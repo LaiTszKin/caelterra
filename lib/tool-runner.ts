@@ -21,6 +21,7 @@ import { extractConversationsHandler } from './tools/extract-conversations';
 import { syncMemoryIndexHandler } from './tools/sync-memory-index';
 import { validateSkillFrontmatterHandler } from './tools/validate-skill-frontmatter';
 import { validateOpenaiAgentConfigHandler } from './tools/validate-openai-agent-config';
+import { createReviewReportHandler } from './tools/create-review-report';
 
 const HELP_FLAGS = new Set(['--help', '-h']);
 
@@ -119,6 +120,40 @@ const TOOL_COMMANDS: ToolDefinition[] = [
         command: 'apltk create-specs "Membership upgrade flow" --change-name membership-upgrade-flow',
         result: 'Creates a dated spec directory with the planning templates for that change.',
       }),
+    },
+  },
+  {
+    name: 'create-review-report',
+    category: 'Planning & architecture',
+    skill: 'qa',
+    handler: createReviewReportHandler,
+    description: 'Copy the QA code review report template to the spec directory.',
+    help: {
+      purpose: 'Copy the code-review-report.md template from qa/assets/templates to the appropriate spec directory. For batch specs, the report is placed alongside coordination.md at the batch root; for single specs, it is placed alongside spec.md.',
+      useWhen: [
+        'You need to start a code review and want the review report template in the correct spec directory.',
+      ],
+      insteadOf: [
+        'Manually copying the template file to the spec directory.',
+      ],
+      examples: toolExamples(
+        {
+          command: 'apltk create-review-report',
+          result: 'Auto-detects the latest spec and copies the review report template to it.',
+        },
+        {
+          command: 'apltk create-review-report docs/plans/2026-05-21/my-feature',
+          result: 'Copies the review report template to the specified spec directory.',
+        },
+        {
+          command: 'apltk create-review-report docs/plans/2026-05-21/my-batch',
+          result: 'Copies the review report template to the batch root directory.',
+        },
+        {
+          command: 'apltk create-review-report --force',
+          result: 'Auto-detects and overwrites the review report if it already exists.',
+        },
+      ),
     },
   },
   {
