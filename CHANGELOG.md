@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.5] - 2026-05-20
+
+### Added
+
+- Add code review report template (`qa/assets/templates/code-review-report.md`) with P0-P3 severity sections for issues and solutions.
+
 ## [v3.15.4] - 2026-05-20
 
 ### Changed
