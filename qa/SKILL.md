@@ -28,12 +28,18 @@ description: 當你需要審查規格文檔相關變更時，調用此技能
 - 無架構瑕疵
 - 無性能隱患
 
+如果你發現有舊有的 code review report，你不需要閱讀該 report，應該將本次審查當成新審查處理，避免被舊有審查結果誤導。
+
 如果有代碼違反了上述6個原則，將他們紀錄在案。
 如果外部環境允許使用 subagents，建議通過並行調度 subagents 完成對代碼的多維度審查，每一個 subagent 審查一個維度。
 
 ### 3. 生成 code review report
 
-將上一步發現的所有問題代碼總結，並按照問題嚴重程度排序，生成code review report。report需要包含以下元素：
+將上一步發現的所有問題代碼總結，並按照問題嚴重程度排序，按照模板生成code review report 並放置在本地 review 的對應 spec 目錄下。report需要包含以下元素：
 - 問題描述、嚴重度（分為P0-P3）及影響
 - 涉及的代碼檔案、行數
 - 建議修正方案
+
+## 參考資料
+
+- `assets/templates/code-review-report.md` - code review report 模板
