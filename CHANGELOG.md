@@ -2,11 +2,15 @@
 
 All notable changes to this repository are documented in this file.
 
-## [v3.15.5] - 2026-05-20
+## [v3.15.6] - 2026-05-21
 
 ### Added
 
-- Add code review report template (`qa/assets/templates/code-review-report.md`) with P0-P3 severity sections for issues and solutions.
+- Add `apltk create-review-report` tool that copies the QA code review report template to the appropriate spec directory (batch root for batch specs, alongside spec.md for single specs), with auto-detection and `--force` support.
+
+### Changed
+
+- Simplify `code-review-report.md` template by replacing code block placeholders with concise text descriptions in P0/P1/P2 solution sections.
 
 ## [v3.15.4] - 2026-05-20
 
