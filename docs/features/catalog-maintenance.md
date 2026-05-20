@@ -34,12 +34,6 @@
 - **When** 使用 `feature-propose` 技能
 - **Then** 產出結構化的功能提案，通過後可對外發佈
 
-## OpenClaw 配置
-
-- **Given** 使用者需要設定或修復 OpenClaw 環境
-- **When** 使用 `openclaw-configuration` 技能
-- **Then** 檢查或更新 `~/.openclaw/openclaw.json`、skills 載入設定、SecretRefs 與 CLI 配置
-
 ## 目錄驗證
 
 - **Given** 技能目錄中的 SKILL.md 被修改過

@@ -17,7 +17,7 @@
 - Provide a curated set of reusable agent skills installable into Codex, OpenClaw, Trae, Agents, and Claude Code skill directories.
 - Enable spec-first software delivery: feature planning, implementation (including parallel subagents and worktree isolation), code review, systematic debugging, and release management.
 - Support evidence-based research (deep research, financial analysis, API fingerprinting), media generation (video, audio, storyboard), and educational content (PDF exams, error books, KaTeX rendering).
-- Automate platform workflows: GitHub issue/PR operations, blockchain development (Solana, Jupiter, Marginfi), and OpenClaw configuration.
+- Automate platform workflows: GitHub issue/PR operations and blockchain development (Solana, Jupiter).
 - Keep skills focused, composable, and easy to reuse; split shared capabilities into dedicated skills when multiple workflows can depend on them.
 
 ## Project Documentation Index

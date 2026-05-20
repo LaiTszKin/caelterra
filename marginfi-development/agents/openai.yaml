@@ -1,4 +1,0 @@
-interface:
-  display_name: "Marginfi Development"
-  short_description: "Build or review integrations on the marginfi protocol"
-  default_prompt: "Use $marginfi-development to ground the task in official marginfi docs, choose the correct development surface (TypeScript SDK, Rust CLI, or raw program instructions), load the relevant reference sections, and then implement or explain the smallest correct marginfi integration without guessing bank config, oracle setup, or protocol addresses."

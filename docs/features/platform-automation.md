@@ -28,12 +28,6 @@
 - **When** 使用 `resolve-review-comments` 技能
 - **Then** 列出未解決 threads 或在處理後標記為已解決
 
-## OpenClaw 配置
-
-- **Given** 使用者需要配置 OpenClaw 環境
-- **When** 使用 `openclaw-configuration` 技能
-- **Then** 依官方文件設定 `~/.openclaw/openclaw.json`、skills 載入、SecretRefs 與 CLI 配置，並可驗證或修復現有設定
-
 ## 區塊鏈開發
 
 ### Solana
@@ -48,8 +42,3 @@
 - **When** 使用 `jupiter-development` 技能
 - **Then** 依官方 SDK、CLI 與 API 文件開發 swap、token、price、lending、trigger、recurring 與 portfolio 功能
 
-### Marginfi
-
-- **Given** 使用者需要建置或審查 Marginfi 整合
-- **When** 使用 `marginfi-development` 技能
-- **Then** 依官方 SDK、CLI、協議與 The Arena 文件進行開發

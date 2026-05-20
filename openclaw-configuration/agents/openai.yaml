@@ -1,4 +1,0 @@
-interface:
-  display_name: "OpenClaw Configuration"
-  short_description: "Configure and troubleshoot OpenClaw settings"
-  default_prompt: "Use $openclaw-configuration to explain, edit, validate, or troubleshoot OpenClaw configuration, including `~/.openclaw/openclaw.json`, `skills` settings, env vars, SecretRefs, and official OpenClaw CLI/config workflows."
