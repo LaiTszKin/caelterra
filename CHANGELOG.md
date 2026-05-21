@@ -2,6 +2,18 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.11] - 2026-05-22
+
+### Changed
+
+- Add spec conflict avoidance note to qa skill documentation: review suggestions must not conflict with spec requirements.
+
+## [v3.15.10] - 2026-05-21
+
+### Changed
+
+- Optimize all 17 skill descriptions for clarity and conciseness.
+
 ## [v3.15.9] - 2026-05-21
 
 ### Changed
