@@ -89,9 +89,17 @@ export async function createSpecsHandler(args: string[], context: ToolContext): 
     const stdout = context.stdout || process.stdout;
     stdout.write(`Usage: apltk create-specs <feature_name> [options]
 
+The tool auto-creates a <today> folder under --output-dir. Batch names
+should group related specs (e.g. "membership-cutover"), NOT include date
+prefixes like "2026-05-22-membership" — that produces nested date folders.
+
+Output layout:
+  Single spec:  <output-dir>/<today>/<change-name>/
+  Batch:        <output-dir>/<today>/<batch-name>/<change-name>/
+
 Options:
   --change-name, --slug   Folder name (defaults to slugified feature_name)
-  --batch-name            Optional batch folder name
+  --batch-name            Batch folder name (do NOT include date prefix)
   --with-coordination     Create coordination.md (requires --batch-name)
   --with-preparation      Create preparation.md (requires --batch-name)
   --output-dir            Output base directory (default: docs/plans)
@@ -114,6 +122,15 @@ Options:
   }
 
   const batchName = (parsed['batch-name'] as string)?.trim() || null;
+
+  // Warn if batch name looks like it starts with a date (common agent mistake
+  // that produces nested date folders like <today>/2026-05-22-my-batch/).
+  if (batchName && /^\d{4}-\d{2}-\d{2}/.test(batchName)) {
+    stderr.write(`Warning: --batch-name "${batchName}" starts with a date pattern. The tool already\n`);
+    stderr.write(`creates a <today> folder automatically, so this will produce nested date folders.\n`);
+    stderr.write(`Use a descriptive name without date prefix, e.g. --batch-name "membership-cutover".\n\n`);
+  }
+
   if (parsed['with-coordination'] && !batchName) {
     stderr.write('Error: --with-coordination requires --batch-name.\n');
     return 1;
