@@ -2,6 +2,13 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.8] - 2026-05-21
+
+### Changed
+
+- Update QA skill code review report workflow to use `apltk` CLI tool for template generation.
+- Expand code review report template with root cause, fix plan, and verification fields for P0-P3 issues.
+
 ## [v3.15.7] - 2026-05-21
 
 ### Changed
