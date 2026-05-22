@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.14] - 2026-05-23
+
+### Changed
+
+- Clarify code review pass criteria in qa skill documentation.
+
 ## [v3.15.13] - 2026-05-22
 
 ### Changed
