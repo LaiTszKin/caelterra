@@ -2,6 +2,14 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.13] - 2026-05-22
+
+### Changed
+
+- Expand `fix` skill subagent workflow with dependency-aware batching guidance.
+- Split `qa` skill dimension review into dedicated subagents per dimension; add PASS/NOT PASS result criteria to report template.
+- Restructure `spec` skill architecture diagram creation into actionable steps.
+
 ## [v3.15.12] - 2026-05-22
 
 ### Changed
