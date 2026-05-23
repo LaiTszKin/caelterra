@@ -7,6 +7,7 @@
 //
 //   open                                          open base atlas in browser
 //   diff                                          render paginated before/after viewer
+//   merge --spec <dir>|--all [--clean]            merge spec overlay(s) into base atlas
 //   render                                        force-regenerate HTML from current state
 //   feature add|set|remove                        feature lifecycle
 //   submodule add|set|remove                      sub-module lifecycle
@@ -27,6 +28,8 @@
 //   --no-render          skip auto-render after a mutation
 //   --no-open            for open/diff: skip launching the browser
 //   --out <dir>          for diff: override viewer output directory
+//   --clean              for merge: remove spec overlays after successful merge
+//   --all                for merge: merge all pending spec overlays under docs/plans/
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -769,14 +772,14 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
   if (!verb) {
     return buildHelpPage({
       title: 'apltk architecture — declarative atlas CLI.',
-      summary: 'Inspect, mutate, validate, and diff the project architecture atlas without hand-editing the rendered HTML output.',
+      summary: 'Inspect, mutate, validate, diff, and merge the project architecture atlas without hand-editing the rendered HTML output.',
       usageLines: [
         'apltk architecture [verb] [options]',
         'apltk architecture help',
       ],
       useWhen: [
         'You need to browse or update `resources/project-architecture/` through YAML-backed atlas state.',
-        'You need to render or compare spec overlays under `docs/plans/**/architecture_diff/`.',
+        'You need to render, compare, or merge spec overlays under `docs/plans/**/architecture_diff/`.',
       ],
       optionalFlags: [
         '`--project <root>` targets a specific repository root (otherwise the CLI walks upward from the cwd).',
@@ -784,9 +787,12 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         '`--no-render` skips automatic re-render after a mutation so you can batch several commands.',
         '`--no-open` keeps `open` and `diff` from launching a browser window.',
         '`--out <dir>` overrides the output directory for `diff`.',
+        '`--clean` (with `merge`) removes spec overlay directories after a successful merge.',
+        '`--all` (with `merge`) selects every pending spec overlay under `docs/plans/`.',
       ],
       notes: [
-        'Command families include `feature add|set|remove`, `submodule add|set|remove`, `function add|remove`, `variable add|remove`, `dataflow add|remove|reorder`, `error add|remove`, `edge add|remove`, `meta set`, and `actor add|remove`.',
+        'Mutation families include `feature add|set|remove`, `submodule add|set|remove`, `function add|remove`, `variable add|remove`, `dataflow add|remove|reorder`, `error add|remove`, `edge add|remove`, `meta set`, and `actor add|remove`.',
+        'Top-level verbs include `open`, `diff`, `merge`, `render`, `validate`, and `undo`.',
         '`feature`, `submodule`, `function`, `variable`, `dataflow`, `error`, `edge`, `meta`, and `actor` all support deeper help such as `apltk architecture edge add --help`.',
         'Run `apltk architecture validate` before declaring atlas work done.',
       ],
@@ -798,6 +804,10 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         {
           command: 'apltk architecture feature add --slug register --title "User registration"',
           result: 'Creates or updates the feature entry and prints `atlas: feature add applied`.',
+        },
+        {
+          command: 'apltk architecture merge --spec docs/plans/2026-05-11/add-2fa',
+          result: 'Merges a spec overlay into the base atlas and re-renders.',
         },
         {
           command: 'apltk architecture validate',
@@ -924,6 +934,42 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
           {
             command: 'apltk architecture undo --steps 2 --spec docs/plans/2026-05-11/add-2fa',
             result: 'Restores the requested overlay snapshots and prints `atlas: undo applied (2 steps)`.',
+          },
+        ],
+      });
+    case 'merge':
+      return buildHelpPage({
+        title: 'apltk architecture merge — merge spec overlay(s) into the base atlas.',
+        summary: 'Apply the architecture changes proposed in one or more spec overlays (architecture_diff/) to the project\'s main architecture diagram, then re-render the base HTML.',
+        usageLines: [
+          'apltk architecture merge --spec <spec_dir> [--clean] [--no-render]',
+          'apltk architecture merge --all [--clean] [--no-render]',
+        ],
+        useWhen: [
+          'A spec\'s proposed architecture changes have been approved and should become the new baseline.',
+          'You want to apply multiple pending spec overlays to the project atlas in one step.',
+        ],
+        requiredFlags: [
+          '`--spec <spec_dir>` or `--all` (one is required).',
+        ],
+        optionalFlags: [
+          '`--clean` removes the spec\'s `architecture_diff/` directory after a successful merge.',
+          '`--no-render` skips HTML regeneration so you can batch multiple operations.',
+          '`--project <root>` selects the repository root.',
+        ],
+        notes: [
+          'An undo snapshot is taken before the merge so `apltk architecture undo` can revert it.',
+          'Overlays are applied in sorted order; later overlays win on conflicts.',
+          'Batch specs (with `coordination.md`) are automatically deduplicated.',
+        ],
+        examples: [
+          {
+            command: 'apltk architecture merge --spec docs/plans/2026-05-11/add-2fa',
+            result: 'Merges the spec overlay into the base atlas, re-renders, and prints a change summary.',
+          },
+          {
+            command: 'apltk architecture merge --all --clean',
+            result: 'Merges every pending spec overlay found under docs/plans/ and removes their diff directories.',
           },
         ],
       });
@@ -1759,6 +1805,112 @@ function readRemovedManifest(diffDir) {
     .filter((l) => l && !l.startsWith('#'));
 }
 
+// ---- merge verb ---------------------------------------------------------
+
+function collectSpecsToMerge(flags, projectRoot) {
+  if (flags.spec !== undefined) {
+    return Array.isArray(flags.spec) ? flags.spec.map(String) : [String(flags.spec)];
+  }
+
+  if (flags.all) {
+    const plansRoot = path.join(projectRoot, PLANS_REL);
+    const seen = new Set();
+    const specs = [];
+
+    for (const diffDir of walkArchitectureDiffDirs(plansRoot)) {
+      const specDir = path.dirname(diffDir);
+      const { rootDir } = specOverlayDir(projectRoot, path.relative(projectRoot, specDir));
+      const key = path.relative(projectRoot, rootDir);
+      if (!seen.has(key)) {
+        seen.add(key);
+        specs.push(key);
+      }
+    }
+
+    return specs.sort();
+  }
+
+  return [];
+}
+
+async function verbMerge(flags, projectRoot, io) {
+  const specs = collectSpecsToMerge(flags, projectRoot);
+  if (specs.length === 0) {
+    io.stderr.write('No spec overlays to merge. Use --spec <dir> or --all to select specs.\n');
+    return 1;
+  }
+
+  const base = stateLib.load(baseAtlasDir(projectRoot));
+  let merged = JSON.parse(JSON.stringify(base));
+  const applied = [];
+
+  for (const spec of specs) {
+    const { overlayDir, rootDir } = specOverlayDir(projectRoot, spec);
+    if (!hasOverlayState(overlayDir)) {
+      io.stdout.write(`Skipping ${spec} (no overlay state found in ${path.relative(projectRoot, overlayDir)})\n`);
+      continue;
+    }
+    const overlay = stateLib.loadOverlay(overlayDir);
+    merged = stateLib.mergeOverlay(merged, overlay);
+    applied.push({ spec, rootDir, overlayDir });
+  }
+
+  if (applied.length === 0) {
+    io.stdout.write('No valid spec overlays to merge.\n');
+    return 0;
+  }
+
+  const diff = stateLib.diffPages(base, merged);
+
+  // Save undo snapshot before mutating base
+  ensureBaseAtlasDir(projectRoot);
+  stateLib.writeUndoSnapshot(baseAtlasDir(projectRoot), JSON.parse(JSON.stringify({ base })));
+
+  // Write merged state to base
+  stateLib.save(baseAtlasDir(projectRoot), merged);
+  stateLib.appendHistory(baseAtlasDir(projectRoot), {
+    action: 'merge',
+    args: { specs: applied.map((a) => a.spec) },
+    mode: 'base',
+  });
+
+  // Render unless --no-render
+  if (!flags['no-render']) {
+    await runRender({ projectRoot, flags: { ...flags, spec: undefined } });
+  }
+
+  // Clean overlays if --clean
+  if (flags.clean) {
+    for (const { rootDir } of applied) {
+      const diffDir = path.join(rootDir, DIFF_DIRNAME);
+      if (fs.existsSync(diffDir)) {
+        fs.rmSync(diffDir, { recursive: true, force: true });
+        io.stdout.write(`Removed ${path.relative(projectRoot, diffDir)}\n`);
+      }
+    }
+  }
+
+  // Summary
+  const featParts = [];
+  if (diff.addedFeatures.size > 0) featParts.push(`${diff.addedFeatures.size} added`);
+  if (diff.modifiedFeatures.size > 0) featParts.push(`${diff.modifiedFeatures.size} modified`);
+  if (diff.removedFeatures.size > 0) featParts.push(`${diff.removedFeatures.size} removed`);
+  const featSummary = featParts.length > 0 ? featParts.join(', ') : 'no changes';
+
+  const subParts = [];
+  if (diff.addedSubmodules.length > 0) subParts.push(`${diff.addedSubmodules.length} added`);
+  if (diff.modifiedSubmodules.length > 0) subParts.push(`${diff.modifiedSubmodules.length} modified`);
+  if (diff.removedSubmodules.length > 0) subParts.push(`${diff.removedSubmodules.length} removed`);
+  const subSummary = subParts.length > 0 ? subParts.join(', ') : 'no changes';
+
+  io.stdout.write(`atlas: merge applied — ${applied.length} spec overlay(s) merged\n`);
+  io.stdout.write(`  Features: ${featSummary}\n`);
+  io.stdout.write(`  Submodules: ${subSummary}\n`);
+  if (diff.macroChanged) io.stdout.write('  Macro page changed\n');
+
+  return 0;
+}
+
 function htmlEscape(value) {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -1992,6 +2144,7 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
       case 'edge': await verbEdge(subverb, flags, projectRoot); break;
       case 'meta': await verbMeta(subverb, flags, projectRoot); break;
       case 'actor': await verbActor(subverb, flags, projectRoot); break;
+      case 'merge': return await verbMerge(flags, projectRoot, io);
       default:
         io.stderr.write(`Unknown verb: ${verb}\n\n${buildArchitectureHelpPage()}\n`);
         return 1;
@@ -2022,4 +2175,7 @@ module.exports = {
   readRemovedManifest,
   renderDiffViewer,
   toViewerRel,
+  hasOverlayState,
+  collectSpecsToMerge,
+  verbMerge,
 };

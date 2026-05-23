@@ -769,3 +769,145 @@ test('spec render deletes stale overlay html when a previously modified page is 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+// ---- merge verb tests ---------------------------------------------------
+
+test('merge without --spec or --all prints error', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const code = await cli.dispatch(['merge', '--project', root, '--no-render'], io);
+    assert.notEqual(code, 0);
+    assert.match(io.stderr_text, /No spec overlays to merge/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('merge --spec applies overlay changes to base atlas', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // Set up base feature in the atlas
+    await cli.dispatch(['feature', 'add', '--slug', 'register', '--title', 'Register', '--project', root, '--no-render'], io);
+    await cli.dispatch(['submodule', 'add', '--feature', 'register', '--slug', 'ui', '--kind', 'ui', '--role', 'Base role', '--project', root, '--no-render'], io);
+
+    // Create a spec overlay that modifies the submodule role
+    const specDir = 'docs/plans/2026-05-14/add-checkout';
+    await cli.dispatch(['submodule', 'set', '--feature', 'register', '--slug', 'ui', '--role', 'Updated role', '--spec', specDir, '--project', root, '--no-render'], io);
+
+    // Merge the spec overlay into base
+    const mergeIo = makeIo();
+    const code = await cli.dispatch(['merge', '--spec', specDir, '--project', root, '--no-render'], mergeIo);
+    assert.equal(code, 0);
+    assert.match(mergeIo.stdout_text, /merge applied/);
+
+    // Verify base atlas now has the updated role
+    const feature = stateLib.load(path.join(root, 'resources/project-architecture/atlas')).features.find((f) => f.slug === 'register');
+    assert.ok(feature, 'feature should exist after merge');
+    const sub = feature.submodules.find((s) => s.slug === 'ui');
+    assert.equal(sub.role, 'Updated role', 'base atlas should contain merged overlay changes');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('merge --spec adds new feature from overlay to base', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // Create base feature
+    await cli.dispatch(['feature', 'add', '--slug', 'existing', '--project', root, '--no-render'], io);
+
+    // Create spec that adds a new feature
+    const specDir = 'docs/plans/2026-05-14/add-new-feature';
+    await cli.dispatch(['feature', 'add', '--slug', 'new-feature', '--title', 'New Feature', '--spec', specDir, '--project', root, '--no-render'], io);
+
+    // Merge
+    await cli.dispatch(['merge', '--spec', specDir, '--project', root, '--no-render'], io);
+
+    // Verify new feature exists in base
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const slugs = state.features.map((f) => f.slug);
+    assert.ok(slugs.includes('new-feature'));
+    assert.ok(slugs.includes('existing'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('merge --spec --clean removes overlay directory', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['feature', 'add', '--slug', 'register', '--project', root, '--no-render'], io);
+
+    const specDir = 'docs/plans/2026-05-14/clean-test';
+    await cli.dispatch(['feature', 'set', '--slug', 'register', '--title', 'Changed', '--spec', specDir, '--project', root, '--no-render'], io);
+
+    const diffDir = path.join(root, specDir, 'architecture_diff');
+    assert.ok(fs.existsSync(diffDir), 'overlay should exist before --clean merge');
+
+    await cli.dispatch(['merge', '--spec', specDir, '--project', root, '--no-render', '--clean'], io);
+    assert.equal(fs.existsSync(diffDir), false, 'overlay should be removed after --clean merge');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('merge creates undo snapshot that can revert the merge', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['feature', 'add', '--slug', 'register', '--title', 'Original', '--project', root, '--no-render'], io);
+
+    const specDir = 'docs/plans/2026-05-14/undo-test';
+    await cli.dispatch(['feature', 'set', '--slug', 'register', '--title', 'Changed', '--spec', specDir, '--project', root, '--no-render'], io);
+
+    // Merge
+    await cli.dispatch(['merge', '--spec', specDir, '--project', root, '--no-render'], io);
+
+    // Verify the change was applied
+    let state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    assert.equal(state.features.find((f) => f.slug === 'register').title, 'Changed');
+
+    // Undo the merge
+    await cli.dispatch(['undo', '--project', root, '--no-render'], io);
+
+    // Verify reverted
+    state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    assert.equal(state.features.find((f) => f.slug === 'register').title, 'Original');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('merge --all merges multiple pending spec overlays', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // Create base
+    await cli.dispatch(['feature', 'add', '--slug', 'base', '--project', root, '--no-render'], io);
+
+    // Create two independent spec overlays
+    const specA = 'docs/plans/2026-05-14/spec-a';
+    const specB = 'docs/plans/2026-05-14/spec-b';
+    await cli.dispatch(['feature', 'add', '--slug', 'from-spec-a', '--spec', specA, '--project', root, '--no-render'], io);
+    await cli.dispatch(['feature', 'add', '--slug', 'from-spec-b', '--spec', specB, '--project', root, '--no-render'], io);
+
+    // Merge all
+    const allIo = makeIo();
+    const code = await cli.dispatch(['merge', '--all', '--project', root, '--no-render'], allIo);
+    assert.equal(code, 0);
+    assert.match(allIo.stdout_text, /2 spec overlay\(s\) merged/);
+
+    // Both spec features should be in base
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const slugs = state.features.map((f) => f.slug);
+    assert.ok(slugs.includes('from-spec-a'));
+    assert.ok(slugs.includes('from-spec-b'));
+    assert.ok(slugs.includes('base'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

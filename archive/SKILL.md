@@ -14,15 +14,22 @@ description: 將已完成的spec歸檔到 `docs/archive/` 下。當你需要將s
 
 ## 工作流程
 
-### 1. 盤點現有spec的完成狀態
+### 1. 盤點現有 spec 的完成狀態
 
-在 `docs/plans/` 目錄下找到現有的所有spec。閱讀每一份spec的 `checklist.md`, `tasks.md`, `spec.md` 並檢查當中的markdown checkboxes是否被全部勾選為完成（除與任務無關的checkboxes外，比如spec的批准狀態）。
+在 `docs/plans/` 目錄下找到現有的所有spec。閱讀每一份spec的 `checklist.md`, `tasks.md`, `spec.md` 並檢查當中的markdown checkboxes是否被全部勾選為完成（除與任務無關的 checkboxes 外，比如 spec 的批准狀態）。
 將 `checklist.md`, `tasks.md`, `spec.md` 三份文檔checkboxes皆完成勾選的spec標記為已完成。
 
-### 2. 歸檔spec並更新項目文檔
+### 2. 更新項目文檔及架構圖
 
-使用 `docs-project`, `maintain-project-constraints` 技能，按照這兩個技能之中的指引，更新項目文檔。並將完成的spec全部移動到 `docs/archive/`。
+使用 `docs-project`, `maintain-project-constraints` 技能，按照這兩個技能之中的指引，更新項目文檔。
+
+使用 `apltk` CLI 工具將 architecture diff 合併回項目架構圖
+
+### 3. 歸檔 spec
+
+將完成的spec全部移動到 `docs/archive/`。
 
 ## 參考資料索引
 
 - `assets/templates/readme.md`：README.md 模板
+- `apltk architecture --help` - apltk CLI 架構圖更新工具相關指引
