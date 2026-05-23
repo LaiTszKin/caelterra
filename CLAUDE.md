@@ -7,7 +7,7 @@
 - `node dist/bin/apollo-toolkit.js uninstall [mode...]` - 從指定目標移除已安裝的 Apollo Toolkit 技能。
 - `node dist/bin/apollo-toolkit.js tools` - 列出所有內建 CLI 工具及其分類。
 - `node dist/bin/apollo-toolkit.js <tool> [args...]` - 執行內建工具（如 `filter-logs`、`search-logs`、`architecture`、`create-specs` 等）。
-- `node dist/bin/apollo-toolkit.js architecture [diff]` - 開啟專案 HTML 架構圖，或搭配 `diff` 產生分頁式 before/after 檢視器。
+- `node dist/bin/apollo-toolkit.js architecture [diff|merge]` - 開啟專案 HTML 架構圖、搭配 `diff` 產生分頁式 before/after 檢視器，或使用 `merge --spec <dir>` 將 spec 的架構變更合併至基礎架構圖。
 - `apltk validate-skill-frontmatter` - 驗證所有頂層技能 `SKILL.md` 的 frontmatter 格式與命名規範。
 - `apltk validate-openai-agent-config` - 驗證所有技能 `agents/openai.yaml` 的設定完整性。
 - `./scripts/install_skills.sh [mode...]` - 透過本地 shell 腳本安裝技能（非 npm 安裝方式）。

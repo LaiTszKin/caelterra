@@ -2,6 +2,15 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.18] - 2026-05-24
+
+### Added
+
+- Add `apltk architecture merge` verb to apply spec `architecture_diff/` overlays to the base atlas state, with `--spec <dir>` and `--all` batch mode support.
+- Add `--clean` flag to `merge` for removing overlay directories after successful application.
+- Create undo snapshot before merge so `apltk architecture undo` can revert the operation.
+- Document architecture merge workflow in `docs/features/software-development.md`.
+
 ## [v3.15.17] - 2026-05-23
 
 ### Changed

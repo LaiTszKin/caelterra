@@ -50,6 +50,16 @@
 - **When** 使用 `fix` 技能
 - **Then** 依嚴重程度排序處理問題，每個修復獨立驗證，完成後全面再驗證
 
+## 架構圖同步
+
+- **Given** spec 包含 `architecture_diff/` overlay，且架構變更已獲批准
+- **When** 使用 `apltk architecture merge --spec <spec_dir>` 命令
+- **Then** 將 spec 提議的架構變更合併至專案基礎架構圖，並重新渲染 HTML
+
+- **Given** 多份已完成 spec 的架構變更需批量合併
+- **When** 使用 `apltk architecture merge --all` 命令
+- **Then** 掃描 `docs/plans/` 下所有 pending overlay 並逐一合併
+
 ## 系統性除錯
 
 - **Given** 應用程式出現非預期行為
