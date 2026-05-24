@@ -21,9 +21,9 @@ description: 依照 code review report 中的建議方案修復代碼問題。P0
 
 ### 2. 修復發現的問題
 
-按 code review report 的嚴重度排序。
-從最高嚴重度的問題開始修復。
-使用 `systematic-debug` 技能。
+如果外部環境不允許使用 subagents，按照以下流程完成修復工作：
+1. 將所有問題按 code review report 的嚴重度排序。
+2. 使用 `systematic-debug` 技能。從最高嚴重度的問題開始修復，直至完成所有建議修復。
 
 若外部環境允許使用 subagents，建議按照以下流程加速修復進度：
 1. 讀取審查結果所發現的問題，識別每個問題對應的改進建議。
