@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.22] - 2026-05-25
+
+### Changed
+
+- Refine subagent workflow in `fix` skill: add fallback path when subagents are unavailable.
+
 ## [v3.15.21] - 2026-05-25
 
 ### Changed
