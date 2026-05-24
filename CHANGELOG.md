@@ -2,6 +2,13 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.20] - 2026-05-24
+
+### Changed
+
+- Refine subagent workflow in `fix` skill: restructure independent/non-independent issue batching and require `systematic-debug` skill usage in subagents.
+- Refine subagent workflow in `implement-with-subagents` skill: require dedicated worktree per subagent and use `implement-with-worktree` skill.
+
 ## [v3.15.19] - 2026-05-24
 
 ### Changed
