@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.21] - 2026-05-25
+
+### Changed
+
+- Refine subagent wording in `qa` skill: clarify that six subagents should be dispatched in parallel.
+
 ## [v3.15.20] - 2026-05-24
 
 ### Changed
