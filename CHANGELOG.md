@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.15.23] - 2026-05-25
+
+### Changed
+
+- Strengthen subagent dispatch wording in `fix` and `qa` skills: change from recommendation ("建議") to requirement ("必須").
+
 ## [v3.15.22] - 2026-05-25
 
 ### Changed
