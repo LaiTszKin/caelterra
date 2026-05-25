@@ -38,7 +38,7 @@ description: 審查規格文檔相關的程式碼變更。從六個維度產出 
 將本次審查當作全新審查處理，避免被舊有結果誤導。
 若有代碼違反上述 6 個原則，將其紀錄在案。
 
-如果外部環境允許使用 subagents，建議並行建立以下6個 subagents：
+如果外部環境允許使用 subagents，必須並行建立以下6個 subagents：
 - 幻覺代碼審查 agent
 - 冗余代碼審查 agent
 - spec 實作偏移審查 agent
