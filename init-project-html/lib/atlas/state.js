@@ -23,6 +23,7 @@ const { emptyState } = require('./schema');
 
 const INDEX_FILE = 'atlas.index.yaml';
 const REMOVED_FILE = '_removed.yaml';
+const REMOVED_TXT = '_removed.txt';
 const FEATURES_DIR = 'features';
 const HISTORY_FILE = 'atlas.history.log';
 const UNDO_FILE = 'atlas.history.undo.json';
@@ -525,6 +526,7 @@ module.exports = {
   ATLAS_DIRNAME,
   INDEX_FILE,
   REMOVED_FILE,
+  REMOVED_TXT,
   FEATURES_DIR,
   load,
   save,

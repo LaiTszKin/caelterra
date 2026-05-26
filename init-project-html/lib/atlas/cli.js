@@ -64,7 +64,6 @@ const ATLAS_DIRNAME = stateLib.ATLAS_DIRNAME;
 const DIFF_DIRNAME = 'architecture_diff';
 const PLANS_REL = path.join('docs', 'plans');
 const COORDINATION_FILE = 'coordination.md';
-const REMOVED_TXT = '_removed.txt';
 const DEFAULT_DIFF_OUT_REL = path.join('.apollo-toolkit', 'architecture-diff');
 
 function buildHelpPage({ title, summary, usageLines, useWhen, requiredFlags, optionalFlags, notes, examples }) {
@@ -1997,7 +1996,7 @@ function walkAfterStateHtml(diffDir) {
     for (const entry of entries) {
       if (entry.name === 'assets') continue;
       if (entry.name === ATLAS_DIRNAME) continue;
-      if (entry.name === REMOVED_TXT) continue;
+      if (entry.name === stateLib.REMOVED_TXT) continue;
       if (entry.name.startsWith('.')) continue;
       const full = path.join(dir, entry.name);
       const nextRel = [...relParts, entry.name];
@@ -2012,7 +2011,7 @@ function walkAfterStateHtml(diffDir) {
 }
 
 function readRemovedManifest(diffDir) {
-  const file = path.join(diffDir, REMOVED_TXT);
+  const file = path.join(diffDir, stateLib.REMOVED_TXT);
   if (!fs.existsSync(file)) return [];
   return fs.readFileSync(file, 'utf8')
     .split(/\r?\n/)

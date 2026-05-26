@@ -14,17 +14,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { layoutMacro, measureSubmodule } = require('./layout');
-const { EVIDENCE_LEVELS } = require('./schema');
-
-const KIND_LABEL = {
-  ui: 'UI',
-  api: 'API',
-  service: 'Service',
-  db: 'DB',
-  'pure-fn': 'Pure fn',
-  queue: 'Queue',
-  external: 'External',
-};
+const { EVIDENCE_LEVELS, KIND_LABEL } = require('./schema');
+const { REMOVED_TXT } = require('./state');
 
 const EVI_LABEL = Object.fromEntries(EVIDENCE_LEVELS.map((l) => [l, l.slice(0, 3)]));
 
@@ -599,9 +590,9 @@ async function renderAll({ outDir, state, scope = null, removedPaths = [] }) {
 
   if (removedPaths && removedPaths.length > 0) {
     const lines = ['# Pages removed by this spec. Used by `apltk architecture diff`.', ...removedPaths];
-    fs.writeFileSync(path.join(outDir, '_removed.txt'), `${lines.join('\n')}\n`, 'utf8');
+    fs.writeFileSync(path.join(outDir, REMOVED_TXT), `${lines.join('\n')}\n`, 'utf8');
   } else {
-    const file = path.join(outDir, '_removed.txt');
+    const file = path.join(outDir, REMOVED_TXT);
     if (fs.existsSync(file)) fs.rmSync(file);
   }
 

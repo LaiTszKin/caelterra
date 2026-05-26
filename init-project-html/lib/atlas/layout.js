@@ -10,6 +10,7 @@
 // Layout is async because elkjs returns a Promise even in Node.
 
 const ELK = require('elkjs');
+const { KIND_LABEL } = require('./schema');
 
 // Default fallback box. The actual width/height for each sub-module
 // is computed per node by measureSubmodule() so the role/description
@@ -50,16 +51,6 @@ const EDGE_LABEL_LINE_PX = 14;
 const EDGE_LABEL_LINE_WIDTH_MAX = 220;
 const EDGE_LABEL_PAD_X = 18;
 const EDGE_LABEL_PAD_Y = 8;
-
-const KIND_LABELS = {
-  ui: 'UI',
-  api: 'API',
-  service: 'service',
-  db: 'database',
-  'pure-fn': 'pure function',
-  queue: 'queue',
-  external: 'external',
-};
 
 // East-Asian Wide / Full-width detection. The ranges follow the
 // canonical "wide" / "fullwidth" code blocks (Unicode TR11) — we use
@@ -192,7 +183,7 @@ function measureEdgeLabel(text) {
 // outside the rectangle the layout engine reserved.
 function measureSubmodule(sub) {
   const slug = (sub && sub.slug) || '';
-  const kindLabel = KIND_LABELS[sub && sub.kind] || (sub && sub.kind) || 'service';
+  const kindLabel = KIND_LABEL[sub && sub.kind] || (sub && sub.kind) || 'Service';
   const role = (sub && sub.role) || '';
 
   const slugW = approxTextWidth(slug, SLUG_FONT_PX);

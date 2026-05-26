@@ -15,6 +15,16 @@ const SUBMODULE_KINDS = Object.freeze([
   'external',
 ]);
 
+const KIND_LABEL = Object.freeze({
+  ui: 'UI',
+  api: 'API',
+  service: 'Service',
+  db: 'DB',
+  'pure-fn': 'Pure fn',
+  queue: 'Queue',
+  external: 'External',
+});
+
 const SIDE_EFFECTS = Object.freeze([
   'pure',
   'io',
@@ -383,6 +393,7 @@ function emptyState({ title = 'Project architecture' } = {}) {
 
 module.exports = {
   SUBMODULE_KINDS,
+  KIND_LABEL,
   SIDE_EFFECTS,
   VARIABLE_SCOPES,
   EDGE_KINDS,
