@@ -63,12 +63,21 @@ const EVIDENCE_LEVELS = Object.freeze(['observed', 'inferred', 'assumed']);
 
 function parseEvidence(value) {
   if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') {
+    throw new Error('--evidence requires a string value (observed, inferred, or assumed)');
+  }
   const str = String(value);
   const colon = str.indexOf(':');
-  const level = colon === -1 ? str : str.slice(0, colon);
-  const source = colon === -1 ? '' : str.slice(colon + 1);
-  if (!EVIDENCE_LEVELS.includes(level)) {
-    throw new Error(`Invalid evidence level: "${level}". Must be one of: ${EVIDENCE_LEVELS.join(', ')}`);
+  let level, source;
+  if (colon === -1) {
+    level = 'inferred';
+    source = str;
+  } else {
+    level = str.slice(0, colon);
+    source = str.slice(colon + 1);
+    if (!EVIDENCE_LEVELS.includes(level)) {
+      throw new Error(`Invalid evidence level: "${level}". Must be one of: ${EVIDENCE_LEVELS.join(', ')}`);
+    }
   }
   return { level, source };
 }
@@ -105,23 +114,29 @@ function validateActor(actor, errors, idx) {
   requireField(errors, where, 'label', actor && actor.label, isNonEmptyString);
 }
 
-function validateFunction(fn, errors, where) {
+function validateFunction(fn, errors, where, featureSlug, subSlug, formatFix) {
   requireField(errors, where, 'name', fn && fn.name, isNonEmptyString);
   if (fn && fn.in !== undefined && typeof fn.in !== 'string') errors.push(noFix(`${where}: "in" must be a string`));
   if (fn && fn.out !== undefined && typeof fn.out !== 'string') errors.push(noFix(`${where}: "out" must be a string`));
   if (fn && fn.side !== undefined && !SIDE_EFFECTS.includes(fn.side)) {
-    errors.push(noFix(`${where}: "side" must be one of ${SIDE_EFFECTS.join('|')}`));
+    errors.push({
+      message: `${where}: "side" must be one of ${SIDE_EFFECTS.join('|')}`,
+      fixCommand: formatFix && formatFix({ type: 'function', action: 'set', feature: featureSlug, submodule: subSlug, name: fn.name, side: SIDE_EFFECTS[0] }),
+    });
   }
   if (fn && fn.purpose !== undefined && typeof fn.purpose !== 'string') {
     errors.push(noFix(`${where}: "purpose" must be a string`));
   }
 }
 
-function validateVariable(v, errors, where) {
+function validateVariable(v, errors, where, featureSlug, subSlug, formatFix) {
   requireField(errors, where, 'name', v && v.name, isNonEmptyString);
   if (v && v.type !== undefined && typeof v.type !== 'string') errors.push(noFix(`${where}: "type" must be a string`));
   if (v && v.scope !== undefined && !VARIABLE_SCOPES.includes(v.scope)) {
-    errors.push(noFix(`${where}: "scope" must be one of ${VARIABLE_SCOPES.join('|')}`));
+    errors.push({
+      message: `${where}: "scope" must be one of ${VARIABLE_SCOPES.join('|')}`,
+      fixCommand: formatFix && formatFix({ type: 'variable', action: 'set', feature: featureSlug, submodule: subSlug, name: v.name, scope: VARIABLE_SCOPES[0] }),
+    });
   }
   if (v && v.purpose !== undefined && typeof v.purpose !== 'string') {
     errors.push(noFix(`${where}: "purpose" must be a string`));
@@ -137,7 +152,10 @@ function validateError(err, errors, where) {
 function validateSubmodule(sub, errors, where, featureSlug, formatFix) {
   requireField(errors, where, 'slug', sub && sub.slug, isSlug, 'kebab-case slug');
   if (sub && sub.kind !== undefined && !SUBMODULE_KINDS.includes(sub.kind)) {
-    errors.push(noFix(`${where}: "kind" must be one of ${SUBMODULE_KINDS.join('|')}`));
+    errors.push({
+      message: `${where}: "kind" must be one of ${SUBMODULE_KINDS.join('|')}`,
+      fixCommand: formatFix({ type: 'submodule', action: 'set', feature: featureSlug, slug: sub.slug, kind: SUBMODULE_KINDS[0] }),
+    });
   }
   if (sub && sub.role !== undefined && typeof sub.role !== 'string') {
     errors.push(noFix(`${where}: "role" must be a string`));
@@ -147,14 +165,14 @@ function validateSubmodule(sub, errors, where, featureSlug, formatFix) {
     if (!Array.isArray(sub.functions)) {
       errors.push(noFix(`${where}: "functions" must be an array`));
     } else {
-      sub.functions.forEach((fn, i) => validateFunction(fn, errors, `${where}.functions[${i}]`));
+      sub.functions.forEach((fn, i) => validateFunction(fn, errors, `${where}.functions[${i}]`, featureSlug, sub.slug, formatFix));
     }
   }
   if (sub && sub.variables) {
     if (!Array.isArray(sub.variables)) {
       errors.push(noFix(`${where}: "variables" must be an array`));
     } else {
-      sub.variables.forEach((v, i) => validateVariable(v, errors, `${where}.variables[${i}]`));
+      sub.variables.forEach((v, i) => validateVariable(v, errors, `${where}.variables[${i}]`, featureSlug, sub.slug, formatFix));
     }
   }
   if (sub && sub.dataflow) {
@@ -231,12 +249,15 @@ function validateEdgeEndpoint(endpoint, errors, where, allowSelf = false) {
   }
 }
 
-function validateEdge(edge, errors, where, { allowSelf = false } = {}) {
+function validateEdge(edge, errors, where, { allowSelf = false, featureSlug, formatFix } = {}) {
   if (edge && edge.id !== undefined && !isSlug(edge.id)) {
     errors.push(noFix(`${where}: "id" must be a kebab-case slug`));
   }
   if (edge && edge.kind !== undefined && !EDGE_KINDS.includes(edge.kind)) {
-    errors.push(noFix(`${where}: "kind" must be one of ${EDGE_KINDS.join('|')}`));
+    errors.push({
+      message: `${where}: "kind" must be one of ${EDGE_KINDS.join('|')}`,
+      fixCommand: (typeof formatFix === 'function' ? formatFix : () => null)({ type: 'edge', action: 'set', kind: EDGE_KINDS[0] }),
+    });
   }
   validateEdgeEndpoint(edge && edge.from, errors, `${where}.from`, allowSelf);
   validateEdgeEndpoint(edge && edge.to, errors, `${where}.to`, allowSelf);
@@ -272,7 +293,7 @@ function validateFeature(feature, errors, where, formatFix) {
   }
   if (feature && feature.edges) {
     if (!Array.isArray(feature.edges)) errors.push(noFix(`${where}: "edges" must be an array`));
-    else feature.edges.forEach((edge, i) => validateEdge(edge, errors, `${where}.edges[${i}]`, { allowSelf: true }));
+    else feature.edges.forEach((edge, i) => validateEdge(edge, errors, `${where}.edges[${i}]`, { allowSelf: true, featureSlug: feature.slug, formatFix }));
   }
 }
 
@@ -331,7 +352,7 @@ function validate(state, formatFix) {
 
   if (state.edges) {
     if (!Array.isArray(state.edges)) errors.push(noFix('edges: must be an array'));
-    else state.edges.forEach((edge, i) => validateEdge(edge, errors, `edges[${i}]`));
+    else state.edges.forEach((edge, i) => validateEdge(edge, errors, `edges[${i}]`, { formatFix }));
   }
 
   // referential integrity for cross-feature edges
