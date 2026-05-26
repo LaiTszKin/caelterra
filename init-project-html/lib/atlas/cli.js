@@ -44,6 +44,20 @@ const renderLib = require('./render');
 const { parseEvidence } = schema;
 const { computeDiff } = stateLib;
 
+// formatFix generates apltk CLI commands from structured params,
+// injected into schema.validate() so schema stays decoupled from CLI syntax.
+function formatFix({ type, action, feature, submodule, name, side, scope, slug, kind }) {
+  const parts = [`apltk architecture ${type} ${action}`];
+  if (feature !== undefined) parts.push(`--feature ${feature}`);
+  if (submodule !== undefined) parts.push(`--submodule ${submodule}`);
+  if (slug !== undefined) parts.push(`--slug ${slug}`);
+  if (name !== undefined) parts.push(`--name ${name}`);
+  if (side !== undefined) parts.push(`--side ${side}`);
+  if (scope !== undefined) parts.push(`--scope ${scope}`);
+  if (kind !== undefined) parts.push(`--kind ${kind}`);
+  return parts.join(' ');
+}
+
 const ATLAS_REL = path.join('resources', 'project-architecture');
 const ATLAS_INDEX_REL = path.join(ATLAS_REL, 'index.html');
 const ATLAS_DIRNAME = stateLib.ATLAS_DIRNAME;
@@ -1200,7 +1214,7 @@ function ensureBaseAtlasDir(projectRoot) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-async function performMutation(projectRoot, flags, action, args, mutate) {
+async function performMutation(projectRoot, flags, action, args, mutate, io) {
   // --dry-run: clone resolved state, apply mutation, print JSON diff, return
   if (flags['dry-run']) {
     const { base, merged, overlay } = loadResolvedState(projectRoot, flags);
@@ -1212,7 +1226,11 @@ async function performMutation(projectRoot, flags, action, args, mutate) {
       mutate(dryRunState, dryRunState, null);
     }
     const diff = computeDiff(before, dryRunState);
-    process.stdout.write(JSON.stringify({ action: 'dry-run', diff }) + '\n');
+    try {
+      (io || process).stdout.write(JSON.stringify({ action: 'dry-run', diff }) + '\n');
+    } catch (err) {
+      (io || process).stderr.write(`dry-run error: ${err.message}\n`);
+    }
     return;
   }
   const isSpec = Boolean(flags.spec);
@@ -1324,7 +1342,7 @@ function isIntraFeatureEdge(from, to) {
 
 // ---- verb dispatch ------------------------------------------------------
 
-async function verbFeature(action, flags, projectRoot) {
+async function verbFeature(action, flags, projectRoot, io) {
   const slug = String(requireFlag(flags, 'slug'));
   if (action === 'add' || action === 'set') {
     const init = {};
@@ -1335,18 +1353,18 @@ async function verbFeature(action, flags, projectRoot) {
     return performMutation(projectRoot, flags, `feature ${action}`, { slug, ...init }, (state) => {
       ensureFeature(state, slug, init);
       return { touchedFeatures: new Set([slug]) };
-    });
+    }, io);
   }
   if (action === 'remove') {
     return performMutation(projectRoot, flags, 'feature remove', { slug }, (state) => {
       removeFeature(state, slug);
       return { removalsHint: { features: [slug] } };
-    });
+    }, io);
   }
   throw new Error(`Unknown feature subverb: ${action}`);
 }
 
-async function verbSubmodule(action, flags, projectRoot) {
+async function verbSubmodule(action, flags, projectRoot, io) {
   const featureSlug = String(requireFlag(flags, 'feature'));
   const slug = String(requireFlag(flags, 'slug'));
   if (action === 'add' || action === 'set') {
@@ -1358,19 +1376,19 @@ async function verbSubmodule(action, flags, projectRoot) {
       const feature = ensureFeature(state, featureSlug);
       ensureSubmodule(feature, slug, init);
       return { touchedFeatures: new Set([featureSlug]) };
-    });
+    }, io);
   }
   if (action === 'remove') {
     return performMutation(projectRoot, flags, 'submodule remove', { feature: featureSlug, slug }, (state) => {
       const feature = findFeature(state, featureSlug);
       if (feature) removeSubmodule(feature, slug);
       return { touchedFeatures: new Set([featureSlug]), removalsHint: { submodules: [{ feature: featureSlug, submodule: slug }] } };
-    });
+    }, io);
   }
   throw new Error(`Unknown submodule subverb: ${action}`);
 }
 
-async function verbFunction(action, flags, projectRoot) {
+async function verbFunction(action, flags, projectRoot, io) {
   const featureSlug = String(requireFlag(flags, 'feature'));
   const subSlug = String(requireFlag(flags, 'submodule'));
   const name = String(requireFlag(flags, 'name'));
@@ -1392,10 +1410,10 @@ async function verbFunction(action, flags, projectRoot) {
       throw new Error(`Unknown function subverb: ${action}`);
     }
     return { touchedFeatures: new Set([featureSlug]) };
-  });
+  }, io);
 }
 
-async function verbVariable(action, flags, projectRoot) {
+async function verbVariable(action, flags, projectRoot, io) {
   const featureSlug = String(requireFlag(flags, 'feature'));
   const subSlug = String(requireFlag(flags, 'submodule'));
   const name = String(requireFlag(flags, 'name'));
@@ -1416,10 +1434,10 @@ async function verbVariable(action, flags, projectRoot) {
       throw new Error(`Unknown variable subverb: ${action}`);
     }
     return { touchedFeatures: new Set([featureSlug]) };
-  });
+  }, io);
 }
 
-async function verbDataflow(action, flags, projectRoot) {
+async function verbDataflow(action, flags, projectRoot, io) {
   const featureSlug = String(requireFlag(flags, 'feature'));
   const subSlug = String(requireFlag(flags, 'submodule'));
   return performMutation(projectRoot, flags, `dataflow ${action}`, { feature: featureSlug, submodule: subSlug, step: flags.step, at: flags.at }, (state) => {
@@ -1458,7 +1476,7 @@ async function verbDataflow(action, flags, projectRoot) {
       throw new Error(`Unknown dataflow subverb: ${action}`);
     }
     return { touchedFeatures: new Set([featureSlug]) };
-  });
+  }, io);
 }
 
 function stepText(item) {
@@ -1486,7 +1504,7 @@ function buildDataflowItem(step, flags) {
   return item;
 }
 
-async function verbError(action, flags, projectRoot) {
+async function verbError(action, flags, projectRoot, io) {
   const featureSlug = String(requireFlag(flags, 'feature'));
   const subSlug = String(requireFlag(flags, 'submodule'));
   const name = String(requireFlag(flags, 'name'));
@@ -1506,10 +1524,10 @@ async function verbError(action, flags, projectRoot) {
       throw new Error(`Unknown error subverb: ${action}`);
     }
     return { touchedFeatures: new Set([featureSlug]) };
-  });
+  }, io);
 }
 
-async function verbEdge(action, flags, projectRoot) {
+async function verbEdge(action, flags, projectRoot, io) {
   const from = parseEndpoint(requireFlag(flags, 'from'));
   const to = parseEndpoint(requireFlag(flags, 'to'));
   return performMutation(projectRoot, flags, `edge ${action}`, { from, to, kind: flags.kind, label: flags.label, id: flags.id }, (state) => {
@@ -1564,7 +1582,7 @@ async function verbEdge(action, flags, projectRoot) {
       return { touchedFeatures: new Set([from.feature, to.feature]) };
     }
     throw new Error(`Unknown edge subverb: ${action}`);
-  });
+  }, io);
 }
 
 function endpointEquals(a, b) {
@@ -1573,17 +1591,17 @@ function endpointEquals(a, b) {
   return a.feature === b.feature && (a.submodule || null) === (b.submodule || null);
 }
 
-async function verbMeta(action, flags, projectRoot) {
+async function verbMeta(action, flags, projectRoot, io) {
   if (action !== 'set') throw new Error(`Unknown meta subverb: ${action}`);
   const update = {};
   if (flags.title !== undefined) update.title = String(flags.title);
   if (flags.summary !== undefined) update.summary = String(flags.summary);
   return performMutation(projectRoot, flags, 'meta set', update, (state) => {
     state.meta = { ...state.meta, ...update };
-  });
+  }, io);
 }
 
-async function verbActor(action, flags, projectRoot) {
+async function verbActor(action, flags, projectRoot, io) {
   const id = String(requireFlag(flags, 'id'));
   return performMutation(projectRoot, flags, `actor ${action}`, { id, label: flags.label }, (state) => {
     state.actors = state.actors || [];
@@ -1595,12 +1613,12 @@ async function verbActor(action, flags, projectRoot) {
     } else {
       throw new Error(`Unknown actor subverb: ${action}`);
     }
-  });
+  }, io);
 }
 
 async function verbValidate(flags, projectRoot, io) {
   const { merged } = loadResolvedState(projectRoot, flags);
-  const result = schema.validate(merged);
+  const result = schema.validate(merged, formatFix);
   if (result.valid) {
     io.stdout.write('atlas: OK\n');
     return 0;
@@ -1617,7 +1635,7 @@ async function verbValidate(flags, projectRoot, io) {
 async function verbStatus(flags, projectRoot, io) {
   const { merged } = loadResolvedState(projectRoot, flags);
   const summary = stateLib.summarize(merged);
-  const validation = schema.validate(merged);
+  const validation = schema.validate(merged, formatFix);
 
   if (flags.json) {
     const output = {
@@ -1630,7 +1648,11 @@ async function verbStatus(flags, projectRoot, io) {
         errors: validation.errors.map((e) => e.message),
       },
     };
-    io.stdout.write(JSON.stringify(output) + '\n');
+    try {
+      io.stdout.write(JSON.stringify(output) + '\n');
+    } catch (err) {
+      io.stderr.write(`status error: ${err.message}\n`);
+    }
     return 0;
   }
 
@@ -1669,6 +1691,7 @@ async function verbScan(flags, projectRoot, io) {
       // Fallback to project root when default src/ doesn't exist
       try {
         entries = fs.readdirSync(projectRoot, { withFileTypes: true });
+        srcDir = projectRoot;
       } catch (e2) {
         io.stderr.write(`Cannot read directory: ${projectRoot}\n`);
         return 1;
@@ -1702,7 +1725,11 @@ async function verbScan(flags, projectRoot, io) {
     });
   }
 
-  io.stdout.write(JSON.stringify(results, null, 2) + '\n');
+  try {
+    io.stdout.write(JSON.stringify(results, null, 2) + '\n');
+  } catch (err) {
+    io.stderr.write(`scan error: ${err.message}\n`);
+  }
   return 0;
 }
 
@@ -2316,15 +2343,15 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
       case 'status': return await verbStatus(flags, projectRoot, io);
       case 'scan': return await verbScan(flags, projectRoot, io);
       case 'undo': return await verbUndo(flags, projectRoot, io);
-      case 'feature': await verbFeature(subverb, flags, projectRoot); break;
-      case 'submodule': await verbSubmodule(subverb, flags, projectRoot); break;
-      case 'function': await verbFunction(subverb, flags, projectRoot); break;
-      case 'variable': await verbVariable(subverb, flags, projectRoot); break;
-      case 'dataflow': await verbDataflow(subverb, flags, projectRoot); break;
-      case 'error': await verbError(subverb, flags, projectRoot); break;
-      case 'edge': await verbEdge(subverb, flags, projectRoot); break;
-      case 'meta': await verbMeta(subverb, flags, projectRoot); break;
-      case 'actor': await verbActor(subverb, flags, projectRoot); break;
+      case 'feature': await verbFeature(subverb, flags, projectRoot, io); break;
+      case 'submodule': await verbSubmodule(subverb, flags, projectRoot, io); break;
+      case 'function': await verbFunction(subverb, flags, projectRoot, io); break;
+      case 'variable': await verbVariable(subverb, flags, projectRoot, io); break;
+      case 'dataflow': await verbDataflow(subverb, flags, projectRoot, io); break;
+      case 'error': await verbError(subverb, flags, projectRoot, io); break;
+      case 'edge': await verbEdge(subverb, flags, projectRoot, io); break;
+      case 'meta': await verbMeta(subverb, flags, projectRoot, io); break;
+      case 'actor': await verbActor(subverb, flags, projectRoot, io); break;
       case 'merge': return await verbMerge(flags, projectRoot, io);
       default:
         io.stderr.write(`Unknown verb: ${verb}\n\n${buildArchitectureHelpPage()}\n`);

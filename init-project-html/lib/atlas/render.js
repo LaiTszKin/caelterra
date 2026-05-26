@@ -26,7 +26,7 @@ const KIND_LABEL = {
   external: 'External',
 };
 
-const EVI_LABEL = { observed: 'obs', inferred: 'inf', assumed: 'asm' };
+const EVI_LABEL = Object.fromEntries(EVIDENCE_LEVELS.map((l) => [l, l.slice(0, 3)]));
 
 function htmlEscape(value) {
   return String(value == null ? '' : value)
@@ -93,7 +93,7 @@ function findEdgeMeta(state, edgeId) {
   return { edge: null, scope: 'feature' };
 }
 
-function renderMacroSvg(layout, state) {
+function renderMacroSvg(layout, state, featureMap, edgeMetaMap) {
   if (layout.empty) {
     return '<svg class="atlas-svg" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Atlas is empty"><text x="160" y="80" text-anchor="middle" fill="currentColor">Atlas has no features yet</text></svg>';
   }
@@ -114,14 +114,15 @@ function renderMacroSvg(layout, state) {
     parts.push(`      <rect class="m-cluster__bg" x="${feat.x.toFixed(2)}" y="${feat.y.toFixed(2)}" width="${feat.width.toFixed(2)}" height="${feat.height.toFixed(2)}" rx="14" ry="14" />`);
     const titleX = feat.x + feat.width / 2;
     const titleY = feat.y + 26;
-    const featureState = (state.features || []).find((f) => f.slug === feat.slug);
+    const featureState = featureMap?.get(feat.slug) ?? (state.features || []).find((f) => f.slug === feat.slug);
     const title = (featureState && featureState.title) || feat.slug;
     parts.push(`      <text class="m-cluster__title" x="${titleX.toFixed(2)}" y="${titleY.toFixed(2)}" text-anchor="middle">${htmlEscape(title)}</text>`);
     parts.push('    </g>');
   }
 
   for (const sub of layout.submodules) {
-    const subState = ((state.features || []).find((f) => f.slug === sub.featureSlug) || {}).submodules || [];
+    const parent = featureMap?.get(sub.featureSlug) ?? (state.features || []).find((f) => f.slug === sub.featureSlug);
+    const subState = (parent || {}).submodules || [];
     const meta = subState.find((s) => s.slug === sub.slug) || {};
     const kind = meta.kind || 'service';
     const role = meta.role || '';
@@ -147,7 +148,7 @@ function renderMacroSvg(layout, state) {
   }
 
   for (const edge of layout.edges) {
-    const { edge: meta, scope } = findEdgeMeta(state, edge.id);
+    const { edge: meta, scope } = edgeMetaMap?.get(edge.id) ?? findEdgeMeta(state, edge.id);
     const kind = edgeKindFor(meta);
     const d = renderEdgePath(edge);
     if (!d) continue;
@@ -209,7 +210,17 @@ ${rows}
 function renderMacro({ state, layout, outDir }) {
   const pageRel = pagePathFor('macro');
   const assetRel = relAssetPath(path.join(outDir, pageRel), outDir);
-  const svg = renderMacroSvg(layout, state);
+  const featureMap = new Map((state.features || []).map((f) => [f.slug, f]));
+  const edgeMetaMap = new Map();
+  for (const f of state.features || []) {
+    for (const e of f.edges || []) {
+      edgeMetaMap.set(e.id, { edge: e, scope: 'feature' });
+    }
+  }
+  for (const e of state.edges || []) {
+    edgeMetaMap.set(e.id, { edge: e, scope: 'root' });
+  }
+  const svg = renderMacroSvg(layout, state, featureMap, edgeMetaMap);
   const title = (state.meta && state.meta.title) || 'Project architecture';
   const summary = (state.meta && state.meta.summary) || '';
   const submoduleIndex = renderAtlasSubmoduleIndex(state);

@@ -91,15 +91,15 @@ function validateActor(actor, errors, idx) {
   requireField(errors, where, 'label', actor && actor.label, isNonEmptyString);
 }
 
-function validateFunction(fn, errors, where, featureSlug, subSlug) {
+function validateFunction(fn, errors, where, featureSlug, subSlug, formatFix) {
   requireField(errors, where, 'name', fn && fn.name, isNonEmptyString);
   if (fn && fn.in !== undefined && typeof fn.in !== 'string') errors.push({ message: `${where}: "in" must be a string (no automatic fix)`, fixCommand: null });
   if (fn && fn.out !== undefined && typeof fn.out !== 'string') errors.push({ message: `${where}: "out" must be a string (no automatic fix)`, fixCommand: null });
   if (fn && fn.side !== undefined && !SIDE_EFFECTS.includes(fn.side)) {
     errors.push({
       message: `${where}: "side" must be one of ${SIDE_EFFECTS.join('|')}`,
-      fixCommand: fn && fn.name
-        ? `apltk architecture function add --feature ${featureSlug} --submodule ${subSlug} --name ${fn.name} --side ${SIDE_EFFECTS[0]}`
+      fixCommand: fn && fn.name && formatFix
+        ? formatFix({ type: 'function', action: 'add', feature: featureSlug, submodule: subSlug, name: fn.name, side: SIDE_EFFECTS[0] })
         : null,
     });
   }
@@ -108,14 +108,14 @@ function validateFunction(fn, errors, where, featureSlug, subSlug) {
   }
 }
 
-function validateVariable(v, errors, where, featureSlug, subSlug) {
+function validateVariable(v, errors, where, featureSlug, subSlug, formatFix) {
   requireField(errors, where, 'name', v && v.name, isNonEmptyString);
   if (v && v.type !== undefined && typeof v.type !== 'string') errors.push({ message: `${where}: "type" must be a string (no automatic fix)`, fixCommand: null });
   if (v && v.scope !== undefined && !VARIABLE_SCOPES.includes(v.scope)) {
     errors.push({
       message: `${where}: "scope" must be one of ${VARIABLE_SCOPES.join('|')}`,
-      fixCommand: v && v.name
-        ? `apltk architecture variable add --feature ${featureSlug} --submodule ${subSlug} --name ${v.name} --scope ${VARIABLE_SCOPES[0]}`
+      fixCommand: v && v.name && formatFix
+        ? formatFix({ type: 'variable', action: 'add', feature: featureSlug, submodule: subSlug, name: v.name, scope: VARIABLE_SCOPES[0] })
         : null,
     });
   }
@@ -130,13 +130,13 @@ function validateError(err, errors, where) {
   if (err && err.means !== undefined && typeof err.means !== 'string') errors.push({ message: `${where}: "means" must be a string (no automatic fix)`, fixCommand: null });
 }
 
-function validateSubmodule(sub, errors, where, featureSlug) {
+function validateSubmodule(sub, errors, where, featureSlug, formatFix) {
   requireField(errors, where, 'slug', sub && sub.slug, isSlug, 'kebab-case slug');
   if (sub && sub.kind !== undefined && !SUBMODULE_KINDS.includes(sub.kind)) {
     errors.push({
       message: `${where}: "kind" must be one of ${SUBMODULE_KINDS.join('|')}`,
-      fixCommand: sub && sub.slug
-        ? `apltk architecture submodule set --feature ${featureSlug} --submodule ${sub.slug} --kind ${SUBMODULE_KINDS[0]}`
+      fixCommand: sub && sub.slug && formatFix
+        ? formatFix({ type: 'submodule', action: 'set', feature: featureSlug, slug: sub.slug, kind: SUBMODULE_KINDS[0] })
         : null,
     });
   }
@@ -148,14 +148,14 @@ function validateSubmodule(sub, errors, where, featureSlug) {
     if (!Array.isArray(sub.functions)) {
       errors.push({ message: `${where}: "functions" must be an array (no automatic fix)`, fixCommand: null });
     } else {
-      sub.functions.forEach((fn, i) => validateFunction(fn, errors, `${where}.functions[${i}]`, featureSlug, sub.slug));
+      sub.functions.forEach((fn, i) => validateFunction(fn, errors, `${where}.functions[${i}]`, featureSlug, sub.slug, formatFix));
     }
   }
   if (sub && sub.variables) {
     if (!Array.isArray(sub.variables)) {
       errors.push({ message: `${where}: "variables" must be an array (no automatic fix)`, fixCommand: null });
     } else {
-      sub.variables.forEach((v, i) => validateVariable(v, errors, `${where}.variables[${i}]`, featureSlug, sub.slug));
+      sub.variables.forEach((v, i) => validateVariable(v, errors, `${where}.variables[${i}]`, featureSlug, sub.slug, formatFix));
     }
   }
   if (sub && sub.dataflow) {
@@ -183,7 +183,9 @@ function validateSubmodule(sub, errors, where, featureSlug) {
           } else if (!fnNames.has(step.fn)) {
             errors.push({
               message: `${stepWhere}: "fn" references unknown function "${step.fn}" — declare it via \`function add\` first`,
-              fixCommand: `apltk architecture function add --feature ${featureSlug} --submodule ${sub.slug} --name ${step.fn}`,
+              fixCommand: formatFix
+                ? formatFix({ type: 'function', action: 'add', feature: featureSlug, submodule: sub.slug, name: step.fn })
+                : null,
             });
           }
         }
@@ -202,7 +204,9 @@ function validateSubmodule(sub, errors, where, featureSlug) {
             if (!varNames.has(name)) {
               errors.push({
                 message: `${refWhere}: unknown variable "${name}" — declare it via \`variable add\` first`,
-                fixCommand: `apltk architecture variable add --feature ${featureSlug} --submodule ${sub.slug} --name ${name}`,
+                fixCommand: formatFix
+                  ? formatFix({ type: 'variable', action: 'add', feature: featureSlug, submodule: sub.slug, name })
+                  : null,
               });
             }
           });
@@ -252,7 +256,7 @@ function validateEdge(edge, errors, where, { allowSelf = false } = {}) {
   }
 }
 
-function validateFeature(feature, errors, where) {
+function validateFeature(feature, errors, where, formatFix) {
   requireField(errors, where, 'slug', feature && feature.slug, isSlug, 'kebab-case slug');
   if (feature && feature.title !== undefined) requireField(errors, where, 'title', feature.title, isNonEmptyString);
   if (feature && feature.story !== undefined && typeof feature.story !== 'string') {
@@ -269,7 +273,7 @@ function validateFeature(feature, errors, where) {
     else {
       const slugs = new Set();
       feature.submodules.forEach((sub, i) => {
-        validateSubmodule(sub, errors, `${where}.submodules[${i}]`, feature.slug);
+        validateSubmodule(sub, errors, `${where}.submodules[${i}]`, feature.slug, formatFix);
         if (sub && isSlug(sub.slug)) {
           if (slugs.has(sub.slug)) errors.push({ message: `${where}: duplicate submodule slug "${sub.slug}" (no automatic fix)`, fixCommand: null });
           slugs.add(sub.slug);
@@ -283,11 +287,15 @@ function validateFeature(feature, errors, where) {
   }
 }
 
-// validate(state) checks structural shape, enum membership, and
+// validate(state, formatFix) checks structural shape, enum membership, and
 // referential integrity (every edge endpoint resolves to a known
 // feature/submodule). Returns { valid, errors } where each error
 // has a `message` string and an optional `fixCommand`.
-function validate(state) {
+//
+// The optional `formatFix` callback receives ({ type, action, ...params })
+// and returns a CLI command string, or null to suppress the fix. When
+// absent (or null), all fixCommand fields in errors are null.
+function validate(state, formatFix) {
   const errors = [];
   if (!state || typeof state !== 'object') {
     return { valid: false, errors: [{ message: 'state: must be an object (no automatic fix)', fixCommand: null }] };
@@ -305,7 +313,7 @@ function validate(state) {
   } else {
     const featureSlugs = new Set();
     state.features.forEach((feature, i) => {
-      validateFeature(feature, errors, `features[${i}]`);
+      validateFeature(feature, errors, `features[${i}]`, formatFix);
       if (feature && isSlug(feature.slug)) {
         if (featureSlugs.has(feature.slug)) errors.push({ message: `features: duplicate feature slug "${feature.slug}" (no automatic fix)`, fixCommand: null });
         featureSlugs.add(feature.slug);
