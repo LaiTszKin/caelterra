@@ -180,7 +180,7 @@ function validateSubmodule(sub, errors, where, featureSlug, formatFix) {
           if (typeof step.fn !== 'string' || !step.fn.trim()) {
             errors.push(noFix(`${stepWhere}: "fn" must be a non-empty string when present`));
           } else if (!fnNames.has(step.fn)) {
-            errors.push(noFix(`${stepWhere}: "fn" references unknown function "${step.fn}" — declare it via \`function add\` first`));
+            errors.push({ message: `${stepWhere}: "fn" references unknown function "${step.fn}" — declare it via \`function add\` first`, fixCommand: formatFix({ type: 'function', action: 'add', feature: featureSlug, submodule: subSlug, name: step.fn }) });
           }
         }
         for (const field of ['reads', 'writes']) {
@@ -196,7 +196,7 @@ function validateSubmodule(sub, errors, where, featureSlug, formatFix) {
               return;
             }
             if (!varNames.has(name)) {
-              errors.push(noFix(`${refWhere}: unknown variable "${name}" — declare it via \`variable add\` first`));
+              errors.push({ message: `${refWhere}: unknown variable "${name}" — declare it via \`variable add\` first`, fixCommand: formatFix({ type: 'variable', action: 'add', feature: featureSlug, submodule: subSlug, name }) });
             }
           });
         }
@@ -317,11 +317,11 @@ function validate(state, formatFix) {
         const where = `features[${feature.slug}].edges[${i}]`;
         for (const [side, ep] of [['from', edge && edge.from], ['to', edge && edge.to]]) {
           if (typeof ep === 'string') {
-            if (!subSlugs.has(ep)) errors.push(noFix(`${where}.${side}: unknown submodule "${ep}" in feature "${feature.slug}"`));
+            if (!subSlugs.has(ep)) errors.push({ message: `${where}.${side}: unknown submodule "${ep}" in feature "${feature.slug}"`, fixCommand: formatFix({ type: 'submodule', action: 'add', feature: feature.slug, slug: ep }) });
           } else if (ep && typeof ep === 'object' && ep.feature && ep.feature !== feature.slug) {
             errors.push(noFix(`${where}.${side}: intra-feature edge cannot point at another feature "${ep.feature}"`));
           } else if (ep && ep.submodule && !subSlugs.has(ep.submodule)) {
-            errors.push(noFix(`${where}.${side}: unknown submodule "${ep.submodule}"`));
+            errors.push({ message: `${where}.${side}: unknown submodule "${ep.submodule}"`, fixCommand: formatFix({ type: 'submodule', action: 'add', feature: feature.slug, slug: ep.submodule }) });
           }
         }
       });
@@ -344,9 +344,9 @@ function validate(state, formatFix) {
       const where = `edges[${i}]`;
       for (const [side, ep] of [['from', edge && edge.from], ['to', edge && edge.to]]) {
         if (!ep || typeof ep !== 'object') continue;
-        if (!featureMap.has(ep.feature)) errors.push(noFix(`${where}.${side}: unknown feature "${ep.feature}"`));
+        if (!featureMap.has(ep.feature)) errors.push({ message: `${where}.${side}: unknown feature "${ep.feature}"`, fixCommand: formatFix({ type: 'feature', action: 'add', slug: ep.feature }) });
         else if (ep.submodule && !featureMap.get(ep.feature).has(ep.submodule)) {
-          errors.push(noFix(`${where}.${side}: unknown submodule "${ep.submodule}" in feature "${ep.feature}"`));
+          errors.push({ message: `${where}.${side}: unknown submodule "${ep.submodule}" in feature "${ep.feature}"`, fixCommand: formatFix({ type: 'submodule', action: 'add', feature: ep.feature, slug: ep.submodule }) });
         }
       }
     });

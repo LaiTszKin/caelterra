@@ -44,6 +44,8 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
     '`--project <root>` to target a specific repository root.',
     '`--spec <spec_dir>` to write into a spec overlay instead of the base atlas.',
     '`--no-render` to batch several mutations before one final render.',
+    '`--dry-run` to preview mutation changes as JSON diff without writing to disk.',
+    '`--evidence <level[:source]>` to tag components with observed/inferred/assumed quality levels.',
   ];
 
   const familyPages = {

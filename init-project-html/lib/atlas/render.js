@@ -189,7 +189,7 @@ function renderAtlasSubmoduleIndex(state) {
           <a href="features/${htmlEscape(it.feature)}/${htmlEscape(it.sub)}.html">
             <span class="atlas-submodule-index__feature">${htmlEscape(it.featureTitle)}</span>
             <span class="atlas-submodule-index__sub">${htmlEscape(it.sub)}</span>
-            <span class="atlas-submodule-index__kind atlas-submodule-index__kind--${htmlEscape(it.kind)}">${htmlEscape(KIND_LABEL[it.kind] || it.kind)}</span>
+            <span class="atlas-submodule-index__kind">${htmlEscape(KIND_LABEL[it.kind] || it.kind)}</span>
           </a>
           ${it.role ? `<p class="atlas-submodule-index__role">${htmlEscape(it.role)}</p>` : ''}
         </li>`).join('\n');
@@ -256,7 +256,7 @@ function renderSubmoduleCard(featureSlug, sub) {
   return `      <li class="submodule-card">
         <a class="submodule-card__link" href="${htmlEscape(link)}">
           <span class="submodule-card__name">${htmlEscape(sub.slug)}</span>
-          <span class="submodule-card__kind submodule-card__kind--${htmlEscape(sub.kind)}">${htmlEscape(kindLabel)}</span>
+          <span class="submodule-card__kind">${htmlEscape(kindLabel)}</span>
         </a>
         ${sub.role ? `<p class="submodule-card__role">${htmlEscape(sub.role)}</p>` : ''}
       </li>`;
@@ -485,7 +485,7 @@ function renderSubmodulePage({ feature, sub, outDir }) {
   const body = `<body>
   <header class="submodule-header">
     <nav class="submodule-breadcrumb"><a href="../../index.html">← Atlas</a> · <a href="index.html">← ${htmlEscape(feature.title || feature.slug)}</a></nav>
-    <h1>${htmlEscape(sub.slug)} <small class="submodule-kind submodule-kind--${htmlEscape(sub.kind)}">${htmlEscape(KIND_LABEL[sub.kind] || sub.kind)}</small></h1>
+    <h1>${htmlEscape(sub.slug)} <small class="submodule-kind">${htmlEscape(KIND_LABEL[sub.kind] || sub.kind)}</small></h1>
     ${sub.role ? `<p class="submodule-role">${htmlEscape(sub.role)}</p>` : ''}
     ${evidenceSummaryHtml}
   </header>
@@ -547,8 +547,6 @@ async function renderAll({ outDir, state, scope = null, removedPaths = [] }) {
   fs.mkdirSync(outDir, { recursive: true });
   copyAssets(outDir);
 
-  const layout = await layoutMacro(state);
-
   const shouldEmit = (kind, slug, subSlug) => {
     if (!scope) return true;
     if (kind === 'macro') return scope.macro === true;
@@ -558,6 +556,11 @@ async function renderAll({ outDir, state, scope = null, removedPaths = [] }) {
     }
     return false;
   };
+
+  let layout = null;
+  if (shouldEmit('macro')) {
+    layout = await layoutMacro(state);
+  }
 
   const written = [];
 
@@ -693,14 +696,9 @@ function removedPagePathsFromDiff(diff) {
 }
 
 module.exports = {
-  KIND_LABEL,
   htmlEscape,
   pagePathFor,
   renderAll,
-  renderMacro,
-  renderFeaturePage,
-  renderSubmodulePage,
-  copyAssets,
   scopeFromDiff,
   removedPagePathsFromDiff,
 };

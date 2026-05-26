@@ -109,28 +109,27 @@ function normalizeSubmodule(sub) {
 // is refreshed.
 function save(atlasDir, state, options = {}) {
   const { touch = true } = options;
-  const next = JSON.parse(JSON.stringify(state));
-  next.meta = next.meta || {};
-  if (touch) next.meta.updatedAt = new Date().toISOString();
+  state.meta = state.meta || {};
+  if (touch) state.meta.updatedAt = new Date().toISOString();
 
   const indexFile = path.join(atlasDir, INDEX_FILE);
   const index = {
-    meta: next.meta,
-    actors: next.actors || [],
-    features: (next.features || []).map((f) => f.slug),
-    edges: next.edges || [],
+    meta: state.meta,
+    actors: state.actors || [],
+    features: (state.features || []).map((f) => f.slug),
+    edges: state.edges || [],
   };
   writeYaml(indexFile, index);
 
   const featuresDir = path.join(atlasDir, FEATURES_DIR);
   fs.mkdirSync(featuresDir, { recursive: true });
-  const wanted = new Set((next.features || []).map((f) => `${f.slug}.yaml`));
+  const wanted = new Set((state.features || []).map((f) => `${f.slug}.yaml`));
   for (const entry of fs.readdirSync(featuresDir)) {
     if (entry.endsWith('.yaml') && !wanted.has(entry)) {
       fs.rmSync(path.join(featuresDir, entry));
     }
   }
-  for (const feature of next.features || []) {
+  for (const feature of state.features || []) {
     writeYaml(path.join(featuresDir, `${feature.slug}.yaml`), feature);
   }
 }
@@ -476,6 +475,10 @@ function appendHistory(atlasDir, entry) {
 function writeUndoSnapshot(atlasDir, state) {
   const stack = readUndoStack(atlasDir);
   stack.push(state);
+  const MAX_STACK = 50;
+  if (stack.length > MAX_STACK) {
+    stack.splice(0, stack.length - MAX_STACK);
+  }
   writeUndoStack(atlasDir, stack);
 }
 

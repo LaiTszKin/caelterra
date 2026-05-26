@@ -46,6 +46,8 @@ const { computeDiff } = stateLib;
 const { renderDiffViewer, toViewerRel } = require('./diff-viewer');
 const { USAGE, buildArchitectureHelpPage } = require('./cli-help');
 
+const BOOLEAN_FLAGS = new Set(['no-render', 'no-open', 'help', 'dry-run', 'json']);
+
 // formatFix generates apltk CLI commands from structured params,
 // injected into schema.validate() so schema stays decoupled from CLI syntax.
 function formatFix({ type, action, feature, submodule, name, side, scope, slug, kind }) {
@@ -104,7 +106,7 @@ function splitList(value) {
 }
 
 function findFirstPositional(args) {
-  const booleanFlags = new Set(['no-render', 'no-open', 'help', 'force', 'dry-run', 'json']);
+  const booleanFlags = BOOLEAN_FLAGS;
   let i = 0;
   while (i < args.length) {
     const token = args[i];
@@ -137,8 +139,7 @@ function parseFlags(args) {
       else {
         name = token.slice(2);
         const nextIsValue = args.length > 0 && !args[0].startsWith('--');
-        const booleanFlags = new Set(['no-render', 'no-open', 'help', 'force', 'dry-run', 'json']);
-        if (booleanFlags.has(name) || !nextIsValue) value = true;
+        if (BOOLEAN_FLAGS.has(name) || !nextIsValue) value = true;
         else value = args.shift();
       }
       if (flags[name] !== undefined) {
@@ -259,14 +260,14 @@ async function performMutation(projectRoot, flags, action, args, mutate, io) {
   }
 
   if (!flags['no-render']) {
-    await runRender({ projectRoot, flags, preloadedMerged: isSpec ? merged : base });
+    await runRender({ projectRoot, flags, preloadedMerged: isSpec ? merged : base, preloadedBase: isSpec ? base : null });
   }
 }
 
-async function runRender({ projectRoot, flags, preloadedMerged }) {
+async function runRender({ projectRoot, flags, preloadedMerged, preloadedBase }) {
   if (flags.spec) {
     const { overlayDir, htmlOutDir } = specOverlayDir(projectRoot, flags.spec);
-    const base = stateLib.load(baseAtlasDir(projectRoot));
+    const base = preloadedBase || stateLib.load(baseAtlasDir(projectRoot));
     const merged = preloadedMerged || stateLib.mergeOverlay(base, stateLib.loadOverlay(overlayDir));
     const diff = stateLib.diffPages(base, merged);
     const scope = renderLib.scopeFromDiff(diff);
@@ -495,6 +496,7 @@ function buildDataflowItem(step, flags) {
   if (fn) item.fn = fn;
   if (reads && reads.length > 0) item.reads = reads;
   if (writes && writes.length > 0) item.writes = writes;
+  if (flags.evidence !== undefined) item.evidence = parseEvidence(flags.evidence);
   return item;
 }
 
@@ -532,6 +534,7 @@ async function verbEdge(action, flags, projectRoot, io) {
         to,
         kind: flags.kind ? String(flags.kind) : 'call',
         label: flags.label !== undefined ? String(flags.label) : '',
+        ...(flags.evidence !== undefined ? { evidence: parseEvidence(flags.evidence) } : {}),
       };
       if (!edge.id) edge.id = `e-${Math.random().toString(36).slice(2, 8)}`;
       const intra = isIntraFeatureEdge(from, to);
@@ -590,6 +593,7 @@ async function verbMeta(action, flags, projectRoot, io) {
   const update = {};
   if (flags.title !== undefined) update.title = String(flags.title);
   if (flags.summary !== undefined) update.summary = String(flags.summary);
+  if (flags.evidence !== undefined) update.evidence = parseEvidence(flags.evidence);
   return performMutation(projectRoot, flags, 'meta set', update, (state) => {
     state.meta = { ...state.meta, ...update };
   }, io);
@@ -601,7 +605,9 @@ async function verbActor(action, flags, projectRoot, io) {
     state.actors = state.actors || [];
     if (action === 'add') {
       state.actors = state.actors.filter((a) => a.id !== id);
-      state.actors.push({ id, label: flags.label !== undefined ? String(flags.label) : id });
+      const actor = { id, label: flags.label !== undefined ? String(flags.label) : id };
+      if (flags.evidence !== undefined) actor.evidence = parseEvidence(flags.evidence);
+      state.actors.push(actor);
     } else if (action === 'remove') {
       state.actors = state.actors.filter((a) => a.id !== id);
     } else {

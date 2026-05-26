@@ -486,6 +486,4 @@ module.exports = {
   buildGraph,
   measureSubmodule,
   measureEdgeLabel,
-  approxTextWidth,
-  wrapByVisualWidth,
 };
