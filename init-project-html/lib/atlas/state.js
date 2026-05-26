@@ -61,12 +61,17 @@ function load(atlasDir) {
     .map((entry) => {
       const slug = typeof entry === 'string' ? entry : entry && entry.slug;
       if (!slug) return null;
-      const featureFile = path.join(atlasDir, FEATURES_DIR, `${slug}.yaml`);
-      const feature = readYaml(featureFile);
-      if (!feature) {
+      try {
+        const featureFile = path.join(atlasDir, FEATURES_DIR, `${slug}.yaml`);
+        const feature = readYaml(featureFile);
+        if (!feature) {
+          return { slug, title: slug, story: '', dependsOn: [], submodules: [], edges: [] };
+        }
+        return normalizeFeature({ ...feature, slug: feature.slug || slug });
+      } catch (e) {
+        console.error(`state: skipping corrupted feature ${slug}: ${e.message}`);
         return { slug, title: slug, story: '', dependsOn: [], submodules: [], edges: [] };
       }
-      return normalizeFeature({ ...feature, slug: feature.slug || slug });
     })
     .filter(Boolean);
 
@@ -473,12 +478,12 @@ function writeUndoSnapshot(atlasDir, state) {
   writeUndoStack(atlasDir, stack);
 }
 
-function readUndoSnapshot(atlasDir) {
+function _readUndoSnapshot(atlasDir) {
   const stack = readUndoStack(atlasDir);
   return stack.length > 0 ? stack[stack.length - 1] : null;
 }
 
-function clearUndoSnapshot(atlasDir) {
+function _clearUndoSnapshot(atlasDir) {
   writeUndoStack(atlasDir, []);
 }
 
@@ -521,9 +526,6 @@ module.exports = {
   INDEX_FILE,
   REMOVED_FILE,
   FEATURES_DIR,
-  HISTORY_FILE,
-  UNDO_FILE,
-  UNDO_STACK_FILE,
   load,
   save,
   loadOverlay,
@@ -535,7 +537,7 @@ module.exports = {
   computeDiff,
   appendHistory,
   writeUndoSnapshot,
-  readUndoSnapshot,
-  clearUndoSnapshot,
+  _readUndoSnapshot,
+  _clearUndoSnapshot,
   consumeUndoSnapshot,
 };
