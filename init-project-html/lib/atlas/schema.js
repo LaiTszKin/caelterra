@@ -73,6 +73,10 @@ function parseEvidence(value) {
   return { level, source };
 }
 
+function noFix(message) {
+  return { message: message + ' (no automatic fix)', fixCommand: null };
+}
+
 function requireField(errors, where, name, value, predicate, hint) {
   if (!predicate(value)) {
     errors.push({
@@ -86,12 +90,12 @@ function requireField(errors, where, name, value, predicate, hint) {
 
 function validateMeta(meta, errors) {
   if (!meta || typeof meta !== 'object') {
-    errors.push({ message: 'meta: missing object (no automatic fix)', fixCommand: null });
+    errors.push(noFix('meta: missing object'));
     return;
   }
   if (meta.title !== undefined) requireField(errors, 'meta', 'title', meta.title, isNonEmptyString);
   if (meta.summary !== undefined && typeof meta.summary !== 'string') {
-    errors.push({ message: 'meta: "summary" must be a string when present (no automatic fix)', fixCommand: null });
+    errors.push(noFix('meta: "summary" must be a string when present'));
   }
 }
 
@@ -103,121 +107,96 @@ function validateActor(actor, errors, idx) {
 
 function validateFunction(fn, errors, where, featureSlug, subSlug, formatFix) {
   requireField(errors, where, 'name', fn && fn.name, isNonEmptyString);
-  if (fn && fn.in !== undefined && typeof fn.in !== 'string') errors.push({ message: `${where}: "in" must be a string (no automatic fix)`, fixCommand: null });
-  if (fn && fn.out !== undefined && typeof fn.out !== 'string') errors.push({ message: `${where}: "out" must be a string (no automatic fix)`, fixCommand: null });
+  if (fn && fn.in !== undefined && typeof fn.in !== 'string') errors.push(noFix(`${where}: "in" must be a string`));
+  if (fn && fn.out !== undefined && typeof fn.out !== 'string') errors.push(noFix(`${where}: "out" must be a string`));
   if (fn && fn.side !== undefined && !SIDE_EFFECTS.includes(fn.side)) {
-    errors.push({
-      message: `${where}: "side" must be one of ${SIDE_EFFECTS.join('|')}`,
-      fixCommand: fn && fn.name && formatFix
-        ? formatFix({ type: 'function', action: 'add', feature: featureSlug, submodule: subSlug, name: fn.name, side: SIDE_EFFECTS[0] })
-        : null,
-    });
+    errors.push(noFix(`${where}: "side" must be one of ${SIDE_EFFECTS.join('|')}`));
   }
   if (fn && fn.purpose !== undefined && typeof fn.purpose !== 'string') {
-    errors.push({ message: `${where}: "purpose" must be a string (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: "purpose" must be a string`));
   }
 }
 
 function validateVariable(v, errors, where, featureSlug, subSlug, formatFix) {
   requireField(errors, where, 'name', v && v.name, isNonEmptyString);
-  if (v && v.type !== undefined && typeof v.type !== 'string') errors.push({ message: `${where}: "type" must be a string (no automatic fix)`, fixCommand: null });
+  if (v && v.type !== undefined && typeof v.type !== 'string') errors.push(noFix(`${where}: "type" must be a string`));
   if (v && v.scope !== undefined && !VARIABLE_SCOPES.includes(v.scope)) {
-    errors.push({
-      message: `${where}: "scope" must be one of ${VARIABLE_SCOPES.join('|')}`,
-      fixCommand: v && v.name && formatFix
-        ? formatFix({ type: 'variable', action: 'add', feature: featureSlug, submodule: subSlug, name: v.name, scope: VARIABLE_SCOPES[0] })
-        : null,
-    });
+    errors.push(noFix(`${where}: "scope" must be one of ${VARIABLE_SCOPES.join('|')}`));
   }
   if (v && v.purpose !== undefined && typeof v.purpose !== 'string') {
-    errors.push({ message: `${where}: "purpose" must be a string (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: "purpose" must be a string`));
   }
 }
 
 function validateError(err, errors, where) {
   requireField(errors, where, 'name', err && err.name, isNonEmptyString);
-  if (err && err.when !== undefined && typeof err.when !== 'string') errors.push({ message: `${where}: "when" must be a string (no automatic fix)`, fixCommand: null });
-  if (err && err.means !== undefined && typeof err.means !== 'string') errors.push({ message: `${where}: "means" must be a string (no automatic fix)`, fixCommand: null });
+  if (err && err.when !== undefined && typeof err.when !== 'string') errors.push(noFix(`${where}: "when" must be a string`));
+  if (err && err.means !== undefined && typeof err.means !== 'string') errors.push(noFix(`${where}: "means" must be a string`));
 }
 
 function validateSubmodule(sub, errors, where, featureSlug, formatFix) {
   requireField(errors, where, 'slug', sub && sub.slug, isSlug, 'kebab-case slug');
   if (sub && sub.kind !== undefined && !SUBMODULE_KINDS.includes(sub.kind)) {
-    errors.push({
-      message: `${where}: "kind" must be one of ${SUBMODULE_KINDS.join('|')}`,
-      fixCommand: sub && sub.slug && formatFix
-        ? formatFix({ type: 'submodule', action: 'set', feature: featureSlug, slug: sub.slug, kind: SUBMODULE_KINDS[0] })
-        : null,
-    });
+    errors.push(noFix(`${where}: "kind" must be one of ${SUBMODULE_KINDS.join('|')}`));
   }
   if (sub && sub.role !== undefined && typeof sub.role !== 'string') {
-    errors.push({ message: `${where}: "role" must be a string (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: "role" must be a string`));
   }
 
   if (sub && sub.functions) {
     if (!Array.isArray(sub.functions)) {
-      errors.push({ message: `${where}: "functions" must be an array (no automatic fix)`, fixCommand: null });
+      errors.push(noFix(`${where}: "functions" must be an array`));
     } else {
       sub.functions.forEach((fn, i) => validateFunction(fn, errors, `${where}.functions[${i}]`, featureSlug, sub.slug, formatFix));
     }
   }
   if (sub && sub.variables) {
     if (!Array.isArray(sub.variables)) {
-      errors.push({ message: `${where}: "variables" must be an array (no automatic fix)`, fixCommand: null });
+      errors.push(noFix(`${where}: "variables" must be an array`));
     } else {
       sub.variables.forEach((v, i) => validateVariable(v, errors, `${where}.variables[${i}]`, featureSlug, sub.slug, formatFix));
     }
   }
   if (sub && sub.dataflow) {
     if (!Array.isArray(sub.dataflow)) {
-      errors.push({ message: `${where}: "dataflow" must be an array (no automatic fix)`, fixCommand: null });
+      errors.push(noFix(`${where}: "dataflow" must be an array`));
     } else {
       const fnNames = new Set((sub.functions || []).map((f) => f && f.name).filter(Boolean));
       const varNames = new Set((sub.variables || []).map((v) => v && v.name).filter(Boolean));
       sub.dataflow.forEach((step, i) => {
         const stepWhere = `${where}.dataflow[${i}]`;
         if (typeof step === 'string') {
-          if (!step.trim()) errors.push({ message: `${stepWhere}: step text must be non-empty (no automatic fix)`, fixCommand: null });
+          if (!step.trim()) errors.push(noFix(`${stepWhere}: step text must be non-empty`));
           return;
         }
         if (!step || typeof step !== 'object') {
-          errors.push({ message: `${stepWhere}: must be a string or an object with "step" (no automatic fix)`, fixCommand: null });
+          errors.push(noFix(`${stepWhere}: must be a string or an object with "step"`));
           return;
         }
         if (!isNonEmptyString(step.step)) {
-          errors.push({ message: `${stepWhere}: "step" must be a non-empty string (no automatic fix)`, fixCommand: null });
+          errors.push(noFix(`${stepWhere}: "step" must be a non-empty string`));
         }
         if (step.fn !== undefined) {
           if (typeof step.fn !== 'string' || !step.fn.trim()) {
-            errors.push({ message: `${stepWhere}: "fn" must be a non-empty string when present (no automatic fix)`, fixCommand: null });
+            errors.push(noFix(`${stepWhere}: "fn" must be a non-empty string when present`));
           } else if (!fnNames.has(step.fn)) {
-            errors.push({
-              message: `${stepWhere}: "fn" references unknown function "${step.fn}" — declare it via \`function add\` first`,
-              fixCommand: formatFix
-                ? formatFix({ type: 'function', action: 'add', feature: featureSlug, submodule: sub.slug, name: step.fn })
-                : null,
-            });
+            errors.push(noFix(`${stepWhere}: "fn" references unknown function "${step.fn}" — declare it via \`function add\` first`));
           }
         }
         for (const field of ['reads', 'writes']) {
           if (step[field] === undefined) continue;
           if (!Array.isArray(step[field])) {
-            errors.push({ message: `${stepWhere}: "${field}" must be an array of variable names (no automatic fix)`, fixCommand: null });
+            errors.push(noFix(`${stepWhere}: "${field}" must be an array of variable names`));
             continue;
           }
           step[field].forEach((name, j) => {
             const refWhere = `${stepWhere}.${field}[${j}]`;
             if (typeof name !== 'string' || !name.trim()) {
-              errors.push({ message: `${refWhere}: variable name must be a non-empty string (no automatic fix)`, fixCommand: null });
+              errors.push(noFix(`${refWhere}: variable name must be a non-empty string`));
               return;
             }
             if (!varNames.has(name)) {
-              errors.push({
-                message: `${refWhere}: unknown variable "${name}" — declare it via \`variable add\` first`,
-                fixCommand: formatFix
-                  ? formatFix({ type: 'variable', action: 'add', feature: featureSlug, submodule: sub.slug, name })
-                  : null,
-              });
+              errors.push(noFix(`${refWhere}: unknown variable "${name}" — declare it via \`variable add\` first`));
             }
           });
         }
@@ -226,7 +205,7 @@ function validateSubmodule(sub, errors, where, featureSlug, formatFix) {
   }
   if (sub && sub.errors) {
     if (!Array.isArray(sub.errors)) {
-      errors.push({ message: `${where}: "errors" must be an array (no automatic fix)`, fixCommand: null });
+      errors.push(noFix(`${where}: "errors" must be an array`));
     } else {
       sub.errors.forEach((err, i) => validateError(err, errors, `${where}.errors[${i}]`));
     }
@@ -236,33 +215,33 @@ function validateSubmodule(sub, errors, where, featureSlug, formatFix) {
 function validateEdgeEndpoint(endpoint, errors, where, allowSelf = false) {
   if (typeof endpoint === 'string') {
     if (allowSelf) {
-      if (!isSlug(endpoint)) errors.push({ message: `${where}: endpoint slug must be kebab-case (no automatic fix)`, fixCommand: null });
+      if (!isSlug(endpoint)) errors.push(noFix(`${where}: endpoint slug must be kebab-case`));
       return;
     }
-    errors.push({ message: `${where}: cross-feature endpoint must be an object {feature, submodule} (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: cross-feature endpoint must be an object {feature, submodule}`));
     return;
   }
   if (!endpoint || typeof endpoint !== 'object') {
-    errors.push({ message: `${where}: endpoint missing (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: endpoint missing`));
     return;
   }
-  if (!isSlug(endpoint.feature)) errors.push({ message: `${where}: endpoint.feature must be a kebab-case slug (no automatic fix)`, fixCommand: null });
+  if (!isSlug(endpoint.feature)) errors.push(noFix(`${where}: endpoint.feature must be a kebab-case slug`));
   if (endpoint.submodule !== undefined && endpoint.submodule !== null && !isSlug(endpoint.submodule)) {
-    errors.push({ message: `${where}: endpoint.submodule must be a kebab-case slug when present (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: endpoint.submodule must be a kebab-case slug when present`));
   }
 }
 
 function validateEdge(edge, errors, where, { allowSelf = false } = {}) {
   if (edge && edge.id !== undefined && !isSlug(edge.id)) {
-    errors.push({ message: `${where}: "id" must be a kebab-case slug (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: "id" must be a kebab-case slug`));
   }
   if (edge && edge.kind !== undefined && !EDGE_KINDS.includes(edge.kind)) {
-    errors.push({ message: `${where}: "kind" must be one of ${EDGE_KINDS.join('|')} (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: "kind" must be one of ${EDGE_KINDS.join('|')}`));
   }
   validateEdgeEndpoint(edge && edge.from, errors, `${where}.from`, allowSelf);
   validateEdgeEndpoint(edge && edge.to, errors, `${where}.to`, allowSelf);
   if (edge && edge.label !== undefined && typeof edge.label !== 'string') {
-    errors.push({ message: `${where}: "label" must be a string (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: "label" must be a string`));
   }
 }
 
@@ -270,29 +249,29 @@ function validateFeature(feature, errors, where, formatFix) {
   requireField(errors, where, 'slug', feature && feature.slug, isSlug, 'kebab-case slug');
   if (feature && feature.title !== undefined) requireField(errors, where, 'title', feature.title, isNonEmptyString);
   if (feature && feature.story !== undefined && typeof feature.story !== 'string') {
-    errors.push({ message: `${where}: "story" must be a string (no automatic fix)`, fixCommand: null });
+    errors.push(noFix(`${where}: "story" must be a string`));
   }
   if (feature && feature.dependsOn) {
-    if (!Array.isArray(feature.dependsOn)) errors.push({ message: `${where}: "dependsOn" must be a list of feature slugs (no automatic fix)`, fixCommand: null });
+    if (!Array.isArray(feature.dependsOn)) errors.push(noFix(`${where}: "dependsOn" must be a list of feature slugs`));
     else feature.dependsOn.forEach((slug, i) => {
-      if (!isSlug(slug)) errors.push({ message: `${where}.dependsOn[${i}]: must be kebab-case slug (no automatic fix)`, fixCommand: null });
+      if (!isSlug(slug)) errors.push(noFix(`${where}.dependsOn[${i}]: must be kebab-case slug`));
     });
   }
   if (feature && feature.submodules) {
-    if (!Array.isArray(feature.submodules)) errors.push({ message: `${where}: "submodules" must be an array (no automatic fix)`, fixCommand: null });
+    if (!Array.isArray(feature.submodules)) errors.push(noFix(`${where}: "submodules" must be an array`));
     else {
       const slugs = new Set();
       feature.submodules.forEach((sub, i) => {
         validateSubmodule(sub, errors, `${where}.submodules[${i}]`, feature.slug, formatFix);
         if (sub && isSlug(sub.slug)) {
-          if (slugs.has(sub.slug)) errors.push({ message: `${where}: duplicate submodule slug "${sub.slug}" (no automatic fix)`, fixCommand: null });
+          if (slugs.has(sub.slug)) errors.push(noFix(`${where}: duplicate submodule slug "${sub.slug}"`));
           slugs.add(sub.slug);
         }
       });
     }
   }
   if (feature && feature.edges) {
-    if (!Array.isArray(feature.edges)) errors.push({ message: `${where}: "edges" must be an array (no automatic fix)`, fixCommand: null });
+    if (!Array.isArray(feature.edges)) errors.push(noFix(`${where}: "edges" must be an array`));
     else feature.edges.forEach((edge, i) => validateEdge(edge, errors, `${where}.edges[${i}]`, { allowSelf: true }));
   }
 }
@@ -308,24 +287,24 @@ function validateFeature(feature, errors, where, formatFix) {
 function validate(state, formatFix) {
   const errors = [];
   if (!state || typeof state !== 'object') {
-    return { valid: false, errors: [{ message: 'state: must be an object (no automatic fix)', fixCommand: null }] };
+    return [noFix('state: must be an object')];
   }
 
   validateMeta(state.meta, errors);
 
   if (state.actors) {
-    if (!Array.isArray(state.actors)) errors.push({ message: 'actors: must be an array (no automatic fix)', fixCommand: null });
+    if (!Array.isArray(state.actors)) errors.push(noFix('actors: must be an array'));
     else state.actors.forEach((actor, i) => validateActor(actor, errors, i));
   }
 
   if (!Array.isArray(state.features)) {
-    errors.push({ message: 'features: must be an array (no automatic fix)', fixCommand: null });
+    errors.push(noFix('features: must be an array'));
   } else {
     const featureSlugs = new Set();
     state.features.forEach((feature, i) => {
       validateFeature(feature, errors, `features[${i}]`, formatFix);
       if (feature && isSlug(feature.slug)) {
-        if (featureSlugs.has(feature.slug)) errors.push({ message: `features: duplicate feature slug "${feature.slug}" (no automatic fix)`, fixCommand: null });
+        if (featureSlugs.has(feature.slug)) errors.push(noFix(`features: duplicate feature slug "${feature.slug}"`));
         featureSlugs.add(feature.slug);
       }
     });
@@ -338,11 +317,11 @@ function validate(state, formatFix) {
         const where = `features[${feature.slug}].edges[${i}]`;
         for (const [side, ep] of [['from', edge && edge.from], ['to', edge && edge.to]]) {
           if (typeof ep === 'string') {
-            if (!subSlugs.has(ep)) errors.push({ message: `${where}.${side}: unknown submodule "${ep}" in feature "${feature.slug}" (no automatic fix)`, fixCommand: null });
+            if (!subSlugs.has(ep)) errors.push(noFix(`${where}.${side}: unknown submodule "${ep}" in feature "${feature.slug}"`));
           } else if (ep && typeof ep === 'object' && ep.feature && ep.feature !== feature.slug) {
-            errors.push({ message: `${where}.${side}: intra-feature edge cannot point at another feature "${ep.feature}" (no automatic fix)`, fixCommand: null });
+            errors.push(noFix(`${where}.${side}: intra-feature edge cannot point at another feature "${ep.feature}"`));
           } else if (ep && ep.submodule && !subSlugs.has(ep.submodule)) {
-            errors.push({ message: `${where}.${side}: unknown submodule "${ep.submodule}" (no automatic fix)`, fixCommand: null });
+            errors.push(noFix(`${where}.${side}: unknown submodule "${ep.submodule}"`));
           }
         }
       });
@@ -350,7 +329,7 @@ function validate(state, formatFix) {
   }
 
   if (state.edges) {
-    if (!Array.isArray(state.edges)) errors.push({ message: 'edges: must be an array (no automatic fix)', fixCommand: null });
+    if (!Array.isArray(state.edges)) errors.push(noFix('edges: must be an array'));
     else state.edges.forEach((edge, i) => validateEdge(edge, errors, `edges[${i}]`));
   }
 
@@ -365,9 +344,9 @@ function validate(state, formatFix) {
       const where = `edges[${i}]`;
       for (const [side, ep] of [['from', edge && edge.from], ['to', edge && edge.to]]) {
         if (!ep || typeof ep !== 'object') continue;
-        if (!featureMap.has(ep.feature)) errors.push({ message: `${where}.${side}: unknown feature "${ep.feature}" (no automatic fix)`, fixCommand: null });
+        if (!featureMap.has(ep.feature)) errors.push(noFix(`${where}.${side}: unknown feature "${ep.feature}"`));
         else if (ep.submodule && !featureMap.get(ep.feature).has(ep.submodule)) {
-          errors.push({ message: `${where}.${side}: unknown submodule "${ep.submodule}" in feature "${ep.feature}" (no automatic fix)`, fixCommand: null });
+          errors.push(noFix(`${where}.${side}: unknown submodule "${ep.submodule}" in feature "${ep.feature}"`));
         }
       }
     });
