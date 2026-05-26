@@ -44,8 +44,8 @@ const renderLib = require('./render');
 const { parseEvidence } = schema;
 const { computeDiff } = stateLib;
 const { renderDiffViewer } = require('./diff-viewer');
-const { buildArchitectureHelpPage } = require('./cli-help');
 const cliHelp = require('./cli-help');
+const { buildArchitectureHelpPage } = cliHelp;
 
 const BOOLEAN_FLAGS = new Set(['no-render', 'no-open', 'help', 'dry-run', 'json']);
 
@@ -230,10 +230,11 @@ async function performMutation(projectRoot, flags, action, args, mutate, io) {
       mutate(dryRunState, dryRunState, null);
     }
     const diff = computeDiff(before, dryRunState);
+    const { addedFeatures, modifiedFeatures, removedFeatures } = diff;
     try {
-      (io || process).stdout.write(JSON.stringify({ action: 'dry-run', diff }) + '\n');
+      io.stdout.write(JSON.stringify({ action: 'dry-run', diff: { addedFeatures, modifiedFeatures, removedFeatures } }) + '\n');
     } catch (err) {
-      (io || process).stderr.write(`dry-run error: ${err.message}\n`);
+      io.stderr.write(`dry-run error: ${err.message}\n`);
     }
     return;
   }
@@ -483,7 +484,7 @@ function buildDataflowItem(step, flags) {
   const fn = flags.fn === undefined ? undefined : String(flags.fn).trim();
   const reads = splitList(flags.reads);
   const writes = splitList(flags.writes);
-  const annotated = (fn && fn.length > 0) || (reads && reads.length > 0) || (writes && writes.length > 0);
+  const annotated = (fn && fn.length > 0) || (reads && reads.length > 0) || (writes && writes.length > 0) || flags.evidence !== undefined;
   if (!annotated) return step;
   const item = { step };
   if (fn) item.fn = fn;
@@ -709,7 +710,7 @@ async function verbScan(flags, projectRoot, io) {
       .replace(/[^a-z0-9-]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '')
-      || entry.name.toLowerCase();
+      || entry.name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
     results.push({
       name: entry.name,
@@ -719,7 +720,7 @@ async function verbScan(flags, projectRoot, io) {
   }
 
   try {
-    io.stdout.write(JSON.stringify(results, null, 2) + '\n');
+    io.stdout.write(JSON.stringify(results) + '\n');
   } catch (err) {
     io.stderr.write(`scan error: ${err.message}\n`);
   }
@@ -773,7 +774,8 @@ async function verbDiff(flags, projectRoot, io) {
   const indexPath = path.join(outDir, 'index.html');
   fs.writeFileSync(indexPath, html, 'utf8');
   io.stdout.write(`${indexPath}\n`);
-  io.stdout.write(`Diff pages: ${changes.length} (modified=${changes.filter((c) => c.kind === 'modified').length}, added=${changes.filter((c) => c.kind === 'added').length}, removed=${changes.filter((c) => c.kind === 'removed').length})\n`);
+  const diffCounts = changes.reduce((acc, c) => { acc[c.kind] = (acc[c.kind] || 0) + 1; return acc; }, {});
+  io.stdout.write(`Diff pages: ${changes.length} (modified=${diffCounts.modified || 0}, added=${diffCounts.added || 0}, removed=${diffCounts.removed || 0})\n`);
   if (!flags['no-open']) openInBrowser(indexPath);
   return 0;
 }
@@ -1192,8 +1194,6 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
 }
 
 module.exports = {
-  get USAGE() { return cliHelp.USAGE; },
-  buildArchitectureHelpPage,
   dispatch,
   parseFlags,
   findProjectRoot,
