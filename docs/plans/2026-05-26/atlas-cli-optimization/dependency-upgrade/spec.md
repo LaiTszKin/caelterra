@@ -31,9 +31,9 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R1.1 `package.json` 中 `devDependencies.@types/node` 為 `^25.9.1`
-- [ ] R1.2 `package.json` 中 `engines.node` 為 `>=20.19.0`
-- [ ] R1.3 `npm install` 成功完成（無 peer dependency 衝突）
+- [x] R1.1 `package.json` 中 `devDependencies.@types/node` 為 `^25.9.1`
+- [x] R1.2 `package.json` 中 `engines.node` 為 `>=20.19.0`
+- [x] R1.3 `npm install` 成功完成（無 peer dependency 衝突）
 
 ### Requirement 2: 專案可正常編譯與測試
 **GIVEN** 依賴已升級
@@ -44,8 +44,8 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R2.1 `npx tsc --noEmit` 通過型別檢查
-- [ ] R2.2 `npm test` 全部通過
+- [x] R2.1 `npx tsc --noEmit` 通過型別檢查
+- [x] R2.2 `npm test` 全部通過
 
 ### Requirement 3: CLI 正常運作
 **GIVEN** 依賴已升級且專案已編譯
@@ -56,8 +56,8 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R3.1 `node dist/bin/apollo-toolkit.js architecture --help` 正常輸出
-- [ ] R3.2 `apltk architecture validate`（在有有效 atlas 的專案上）輸出 `atlas: OK`
+- [x] R3.1 `node dist/bin/apollo-toolkit.js architecture --help` 正常輸出
+- [x] R3.2 `apltk architecture validate`（在有有效 atlas 的專案上）輸出 `atlas: OK`
 
 ## Error and Edge Cases
 - [ ] 若使用者 Node.js 版本低於 20.19.0，`npm install` 顯示 engine 警告（非錯誤，不阻斷安裝）
