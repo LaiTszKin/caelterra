@@ -1,0 +1,164 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Spec Skill Test Question Schema",
+  "description": "標準化測試題目格式，用於評估 spec 技能的輸出品質。評分標準欄位僅供評分器讀取，不暴露給被測 agent。",
+  "type": "object",
+  "required": ["id", "userPrompt", "projectContext", "scoringCriteria", "difficulty"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "題目唯一識別碼"
+    },
+    "userPrompt": {
+      "type": "string",
+      "description": "使用者輸入的需求描述（繁體中文）"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["basic", "advanced", "edge"],
+      "description": "題目難度：basic = 基本場景，advanced = 進階跨模塊場景，edge = 邊界/異常場景"
+    },
+    "projectContext": {
+      "type": "object",
+      "required": ["description", "files"],
+      "additionalProperties": false,
+      "description": "模擬專案狀態，提供被測 agent 理解專案背景所需的資訊",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "專案背景描述，說明專案類型、技術堆疊、現有功能模塊等"
+        },
+        "files": {
+          "type": "array",
+          "description": "模擬專案中的關鍵檔案列表",
+          "items": {
+            "type": "object",
+            "required": ["path", "content"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "相對於專案根目錄的檔案路徑"
+              },
+              "content": {
+                "type": "string",
+                "description": "檔案內容（簡化的範例程式碼或配置）"
+              }
+            }
+          }
+        }
+      }
+    },
+    "scoringCriteria": {
+      "type": "object",
+      "required": ["outcome", "process", "style", "efficiency"],
+      "additionalProperties": false,
+      "description": "多維度評分標準，僅供評分器讀取。此欄位絕不傳遞給被測 agent。",
+      "properties": {
+        "outcome": {
+          "type": "object",
+          "required": ["weight", "checks"],
+          "additionalProperties": false,
+          "description": "任務完成維度 — 評估 spec 是否正確滿足了使用者需求",
+          "properties": {
+            "weight": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "此維度在總分中的權重"
+            },
+            "checks": {
+              "type": "array",
+              "description": "檢查項列表",
+              "minItems": 1,
+              "items": { "$ref": "#/definitions/check" }
+            }
+          }
+        },
+        "process": {
+          "type": "object",
+          "required": ["weight", "checks"],
+          "additionalProperties": false,
+          "description": "流程遵循維度 — 評估 agent 是否正確調用了 spec skill 及其工作流程",
+          "properties": {
+            "weight": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "此維度在總分中的權重"
+            },
+            "checks": {
+              "type": "array",
+              "description": "檢查項列表",
+              "minItems": 1,
+              "items": { "$ref": "#/definitions/check" }
+            }
+          }
+        },
+        "style": {
+          "type": "object",
+          "required": ["weight", "checks"],
+          "additionalProperties": false,
+          "description": "輸出格式維度 — 評估 spec 文件的格式、結構、語言品質",
+          "properties": {
+            "weight": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "此維度在總分中的權重"
+            },
+            "checks": {
+              "type": "array",
+              "description": "檢查項列表",
+              "minItems": 1,
+              "items": { "$ref": "#/definitions/check" }
+            }
+          }
+        },
+        "efficiency": {
+          "type": "object",
+          "required": ["weight", "checks"],
+          "additionalProperties": false,
+          "description": "效率維度 — 評估生成 spec 過程中的資源使用效率",
+          "properties": {
+            "weight": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "此維度在總分中的權重"
+            },
+            "checks": {
+              "type": "array",
+              "description": "檢查項列表",
+              "minItems": 1,
+              "items": { "$ref": "#/definitions/check" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "check": {
+      "type": "object",
+      "required": ["id", "description", "passCondition"],
+      "additionalProperties": false,
+      "description": "單一檢查項",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "檢查項唯一識別碼"
+        },
+        "description": {
+          "type": "string",
+          "description": "檢查項描述，說明檢查什麼"
+        },
+        "passCondition": {
+          "type": "string",
+          "description": "通過條件，說明如何判斷此檢查項為通過"
+        }
+      }
+    }
+  }
+}
