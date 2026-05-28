@@ -246,7 +246,7 @@ function readPayloadFile(rawPath: string): PayloadEntry {
 }
 
 function readAtFileValue(fieldName: string, value: string | null): string | null {
-  if (value === null) return null;
+  if (value == null) return null;
   if (value.startsWith('@@')) return value.slice(1);
   if (value === '@-') {
     throw new Error('stdin reading (@-) is not supported in handler mode');

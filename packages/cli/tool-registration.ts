@@ -23,7 +23,14 @@ const TOOL_MODULE_NAMES = [
 ];
 
 // Sync tool-name lookup for parseArguments (does not load handlers)
-const TOOL_NAMES = new Set(TOOL_MODULE_NAMES.map((name) => name.replace('@laitszkin/tool-', '')));
+const TOOL_NAMES = new Set([
+  ...TOOL_MODULE_NAMES.map((name) => name.replace('@laitszkin/tool-', '')),
+  // Tool definitions whose name differs from the module suffix
+  'extract-pdf-text-pdfkit',
+  // Known aliases (must match tool definitions)
+  'extract-codex-conversations',
+  'extract-skill-conversations',
+]);
 
 export function isKnownToolName(name: string): boolean {
   return TOOL_NAMES.has(name);
