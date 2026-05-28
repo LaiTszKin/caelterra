@@ -17,7 +17,6 @@
     "test": "node --test dist/"
   },
   "dependencies": {
-    "@laitszkin/tool-registry": "*",
-    "@laitszkin/tool-utils": "*"
+    "@laitszkin/tool-registry": "*"
   }
 }

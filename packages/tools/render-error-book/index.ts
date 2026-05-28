@@ -305,14 +305,3 @@ export const tool: ToolDefinition = {
   description: 'Generate an error book PDF from JSON data.',
   handler: renderErrorBookHandler,
 };
-
-export const yargsCommand = {
-  command: 'render-error-book [args...]',
-  describe: 'Generate an error book PDF from JSON data.',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (argv: any) => {
-    const args = process.argv.slice(2);
-    const code = await renderErrorBookHandler(args, {});
-    process.exitCode = code;
-  },
-};

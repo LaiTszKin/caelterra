@@ -29,27 +29,3 @@ export const tool: ToolDefinition = {
   description: 'Open the project HTML architecture atlas, or render a paginated diff (`architecture diff`).',
   handler: architectureHandler,
 };
-
-export const yargsCommand = {
-  command: 'architecture [args...]',
-  describe: 'Open the project HTML architecture atlas, or render a paginated diff.',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (argv: any) => {
-    const toolArgs: string[] = [];
-    for (const [key, value] of Object.entries(argv)) {
-      if (key === '_' || key === '$0') continue;
-      if (value === true) {
-        toolArgs.push(`--${key}`);
-      } else if (value !== false && value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          for (const v of value) {
-            toolArgs.push(`--${key}`, String(v));
-          }
-        } else {
-          toolArgs.push(`--${key}`, String(value));
-        }
-      }
-    }
-    return architectureHandler(toolArgs, {});
-  },
-};

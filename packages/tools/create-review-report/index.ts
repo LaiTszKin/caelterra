@@ -202,30 +202,3 @@ export const tool: ToolDefinition = {
   description: 'Copy the QA code review report template to the spec directory.',
   handler: createReviewReportHandler,
 };
-
-export const yargsCommand = {
-  command: 'create-review-report [options] [<spec-path>]',
-  describe: 'Copy the QA code review report template to the spec directory.',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (argv: any) => {
-    const toolArgs: string[] = [];
-    const positional: string[] = [];
-    for (const [key, value] of Object.entries(argv)) {
-      if (key === '_' || key === '$0') continue;
-      if (key === 'spec-path') {
-        if (typeof value === 'string') positional.push(value);
-      } else if (value === true) {
-        toolArgs.push(`--${key}`);
-      } else if (value !== false && value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          for (const v of value) {
-            toolArgs.push(`--${key}`, String(v));
-          }
-        } else {
-          toolArgs.push(`--${key}`, String(value));
-        }
-      }
-    }
-    return createReviewReportHandler([...positional, ...toolArgs], {});
-  },
-};

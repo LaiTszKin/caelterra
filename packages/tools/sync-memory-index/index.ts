@@ -124,26 +124,3 @@ export const tool: ToolDefinition = {
   description: 'Sync memory file index into AGENTS.md',
   handler: syncMemoryIndexHandler,
 };
-
-export const yargsCommand = {
-  command: 'sync-memory-index',
-  describe: 'Sync memory file index into AGENTS.md',
-  builder: (yargs: any) =>
-    yargs
-      .option('agents-file', { type: 'string', describe: 'Path to AGENTS.md file' })
-      .option('memory-dir', { type: 'string', describe: 'Directory containing memory files' })
-      .option('section-title', { type: 'string', describe: 'Title for the memory index section' })
-      .option('instruction-line', { type: 'string', describe: 'Additional instruction line (repeatable)' })
-      .strict(),
-  handler: async (argv: any) => {
-    const args: string[] = [];
-    if (argv.agentsFile) { args.push('--agents-file', argv.agentsFile); }
-    if (argv.memoryDir) { args.push('--memory-dir', argv.memoryDir); }
-    if (argv.sectionTitle) { args.push('--section-title', argv.sectionTitle); }
-    if (argv.instructionLine) {
-      const lines = Array.isArray(argv.instructionLine) ? argv.instructionLine : [argv.instructionLine];
-      for (const line of lines) { args.push('--instruction-line', line); }
-    }
-    await syncMemoryIndexHandler(args, { stdout: process.stdout, stderr: process.stderr });
-  },
-};

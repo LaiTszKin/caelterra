@@ -122,24 +122,6 @@ export const tool: ToolDefinition = {
   name: 'extract-conversations',
   category: 'Codex memory & learning',
   description: 'Extract recent Codex sessions for memory updates.',
+  aliases: ['extract-codex-conversations', 'extract-skill-conversations'],
   handler: extractConversationsHandler,
-};
-
-export const yargsCommand = {
-  command: 'extract-conversations [args...]',
-  describe: 'Extract recent Codex sessions for memory updates.',
-  builder: (yargs: any) => yargs
-    .option('hours', { type: 'number', describe: 'Hours to look back', default: 24 })
-    .option('format', { type: 'string', describe: 'Output format: text|json', default: 'text' })
-    .strict(),
-  handler: async (argv: any) => {
-    const args: string[] = [];
-    if (argv.hours && argv.hours !== 24) args.push('--hours', String(argv.hours));
-    if (argv.format && argv.format !== 'text') args.push('--format', String(argv.format));
-    await extractConversationsHandler(args, {
-      stdout: process.stdout,
-      stderr: process.stderr,
-      env: process.env as NodeJS.ProcessEnv,
-    });
-  },
 };

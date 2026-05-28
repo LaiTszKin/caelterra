@@ -185,26 +185,3 @@ export const tool: ToolDefinition = {
   description: 'Read GitHub issue details through gh.',
   handler: readGitHubIssueHandler,
 };
-
-export const yargsCommand = {
-  command: 'read-github-issue [issue]',
-  describe: 'Read GitHub issue details through gh.',
-  builder: (yargs: any) => yargs
-    .option('repo', { type: 'string', describe: 'GitHub repo (owner/repo)' })
-    .option('comments', { type: 'boolean', describe: 'Include comments', default: false })
-    .option('json', { type: 'boolean', describe: 'Output as JSON', default: false })
-    .strict(),
-  handler: async (argv: any) => {
-    const args: string[] = [];
-    // Positional issue number
-    if (argv._ && argv._.length > 0) args.push(String(argv._[0]));
-    if (argv.repo) args.push('--repo', String(argv.repo));
-    if (argv.comments) args.push('--comments');
-    if (argv.json) args.push('--json');
-    await readGitHubIssueHandler(args, {
-      stdout: process.stdout,
-      stderr: process.stderr,
-      env: process.env as NodeJS.ProcessEnv,
-    });
-  },
-};

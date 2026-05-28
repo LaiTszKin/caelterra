@@ -35,12 +35,12 @@
 
 - [x] **回歸測試**: CLI 幫助文字輸出格式與現有完全一致 (`REG-01`)
 - [x] **Unit drift checks**: `parseArguments` → yargs 命令定義的等價性驗證 (`REG-02`)
-- [ ] **Property-based coverage**: `N/A` — 本次為重構，不改變業務邏輯
+- [x] **Property-based coverage**: `N/A` — 本次為重構，不改變業務邏輯
 - [x] **外部服務 mocked/faked**: TUI 測試使用 fake stdin/stdout streams
-- [ ] **Adversarial cases**: `N/A` — 不變更安全相關邏輯
+- [x] **Adversarial cases**: `N/A` — 不變更安全相關邏輯
 - [x] **授權/冪等性/並行**: installer manifest 一致性驗證 (`IT-04`)
 - [x] **Assertions verify outcomes**: 每個測試驗證具體輸出或狀態變更，非僅 "returns 0"
-- [ ] **Fixtures reproducible**: `N/A` — TUI 測試手動注入 I/O streams
+- [x] **Fixtures reproducible**: `N/A` — TUI 測試手動注入 I/O streams
 
 ---
 

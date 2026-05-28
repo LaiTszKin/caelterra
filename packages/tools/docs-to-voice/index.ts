@@ -804,14 +804,3 @@ export const tool: ToolDefinition = {
   description: 'Convert text into audio and sentence timelines.',
   handler: docsToVoiceHandler,
 };
-
-export const yargsCommand = {
-  command: 'docs-to-voice [args...]',
-  describe: 'Convert text into audio and sentence timelines.',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (argv: any) => {
-    const args = process.argv.slice(2);
-    const code = await docsToVoiceHandler(args, {});
-    process.exitCode = code;
-  },
-};

@@ -122,26 +122,3 @@ export const tool: ToolDefinition = {
   description: 'Filter log lines by time window',
   handler: filterLogsHandler,
 };
-
-export const yargsCommand = {
-  command: 'filter-logs [paths...]',
-  describe: 'Filter log lines by time window',
-  builder: (yargs: any) =>
-    yargs
-      .option('start', { type: 'string', describe: 'Start of time window (inclusive)' })
-      .option('end', { type: 'string', describe: 'End of time window (inclusive)' })
-      .option('assume-timezone', { type: 'string', describe: 'Timezone for timestamps without offset' })
-      .option('keep-undated', { type: 'boolean', describe: 'Keep lines without timestamps' })
-      .option('count-only', { type: 'boolean', describe: 'Only print the match count' })
-      .strict(),
-  handler: async (argv: any) => {
-    const args: string[] = [];
-    if (argv.paths) args.push(...(Array.isArray(argv.paths) ? argv.paths : [argv.paths]));
-    if (argv.start) { args.push('--start', argv.start); }
-    if (argv.end) { args.push('--end', argv.end); }
-    if (argv.assumeTimezone) { args.push('--assume-timezone', argv.assumeTimezone); }
-    if (argv.keepUndated) { args.push('--keep-undated'); }
-    if (argv.countOnly) { args.push('--count-only'); }
-    await filterLogsHandler(args, { stdout: process.stdout, stderr: process.stderr });
-  },
-};

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@laitszkin/tool-registry": "*",
-    "@laitszkin/tool-utils": "*"
+    "@laitszkin/tool-utils": "*",
+    "js-yaml": "^4.1.1"
   }
 }

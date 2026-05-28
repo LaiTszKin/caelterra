@@ -37,8 +37,6 @@
     "@laitszkin/tool-architecture": "*",
     "@laitszkin/tool-create-specs": "*",
     "@laitszkin/tool-create-review-report": "*",
-    "@laitszkin/tool-extract-pdf-text": "*",
-    "yargs": "^18.0.0",
-    "js-yaml": "^4.1.1"
+    "@laitszkin/tool-extract-pdf-text": "*"
   }
 }

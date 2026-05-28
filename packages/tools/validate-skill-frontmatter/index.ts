@@ -122,12 +122,3 @@ export const tool: ToolDefinition = {
   description: 'Validate SKILL.md frontmatter format and naming conventions',
   handler: validateSkillFrontmatterHandler,
 };
-
-export const yargsCommand = {
-  command: 'validate-skill-frontmatter',
-  describe: 'Validate SKILL.md frontmatter format and naming conventions',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (_argv: any) => {
-    await validateSkillFrontmatterHandler([], { stdout: process.stdout, stderr: process.stderr });
-  },
-};

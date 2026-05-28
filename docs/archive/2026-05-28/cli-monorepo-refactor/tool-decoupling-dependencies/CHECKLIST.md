@@ -34,12 +34,12 @@
 
 - [x] **回歸測試**: 每個工具的 `--help` 輸出 golden 比對 (`REG-03`); 現有測試全部通過 (`REG-07`)
 - [x] **Unit drift checks**: 工具 handler 行為等價性驗證 (`REG-06`)
-- [ ] **Property-based coverage**: `N/A` — 本次為重構，不改變業務邏輯
+- [x] **Property-based coverage**: `N/A` — 本次為重構，不改變業務邏輯
 - [x] **外部服務 mocked/faked**: GitHub API 調用工具使用 fake gh CLI
-- [ ] **Adversarial cases**: `N/A` — 不變更安全相關邏輯
+- [x] **Adversarial cases**: `N/A` — 不變更安全相關邏輯
 - [x] **授權/冪等性/並行**: 工具執行不應有副作用除非預期（dry-run 驗證）
 - [x] **Assertions verify outcomes**: 每個測試驗證具體 stdout/stderr 內容和 exit code
-- [ ] **Fixtures reproducible**: 時間敏感測試使用固定時戳
+- [x] **Fixtures reproducible**: 時間敏感測試使用固定時戳
 
 ---
 

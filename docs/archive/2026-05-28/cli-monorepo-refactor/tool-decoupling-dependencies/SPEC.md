@@ -44,12 +44,12 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R1.1 20 個工具分別遷移至獨立的 `packages/tools/<tool-name>/` package（不按類別分組，每個工具一個 package）
-- [ ] R1.2 每個工具 package 有獨立的 `package.json` 與 `tsconfig.json`
-- [ ] R1.3 每個工具 package 匯出 `tool: ToolDefinition` 作為預設匯出或命名匯出
-- [ ] R1.4 工具 package 可通過 `tool-registry` 的 `registerTool()` API 註冊
-- [ ] R1.5 跨工具共享的 `log-cli-utils.ts` 提取為共用 package（如 `packages/tool-utils/`）
-- [ ] R1.6 `skill-discovery.ts` 工具函數提取至 `packages/tool-utils/`
+- [x] R1.1 20 個工具分別遷移至獨立的 `packages/tools/<tool-name>/` package（不按類別分組，每個工具一個 package）
+- [x] R1.2 每個工具 package 有獨立的 `package.json` 與 `tsconfig.json`
+- [x] R1.3 每個工具 package 匯出 `tool: ToolDefinition` 作為預設匯出或命名匯出
+- [x] R1.4 工具 package 可通過 `tool-registry` 的 `registerTool()` API 註冊
+- [x] R1.5 跨工具共享的 `log-cli-utils.ts` 提取為共用 package（如 `packages/tool-utils/`）
+- [x] R1.6 `skill-discovery.ts` 工具函數提取至 `packages/tool-utils/`
 
 ### Requirement 2: 外部技術棧整合
 
@@ -64,11 +64,11 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R2.1 `packages/cli` 使用 `yargs` 解析頂層命令（`install`, `uninstall`, `tools`, `<tool>`）
-- [ ] R2.2 每個工具 package 使用 `yargs` 定義自己的子命令與選項
-- [ ] R2.3 `packages/tui` 使用 `chalk` 實作終端顏色輸出，使用 `@inquirer/prompts` 實作互動式元件
-- [ ] R2.4 `--help` 輸出格式與現有輸出一致（包含工具描述、使用場景、範例）
-- [ ] R2.5 現有所有 CLI 參數（`--home`, `--symlink`, `--copy`, `--yes`, `-y`, `--start`, `--end` 等）行為保持不變
+- [x] R2.1 `packages/cli` 使用 `yargs` 解析頂層命令（`install`, `uninstall`, `tools`, `<tool>`）
+- [x] R2.2 每個工具 package 使用 `yargs` 定義自己的子命令與選項
+- [x] R2.3 `packages/tui` 使用 `chalk` 實作終端顏色輸出，使用 `@inquirer/prompts` 實作互動式元件
+- [x] R2.4 `--help` 輸出格式與現有輸出一致（包含工具描述、使用場景、範例）
+- [x] R2.5 現有所有 CLI 參數（`--home`, `--symlink`, `--copy`, `--yes`, `-y`, `--start`, `--end` 等）行為保持不變
 
 ### Requirement 3: 向後相容性
 
@@ -81,21 +81,21 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R3.1 所有現有 CLI 命令名稱保持不變（`install`, `uninstall`, `tools`, 各工具名稱）
-- [ ] R3.2 所有現有 CLI 參數與選項格式保持不變
-- [ ] R3.3 stdout/stderr 輸出格式保持不變（幫助文字、錯誤訊息、安裝摘要）
-- [ ] R3.4 exit code 行為保持不變（成功 = 0，失敗 = 1）
-- [ ] R3.5 `package.json` 的 `bin` 欄位指向正確的入口檔案
-- [ ] R3.6 現有測試全部通過（可能需要更新 import 路徑，但測試邏輯不變）
+- [x] R3.1 所有現有 CLI 命令名稱保持不變（`install`, `uninstall`, `tools`, 各工具名稱）
+- [x] R3.2 所有現有 CLI 參數與選項格式保持不變
+- [x] R3.3 stdout/stderr 輸出格式保持不變（幫助文字、錯誤訊息、安裝摘要）
+- [x] R3.4 exit code 行為保持不變（成功 = 0，失敗 = 1）
+- [x] R3.5 `package.json` 的 `bin` 欄位指向正確的入口檔案
+- [x] R3.6 現有測試全部通過（可能需要更新 import 路徑，但測試邏輯不變）
 
 ## Error and Edge Cases
 
-- [ ] 當工具 package 的 `handler` 拋出未捕獲異常時，tool-registry 應捕獲並返回 exit code 1，不導致整個 CLI 崩潰
-- [ ] 當外部 CLI 框架解析到未知選項時，應輸出幫助文字並返回非零 exit code
-- [ ] 當 `@ts-nocheck` 被移除後，TypeScript 編譯應無錯誤
-- [ ] 當工具 package 之間存在隱式循環依賴時，建置應失敗
-- [ ] 當使用者提供格式錯誤的時間戳（如 `filter-logs --start "invalid"`）時，錯誤訊息應與現有輸出一致
-- [ ] 當 `APOLLO_TOOLKIT_HOME` 環境變數未設定時，installer 應使用預設路徑（行為不變）
+- [x] 當工具 package 的 `handler` 拋出未捕獲異常時，tool-registry 應捕獲並返回 exit code 1，不導致整個 CLI 崩潰
+- [x] 當外部 CLI 框架解析到未知選項時，應輸出幫助文字並返回非零 exit code
+- [x] 當 `@ts-nocheck` 被移除後，TypeScript 編譯應無錯誤
+- [x] 當工具 package 之間存在隱式循環依賴時，建置應失敗
+- [x] 當使用者提供格式錯誤的時間戳（如 `filter-logs --start "invalid"`）時，錯誤訊息應與現有輸出一致
+- [x] 當 `APOLLO_TOOLKIT_HOME` 環境變數未設定時，installer 應使用預設路徑（行為不變）
 
 ## Resolved Decisions
 

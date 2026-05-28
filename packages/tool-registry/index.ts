@@ -12,8 +12,6 @@ export {
   runTool,
   formatExamples,
   formatToolList,
-  buildToolOverview,
-  buildToolExamples,
   buildToolDiscoveryHelp,
   isTopLevelToolHelpRequest,
 } from './registry.js';

@@ -45,11 +45,11 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R1.1 根 `package.json` 定義 workspaces 欄位，包含 `packages/cli`, `packages/tui`, `packages/tool-registry`
-- [ ] R1.2 每個子 package 有獨立的 `package.json`、`tsconfig.json`
-- [ ] R1.3 TypeScript project references 設定正確的依賴順序（tui → tool-registry → cli）
-- [ ] R1.4 `npm run build` 在根目錄執行時能編譯所有子 package
-- [ ] R1.5 `npm test` 在根目錄執行時能運行所有子 package 的測試
+- [x] R1.1 根 `package.json` 定義 workspaces 欄位，包含 `packages/cli`, `packages/tui`, `packages/tool-registry`
+- [x] R1.2 每個子 package 有獨立的 `package.json`、`tsconfig.json`
+- [x] R1.3 TypeScript project references 設定正確的依賴順序（tui → tool-registry → cli）
+- [x] R1.4 `npm run build` 在根目錄執行時能編譯所有子 package
+- [x] R1.5 `npm test` 在根目錄執行時能運行所有子 package 的測試
 
 ### Requirement 2: CLI 命令管理模組 (`packages/cli`)
 
@@ -62,12 +62,12 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R2.1 `packages/cli` 匯出 `run(argv, context)` 函數，簽名與現有 `lib/cli.ts` 的 `run` 一致
-- [ ] R2.2 命令解析邏輯（`parseArguments`）從 `lib/cli.ts` 遷移至 `packages/cli`
-- [ ] R2.3 安裝流程（`syncToolkitHome` → `installLinks` → `printSummary`）在 `packages/cli` 內實作，`installer.ts` 與 `updater.ts` 作為 `packages/cli` 內部模組
-- [ ] R2.4 卸載流程（`getUninstallTargetRoots` → `uninstallSkills` → `printUninstallSummary`）在 `packages/cli` 內實作
-- [ ] R2.5 工具命令路由（`parsed.command === 'tool'` 路徑）通過 tool-registry 介面分發
-- [ ] R2.6 `bin/apollo-toolkit.ts` 入口檔案更新 import 路徑指向 `packages/cli`
+- [x] R2.1 `packages/cli` 匯出 `run(argv, context)` 函數，簽名與現有 `lib/cli.ts` 的 `run` 一致
+- [x] R2.2 命令解析邏輯（`parseArguments`）從 `lib/cli.ts` 遷移至 `packages/cli`
+- [x] R2.3 安裝流程（`syncToolkitHome` → `installLinks` → `printSummary`）在 `packages/cli` 內實作，`installer.ts` 與 `updater.ts` 作為 `packages/cli` 內部模組
+- [x] R2.4 卸載流程（`getUninstallTargetRoots` → `uninstallSkills` → `printUninstallSummary`）在 `packages/cli` 內實作
+- [x] R2.5 工具命令路由（`parsed.command === 'tool'` 路徑）通過 tool-registry 介面分發
+- [x] R2.6 `bin/apollo-toolkit.ts` 入口檔案更新 import 路徑指向 `packages/cli`
 
 ### Requirement 3: 互動式 TUI 模組 (`packages/tui`)
 
@@ -80,12 +80,12 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R3.1 `packages/tui` 匯出 `promptForSelectableModes` 函數，行為與現有實作一致
-- [ ] R3.2 `packages/tui` 匯出 `promptYesNo` 函數，行為與現有實作一致
-- [ ] R3.3 `packages/tui` 匯出 `renderSelectionScreen` 函數
-- [ ] R3.4 `packages/tui` 匯出終端樣式工具函數（`color`, `supportsColor`, `clearScreen`, `sleep` 等，來自現有 `lib/utils/terminal.ts`）
-- [ ] R3.5 所有 TUI 函數通過參數接收 I/O streams（stdin, stdout），不直接依賴 `process` 全域變數
-- [ ] R3.6 歡迎動畫邏輯（`animateWelcomeScreen`, `buildWelcomeScreen`, `buildWordmark`, `buildBanner`）遷移至 `packages/tui`
+- [x] R3.1 `packages/tui` 匯出 `promptForSelectableModes` 函數，行為與現有實作一致
+- [x] R3.2 `packages/tui` 匯出 `promptYesNo` 函數，行為與現有實作一致
+- [x] R3.3 `packages/tui` 匯出 `renderSelectionScreen` 函數
+- [x] R3.4 `packages/tui` 匯出終端樣式工具函數（`color`, `supportsColor`, `clearScreen`, `sleep` 等，來自現有 `lib/utils/terminal.ts`）
+- [x] R3.5 所有 TUI 函數通過參數接收 I/O streams（stdin, stdout），不直接依賴 `process` 全域變數
+- [x] R3.6 歡迎動畫邏輯（`animateWelcomeScreen`, `buildWelcomeScreen`, `buildWordmark`, `buildBanner`）遷移至 `packages/tui`
 
 ### Requirement 4: 工具註冊中心 (`packages/tool-registry`)
 
@@ -97,22 +97,22 @@
 **Uncertainty Level**: Known
 
 **Requirements**:
-- [ ] R4.1 `packages/tool-registry` 匯出 `ToolDefinition` 介面（從現有 `lib/types.ts` 遷移）
-- [ ] R4.2 `packages/tool-registry` 匯出 `ToolContext` 介面
-- [ ] R4.3 `packages/tool-registry` 匯出 `registerTool(tool: ToolDefinition): void`
-- [ ] R4.4 `packages/tool-registry` 匯出 `getTool(name: string): ToolDefinition | null`
-- [ ] R4.5 `packages/tool-registry` 匯出 `listTools(): ToolDefinition[]`
-- [ ] R4.6 `packages/tool-registry` 匯出 `runTool(name, args, context): Promise<number>`
-- [ ] R4.7 幫助文字格式化函數（`formatToolList`, `buildToolDiscoveryHelp`, `buildToolOverview`, `buildToolExamples`）遷移至 `packages/tool-registry`
-- [ ] R4.8 `ToolDefinition.handler` 欄位為 `(args: string[], context: ToolContext) => Promise<number>`，與現有合約一致
+- [x] R4.1 `packages/tool-registry` 匯出 `ToolDefinition` 介面（從現有 `lib/types.ts` 遷移）
+- [x] R4.2 `packages/tool-registry` 匯出 `ToolContext` 介面
+- [x] R4.3 `packages/tool-registry` 匯出 `registerTool(tool: ToolDefinition): void`
+- [x] R4.4 `packages/tool-registry` 匯出 `getTool(name: string): ToolDefinition | null`
+- [x] R4.5 `packages/tool-registry` 匯出 `listTools(): ToolDefinition[]`
+- [x] R4.6 `packages/tool-registry` 匯出 `runTool(name, args, context): Promise<number>`
+- [x] R4.7 幫助文字格式化函數（`formatToolList`, `buildToolDiscoveryHelp`, `buildToolOverview`, `buildToolExamples`）遷移至 `packages/tool-registry`
+- [x] R4.8 `ToolDefinition.handler` 欄位為 `(args: string[], context: ToolContext) => Promise<number>`，與現有合約一致
 
 ## Error and Edge Cases
 
-- [ ] 當 `packages/tui` 在非 TTY 環境中調用互動式函數時，應拋出明確的錯誤訊息（與現有行為一致）
-- [ ] 當 tool-registry 收到未知工具名稱時，應輸出可用工具列表並返回非零 exit code
-- [ ] 當 workspace 子 package 之間的循環依賴被引入時，建置應失敗
-- [ ] 當某個子 package 的 `package.json` 缺少必要欄位時，`npm install` 應給出明確錯誤
-- [ ] 當 CLI 模組調用 installer 但 `APOLLO_TOOLKIT_HOME` 指向無效路徑時，應給出明確錯誤訊息
+- [x] 當 `packages/tui` 在非 TTY 環境中調用互動式函數時，應拋出明確的錯誤訊息（與現有行為一致）
+- [x] 當 tool-registry 收到未知工具名稱時，應輸出可用工具列表並返回非零 exit code
+- [x] 當 workspace 子 package 之間的循環依賴被引入時，建置應失敗
+- [x] 當某個子 package 的 `package.json` 缺少必要欄位時，`npm install` 應給出明確錯誤
+- [x] 當 CLI 模組調用 installer 但 `APOLLO_TOOLKIT_HOME` 指向無效路徑時，應給出明確錯誤訊息
 
 ## Resolved Decisions
 

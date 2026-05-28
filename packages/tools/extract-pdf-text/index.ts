@@ -104,23 +104,3 @@ export const tool: ToolDefinition = {
   description: 'Extract PDF text with macOS PDFKit fallback.',
   handler: extractPdfTextHandler,
 };
-
-export const yargsCommand = {
-  command: 'extract-pdf-text-pdfkit <path>',
-  describe: 'Extract PDF text with macOS PDFKit fallback.',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (argv: any) => {
-    const toolArgs: string[] = [];
-    for (const [key, value] of Object.entries(argv)) {
-      if (key === '_' || key === '$0') continue;
-      if (key === 'path' && typeof value === 'string') {
-        toolArgs.push(value);
-      } else if (value === true) {
-        toolArgs.push(`--${key}`);
-      } else if (value !== false && value !== undefined && value !== null) {
-        toolArgs.push(`--${key}`, String(value));
-      }
-    }
-    return extractPdfTextHandler(toolArgs, {});
-  },
-};

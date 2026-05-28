@@ -24,10 +24,7 @@ import {
   listSkillNames,
 } from './installer.js';
 import { checkForPackageUpdate, compareVersions, execCommand } from './updater.js';
-import { registerAllTools } from './tool-registration.js';
-
-// Eagerly register all tools so parseArguments recognizes tool commands
-registerAllTools();
+import { registerAllTools, isKnownToolName } from './tool-registration.js';
 
 // Re-export installer functions for external consumers (tests, bin)
 export {
@@ -260,7 +257,7 @@ function parseArguments(argv: string[]): ParsedArguments {
   }
 
   const firstArg = args[0];
-  if (firstArg && getToolCommand(firstArg)) {
+  if (firstArg && isKnownToolName(firstArg)) {
     result.command = 'tool';
     result.toolName = args.shift() || null;
     result.toolArgs = args;
@@ -421,7 +418,7 @@ function printUninstallSummary({ stdout, uninstallResult, env }: {
   }
 }
 
-export { parseArguments, buildHelpText, buildInstallHelpText, buildUninstallHelpText, buildToolsHelp, buildBanner, buildWelcomeScreen };
+export { parseArguments, buildHelpText, buildInstallHelpText, buildUninstallHelpText, buildToolsHelp, buildBanner, buildWelcomeScreen, registerAllTools };
 
 export async function run(argv: string[], context: CliContext = {}): Promise<number> {
   const __filename = fileURLToPath(import.meta.url);
@@ -438,6 +435,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
 
     if (parsed.showHelp) {
       const colorEnabled = supportsColor(stdout, env);
+      if (parsed.helpTopic === 'overview') await registerAllTools();
       const helpText = parsed.helpTopic === 'install'
         ? buildInstallHelpText({ version: packageJson.version, colorEnabled })
         : parsed.helpTopic === 'uninstall'
@@ -448,11 +446,13 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
     }
 
     if (parsed.showToolsHelp) {
+      await registerAllTools();
       stdout.write(`${buildToolsHelp({ version: packageJson.version, colorEnabled: supportsColor(stdout, env) })}\n`);
       return 0;
     }
 
     if (parsed.command === 'tool') {
+      await registerAllTools();
       return (context.runTool || runTool)(parsed.toolName!, parsed.toolArgs, {
         sourceRoot, stdout, stderr, env, spawnCommand: context.spawnCommand,
       });

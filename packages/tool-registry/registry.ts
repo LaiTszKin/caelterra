@@ -56,40 +56,6 @@ export function formatToolList(): string {
   }).join('\n');
 }
 
-export function buildToolOverview(name: string): string | null {
-  const tool = getTool(name);
-  if (!tool) return null;
-
-  const lines = [
-    `apltk ${tool.name} — ${tool.description}`,
-    '',
-    'Usage:',
-    `  apltk ${tool.name} [...args]`,
-    `  apltk tools ${tool.name} [...args]`,
-  ];
-
-  if (tool.help?.purpose) {
-    lines.push('', 'Purpose:', `  ${tool.help.purpose}`);
-  }
-
-  if (tool.help?.useWhen?.length) {
-    lines.push('', 'Use this when:', ...tool.help.useWhen.map((item) => `  - ${item}`));
-  }
-
-  if (tool.help?.insteadOf?.length) {
-    lines.push('', 'Instead of:', ...tool.help.insteadOf.map((item) => `  - ${item}`));
-  }
-
-  lines.push('', 'Exact flags:', '  The native tool help appears below.');
-  return lines.join('\n');
-}
-
-export function buildToolExamples(name: string): string {
-  const tool = getTool(name);
-  if (!tool || !tool.help?.examples?.length) return '';
-  return ['Examples:', formatExamples(tool.help.examples)].join('\n');
-}
-
 export function buildToolDiscoveryHelp(): string {
   const categories = new Map<string, ToolDefinition[]>();
   for (const tool of listTools()) {

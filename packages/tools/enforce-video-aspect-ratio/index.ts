@@ -373,14 +373,3 @@ export const tool: ToolDefinition = {
   description: 'Resize video output to a target aspect ratio or size.',
   handler: enforceVideoAspectRatioHandler,
 };
-
-export const yargsCommand = {
-  command: 'enforce-video-aspect-ratio [args...]',
-  describe: 'Resize video output to a target aspect ratio or size.',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (argv: any) => {
-    const args = process.argv.slice(2);
-    const code = await enforceVideoAspectRatioHandler(args, {});
-    process.exitCode = code;
-  },
-};

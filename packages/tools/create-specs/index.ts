@@ -184,30 +184,3 @@ export const tool: ToolDefinition = {
   description: 'Create spec planning documents from templates.',
   handler: createSpecsHandler,
 };
-
-export const yargsCommand = {
-  command: 'create-specs <feature_name> [options]',
-  describe: 'Create spec planning documents from templates.',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (argv: any) => {
-    const toolArgs: string[] = [];
-    const positional: string[] = [];
-    for (const [key, value] of Object.entries(argv)) {
-      if (key === '_' || key === '$0') continue;
-      if (key === 'feature_name') {
-        if (typeof value === 'string') positional.push(value);
-      } else if (value === true) {
-        toolArgs.push(`--${key}`);
-      } else if (value !== false && value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          for (const v of value) {
-            toolArgs.push(`--${key}`, String(v));
-          }
-        } else {
-          toolArgs.push(`--${key}`, String(value));
-        }
-      }
-    }
-    return createSpecsHandler([...positional, ...toolArgs], {});
-  },
-};

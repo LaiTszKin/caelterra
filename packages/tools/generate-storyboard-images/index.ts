@@ -462,14 +462,3 @@ export const tool: ToolDefinition = {
   description: 'Generate storyboard images from prompts via OpenAI-compatible API.',
   handler: generateStoryboardImagesHandler,
 };
-
-export const yargsCommand = {
-  command: 'generate-storyboard-images [args...]',
-  describe: 'Generate storyboard images from prompts via OpenAI-compatible API.',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (argv: any) => {
-    const args = process.argv.slice(2);
-    const code = await generateStoryboardImagesHandler(args, {});
-    process.exitCode = code;
-  },
-};

@@ -217,30 +217,3 @@ export const tool: ToolDefinition = {
   description: 'List GitHub issues through gh.',
   handler: findGitHubIssuesHandler,
 };
-
-export const yargsCommand = {
-  command: 'find-github-issues [args...]',
-  describe: 'List GitHub issues through gh.',
-  builder: (yargs: any) => yargs
-    .option('repo', { type: 'string', describe: 'GitHub repo (owner/repo)' })
-    .option('state', { type: 'string', describe: 'Issue state: open|closed|all', default: 'open' })
-    .option('limit', { type: 'number', describe: 'Max issues to return', default: 50 })
-    .option('label', { type: 'string', describe: 'Filter by label' })
-    .option('search', { type: 'string', describe: 'Search query' })
-    .option('output', { type: 'string', describe: 'Output format: table|json', default: 'table' })
-    .strict(),
-  handler: async (argv: any) => {
-    const args: string[] = [];
-    if (argv.repo) args.push('--repo', String(argv.repo));
-    if (argv.state && argv.state !== 'open') args.push('--state', String(argv.state));
-    if (argv.limit && argv.limit !== 50) args.push('--limit', String(argv.limit));
-    if (argv.label) args.push('--label', String(argv.label));
-    if (argv.search) args.push('--search', String(argv.search));
-    if (argv.output && argv.output !== 'table') args.push('--output', String(argv.output));
-    await findGitHubIssuesHandler(args, {
-      stdout: process.stdout,
-      stderr: process.stderr,
-      env: process.env as NodeJS.ProcessEnv,
-    });
-  },
-};

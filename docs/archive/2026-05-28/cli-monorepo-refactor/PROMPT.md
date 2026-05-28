@@ -70,15 +70,15 @@ W1 (Workspace 基礎)
 **依賴**: 無
 
 **任務清單**:
-- [ ] T1.1 修改根 `package.json`: 加入 `"workspaces": ["packages/*", "packages/tools/*"]`, 設 `"type": "module"`, 更新 `scripts.build` 為 `tsc --build`
-- [ ] T1.2 修改根 `tsconfig.json`: 改為 project references 模式 (`"files": []`, `"references": [...]`), `"module": "NodeNext"`, `"target": "ES2022"`
-- [ ] T1.3 建立 `packages/tui/package.json` + `packages/tui/tsconfig.json` (設 `"composite": true`)
-- [ ] T1.4 建立 `packages/tool-registry/package.json` + `packages/tool-registry/tsconfig.json`
-- [ ] T1.5 建立 `packages/cli/package.json` + `packages/cli/tsconfig.json` (含 `bin` 指向, `dependencies` 含 yargs)
+- [x] T1.1 修改根 `package.json`: 加入 `"workspaces": ["packages/*", "packages/tools/*"]`, 設 `"type": "module"`, 更新 `scripts.build` 為 `tsc --build`
+- [x] T1.2 修改根 `tsconfig.json`: 改為 project references 模式 (`"files": []`, `"references": [...]`), `"module": "NodeNext"`, `"target": "ES2022"`
+- [x] T1.3 建立 `packages/tui/package.json` + `packages/tui/tsconfig.json` (設 `"composite": true`)
+- [x] T1.4 建立 `packages/tool-registry/package.json` + `packages/tool-registry/tsconfig.json`
+- [x] T1.5 建立 `packages/cli/package.json` + `packages/cli/tsconfig.json` (含 `bin` 指向, `dependencies` 含 yargs)
 
 **完成條件**:
-- [ ] `npm install` 成功 (workspace symlinks 正確建立)
-- [ ] 目錄結構驗證: `ls packages/tui/package.json packages/tool-registry/package.json packages/cli/package.json`
+- [x] `npm install` 成功 (workspace symlinks 正確建立)
+- [x] 目錄結構驗證: `ls packages/tui/package.json packages/tool-registry/package.json packages/cli/package.json`
 
 ---
 
@@ -91,15 +91,15 @@ W1 (Workspace 基礎)
 #### Phase 2a: 並行實作 tui + tool-registry
 
 **完成條件**:
-- [ ] `packages/tui/index.ts` 匯出所有公開 API (UT-03 ~ UT-06)
-- [ ] `packages/tool-registry/index.ts` 匯出所有公開 API (UT-07 ~ UT-09)
+- [x] `packages/tui/index.ts` 匯出所有公開 API (UT-03 ~ UT-06)
+- [x] `packages/tool-registry/index.ts` 匯出所有公開 API (UT-07 ~ UT-09)
 
 #### Phase 2b: 實作 cli (依賴 2a)
 
 **完成條件**:
-- [ ] `packages/cli/index.ts` 匯出 `run()` (UT-01)
-- [ ] `packages/cli/installer.ts` 從 `lib/installer.ts` 遷移
-- [ ] `packages/cli/updater.ts` 從 `lib/updater.ts` 遷移
+- [x] `packages/cli/index.ts` 匯出 `run()` (UT-01)
+- [x] `packages/cli/installer.ts` 從 `lib/installer.ts` 遷移
+- [x] `packages/cli/updater.ts` 從 `lib/updater.ts` 遷移
 
 ---
 
@@ -110,14 +110,14 @@ W1 (Workspace 基礎)
 **依賴**: Batch 2
 
 **任務清單**:
-- [ ] T5.1 更新 `bin/apollo-toolkit.ts` import 路徑指向 `packages/cli` (UT-02)
-- [ ] T5.2 刪除已遷移的舊檔案: `lib/cli.ts`, `lib/installer.ts`, `lib/updater.ts`, `lib/types.ts`, `lib/tool-runner.ts`, `lib/utils/terminal.ts`, `lib/utils/format.ts`
-- [ ] T5.3 更新 `lib/utils/skill-discovery.ts` → `packages/tool-utils/skill-discovery.ts` (Batch 4 前移)
-- [ ] T5.4 更新測試檔案 import 路徑 (從 `dist/lib/...` → 新路徑)
+- [x] T5.1 更新 `bin/apollo-toolkit.ts` import 路徑指向 `packages/cli` (UT-02)
+- [x] T5.2 刪除已遷移的舊檔案: `lib/cli.ts`, `lib/installer.ts`, `lib/updater.ts`, `lib/types.ts`, `lib/tool-runner.ts`, `lib/utils/terminal.ts`, `lib/utils/format.ts`
+- [x] T5.3 更新 `lib/utils/skill-discovery.ts` → `packages/tool-utils/skill-discovery.ts` (Batch 4 前移)
+- [x] T5.4 更新測試檔案 import 路徑 (從 `dist/lib/...` → 新路徑)
 
 **完成條件**:
-- [ ] `tsc --build` 成功 (IT-02)
-- [ ] `npm test` 通過 (IT-03)
+- [x] `tsc --build` 成功 (IT-02)
+- [x] `npm test` 通過 (IT-03)
 
 ---
 
@@ -129,21 +129,21 @@ W1 (Workspace 基礎)
 
 #### Phase 4a: 共用基礎 (主流程)
 
-- [ ] T6.1 建立 `packages/tool-utils/package.json` + `packages/tool-utils/tsconfig.json`
-- [ ] T6.2 `packages/tool-utils/index.ts` — 從 `lib/tools/log-cli-utils.ts` 遷移所有函數 (UT-12)
-- [ ] T6.3 `packages/tool-utils/skill-discovery.ts` — 從 `lib/utils/skill-discovery.ts` 遷移
-- [ ] T6.4 `npm install yargs chalk @inquirer/prompts` (或加入根 package.json)
+- [x] T6.1 建立 `packages/tool-utils/package.json` + `packages/tool-utils/tsconfig.json`
+- [x] T6.2 `packages/tool-utils/index.ts` — 從 `lib/tools/log-cli-utils.ts` 遷移所有函數 (UT-12)
+- [x] T6.3 `packages/tool-utils/skill-discovery.ts` — 從 `lib/utils/skill-discovery.ts` 遷移
+- [x] T6.4 `npm install yargs chalk @inquirer/prompts` (或加入根 package.json)
 
 **完成條件**:
-- [ ] `packages/tool-utils` 匯出 `extractTimestamp`, `iterInputLines`, `parseCliTimestamp`, `inWindow`, `buildTimezone`, `validateTimeWindow`, `iterSkillDirs`
+- [x] `packages/tool-utils` 匯出 `extractTimestamp`, `iterInputLines`, `parseCliTimestamp`, `inWindow`, `buildTimezone`, `validateTimeWindow`, `iterSkillDirs`
 
 #### Phase 4b: 工具遷移 (4 subagents 並行)
 
 **完成條件** (每個工具):
-- [ ] 建立 `packages/tools/<tool-name>/package.json` + `tsconfig.json`
-- [ ] `packages/tools/<tool-name>/index.ts` 匯出 `tool: ToolDefinition` + `yargsCommand`
-- [ ] Handler 從 `lib/tools/<tool-name>.ts` 遷移，移除 `@ts-nocheck` (UT-14)
-- [ ] yargs handler 適配: argv 物件 → string[] 轉換 → 調用原 handler
+- [x] 建立 `packages/tools/<tool-name>/package.json` + `tsconfig.json`
+- [x] `packages/tools/<tool-name>/index.ts` 匯出 `tool: ToolDefinition` + `yargsCommand`
+- [x] Handler 從 `lib/tools/<tool-name>.ts` 遷移，移除 `@ts-nocheck` (UT-14)
+- [x] yargs handler 適配: argv 物件 → string[] 轉換 → 調用原 handler
 
 ---
 
@@ -154,19 +154,19 @@ W1 (Workspace 基礎)
 **依賴**: Batch 4
 
 **任務清單**:
-- [ ] T11.1 `packages/cli/tool-registration.ts` — 匯入所有 20 個工具，逐一 `registerTool()`
-- [ ] T11.2 `packages/cli/index.ts` — 使用 yargs `.command(tool.yargsCommand)` 註冊所有工具命令
-- [ ] T11.3 刪除 `lib/tools/*.ts` 舊檔案 (已遷移)
-- [ ] T11.4 執行 REG-01 (CLI --help golden 比對)
-- [ ] T11.5 執行 REG-03 (20 個工具 --help golden 比對)
-- [ ] T11.6 執行 REG-07 (現有測試全部通過)
-- [ ] T11.7 執行完整測試套件 `npm test`
+- [x] T11.1 `packages/cli/tool-registration.ts` — 匯入所有 20 個工具，逐一 `registerTool()`
+- [x] T11.2 `packages/cli/index.ts` — 使用 yargs `.command(tool.yargsCommand)` 註冊所有工具命令
+- [x] T11.3 刪除 `lib/tools/*.ts` 舊檔案 (已遷移)
+- [x] T11.4 執行 REG-01 (CLI --help golden 比對)
+- [x] T11.5 執行 REG-03 (20 個工具 --help golden 比對)
+- [x] T11.6 執行 REG-07 (現有測試全部通過)
+- [x] T11.7 執行完整測試套件 `npm test`
 
 **完成條件**:
-- [ ] `tsc --build` 零錯誤
-- [ ] `npm test` 全部通過
-- [ ] 所有 golden snapshot 比對一致
-- [ ] `apltk --help` 輸出與重構前一致
+- [x] `tsc --build` 零錯誤
+- [x] `npm test` 全部通過
+- [x] 所有 golden snapshot 比對一致
+- [x] `apltk --help` 輸出與重構前一致
 
 ---
 
@@ -178,12 +178,12 @@ W1 (Workspace 基礎)
 - **目標**: 從 `lib/utils/terminal.ts` + `lib/cli.ts` 動畫/Banner 部分建立 `packages/tui`
 - **工作目錄**: `docs/plans/2026-05-28/cli-monorepo-refactor/package-architecture-foundation/`
 - **任務清單**:
-  - [ ] T2.1: 建立 `packages/tui/index.ts` — 遷移 `color`, `supportsColor`, `clearScreen`, `sleep`, `supportsAnimation` (`lib/utils/terminal.ts:1-23`)
-  - [ ] T2.2: 加入 `chalk` 包裝層 — 替換 ANSI escape code 拼接
-  - [ ] T2.3: 遷移 `buildWordmark`, `buildBanner`, `buildWelcomeScreen`, `animateWelcomeScreen` (`lib/cli.ts:27-101`)
-  - [ ] T2.4: 遷移 `renderSelectionScreen`, `buildSupportedTargetLines` (`lib/cli.ts:357-389`)
-  - [ ] T2.5: 使用 `@inquirer/prompts` 的 `checkbox` + `confirm` 實作 `promptForModes` + `promptYesNo` (取代 `lib/cli.ts` 的 `promptForSelectableModes` 和 `promptYesNo`)
-  - [ ] T2.6: 匯出介面: `promptForModes(opts)`, `promptYesNo(opts)`, `buildBanner(opts)`, `buildWelcomeScreen(opts)`, `renderSelectionScreen(opts)`
+  - [x] T2.1: 建立 `packages/tui/index.ts` — 遷移 `color`, `supportsColor`, `clearScreen`, `sleep`, `supportsAnimation` (`lib/utils/terminal.ts:1-23`)
+  - [x] T2.2: 加入 `chalk` 包裝層 — 替換 ANSI escape code 拼接
+  - [x] T2.3: 遷移 `buildWordmark`, `buildBanner`, `buildWelcomeScreen`, `animateWelcomeScreen` (`lib/cli.ts:27-101`)
+  - [x] T2.4: 遷移 `renderSelectionScreen`, `buildSupportedTargetLines` (`lib/cli.ts:357-389`)
+  - [x] T2.5: 使用 `@inquirer/prompts` 的 `checkbox` + `confirm` 實作 `promptForModes` + `promptYesNo` (取代 `lib/cli.ts` 的 `promptForSelectableModes` 和 `promptYesNo`)
+  - [x] T2.6: 匯出介面: `promptForModes(opts)`, `promptYesNo(opts)`, `buildBanner(opts)`, `buildWelcomeScreen(opts)`, `renderSelectionScreen(opts)`
 - **允許修改的檔案**:
   - `packages/tui/package.json`
   - `packages/tui/tsconfig.json`
@@ -203,14 +203,14 @@ W1 (Workspace 基礎)
 - **目標**: 從 `lib/types.ts` + `lib/tool-runner.ts` 建立 `packages/tool-registry`
 - **工作目錄**: `docs/plans/2026-05-28/cli-monorepo-refactor/package-architecture-foundation/`
 - **任務清單**:
-  - [ ] T3.1: 遷移型別定義 (`lib/types.ts` → `packages/tool-registry/types.ts`): `ToolDefinition`, `ToolContext`, `ToolHelp`, `ToolExample`, `InstallMode` 等
-  - [ ] T3.2: 建立 `registerTool(tool: ToolDefinition): void` (Registration API)
-  - [ ] T3.3: 建立 `getTool(name: string): ToolDefinition | null` (Lookup API)
-  - [ ] T3.4: 建立 `listTools(): ToolDefinition[]` (List API)
-  - [ ] T3.5: 建立 `runTool(name, args, context): Promise<number>` (Dispatch API)
-  - [ ] T3.6: 遷移 `formatToolList`, `buildToolDiscoveryHelp`, `buildToolOverview`, `buildToolExamples` (`lib/tool-runner.ts:405-468`)
-  - [ ] T3.7: 遷移 `formatExamples` (`lib/utils/format.ts`)
-  - [ ] T3.8: `packages/tool-registry/index.ts` 匯出所有公開 API
+  - [x] T3.1: 遷移型別定義 (`lib/types.ts` → `packages/tool-registry/types.ts`): `ToolDefinition`, `ToolContext`, `ToolHelp`, `ToolExample`, `InstallMode` 等
+  - [x] T3.2: 建立 `registerTool(tool: ToolDefinition): void` (Registration API)
+  - [x] T3.3: 建立 `getTool(name: string): ToolDefinition | null` (Lookup API)
+  - [x] T3.4: 建立 `listTools(): ToolDefinition[]` (List API)
+  - [x] T3.5: 建立 `runTool(name, args, context): Promise<number>` (Dispatch API)
+  - [x] T3.6: 遷移 `formatToolList`, `buildToolDiscoveryHelp`, `buildToolOverview`, `buildToolExamples` (`lib/tool-runner.ts:405-468`)
+  - [x] T3.7: 遷移 `formatExamples` (`lib/utils/format.ts`)
+  - [x] T3.8: `packages/tool-registry/index.ts` 匯出所有公開 API
 - **允許修改的檔案**:
   - `packages/tool-registry/package.json`
   - `packages/tool-registry/tsconfig.json`
@@ -231,11 +231,11 @@ W1 (Workspace 基礎)
 - **目標**: 遷移 5 個工具至獨立 package
 - **工作目錄**: `docs/plans/2026-05-28/cli-monorepo-refactor/tool-decoupling-dependencies/`
 - **任務清單**:
-  - [ ] T7.1: `packages/tools/filter-logs` — 遷移 `lib/tools/filter-logs.ts`, 添加 yargsCommand, 移除 @ts-nocheck
-  - [ ] T7.2: `packages/tools/search-logs` — 遷移 `lib/tools/search-logs.ts`, 添加 yargsCommand, 移除 @ts-nocheck
-  - [ ] T7.3: `packages/tools/validate-skill-frontmatter` — 遷移 `lib/tools/validate-skill-frontmatter.ts`
-  - [ ] T7.4: `packages/tools/validate-openai-agent-config` — 遷移 `lib/tools/validate-openai-agent-config.ts`
-  - [ ] T7.5: `packages/tools/sync-memory-index` — 遷移 `lib/tools/sync-memory-index.ts`
+  - [x] T7.1: `packages/tools/filter-logs` — 遷移 `lib/tools/filter-logs.ts`, 添加 yargsCommand, 移除 @ts-nocheck
+  - [x] T7.2: `packages/tools/search-logs` — 遷移 `lib/tools/search-logs.ts`, 添加 yargsCommand, 移除 @ts-nocheck
+  - [x] T7.3: `packages/tools/validate-skill-frontmatter` — 遷移 `lib/tools/validate-skill-frontmatter.ts`
+  - [x] T7.4: `packages/tools/validate-openai-agent-config` — 遷移 `lib/tools/validate-openai-agent-config.ts`
+  - [x] T7.5: `packages/tools/sync-memory-index` — 遷移 `lib/tools/sync-memory-index.ts`
 - **允許修改的檔案**:
   - `packages/tools/filter-logs/*`
   - `packages/tools/search-logs/*`
@@ -256,11 +256,11 @@ W1 (Workspace 基礎)
 - **目標**: 遷移 5 個工具至獨立 package
 - **工作目錄**: `docs/plans/2026-05-28/cli-monorepo-refactor/tool-decoupling-dependencies/`
 - **任務清單**:
-  - [ ] T8.1: `packages/tools/open-github-issue` — 遷移 `lib/tools/open-github-issue.ts`, 添加 yargsCommand, 移除 @ts-nocheck
-  - [ ] T8.2: `packages/tools/find-github-issues` — 遷移 `lib/tools/find-github-issues.ts`, 添加 yargsCommand, 移除 @ts-nocheck
-  - [ ] T8.3: `packages/tools/read-github-issue` — 遷移 `lib/tools/read-github-issue.ts`, 添加 yargsCommand, 移除 @ts-nocheck
-  - [ ] T8.4: `packages/tools/review-threads` — 遷移 `lib/tools/review-threads.ts`, 添加 yargsCommand, 移除 @ts-nocheck
-  - [ ] T8.5: `packages/tools/extract-conversations` — 遷移 `lib/tools/extract-conversations.ts`, 處理 extract-codex-conversations + extract-skill-conversations 兩個別名
+  - [x] T8.1: `packages/tools/open-github-issue` — 遷移 `lib/tools/open-github-issue.ts`, 添加 yargsCommand, 移除 @ts-nocheck
+  - [x] T8.2: `packages/tools/find-github-issues` — 遷移 `lib/tools/find-github-issues.ts`, 添加 yargsCommand, 移除 @ts-nocheck
+  - [x] T8.3: `packages/tools/read-github-issue` — 遷移 `lib/tools/read-github-issue.ts`, 添加 yargsCommand, 移除 @ts-nocheck
+  - [x] T8.4: `packages/tools/review-threads` — 遷移 `lib/tools/review-threads.ts`, 添加 yargsCommand, 移除 @ts-nocheck
+  - [x] T8.5: `packages/tools/extract-conversations` — 遷移 `lib/tools/extract-conversations.ts`, 處理 extract-codex-conversations + extract-skill-conversations 兩個別名
 - **允許修改的檔案**:
   - `packages/tools/open-github-issue/*`
   - `packages/tools/find-github-issues/*`
@@ -278,11 +278,11 @@ W1 (Workspace 基礎)
 - **工作單元**: W9
 - **目標**: 遷移 5 個工具至獨立 package
 - **任務清單**:
-  - [ ] T9.1: `packages/tools/docs-to-voice` — 遷移 `lib/tools/docs-to-voice.ts`
-  - [ ] T9.2: `packages/tools/render-katex` — 遷移 `lib/tools/render-katex.ts`
-  - [ ] T9.3: `packages/tools/render-error-book` — 遷移 `lib/tools/render-error-book.ts`
-  - [ ] T9.4: `packages/tools/generate-storyboard-images` — 遷移 `lib/tools/generate-storyboard-images.ts`
-  - [ ] T9.5: `packages/tools/enforce-video-aspect-ratio` — 遷移 `lib/tools/enforce-video-aspect-ratio.ts`
+  - [x] T9.1: `packages/tools/docs-to-voice` — 遷移 `lib/tools/docs-to-voice.ts`
+  - [x] T9.2: `packages/tools/render-katex` — 遷移 `lib/tools/render-katex.ts`
+  - [x] T9.3: `packages/tools/render-error-book` — 遷移 `lib/tools/render-error-book.ts`
+  - [x] T9.4: `packages/tools/generate-storyboard-images` — 遷移 `lib/tools/generate-storyboard-images.ts`
+  - [x] T9.5: `packages/tools/enforce-video-aspect-ratio` — 遷移 `lib/tools/enforce-video-aspect-ratio.ts`
 - **允許修改/禁止修改的檔案**: 同規則
 - **風險標記**: 無 @ts-nocheck (這組無型別問題)
 - **驗證命令**: `npx tsc --build`
@@ -294,11 +294,11 @@ W1 (Workspace 基礎)
 - **工作單元**: W10
 - **目標**: 遷移 5 個工具至獨立 package
 - **任務清單**:
-  - [ ] T10.1: `packages/tools/architecture` — 遷移 `lib/tools/architecture.ts`, 改寫 `require()` 為動態 `import()` + 修復 skills 路徑
-  - [ ] T10.2: `packages/tools/create-specs` — 遷移 `lib/tools/create-specs.ts`
-  - [ ] T10.3: `packages/tools/create-review-report` — 遷移 `lib/tools/create-review-report.ts`
-  - [ ] T10.4: `packages/tools/extract-pdf-text` — 遷移 `lib/tools/extract-pdf-text.ts`
-  - [ ] T10.5: `packages/tools/extract-codex-conversations` — 建立別名 package (指向 extract-conversations)
+  - [x] T10.1: `packages/tools/architecture` — 遷移 `lib/tools/architecture.ts`, 改寫 `require()` 為動態 `import()` + 修復 skills 路徑
+  - [x] T10.2: `packages/tools/create-specs` — 遷移 `lib/tools/create-specs.ts`
+  - [x] T10.3: `packages/tools/create-review-report` — 遷移 `lib/tools/create-review-report.ts`
+  - [x] T10.4: `packages/tools/extract-pdf-text` — 遷移 `lib/tools/extract-pdf-text.ts`
+  - [x] T10.5: `packages/tools/extract-codex-conversations` — 建立別名 package (指向 extract-conversations)
 - **允許修改/禁止修改的檔案**: 同規則
 - **風險標記**: @ts-nocheck 移除 + `require()` → `import()` (architecture.ts)
 - **驗證命令**: `npx tsc --build`
@@ -400,20 +400,20 @@ W1 (Workspace 基礎)
 ## 9. Boundaries
 
 ### Always
-- [ ] 每個批次完成後執行對應的驗證 checkpoint
-- [ ] 遵循 `DESIGN.md` 定義的模組邊界 (tui ∥ tool-registry → cli → tools)
-- [ ] 遵循 `ToolDefinition` 介面合約 (`handler: (args: string[], context: ToolContext) => Promise<number>`)
-- [ ] yargs handler 內部做 argv → string[] 轉換，保持 handler 簽名不變
+- [x] 每個批次完成後執行對應的驗證 checkpoint
+- [x] 遵循 `DESIGN.md` 定義的模組邊界 (tui ∥ tool-registry → cli → tools)
+- [x] 遵循 `ToolDefinition` 介面合約 (`handler: (args: string[], context: ToolContext) => Promise<number>`)
+- [x] yargs handler 內部做 argv → string[] 轉換，保持 handler 簽名不變
 
 ### Ask First
-- [ ] 修改 `skills/` 目錄結構
-- [ ] 變更現有 CLI 命令名稱或參數名稱
-- [ ] 超出 spec 定義範圍的變更 (如新增工具、改變輸出行為)
-- [ ] 修改 npm 發布相關的 package.json 欄位
+- [x] 修改 `skills/` 目錄結構
+- [x] 變更現有 CLI 命令名稱或參數名稱
+- [x] 超出 spec 定義範圍的變更 (如新增工具、改變輸出行為)
+- [x] 修改 npm 發布相關的 package.json 欄位
 
 ### Never
-- [ ] 修改其他 subagent 擁有的檔案 (見 File Ownership Map)
-- [ ] 提交 node_modules 或 dist 目錄
-- [ ] 跳過驗證 checkpoint 直接進入下一批次
-- [ ] 在工具 package 中 import 其他工具 package (每個工具獨立)
-- [ ] 在 `tool-registry` 中 import 特定工具 package
+- [x] 修改其他 subagent 擁有的檔案 (見 File Ownership Map)
+- [x] 提交 node_modules 或 dist 目錄
+- [x] 跳過驗證 checkpoint 直接進入下一批次
+- [x] 在工具 package 中 import 其他工具 package (每個工具獨立)
+- [x] 在 `tool-registry` 中 import 特定工具 package

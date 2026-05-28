@@ -216,12 +216,3 @@ export const tool: ToolDefinition = {
   description: 'Validate agents/openai.yaml configuration completeness',
   handler: validateOpenaiAgentConfigHandler,
 };
-
-export const yargsCommand = {
-  command: 'validate-openai-agent-config',
-  describe: 'Validate agents/openai.yaml configuration completeness',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (_argv: any) => {
-    await validateOpenaiAgentConfigHandler([], { stdout: process.stdout, stderr: process.stderr });
-  },
-};

@@ -952,34 +952,3 @@ export const tool: ToolDefinition = {
   description: 'Publish or draft a structured GitHub issue.',
   handler: openGitHubIssueHandler,
 };
-
-export const yargsCommand = {
-  command: 'open-github-issue [args...]',
-  describe: 'Publish or draft a structured GitHub issue.',
-  builder: (yargs: any) => yargs
-    .option('payload-file', { type: 'string', describe: 'JSON payload file path' })
-    .option('title', { type: 'string', describe: 'Issue title' })
-    .option('issue-type', { type: 'string', describe: 'Issue type: problem|feature|performance|security|docs|observability' })
-    .option('problem-description', { type: 'string', describe: 'Problem description' })
-    .option('suspected-cause', { type: 'string', describe: 'Suspected cause' })
-    .option('reproduction', { type: 'string', describe: 'Reproduction steps' })
-    .option('proposal', { type: 'string', describe: 'Feature proposal' })
-    .option('reason', { type: 'string', describe: 'Reason for feature' })
-    .option('suggested-architecture', { type: 'string', describe: 'Suggested architecture' })
-    .option('impact', { type: 'string', describe: 'Impact description' })
-    .option('evidence', { type: 'string', describe: 'Evidence' })
-    .option('suggested-action', { type: 'string', describe: 'Suggested action' })
-    .option('severity', { type: 'string', describe: 'Severity level' })
-    .option('affected-scope', { type: 'string', describe: 'Affected scope' })
-    .option('repo', { type: 'string', describe: 'GitHub repo (owner/repo)' })
-    .option('dry-run', { type: 'boolean', describe: 'Dry run mode', default: false })
-    .strict(),
-  handler: async (argv: any) => {
-    const args = buildArgsFromYargs(argv);
-    await openGitHubIssueHandler(args, {
-      stdout: process.stdout,
-      stderr: process.stderr,
-      env: process.env as NodeJS.ProcessEnv,
-    });
-  },
-};

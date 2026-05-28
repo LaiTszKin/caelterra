@@ -330,14 +330,3 @@ export const tool: ToolDefinition = {
   description: 'Render TeX with KaTeX and emit insertion-ready output.',
   handler: renderKatexHandler,
 };
-
-export const yargsCommand = {
-  command: 'render-katex [args...]',
-  describe: 'Render TeX with KaTeX and emit insertion-ready output.',
-  builder: (yargs: any) => yargs.strict(),
-  handler: async (argv: any) => {
-    const args = process.argv.slice(2);
-    const code = await renderKatexHandler(args, {});
-    process.exitCode = code;
-  },
-};
