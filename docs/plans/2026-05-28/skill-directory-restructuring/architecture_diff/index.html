@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-atlas-page="macro">
+<head>
+  <meta charset="utf-8">
+  <title>Project architecture</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="assets/architecture.css">
+</head>
+<body>
+  <header class="atlas-header">
+    <h1>Project architecture</h1>
+    
+  </header>
+  <main class="atlas-main">
+    <section class="atlas-canvas" aria-label="Macro architecture diagram">
+      <div class="atlas-canvas__toolbar" role="toolbar" aria-label="Diagram controls">
+        <button type="button" data-pan-zoom="zoom-in" aria-label="Zoom in">+</button>
+        <button type="button" data-pan-zoom="zoom-out" aria-label="Zoom out">−</button>
+        <button type="button" data-pan-zoom="fit" aria-label="Reset view">Fit</button>
+      </div>
+      <div class="atlas-canvas__viewport" data-pan-zoom-viewport>
+<svg class="atlas-svg" viewBox="0 0 746 273" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Project architecture atlas" data-atlas-svg="macro">
+  <defs>
+    <marker id="arrow-call" class="m-arrow m-arrow--call" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-return" class="m-arrow m-arrow--return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-data-row" class="m-arrow m-arrow--data-row" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-failure" class="m-arrow m-arrow--failure" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+  </defs>
+  <g transform="translate(24,24)">
+    <g class="m-cluster" data-feature="skill-directory-restructuring">
+      <rect class="m-cluster__bg" x="20.00" y="20.00" width="658.00" height="185.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="349.00" y="46.00" text-anchor="middle">技能目錄重組</text>
+    </g>
+    <a class="m-node m-node--service" href="features/skill-directory-restructuring/skills-dir.html" data-feature="skill-directory-restructuring" data-submodule="skills-dir" tabindex="0" aria-label="skills-dir — skills/ 目錄，存放全部技能 — open sub-module page">
+      <title>skills-dir — skills/ 目錄，存放全部技能</title>
+      <rect x="442.00" y="93.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="552.00" y="123.00" text-anchor="middle">skills-dir</text>
+      <text class="m-node__kind" x="552.00" y="139.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="552.00" y="159.00" text-anchor="middle">skills/ 目錄，存放全部技能</text>
+    </a>
+    <a class="m-node m-node--service" href="features/skill-directory-restructuring/install-script.html" data-feature="skill-directory-restructuring" data-submodule="install-script" tabindex="0" aria-label="install-script — Shell 安裝腳本，從 skills/ 發現技能並安裝 — open sub-module page">
+      <title>install-script — Shell 安裝腳本，從 skills/ 發現技能並安裝</title>
+      <rect x="36.00" y="93.00" width="268.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="170.00" y="123.00" text-anchor="middle">install-script</text>
+      <text class="m-node__kind" x="170.00" y="139.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="170.00" y="159.00" text-anchor="middle">Shell 安裝腳本，從 skills/ 發現技能並安裝</text>
+    </a>
+    <g class="m-edge m-edge--call" data-edge="e-install-skills">
+      <path d="M304.00,140.00 L442.00,140.00" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="373.00" y="158.00" text-anchor="middle">
+        <tspan x="373.00">find skills</tspan>
+      </text>
+    </g>
+  </g>
+</svg>
+      </div>
+      <ol class="atlas-legend" aria-label="Edge legend">
+        <li><span class="legend-swatch legend-swatch--call"></span>call</li>
+        <li><span class="legend-swatch legend-swatch--return"></span>return</li>
+        <li><span class="legend-swatch legend-swatch--data-row"></span>data-row</li>
+        <li><span class="legend-swatch legend-swatch--failure"></span>failure</li>
+      </ol>
+    </section>
+    <section class="atlas-index" aria-label="Submodule index">
+      <h2>Submodule index</h2>
+      <ul class="atlas-submodule-index">
+        <li class="atlas-submodule-index__item">
+          <a href="features/skill-directory-restructuring/skills-dir.html">
+            <span class="atlas-submodule-index__feature">技能目錄重組</span>
+            <span class="atlas-submodule-index__sub">skills-dir</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">skills/ 目錄，存放全部技能</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/skill-directory-restructuring/install-script.html">
+            <span class="atlas-submodule-index__feature">技能目錄重組</span>
+            <span class="atlas-submodule-index__sub">install-script</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">Shell 安裝腳本，從 skills/ 發現技能並安裝</p>
+        </li>
+      </ul>
+    </section>
+  </main>
+  <script src="assets/viewer.client.js" defer></script>
+</body>
+</html>

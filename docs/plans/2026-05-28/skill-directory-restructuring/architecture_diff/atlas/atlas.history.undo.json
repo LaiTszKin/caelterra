@@ -1,0 +1,79 @@
+{
+  "base": {
+    "meta": {
+      "title": "Project architecture",
+      "summary": "",
+      "updatedAt": null
+    },
+    "actors": [],
+    "features": [],
+    "edges": []
+  },
+  "overlay": {
+    "meta": null,
+    "actors": [
+      {
+        "id": "user",
+        "label": "使用者"
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-user-install",
+        "from": {
+          "feature": "user"
+        },
+        "to": {
+          "feature": "skill-directory-restructuring",
+          "submodule": "install-script"
+        },
+        "kind": "call",
+        "label": "執行安裝命令"
+      }
+    ],
+    "featureOrder": [
+      "skill-directory-restructuring"
+    ],
+    "features": {
+      "skill-directory-restructuring": {
+        "slug": "skill-directory-restructuring",
+        "title": "技能目錄重組",
+        "story": "將 repo 根目錄下 42 個技能目錄統一移至 skills/ 子目錄，並更新安裝腳本的路徑搜尋邏輯",
+        "dependsOn": [],
+        "submodules": [
+          {
+            "slug": "skills-dir",
+            "kind": "service",
+            "role": "skills/ 目錄，存放全部技能",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          },
+          {
+            "slug": "install-script",
+            "kind": "service",
+            "role": "Shell 安裝腳本，從 skills/ 發現技能並安裝",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-install-skills",
+            "from": "install-script",
+            "to": "skills-dir",
+            "kind": "call",
+            "label": "find skills"
+          }
+        ]
+      }
+    },
+    "removed": {
+      "features": [],
+      "submodules": []
+    }
+  }
+}

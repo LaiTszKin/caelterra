@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-atlas-page="feature">
+<head>
+  <meta charset="utf-8">
+  <title>測試執行器與評分器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="../../assets/architecture.css">
+</head>
+<body>
+  <header class="feature-header">
+    <nav class="feature-breadcrumb"><a href="../../index.html">← Atlas</a></nav>
+    <h1>測試執行器與評分器</h1>
+    
+  </header>
+  <main class="feature-main">
+    <section class="feature-story"><p>並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分</p></section>
+    <section class="feature-submodules" aria-label="Submodules">
+      <h2>Submodules</h2>
+      <ul class="submodule-nav">
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="env-utils.html">
+          <span class="submodule-card__name">env-utils</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">.env 環境變數讀取與驗證</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="run-evals.html">
+          <span class="submodule-card__name">run-evals</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="score.html">
+          <span class="submodule-card__name">score</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別</p>
+      </li>
+      </ul>
+    </section>
+    <section class="feature-edges" aria-label="Intra-feature edges">
+      <h2>Intra-feature edges</h2>
+      <ul class="feature-edges__list">
+        <li class="feature-edges__item feature-edges__item--call"><span class="feature-edges__endpoints">run-evals → env-utils</span><span class="feature-edges__kind">call</span><span class="feature-edges__label">讀取 EXEC_*</span></li>
+        <li class="feature-edges__item feature-edges__item--call"><span class="feature-edges__endpoints">score → env-utils</span><span class="feature-edges__kind">call</span><span class="feature-edges__label">讀取 JUDGE_*</span></li>
+        <li class="feature-edges__item feature-edges__item--call"><span class="feature-edges__endpoints">run-evals → score</span><span class="feature-edges__kind">call</span><span class="feature-edges__label">.done marker 觸發評分</span></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

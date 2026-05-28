@@ -1,0 +1,6 @@
+slug: exec-model-api
+title: 執行模型 API (OpenAI 相容)
+story: 外部 LLM API，被測 agent 的執行環境
+dependsOn: []
+submodules: []
+edges: []

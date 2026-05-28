@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-atlas-page="feature">
+<head>
+  <meta charset="utf-8">
+  <title>測試題庫</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="../../assets/architecture.css">
+</head>
+<body>
+  <header class="feature-header">
+    <nav class="feature-breadcrumb"><a href="../../index.html">← Atlas</a></nav>
+    <h1>測試題庫</h1>
+    
+  </header>
+  <main class="feature-main">
+    <section class="feature-story"><p>為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準</p></section>
+    <section class="feature-submodules" aria-label="Submodules">
+      <h2>Submodules</h2>
+      <ul class="submodule-nav">
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="question-schema.html">
+          <span class="submodule-card__name">question-schema</span>
+          <span class="submodule-card__kind">API</span>
+        </a>
+        <p class="submodule-card__role">題目 JSON Schema 定義與驗證規則</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="test-questions.html">
+          <span class="submodule-card__name">test-questions</span>
+          <span class="submodule-card__kind">DB</span>
+        </a>
+        <p class="submodule-card__role">100 道測試題目靜態資料</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="question-utils.html">
+          <span class="submodule-card__name">question-utils</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">題目載入、剝離評分標準、提供給執行器/評分器的工具函數</p>
+      </li>
+      </ul>
+    </section>
+    <section class="feature-edges" aria-label="Intra-feature edges">
+      <h2>Intra-feature edges</h2>
+      <ul class="feature-edges__list">
+        <li class="feature-edges__item feature-edges__item--call"><span class="feature-edges__endpoints">question-utils → question-schema</span><span class="feature-edges__kind">call</span><span class="feature-edges__label">驗證 schema</span></li>
+        <li class="feature-edges__item feature-edges__item--data-row"><span class="feature-edges__endpoints">question-utils → test-questions</span><span class="feature-edges__kind">data-row</span><span class="feature-edges__label">載入題目</span></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

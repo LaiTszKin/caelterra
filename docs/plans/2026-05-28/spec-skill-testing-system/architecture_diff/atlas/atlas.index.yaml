@@ -1,0 +1,41 @@
+edges:
+  - id: e-call-exec
+    from:
+      feature: test-executor-scorer
+      submodule: run-evals
+    to:
+      feature: exec-model-api
+    kind: call
+    label: POST /v1/chat/completions
+  - id: e-call-judge
+    from:
+      feature: test-executor-scorer
+      submodule: score
+    to:
+      feature: judge-model-api
+    kind: call
+    label: POST /v1/chat/completions
+  - id: e-write-skill
+    from:
+      feature: spec-optimizer
+      submodule: skill-optimizer
+    to:
+      feature: spec-skill
+    kind: call
+    label: 寫入優化後 SKILL.md
+  - id: e-write-tool
+    from:
+      feature: spec-optimizer
+      submodule: tool-optimizer
+    to:
+      feature: apltk-create-specs
+    kind: call
+    label: 修改 TypeScript 源碼
+features:
+  - test-question-bank
+  - test-executor-scorer
+  - exec-model-api
+  - judge-model-api
+  - spec-optimizer
+  - spec-skill
+  - apltk-create-specs

@@ -1,0 +1,5 @@
+actors:
+  - id: user
+    label: 使用者
+features:
+  - skill-directory-restructuring

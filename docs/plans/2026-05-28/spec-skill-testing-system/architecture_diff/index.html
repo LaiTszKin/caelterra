@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-atlas-page="macro">
+<head>
+  <meta charset="utf-8">
+  <title>Project architecture</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="assets/architecture.css">
+</head>
+<body>
+  <header class="atlas-header">
+    <h1>Project architecture</h1>
+    
+  </header>
+  <main class="atlas-main">
+    <section class="atlas-canvas" aria-label="Macro architecture diagram">
+      <div class="atlas-canvas__toolbar" role="toolbar" aria-label="Diagram controls">
+        <button type="button" data-pan-zoom="zoom-in" aria-label="Zoom in">+</button>
+        <button type="button" data-pan-zoom="zoom-out" aria-label="Zoom out">−</button>
+        <button type="button" data-pan-zoom="fit" aria-label="Reset view">Fit</button>
+      </div>
+      <div class="atlas-canvas__viewport" data-pan-zoom-viewport>
+<svg class="atlas-svg" viewBox="0 0 1842 983" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Project architecture atlas" data-atlas-svg="macro">
+  <defs>
+    <marker id="arrow-call" class="m-arrow m-arrow--call" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-return" class="m-arrow m-arrow--return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-data-row" class="m-arrow m-arrow--data-row" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-failure" class="m-arrow m-arrow--failure" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+  </defs>
+  <g transform="translate(24,24)">
+    <g class="m-cluster" data-feature="test-question-bank">
+      <rect class="m-cluster__bg" x="20.00" y="20.00" width="725.00" height="295.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="382.50" y="46.00" text-anchor="middle">測試題庫</text>
+    </g>
+    <g class="m-cluster" data-feature="test-executor-scorer">
+      <rect class="m-cluster__bg" x="20.00" y="674.00" width="1280.00" height="240.83" rx="14" ry="14" />
+      <text class="m-cluster__title" x="660.00" y="700.00" text-anchor="middle">測試執行器與評分器</text>
+    </g>
+    <g class="m-cluster" data-feature="exec-model-api">
+      <rect class="m-cluster__bg" x="1682.00" y="737.67" width="0.00" height="0.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="1682.00" y="763.67" text-anchor="middle">執行模型 API (OpenAI 相容)</text>
+    </g>
+    <g class="m-cluster" data-feature="judge-model-api">
+      <rect class="m-cluster__bg" x="1682.00" y="798.67" width="0.00" height="0.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="1682.00" y="824.67" text-anchor="middle">評分模型 API (OpenAI 相容)</text>
+    </g>
+    <g class="m-cluster" data-feature="spec-optimizer">
+      <rect class="m-cluster__bg" x="20.00" y="347.00" width="728.00" height="295.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="384.00" y="373.00" text-anchor="middle">優化器</text>
+    </g>
+    <g class="m-cluster" data-feature="spec-skill">
+      <rect class="m-cluster__bg" x="1072.00" y="467.00" width="0.00" height="0.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="1072.00" y="493.00" text-anchor="middle">spec 技能 (SKILL.md)</text>
+    </g>
+    <g class="m-cluster" data-feature="apltk-create-specs">
+      <rect class="m-cluster__bg" x="1088.50" y="577.00" width="0.00" height="0.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="1088.50" y="603.00" text-anchor="middle">apltk create-specs 工具</text>
+    </g>
+    <a class="m-node m-node--api" href="features/test-question-bank/question-schema.html" data-feature="test-question-bank" data-submodule="question-schema" tabindex="0" aria-label="question-schema — 題目 JSON Schema 定義與驗證規則 — open sub-module page">
+      <title>question-schema — 題目 JSON Schema 定義與驗證規則</title>
+      <rect x="509.00" y="93.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="619.00" y="123.00" text-anchor="middle">question-schema</text>
+      <text class="m-node__kind" x="619.00" y="139.00" text-anchor="middle">API</text>
+      <text class="m-node__role" x="619.00" y="159.00" text-anchor="middle">題目 JSON Schema 定義與驗證規則</text>
+    </a>
+    <a class="m-node m-node--db" href="features/test-question-bank/test-questions.html" data-feature="test-question-bank" data-submodule="test-questions" tabindex="0" aria-label="test-questions — 100 道測試題目靜態資料 — open sub-module page">
+      <title>test-questions — 100 道測試題目靜態資料</title>
+      <rect x="509.00" y="203.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="619.00" y="233.00" text-anchor="middle">test-questions</text>
+      <text class="m-node__kind" x="619.00" y="249.00" text-anchor="middle">DB</text>
+      <text class="m-node__role" x="619.00" y="269.00" text-anchor="middle">100 道測試題目靜態資料</text>
+    </a>
+    <a class="m-node m-node--service" href="features/test-question-bank/question-utils.html" data-feature="test-question-bank" data-submodule="question-utils" tabindex="0" aria-label="question-utils — 題目載入、剝離評分標準、提供給執行器/評分器的工具函數 — open sub-module page">
+      <title>question-utils — 題目載入、剝離評分標準、提供給執行器/評分器的工具函數</title>
+      <rect x="36.00" y="148.00" width="337.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="204.50" y="178.00" text-anchor="middle">question-utils</text>
+      <text class="m-node__kind" x="204.50" y="194.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="204.50" y="214.00" text-anchor="middle">題目載入、剝離評分標準、提供給執行器/評分器的工具函數</text>
+    </a>
+    <a class="m-node m-node--service" href="features/test-executor-scorer/env-utils.html" data-feature="test-executor-scorer" data-submodule="env-utils" tabindex="0" aria-label="env-utils — .env 環境變數讀取與驗證 — open sub-module page">
+      <title>env-utils — .env 環境變數讀取與驗證</title>
+      <rect x="1064.00" y="802.83" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="1174.00" y="832.83" text-anchor="middle">env-utils</text>
+      <text class="m-node__kind" x="1174.00" y="848.83" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="1174.00" y="868.83" text-anchor="middle">.env 環境變數讀取與驗證</text>
+    </a>
+    <a class="m-node m-node--service" href="features/test-executor-scorer/run-evals.html" data-feature="test-executor-scorer" data-submodule="run-evals" tabindex="0" aria-label="run-evals — 並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入 — open sub-module page">
+      <title>run-evals — 並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入</title>
+      <rect x="36.00" y="758.00" width="355.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="213.50" y="788.00" text-anchor="middle">run-evals</text>
+      <text class="m-node__kind" x="213.50" y="804.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="213.50" y="824.00" text-anchor="middle">並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入</text>
+    </a>
+    <a class="m-node m-node--service" href="features/test-executor-scorer/score.html" data-feature="test-executor-scorer" data-submodule="score" tabindex="0" aria-label="score — LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別 — open sub-module page">
+      <title>score — LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別</title>
+      <rect x="582.00" y="758.00" width="341.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="752.50" y="788.00" text-anchor="middle">score</text>
+      <text class="m-node__kind" x="752.50" y="804.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="752.50" y="824.00" text-anchor="middle">LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別</text>
+    </a>
+    <a class="m-node m-node--service" href="features/spec-optimizer/aggregate.html" data-feature="spec-optimizer" data-submodule="aggregate" tabindex="0" aria-label="aggregate — 評分結果彙整、問題去重、優化計劃生成 — open sub-module page">
+      <title>aggregate — 評分結果彙整、問題去重、優化計劃生成</title>
+      <rect x="36.00" y="475.00" width="239.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="155.50" y="505.00" text-anchor="middle">aggregate</text>
+      <text class="m-node__kind" x="155.50" y="521.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="155.50" y="541.00" text-anchor="middle">評分結果彙整、問題去重、優化計劃生成</text>
+    </a>
+    <a class="m-node m-node--service" href="features/spec-optimizer/skill-optimizer.html" data-feature="spec-optimizer" data-submodule="skill-optimizer" tabindex="0" aria-label="skill-optimizer — 依據 skill 類別問題優化 SKILL.md 內容 — open sub-module page">
+      <title>skill-optimizer — 依據 skill 類別問題優化 SKILL.md 內容</title>
+      <rect x="465.00" y="420.00" width="243.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="586.50" y="450.00" text-anchor="middle">skill-optimizer</text>
+      <text class="m-node__kind" x="586.50" y="466.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="586.50" y="486.00" text-anchor="middle">依據 skill 類別問題優化 SKILL.md 內容</text>
+    </a>
+    <a class="m-node m-node--service" href="features/spec-optimizer/tool-optimizer.html" data-feature="spec-optimizer" data-submodule="tool-optimizer" tabindex="0" aria-label="tool-optimizer — 依據 apltk 類別問題優化 TypeScript 工具原始碼 — open sub-module page">
+      <title>tool-optimizer — 依據 apltk 類別問題優化 TypeScript 工具原始碼</title>
+      <rect x="441.00" y="530.00" width="291.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="586.50" y="560.00" text-anchor="middle">tool-optimizer</text>
+      <text class="m-node__kind" x="586.50" y="576.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="586.50" y="596.00" text-anchor="middle">依據 apltk 類別問題優化 TypeScript 工具原始碼</text>
+    </a>
+    <g class="m-edge m-edge--call m-edge--cross" data-edge="e-call-exec">
+      <path d="M391.00,781.50 L401.00,781.50 L401.00,747.00 L1315.00,747.00 L1315.00,737.67 L1682.00,737.67" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="1447.50" y="755.67" text-anchor="middle">
+        <tspan x="1447.50">POST /v1/chat/completions</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--call m-edge--cross" data-edge="e-call-judge">
+      <path d="M923.00,789.33 L1315.00,789.33 L1315.00,798.67 L1682.00,798.67" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="1447.50" y="816.67" text-anchor="middle">
+        <tspan x="1447.50">POST /v1/chat/completions</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--call m-edge--cross" data-edge="e-write-skill">
+      <path d="M708.00,467.00 L1072.00,467.00" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="875.50" y="485.00" text-anchor="middle">
+        <tspan x="875.50">寫入優化後 SKILL.md</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--call m-edge--cross" data-edge="e-write-tool">
+      <path d="M732.00,577.00 L1088.50,577.00" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="878.00" y="595.00" text-anchor="middle">
+        <tspan x="878.00">修改 TypeScript 源碼</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--call" data-edge="e-validate-schema">
+      <path d="M373.00,179.33 L383.00,179.33 L383.00,140.00 L509.00,140.00" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="441.00" y="130.00" text-anchor="middle">
+        <tspan x="441.00">驗證 schema</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--data-row" data-edge="e-load-questions">
+      <path d="M373.00,210.67 L383.00,210.67 L383.00,250.00 L509.00,250.00" fill="none" marker-end="url(#arrow-data-row)" />
+      <text class="m-edge__label" x="441.00" y="268.00" text-anchor="middle">
+        <tspan x="441.00">載入題目</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--call" data-edge="e-read-exec-env">
+      <path d="M391.00,828.50 L401.00,828.50 L401.00,868.00 L1046.00,868.00 L1046.00,865.50 L1064.00,865.50" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="752.50" y="886.00" text-anchor="middle">
+        <tspan x="752.50">讀取 EXEC_*</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--call" data-edge="e-read-judge-env">
+      <path d="M923.00,820.67 L933.00,820.67 L933.00,826.17 L1046.00,826.17 L1046.00,834.17 L1064.00,834.17" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="993.50" y="844.17" text-anchor="middle">
+        <tspan x="993.50">讀取 JUDGE_*</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--call" data-edge="e-trigger-score">
+      <path d="M391.00,805.00 L582.00,805.00" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="486.50" y="823.00" text-anchor="middle">
+        <tspan x="486.50">.done marker 觸發評分</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--call" data-edge="e-to-skill">
+      <path d="M275.00,506.33 L285.00,506.33 L285.00,467.00 L465.00,467.00" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="358.00" y="457.00" text-anchor="middle">
+        <tspan x="358.00">傳遞 skill 類問題</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--call" data-edge="e-to-tool">
+      <path d="M275.00,537.67 L285.00,537.67 L285.00,577.00 L441.00,577.00" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="358.00" y="595.00" text-anchor="middle">
+        <tspan x="358.00">傳遞 apltk 類問題</tspan>
+      </text>
+    </g>
+  </g>
+</svg>
+      </div>
+      <ol class="atlas-legend" aria-label="Edge legend">
+        <li><span class="legend-swatch legend-swatch--call"></span>call</li>
+        <li><span class="legend-swatch legend-swatch--return"></span>return</li>
+        <li><span class="legend-swatch legend-swatch--data-row"></span>data-row</li>
+        <li><span class="legend-swatch legend-swatch--failure"></span>failure</li>
+      </ol>
+    </section>
+    <section class="atlas-index" aria-label="Submodule index">
+      <h2>Submodule index</h2>
+      <ul class="atlas-submodule-index">
+        <li class="atlas-submodule-index__item">
+          <a href="features/test-question-bank/question-schema.html">
+            <span class="atlas-submodule-index__feature">測試題庫</span>
+            <span class="atlas-submodule-index__sub">question-schema</span>
+            <span class="atlas-submodule-index__kind">API</span>
+          </a>
+          <p class="atlas-submodule-index__role">題目 JSON Schema 定義與驗證規則</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/test-question-bank/test-questions.html">
+            <span class="atlas-submodule-index__feature">測試題庫</span>
+            <span class="atlas-submodule-index__sub">test-questions</span>
+            <span class="atlas-submodule-index__kind">DB</span>
+          </a>
+          <p class="atlas-submodule-index__role">100 道測試題目靜態資料</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/test-question-bank/question-utils.html">
+            <span class="atlas-submodule-index__feature">測試題庫</span>
+            <span class="atlas-submodule-index__sub">question-utils</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">題目載入、剝離評分標準、提供給執行器/評分器的工具函數</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/test-executor-scorer/env-utils.html">
+            <span class="atlas-submodule-index__feature">測試執行器與評分器</span>
+            <span class="atlas-submodule-index__sub">env-utils</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">.env 環境變數讀取與驗證</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/test-executor-scorer/run-evals.html">
+            <span class="atlas-submodule-index__feature">測試執行器與評分器</span>
+            <span class="atlas-submodule-index__sub">run-evals</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/test-executor-scorer/score.html">
+            <span class="atlas-submodule-index__feature">測試執行器與評分器</span>
+            <span class="atlas-submodule-index__sub">score</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/spec-optimizer/aggregate.html">
+            <span class="atlas-submodule-index__feature">優化器</span>
+            <span class="atlas-submodule-index__sub">aggregate</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">評分結果彙整、問題去重、優化計劃生成</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/spec-optimizer/skill-optimizer.html">
+            <span class="atlas-submodule-index__feature">優化器</span>
+            <span class="atlas-submodule-index__sub">skill-optimizer</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">依據 skill 類別問題優化 SKILL.md 內容</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/spec-optimizer/tool-optimizer.html">
+            <span class="atlas-submodule-index__feature">優化器</span>
+            <span class="atlas-submodule-index__sub">tool-optimizer</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">依據 apltk 類別問題優化 TypeScript 工具原始碼</p>
+        </li>
+      </ul>
+    </section>
+  </main>
+  <script src="assets/viewer.client.js" defer></script>
+</body>
+</html>

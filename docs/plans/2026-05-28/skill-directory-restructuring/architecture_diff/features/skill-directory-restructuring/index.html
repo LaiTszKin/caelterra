@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" data-atlas-page="feature">
+<head>
+  <meta charset="utf-8">
+  <title>技能目錄重組</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="../../assets/architecture.css">
+</head>
+<body>
+  <header class="feature-header">
+    <nav class="feature-breadcrumb"><a href="../../index.html">← Atlas</a></nav>
+    <h1>技能目錄重組</h1>
+    
+  </header>
+  <main class="feature-main">
+    <section class="feature-story"><p>將 repo 根目錄下 42 個技能目錄統一移至 skills/ 子目錄，並更新安裝腳本的路徑搜尋邏輯</p></section>
+    <section class="feature-submodules" aria-label="Submodules">
+      <h2>Submodules</h2>
+      <ul class="submodule-nav">
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="skills-dir.html">
+          <span class="submodule-card__name">skills-dir</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">skills/ 目錄，存放全部技能</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="install-script.html">
+          <span class="submodule-card__name">install-script</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">Shell 安裝腳本，從 skills/ 發現技能並安裝</p>
+      </li>
+      </ul>
+    </section>
+    <section class="feature-edges" aria-label="Intra-feature edges">
+      <h2>Intra-feature edges</h2>
+      <ul class="feature-edges__list">
+        <li class="feature-edges__item feature-edges__item--call"><span class="feature-edges__endpoints">install-script → skills-dir</span><span class="feature-edges__kind">call</span><span class="feature-edges__label">find skills</span></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

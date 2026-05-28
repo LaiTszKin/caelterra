@@ -1,0 +1,37 @@
+slug: spec-optimizer
+title: 優化器
+story: 彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化
+dependsOn: []
+submodules:
+  - slug: aggregate
+    kind: service
+    role: 評分結果彙整、問題去重、優化計劃生成
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: skill-optimizer
+    kind: service
+    role: 依據 skill 類別問題優化 SKILL.md 內容
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: tool-optimizer
+    kind: service
+    role: 依據 apltk 類別問題優化 TypeScript 工具原始碼
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges:
+  - id: e-to-skill
+    from: aggregate
+    to: skill-optimizer
+    kind: call
+    label: 傳遞 skill 類問題
+  - id: e-to-tool
+    from: aggregate
+    to: tool-optimizer
+    kind: call
+    label: 傳遞 apltk 類問題

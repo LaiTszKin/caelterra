@@ -1,0 +1,37 @@
+slug: test-question-bank
+title: 測試題庫
+story: 為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準
+dependsOn: []
+submodules:
+  - slug: question-schema
+    kind: api
+    role: 題目 JSON Schema 定義與驗證規則
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: test-questions
+    kind: db
+    role: 100 道測試題目靜態資料
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: question-utils
+    kind: service
+    role: 題目載入、剝離評分標準、提供給執行器/評分器的工具函數
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges:
+  - id: e-validate-schema
+    from: question-utils
+    to: question-schema
+    kind: call
+    label: 驗證 schema
+  - id: e-load-questions
+    from: question-utils
+    to: test-questions
+    kind: data-row
+    label: 載入題目

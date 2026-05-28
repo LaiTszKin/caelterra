@@ -1,0 +1,25 @@
+slug: skill-directory-restructuring
+title: 技能目錄重組
+story: 將 repo 根目錄下 42 個技能目錄統一移至 skills/ 子目錄，並更新安裝腳本的路徑搜尋邏輯
+dependsOn: []
+submodules:
+  - slug: skills-dir
+    kind: service
+    role: skills/ 目錄，存放全部技能
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: install-script
+    kind: service
+    role: Shell 安裝腳本，從 skills/ 發現技能並安裝
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges:
+  - id: e-install-skills
+    from: install-script
+    to: skills-dir
+    kind: call
+    label: find skills

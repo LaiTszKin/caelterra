@@ -1,0 +1,4170 @@
+[
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": null,
+      "features": {},
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank"
+      ],
+      "features": {
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank"
+      ],
+      "features": {
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank"
+      ],
+      "features": {
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank"
+      ],
+      "features": {
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank"
+      ],
+      "features": {
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank"
+      ],
+      "features": {
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer"
+      ],
+      "features": {
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer"
+      ],
+      "features": {
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer"
+      ],
+      "features": {
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "worker",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer"
+      ],
+      "features": {
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "worker",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "worker",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer"
+      ],
+      "features": {
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "worker",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "worker",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer"
+      ],
+      "features": {
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "worker",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "worker",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer"
+      ],
+      "features": {
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "worker",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "worker",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "worker",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "worker",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "worker",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "worker",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "worker",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "worker",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "worker",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "worker",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "worker",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api",
+        "spec-optimizer"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "spec-optimizer": {
+          "slug": "spec-optimizer",
+          "title": "優化器",
+          "story": "彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api",
+        "spec-optimizer"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "spec-optimizer": {
+          "slug": "spec-optimizer",
+          "title": "優化器",
+          "story": "彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "aggregate",
+              "kind": "service",
+              "role": "評分結果彙整、問題去重、優化計劃生成",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api",
+        "spec-optimizer"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "spec-optimizer": {
+          "slug": "spec-optimizer",
+          "title": "優化器",
+          "story": "彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "aggregate",
+              "kind": "service",
+              "role": "評分結果彙整、問題去重、優化計劃生成",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-optimizer",
+              "kind": "service",
+              "role": "依據 skill 類別問題優化 SKILL.md 內容",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api",
+        "spec-optimizer"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "spec-optimizer": {
+          "slug": "spec-optimizer",
+          "title": "優化器",
+          "story": "彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "aggregate",
+              "kind": "service",
+              "role": "評分結果彙整、問題去重、優化計劃生成",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-optimizer",
+              "kind": "service",
+              "role": "依據 skill 類別問題優化 SKILL.md 內容",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-optimizer",
+              "kind": "service",
+              "role": "依據 apltk 類別問題優化 TypeScript 工具原始碼",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api",
+        "spec-optimizer"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "spec-optimizer": {
+          "slug": "spec-optimizer",
+          "title": "優化器",
+          "story": "彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "aggregate",
+              "kind": "service",
+              "role": "評分結果彙整、問題去重、優化計劃生成",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-optimizer",
+              "kind": "service",
+              "role": "依據 skill 類別問題優化 SKILL.md 內容",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-optimizer",
+              "kind": "service",
+              "role": "依據 apltk 類別問題優化 TypeScript 工具原始碼",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-to-skill",
+              "from": "aggregate",
+              "to": "skill-optimizer",
+              "kind": "call",
+              "label": "傳遞 skill 類問題"
+            }
+          ]
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api",
+        "spec-optimizer"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "spec-optimizer": {
+          "slug": "spec-optimizer",
+          "title": "優化器",
+          "story": "彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "aggregate",
+              "kind": "service",
+              "role": "評分結果彙整、問題去重、優化計劃生成",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-optimizer",
+              "kind": "service",
+              "role": "依據 skill 類別問題優化 SKILL.md 內容",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-optimizer",
+              "kind": "service",
+              "role": "依據 apltk 類別問題優化 TypeScript 工具原始碼",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-to-skill",
+              "from": "aggregate",
+              "to": "skill-optimizer",
+              "kind": "call",
+              "label": "傳遞 skill 類問題"
+            },
+            {
+              "id": "e-to-tool",
+              "from": "aggregate",
+              "to": "tool-optimizer",
+              "kind": "call",
+              "label": "傳遞 apltk 類問題"
+            }
+          ]
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api",
+        "spec-optimizer",
+        "spec-skill"
+      ],
+      "features": {
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "spec-optimizer": {
+          "slug": "spec-optimizer",
+          "title": "優化器",
+          "story": "彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "aggregate",
+              "kind": "service",
+              "role": "評分結果彙整、問題去重、優化計劃生成",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-optimizer",
+              "kind": "service",
+              "role": "依據 skill 類別問題優化 SKILL.md 內容",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-optimizer",
+              "kind": "service",
+              "role": "依據 apltk 類別問題優化 TypeScript 工具原始碼",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-to-skill",
+              "from": "aggregate",
+              "to": "skill-optimizer",
+              "kind": "call",
+              "label": "傳遞 skill 類問題"
+            },
+            {
+              "id": "e-to-tool",
+              "from": "aggregate",
+              "to": "tool-optimizer",
+              "kind": "call",
+              "label": "傳遞 apltk 類問題"
+            }
+          ]
+        },
+        "spec-skill": {
+          "slug": "spec-skill",
+          "title": "spec 技能 (SKILL.md)",
+          "story": "優化目標：spec 技能的 SKILL.md 內容",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api",
+        "spec-optimizer",
+        "spec-skill",
+        "apltk-create-specs"
+      ],
+      "features": {
+        "apltk-create-specs": {
+          "slug": "apltk-create-specs",
+          "title": "apltk create-specs 工具",
+          "story": "優化目標：apltk CLI 的 create-specs TypeScript 原始碼",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "spec-optimizer": {
+          "slug": "spec-optimizer",
+          "title": "優化器",
+          "story": "彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "aggregate",
+              "kind": "service",
+              "role": "評分結果彙整、問題去重、優化計劃生成",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-optimizer",
+              "kind": "service",
+              "role": "依據 skill 類別問題優化 SKILL.md 內容",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-optimizer",
+              "kind": "service",
+              "role": "依據 apltk 類別問題優化 TypeScript 工具原始碼",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-to-skill",
+              "from": "aggregate",
+              "to": "skill-optimizer",
+              "kind": "call",
+              "label": "傳遞 skill 類問題"
+            },
+            {
+              "id": "e-to-tool",
+              "from": "aggregate",
+              "to": "tool-optimizer",
+              "kind": "call",
+              "label": "傳遞 apltk 類問題"
+            }
+          ]
+        },
+        "spec-skill": {
+          "slug": "spec-skill",
+          "title": "spec 技能 (SKILL.md)",
+          "story": "優化目標：spec 技能的 SKILL.md 內容",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": [
+        {
+          "id": "e-call-exec",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "run-evals"
+          },
+          "to": {
+            "feature": "exec-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-call-judge",
+          "from": {
+            "feature": "test-executor-scorer",
+            "submodule": "score"
+          },
+          "to": {
+            "feature": "judge-model-api"
+          },
+          "kind": "call",
+          "label": "POST /v1/chat/completions"
+        },
+        {
+          "id": "e-write-skill",
+          "from": {
+            "feature": "spec-optimizer",
+            "submodule": "skill-optimizer"
+          },
+          "to": {
+            "feature": "spec-skill"
+          },
+          "kind": "call",
+          "label": "寫入優化後 SKILL.md"
+        }
+      ],
+      "featureOrder": [
+        "test-question-bank",
+        "test-executor-scorer",
+        "exec-model-api",
+        "judge-model-api",
+        "spec-optimizer",
+        "spec-skill",
+        "apltk-create-specs"
+      ],
+      "features": {
+        "apltk-create-specs": {
+          "slug": "apltk-create-specs",
+          "title": "apltk create-specs 工具",
+          "story": "優化目標：apltk CLI 的 create-specs TypeScript 原始碼",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "exec-model-api": {
+          "slug": "exec-model-api",
+          "title": "執行模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，被測 agent 的執行環境",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "judge-model-api": {
+          "slug": "judge-model-api",
+          "title": "評分模型 API (OpenAI 相容)",
+          "story": "外部 LLM API，LLM-as-Judge",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "spec-optimizer": {
+          "slug": "spec-optimizer",
+          "title": "優化器",
+          "story": "彙整評分結果，去重歸類問題，對 spec 技能及 apltk 工具進行針對性優化",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "aggregate",
+              "kind": "service",
+              "role": "評分結果彙整、問題去重、優化計劃生成",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-optimizer",
+              "kind": "service",
+              "role": "依據 skill 類別問題優化 SKILL.md 內容",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-optimizer",
+              "kind": "service",
+              "role": "依據 apltk 類別問題優化 TypeScript 工具原始碼",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-to-skill",
+              "from": "aggregate",
+              "to": "skill-optimizer",
+              "kind": "call",
+              "label": "傳遞 skill 類問題"
+            },
+            {
+              "id": "e-to-tool",
+              "from": "aggregate",
+              "to": "tool-optimizer",
+              "kind": "call",
+              "label": "傳遞 apltk 類問題"
+            }
+          ]
+        },
+        "spec-skill": {
+          "slug": "spec-skill",
+          "title": "spec 技能 (SKILL.md)",
+          "story": "優化目標：spec 技能的 SKILL.md 內容",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "test-executor-scorer": {
+          "slug": "test-executor-scorer",
+          "title": "測試執行器與評分器",
+          "story": "並行執行 100 題測試，記錄 JSONL trace，由 LLM-as-Judge 進行多維度評分",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "env-utils",
+              "kind": "service",
+              "role": ".env 環境變數讀取與驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "run-evals",
+              "kind": "service",
+              "role": "並行測試執行器：隔離環境建立、API 調用、JSONL trace 寫入",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "score",
+              "kind": "service",
+              "role": "LLM-as-Judge 評分器：trace 解析、多維度評分、問題識別",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-read-exec-env",
+              "from": "run-evals",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 EXEC_*"
+            },
+            {
+              "id": "e-read-judge-env",
+              "from": "score",
+              "to": "env-utils",
+              "kind": "call",
+              "label": "讀取 JUDGE_*"
+            },
+            {
+              "id": "e-trigger-score",
+              "from": "run-evals",
+              "to": "score",
+              "kind": "call",
+              "label": ".done marker 觸發評分"
+            }
+          ]
+        },
+        "test-question-bank": {
+          "slug": "test-question-bank",
+          "title": "測試題庫",
+          "story": "為 spec 技能生成 100 道標準化測試題目，每題含 user prompt、project context 與多維度評分標準",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-schema",
+              "kind": "api",
+              "role": "題目 JSON Schema 定義與驗證規則",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "test-questions",
+              "kind": "db",
+              "role": "100 道測試題目靜態資料",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "question-utils",
+              "kind": "service",
+              "role": "題目載入、剝離評分標準、提供給執行器/評分器的工具函數",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-validate-schema",
+              "from": "question-utils",
+              "to": "question-schema",
+              "kind": "call",
+              "label": "驗證 schema"
+            },
+            {
+              "id": "e-load-questions",
+              "from": "question-utils",
+              "to": "test-questions",
+              "kind": "data-row",
+              "label": "載入題目"
+            }
+          ]
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  }
+]

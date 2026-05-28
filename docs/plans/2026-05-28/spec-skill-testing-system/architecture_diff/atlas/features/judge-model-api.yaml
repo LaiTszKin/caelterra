@@ -1,0 +1,6 @@
+slug: judge-model-api
+title: 評分模型 API (OpenAI 相容)
+story: 外部 LLM API，LLM-as-Judge
+dependsOn: []
+submodules: []
+edges: []
