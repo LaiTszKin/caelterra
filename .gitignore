@@ -15,6 +15,10 @@ dist/
 # Apollo Toolkit architecture diff viewer default output (local only)
 .apollo-toolkit/
 
+# Test execution artifacts (local only)
+assets/spec/*/test_*/
+results/
+
 # Node — after clone or `npm install -g`, dependencies live here locally only.
 # Root package-lock.json MUST stay committed (not ignored) so `npm ci` and npm
 # installs resolve the same tree as published versions (e.g. elkjs, js-yaml for
