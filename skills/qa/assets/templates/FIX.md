@@ -94,6 +94,18 @@ FIX-04 ──→ FIX-05  （同檔案 src/e.ts，必須循序）
 - **修復方案**: [具體修改方式]
 - **驗證命令**: `[test command]`
 
+**Subagent Prompt**:
+
+```
+[完整的 subagent 提示詞，包含:
+- 修復背景與目標
+- 需要閱讀的 REPORT.md / spec 檔案路徑
+- Per-Issue Fix Details 中該問題的完整修復方案
+- 允許/禁止修改的檔案邊界
+- 驗證命令
+- 風險標記與注意事項]
+```
+
 ### Batch 1 — Subagent B: [名稱]
 
 - **負責問題**: FIX-03
@@ -104,6 +116,18 @@ FIX-04 ──→ FIX-05  （同檔案 src/e.ts，必須循序）
   - `src/a.ts`（屬於 Subagent A）
 - **修復方案**: [具體修改方式]
 - **驗證命令**: `[test command]`
+
+**Subagent Prompt**:
+
+```
+[完整的 subagent 提示詞，包含:
+- 修復背景與目標
+- 需要閱讀的 REPORT.md / spec 檔案路徑
+- Per-Issue Fix Details 中該問題的完整修復方案
+- 允許/禁止修改的檔案邊界
+- 驗證命令
+- 風險標記與注意事項]
+```
 
 ---
 

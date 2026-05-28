@@ -88,6 +88,18 @@ W3 ──→ W4
 - **風險標記**: [auth / schema / migration / 外部 API / 無]
 - **驗證命令**: `[test/lint 命令]`
 
+**Subagent Prompt**:
+
+```
+[完整的 subagent 提示詞，包含:
+- 任務背景與目標
+- 需要閱讀的 spec/doc 檔案路徑
+- 具體任務清單與預期結果
+- 允許/禁止修改的檔案邊界
+- 驗證命令
+- 風險標記與注意事項]
+```
+
 ### Batch 2 — Subagent B: [名稱]
 
 - **工作單元**: W3
@@ -101,6 +113,18 @@ W3 ──→ W4
   - `src/a.ts`, `src/b.ts`（屬於 Subagent A）
 - **風險標記**: [auth / schema / migration / 外部 API / 無]
 - **驗證命令**: `[test/lint 命令]`
+
+**Subagent Prompt**:
+
+```
+[完整的 subagent 提示詞，包含:
+- 任務背景與目標
+- 需要閱讀的 spec/doc 檔案路徑
+- 具體任務清單與預期結果
+- 允許/禁止修改的檔案邊界
+- 驗證命令
+- 風險標記與注意事項]
+```
 
 ---
 
