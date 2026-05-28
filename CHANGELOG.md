@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v3.17.1] - 2026-05-28
+
+### Docs
+
+- Add regression testing step to fix skill workflow.
+
 ## [v3.17.0] - 2026-05-27
 
 ### Added
