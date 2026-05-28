@@ -84,6 +84,10 @@ Notes:
 - You can pass `--api-url` and `--api-key` to override `OPENAI_API_URL` and `OPENAI_API_KEY`.
 - When an aspect ratio is set, the script applies center-crop post-processing so outputs still match the target ratio.
 
+## 參考資料
+
+- `references/generate-storyboard-images.md` — apltk generate-storyboard-images 工具的完整參數說明。在執行 CLI 生成圖片前閱讀。
+
 ## Output Convention
 
 Generated files:

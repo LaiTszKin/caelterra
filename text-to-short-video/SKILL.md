@@ -150,6 +150,8 @@ If provider returns multiple outputs, keep the best one that matches requested s
 
 ### 6) Enforce final aspect ratio and size (optional but recommended)
 
+在操作前先閱讀 `references/enforce-video-aspect-ratio.md` 了解各參數的行為。
+
 When output ratio or resolution differs from target, run:
 
 ```bash
@@ -199,3 +201,7 @@ Before finishing, verify:
 - output file exists at returned absolute path
 - output duration is within `30-60` seconds (or user-approved exception)
 - output size matches requested target (after post-processing if needed)
+
+## References
+
+- `references/enforce-video-aspect-ratio.md` — apltk enforce-video-aspect-ratio 工具的完整參數說明。在步驟 6 執行長寬比修正前閱讀。

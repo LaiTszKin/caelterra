@@ -40,7 +40,7 @@ description: Read GitHub pull request review comments, analyze each thread, deci
 
 - If user provides PR number, use it directly.
 - If user does not provide PR number, infer from current branch context.
-- Use `apltk review-threads --help` as the live command reference for PR inference and explicit repo selection.
+- 在操作前先閱讀 `references/review-threads.md` 了解 list/resolve 子指令與過濾選項。
 
 ## 2) Read unresolved review threads
 
@@ -82,7 +82,7 @@ Track adopted thread IDs in a JSON file:
 ## 7) Resolve addressed threads
 
 Resolve only threads you actually addressed in code.
-- Use `apltk review-threads --help` as the live command reference for listing, resolving, dry-run behavior, and thread-id file input.
+- 在操作前先閱讀 `references/review-threads.md` 了解 resolve 子指令與 thread-id 的指定方式。
 
 ## 8) Handle non-adopted comments
 
@@ -92,4 +92,4 @@ Resolve only threads you actually addressed in code.
 
 ## CLI reference
 
-Use `apltk review-threads --help` as the authoritative command reference. This skill preserves the adopt/reject workflow and submission rules, not the flag catalog.
+- `references/review-threads.md` — apltk review-threads 工具的完整參數說明。在步驟 1 識別 PR 或步驟 7 解析 thread 前閱讀。

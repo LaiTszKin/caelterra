@@ -118,6 +118,7 @@ If producing multiple short videos in one request, enforce the same 50-60 second
 - Copy top-level `characters` from the final `roles.json` (reused + newly appended roles), then build beat-aligned `scenes` in narrative order.
 - Ensure prompts match the image list defined in the plan markdown.
 - Generate images with:
+  - 在執行前先閱讀 `references/generate-storyboard-images.md` 了解參數。
 
 ```bash
 apltk generate-storyboard-images \
@@ -131,6 +132,7 @@ apltk generate-storyboard-images \
 
 - Use the loop script text as narration input.
 - Generate audio + timeline + SRT:
+  - 在執行前先閱讀 `references/docs-to-voice.md` 了解參數。
 
 ```bash
 apltk docs-to-voice \
@@ -231,3 +233,9 @@ Before finishing, verify all conditions:
 - ending leaves one unresolved but compelling question
 - images and voice assets are generated successfully
 - Remotion project is preserved and `.gitignore` is configured
+
+## References
+
+- `references/generate-storyboard-images.md` — apltk generate-storyboard-images 工具的完整參數說明。在步驟 6 生成 storyboard 圖片前閱讀。
+- `references/docs-to-voice.md` — apltk docs-to-voice 工具的完整參數說明。在步驟 7 生成旁白前閱讀。
+- `references/roles-json.md` — roles.json 的 schema 與角色一致性規則。

@@ -74,6 +74,7 @@ At load time, check the project state to select the correct mode:
 ### 2. 使用 `apltk` cli 工具協助生成架構圖
 
 依照 C4 層級逐步產生：
+在操作 CLI 前先閱讀 `references/architecture.md` 了解所有參數與 mutation 系列的使用方式。
 
 1. **System Context**：定義外部 actor、系統邊界、跨系統 edge
 2. **Container 層級**：定義功能模塊（feature）及其之間的 edge
@@ -96,9 +97,9 @@ At load time, check the project state to select the correct mode:
 
 ## 參考資料
 
+- `references/architecture.md` — apltk architecture 工具的完整參數說明。在步驟 2 產生架構圖前閱讀。
 - `references/TEMPLATE_SPEC.md`：atlas 欄位、列舉和 CLI 寫入形狀速查表。
 - `references/definition.md`: 功能模塊和子模塊的詳細定義。
 - `assets/architecture-page.template.html`: 模板 html。
 - `references/architecture.css`: 風格模板。
 - `sample-demo/`：完整示例輸出，用於理解基礎 atlas 的最終形態與 C4 層級對應。
-- `apltk architecture --help` - cli 工具的指引指令。

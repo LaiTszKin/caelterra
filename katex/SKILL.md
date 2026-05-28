@@ -86,6 +86,6 @@ See `references/insertion-patterns.md` for concrete insertion guidance.
 
 ## References
 
+- `references/render-katex.md` — apltk render-katex 工具的完整參數說明。在步驟 3 執行渲染前閱讀。
 - `references/official-docs.md`: condensed notes from the official KaTeX docs and direct source links.
 - `references/insertion-patterns.md`: insertion patterns for HTML, Markdown/MDX, and auto-rendered pages.
-- `apltk render-katex`: TypeScript handler that calls the official KaTeX CLI for insertion-ready output (`lib/tools/render-katex.ts`).

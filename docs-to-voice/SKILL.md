@@ -46,7 +46,9 @@ description: Convert text and document content into audio files and sentence-lev
 
 ## CLI reference
 
-Use `apltk docs-to-voice --help` as the live command reference for required inputs, mode-specific flags, environment variables, examples, and expected output paths.
+- `references/docs-to-voice.md` — apltk docs-to-voice 工具的完整參數說明。在步驟 2 選擇 mode 前閱讀。
+
+在執行產出前先閱讀 `references/docs-to-voice.md` 了解各 mode 的參數與環境變數設定方式。
 
 ## Troubleshooting
 

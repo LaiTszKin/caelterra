@@ -35,10 +35,12 @@ description: Comprehensive application log investigation workflow that reads log
    - Prefer analyzing logs only inside that bounded window first (for example, from the last restart until now) to avoid stale logs polluting the diagnosis; widen the window only when the bounded slice cannot explain the symptom.
    - Identify relevant identifiers (trace ID, request ID, user ID, job ID, tx hash).
    - Use `apltk filter-logs` first when the raw log set is large and the incident window can be bounded.
+   - 在操作前先閱讀 `references/filter-logs.md` 了解所有參數。
 2. Build a timeline from logs
    - Extract key events in chronological order within the chosen window: deploys, config changes, warnings, errors, retries, and recoveries.
    - Group repeated symptoms by signature (error type, message prefix, stack frame, endpoint).
    - Use `apltk search-logs` to narrow by error signature, IDs, endpoint names, or repeated keywords before summarizing the timeline.
+   - 在操作前先閱讀 `references/search-logs.md` 了解搜尋模式與上下文行設定。
 3. Correlate across context
    - Link related log lines using identifiers and timestamps.
    - Map stack traces and log messages to exact code locations.
@@ -116,9 +118,8 @@ Use this structure in responses:
 
 ## Resources
 
+- `references/filter-logs.md` — apltk filter-logs 工具的完整參數說明。在步驟 1 使用 CLI 過濾日誌時間窗前閱讀。
+- `references/search-logs.md` — apltk search-logs 工具的完整參數說明。在步驟 2 搜尋日誌前閱讀。
+- `references/open-github-issue.md` — apltk open-github-issue 工具的完整參數說明。在步驟 6 發布 Issue 前閱讀。
 - `references/investigation-checklist.md`: Step-by-step checklist for evidence-driven log investigations.
 - `references/log-signal-patterns.md`: Common log signatures, likely causes, validation hints, and false-positive guards.
-- `apltk filter-logs`: Filter raw logs to a bounded incident window from files or stdin (TypeScript handler in `lib/tools/filter-logs.ts`).
-- `apltk search-logs`: Search logs by keyword or regex with optional time-window filtering and context lines (TypeScript handler in `lib/tools/search-logs.ts`).
-- Shared timestamp parsing and stdin/file iteration utilities built into `lib/tools/log-cli-utils.ts`.
-- Dependency skill: `open-github-issue` for deterministic issue publishing with auth fallback and README language detection.

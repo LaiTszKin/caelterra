@@ -23,7 +23,7 @@ description: 將已完成的spec歸檔到 `docs/archive/` 下。當你需要將s
 
 使用 `docs-project`, `maintain-project-constraints` 技能，按照這兩個技能之中的指引，更新項目文檔。
 
-使用 `apltk` CLI 工具將 architecture diff 合併回項目架構圖
+使用 `apltk` CLI 工具將 architecture diff 合併回項目架構圖。在操作前先閱讀 `references/architecture.md` 了解 merge 與相關參數的使用方式。
 
 ### 3. 歸檔 spec
 
@@ -31,5 +31,5 @@ description: 將已完成的spec歸檔到 `docs/archive/` 下。當你需要將s
 
 ## 參考資料索引
 
+- `references/architecture.md` — apltk architecture 工具的完整參數說明。在步驟 2 合併 architecture diff 前閱讀。
 - `assets/templates/readme.md`：README.md 模板
-- `apltk architecture --help` - apltk CLI 架構圖更新工具相關指引

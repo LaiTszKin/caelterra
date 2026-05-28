@@ -31,6 +31,7 @@ Load these references as needed during classification:
 - `references/important-features.md`
 - `references/enhancement-features.md`
 - `references/performance-features.md`
+- `references/open-github-issue.md` — apltk open-github-issue 工具的完整參數說明。在步驟 5 發布 accepted feature 前閱讀。
 
 ## Workflow
 
@@ -93,6 +94,7 @@ Load these references as needed during classification:
   - `suggested-architecture`: minimal architecture and module plan
   - `repo`: target repository in `owner/repo` format when known
 - If invoking the publisher CLI directly, pass accepted proposal details through `apltk open-github-issue --payload-file <json>` or `@file` inputs rather than inline shell arguments so Markdown and code identifiers remain literal.
+- 在操作 CLI 前先閱讀 `references/open-github-issue.md` 了解所有旗標與 Issue type 必要欄位。
 - Reuse the returned `mode`, `issue_url`, and `publish_error` in the response.
 - After the related feature is implemented, remove that feature entry from `## Accepted Feature Proposals` in `AGENTS.md/CLAUDE.md`.
 - Remove only implemented items; keep unimplemented accepted items untouched.

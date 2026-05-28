@@ -71,6 +71,7 @@ Do not guess any input that materially changes the research window or report sco
 apltk extract-pdf-text-pdfkit /absolute/path/to/source.pdf
 ```
 
+- 在執行前先閱讀 `references/extract-pdf-text-pdfkit.md` 了解輸出格式。
 - The bundled extractor prints page-delimited text directly from PDFKit so the agent can still build the source-event table without adding Python PDF packages ad hoc.
 - Identify the document's explicit markers, such as highlights, comments, callouts, boxed sections, bookmarks, or clearly labeled weekly key-event sections.
 - Build a source-event table before searching. For each marked event capture:
@@ -211,3 +212,7 @@ The report must contain these sections in order:
 - The default language is Chinese unless the user explicitly requests another language.
 - Keep the report evidence-based, concise, and decision-useful.
 - Make it easy for a user to understand the week's important financial developments within a few minutes.
+
+## References
+
+- `references/extract-pdf-text-pdfkit.md` — apltk extract-pdf-text-pdfkit 工具的完整參數說明。在步驟 1 需要 macOS 本地 PDF 提取時閱讀。

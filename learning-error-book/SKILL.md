@@ -111,6 +111,7 @@ error_book/
 
 5) Render structured data -> PDF (CJK font support)
    - Run:
+     - 在執行前先閱讀 `references/render-error-book.md` 了解參數。
      - `apltk render-error-book error_book/references/mc-question-reference.json error_book/mc-question-error-book.pdf`
      - `apltk render-error-book error_book/references/long-question-reference.json error_book/long-question-error-book.pdf`
    - If paper size/font needs change: adjust script flags (`--help`)
@@ -125,3 +126,7 @@ error_book/
 - Avoid lossy Markdown conversion. Keep symbols, formulas, and option text in the structured reference payload.
 - For long-answer questions, preserve the original step granularity instead of merging multiple reasoning steps into one.
 - Keep key-concept labels stable across questions so the concept summary can aggregate them cleanly.
+
+## 參考資料
+
+- `references/render-error-book.md` — apltk render-error-book 工具的完整參數說明。在步驟 5 渲染 PDF 前閱讀。

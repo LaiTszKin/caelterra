@@ -77,6 +77,6 @@ description: 審查規格文檔相關的程式碼變更。從六個維度產出 
 
 ## 參考資料
 
+- `references/create-review-report.md` — apltk create-review-report 工具的完整參數說明。在步驟 4 使用 CLI 產生模板前閱讀。
 - `assets/templates/code-review-report.md` - code review report 模板
 - `references/halluciation-review-instruction.md` - 幻覺代碼審查建議流程
-- `apltk create-review-report --help` - cli 工具幫助資訊

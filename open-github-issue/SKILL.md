@@ -87,5 +87,6 @@ When another skill depends on `open-github-issue`:
 
 ## Resources
 
-- `apltk open-github-issue`: Deterministic issue publishing helper with auth fallback and README language detection (TypeScript handler in `lib/tools/open-github-issue.ts`).
+- `references/open-github-issue.md` — apltk open-github-issue 工具的完整參數說明。在執行 CLI 發布 Issue 前閱讀，了解各 Issue type 的必要欄位與 auth 降級邏輯。
+- `references/issue-schemas.md` — 各 Issue type 的 payload schema 定義。
 - If the CLI tool is unavailable or fails for environment reasons, fall back to direct `gh issue create` or GitHub REST API publishing instead of retrying the same invocation.
