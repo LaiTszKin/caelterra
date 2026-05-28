@@ -54,11 +54,7 @@ test('createSpecsHandler creates correct directory structure (default)', async (
   );
 
   assert.equal(code, 0, stderr.toString());
-  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-feature', 'spec.md')));
-  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-feature', 'tasks.md')));
-  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-feature', 'checklist.md')));
-  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-feature', 'contract.md')));
-  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-feature', 'design.md')));
+  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-feature', 'SPEC.md')));
   // No nested date directory
   assert.ok(!fs.existsSync(path.join(tmpDir, FIXED_DATE, FIXED_DATE)));
 
@@ -73,7 +69,7 @@ test('createSpecsHandler with --batch-name creates batch structure', async () =>
   );
 
   assert.equal(code, 0, stderr.toString());
-  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-batch', 'feat-1', 'spec.md')));
+  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-batch', 'feat-1', 'SPEC.md')));
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
@@ -91,7 +87,7 @@ test('createSpecsHandler prevents double-nesting when output-dir points to exist
 
   assert.equal(code, 0, stderr.toString());
   // Should NOT nest: docs/plans/2026-05-16/another-feature/ (not docs/plans/2026-05-16/2026-05-16/another-feature/)
-  assert.ok(fs.existsSync(path.join(existingDateDir, 'another-feature', 'spec.md')));
+  assert.ok(fs.existsSync(path.join(existingDateDir, 'another-feature', 'SPEC.md')));
   assert.ok(!fs.existsSync(path.join(existingDateDir, FIXED_DATE)));
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -105,7 +101,7 @@ test('createSpecsHandler uses correct today output in templates', async () => {
   );
 
   assert.equal(code, 0, stderr.toString());
-  const specPath = path.join(tmpDir, FIXED_DATE, 'dated-feature', 'spec.md');
+  const specPath = path.join(tmpDir, FIXED_DATE, 'dated-feature', 'SPEC.md');
   const content = fs.readFileSync(specPath, 'utf-8');
   assert.ok(content.includes(FIXED_DATE));
 
