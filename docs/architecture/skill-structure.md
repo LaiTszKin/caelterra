@@ -2,7 +2,7 @@
 
 ## 每技能一目錄
 
-每個技能是頂層 kebab-case 目錄，根目錄包含 `SKILL.md` 作為技能進入點。`bin/apollo-toolkit.ts` 與 `lib/cli.ts` 透過掃描含 `SKILL.md` 的目錄來發現技能清單。兩個 codex 獨佔技能（`codex-memory-manager`、`learn-skill-from-conversations`）位於 `codex/` 命名空間下。
+每個技能是 `skills/` 下的 kebab-case 目錄，根目錄包含 `SKILL.md` 作為技能進入點。CLI 透過掃描 `skills/` 下含 `SKILL.md` 的子目錄來發現技能清單。
 
 ## Frontmatter 最小化
 

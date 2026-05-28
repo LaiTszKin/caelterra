@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import type { ToolContext } from '../types';
+import { iterSkillDirs } from '../utils/skill-discovery';
 
 const TOP_LEVEL_ALLOWED_KEYS = new Set(['interface', 'dependencies', 'policy']);
 const INTERFACE_REQUIRED_KEYS = new Set(['display_name', 'short_description', 'default_prompt']);
@@ -17,18 +18,6 @@ function repoRoot(context?: ToolContext): string {
   const fromDirname = path.resolve(__dirname, '..', '..', '..');
   if (fs.existsSync(path.join(fromDirname, 'package.json'))) return fromDirname;
   return path.resolve(__dirname, '..', '..', '..');
-}
-
-function iterSkillDirs(root: string): string[] {
-  const skillsDir = path.join(root, 'skills');
-  if (!fs.existsSync(skillsDir)) return [];
-  return fs.readdirSync(skillsDir)
-    .filter((name) => {
-      const full = path.join(skillsDir, name);
-      return fs.statSync(full).isDirectory() && fs.existsSync(path.join(full, 'SKILL.md'));
-    })
-    .map((name) => path.join(skillsDir, name))
-    .sort();
 }
 
 function extractFrontmatter(content: string): Record<string, any> {

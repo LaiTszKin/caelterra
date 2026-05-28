@@ -20,7 +20,7 @@ export const TARGET_DEFINITIONS: readonly TargetDefinition[] = Object.freeze([
 
 export const VALID_MODES: readonly InstallMode[] = TARGET_DEFINITIONS.map(({ id }) => id);
 const COPY_FILES = new Set(['AGENTS.md', 'CHANGELOG.md', 'LICENSE', 'README.md', 'package.json']);
-const COPY_DIRS = new Set<string>();
+const SKILLS_DIRNAME = 'skills';
 export const MANIFEST_FILENAME = '.apollo-toolkit-manifest.json';
 
 export function resolveHomeDirectory(env: NodeJS.ProcessEnv = process.env): string {
@@ -66,7 +66,7 @@ export function normalizeModes(inputModes: string[]): InstallMode[] {
 }
 
 export async function listSkillNames(rootDir: string, modes: InstallMode[] = []): Promise<string[]> {
-  const skillsDir = path.join(rootDir, 'skills');
+  const skillsDir = path.join(rootDir, SKILLS_DIRNAME);
   const entries = fs.existsSync(skillsDir)
     ? await fsp.readdir(skillsDir, { withFileTypes: true })
     : [];
@@ -191,23 +191,16 @@ function resolveInstallSourcePath({ toolkitHome, targetMode, skillName, codexSki
   if (targetMode === 'codex' && codexSkillNames.includes(skillName)) {
     return path.join(toolkitHome, 'codex', skillName);
   }
-  return path.join(toolkitHome, 'skills', skillName);
+  return path.join(toolkitHome, SKILLS_DIRNAME, skillName);
 }
 
-function shouldCopyEntry(sourceRoot: string, entry: fs.Dirent): boolean {
+function shouldCopyEntry(entry: fs.Dirent): boolean {
   if (entry.isFile()) return COPY_FILES.has(entry.name);
   if (!entry.isDirectory()) return false;
-  if (COPY_DIRS.has(entry.name)) return true;
-  // skills/ container directory: skill subdirectories are inside it
-  if (entry.name === 'skills') return true;
-  return fs.existsSync(path.join(sourceRoot, entry.name, 'SKILL.md'));
+  return entry.name === SKILLS_DIRNAME;
 }
 
-function shouldCopyCodexContainer({ sourceRoot, entry, modes = [] }: {
-  sourceRoot: string;
-  entry: fs.Dirent;
-  modes?: InstallMode[];
-}): boolean {
+function shouldCopyCodexContainer(sourceRoot: string, entry: fs.Dirent, modes: InstallMode[]): boolean {
   if (entry.name !== 'codex' || !entry.isDirectory() || !modes.includes('codex')) return false;
   const codexDir = path.join(sourceRoot, entry.name);
   if (!fs.existsSync(codexDir)) return false;
@@ -226,7 +219,7 @@ async function stageToolkitContents({ sourceRoot, destinationRoot, version, mode
   await fsp.mkdir(destinationRoot, { recursive: true });
 
   for (const entry of entries) {
-    if (!shouldCopyEntry(sourceRoot, entry) && !shouldCopyCodexContainer({ sourceRoot, entry, modes })) continue;
+    if (!shouldCopyEntry(entry) && !shouldCopyCodexContainer(sourceRoot, entry, modes)) continue;
     const sourcePath = path.join(sourceRoot, entry.name);
     const destinationPath = path.join(destinationRoot, entry.name);
     await fsp.cp(sourcePath, destinationPath, { recursive: true, force: true });

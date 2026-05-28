@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolContext } from '../types';
 
-const TEMPLATE_RELATIVE_PATH = 'qa/assets/templates/code-review-report.md';
+const TEMPLATE_RELATIVE_PATH = 'skills/qa/assets/templates/code-review-report.md';
 const OUTPUT_FILENAME = 'code-review-report.md';
 const COORDINATION_FILENAME = 'coordination.md';
 const SPEC_FILENAME = 'spec.md';

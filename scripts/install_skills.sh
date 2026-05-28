@@ -76,7 +76,7 @@ if [[ -n "$SCRIPT_SOURCE" && -f "$SCRIPT_SOURCE" ]]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 else
   # curl/pipe mode: use current directory only when it looks like this repo.
-  if find "$PWD/skills" -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/SKILL.md' ';' -print -quit 2>/dev/null | grep -q .; then
+  if [[ -f "$PWD/package.json" ]] && find "$PWD/skills" -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/SKILL.md' ';' -print -quit 2>/dev/null | grep -q .; then
     REPO_ROOT="$PWD"
   else
     bootstrap_repo_if_needed
