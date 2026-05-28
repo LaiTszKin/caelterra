@@ -26,7 +26,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * @param {string} [schemaPath] - schema 檔案路徑，預設為 assets/spec/question-schema.json
  * @returns {object} 解析後的 JSON Schema 物件
  */
-function loadSchema(schemaPath) {
+export function loadSchema(schemaPath) {
   const resolved = schemaPath
     ? resolve(schemaPath)
     : resolve(__dirname, '..', 'assets', 'spec', 'question-schema.json');
@@ -119,6 +119,20 @@ function validateQuestion(question) {
     });
   }
 
+  // coveredSteps 欄位驗證（可選欄位）
+  if (question.coveredSteps !== undefined) {
+    if (!Array.isArray(question.coveredSteps)) {
+      errors.push('question.coveredSteps 必須是陣列');
+    } else {
+      const validSteps = new Set(SPEC_WORKFLOW_STEPS.map(s => s.key));
+      question.coveredSteps.forEach((step, i) => {
+        if (typeof step !== 'string' || !validSteps.has(step)) {
+          errors.push(`question.coveredSteps[${i}] "${step}" 不是有效的步驟鍵值`);
+        }
+      });
+    }
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -175,6 +189,10 @@ export function loadQuestions(filePath) {
 
   if (questions.length === 0) {
     throw new Error('題目陣列為空');
+  }
+
+  if (questions.length < 100) {
+    console.warn(`警告: 題目數量為 ${questions.length}，少於預期的 100 道。測試覆蓋率可能不足。`);
   }
 
   // 驗證每道題目
@@ -338,7 +356,7 @@ function selfTest() {
   for (const q of questions) {
     if (Array.isArray(q.coveredSteps)) {
       for (const step of q.coveredSteps) {
-        if (stepCounts.hasOwnProperty(step)) {
+        if (Object.hasOwn(stepCounts, step)) {
           stepCounts[step]++;
         }
       }
