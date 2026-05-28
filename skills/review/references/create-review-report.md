@@ -1,7 +1,7 @@
-# apltk create-review-report — code review report 模板產生器
+# apltk create-review-report — review report 模板產生器
 
 ## 用途
-將 QA code review report 模板複製到對應的 spec 目錄。
+將 review report 模板（REPORT.md）複製到對應的 spec 目錄。
 
 ## 用法
 ```
@@ -16,7 +16,7 @@ apltk create-review-report [options] [<spec-path>]
 ## 旗標
 | 旗標 | 效果 |
 |------|------|
-| `--force, -f` | 覆蓋已存在的 `code-review-report.md` |
+| `--force, -f` | 覆蓋已存在的 `REPORT.md` |
 
 ## 放置邏輯
 - 單一 spec：放在 `spec.md` 旁

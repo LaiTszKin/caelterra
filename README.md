@@ -19,7 +19,7 @@ A curated skill catalog for Codex, OpenClaw, Trae, Agents, and Claude Code with 
 - financial-research
 - spec
 - implement
-- implement-with-subagents
+- plan
 - improve-observability
 - init-project-html
 - katex
@@ -35,6 +35,7 @@ A curated skill catalog for Codex, OpenClaw, Trae, Agents, and Claude Code with 
 - record-spending
 - resolve-review-comments
 - qa
+- review
 - shadow-api-model-research
 - ship-github-issue-fix
 - fix
@@ -189,10 +190,11 @@ The install commands below were checked with the Skills CLI unless otherwise not
 Compatibility note:
 
 - `spec` is a local skill used by `develop-new-features` and `enhance-existing-features`, and it can produce either a single spec set under `docs/plans/{YYYY-MM-DD}/{change_name}/` or a coordinated parallel batch under `docs/plans/{YYYY-MM-DD}/{batch_name}/{change_name}/` with shared `coordination.md`.
-- `implement-with-subagents` coordinates one `implement` subagent per spec directory for approved multi-spec batches.
+- `plan` converts completed spec documents into a detailed execution plan (`PROMPT.md`) with dependency analysis, batch scheduling, and subagent routing. `implement` then reads `PROMPT.md` and executes mechanically without making its own coordination decisions.
 
 - `read-github-issue` uses GitHub CLI (`gh`) directly for remote issue discovery and inspection, so it does not add any extra skill dependency.
-- `qa` is a local skill that reviews spec compliance of changes against governing planning documents, assessing business goals before secondary code-practice concerns.
+- `review` is a local skill that reviews spec compliance of changes against governing planning documents, assessing business goals before secondary code-practice concerns. It outputs `REPORT.md` (issue list only, no solutions).
+- `qa` reads `REPORT.md` and spec documents to generate `FIX.md` — a complete fix plan with dependency analysis and subagent routing. `fix` then reads `FIX.md` and executes mechanically.
 - `update-project-html` is a local skill that depends on `init-project-html` for semantic rules and on the `apltk architecture` CLI to refresh the base atlas after code changes; for spec overlay diagrams use `spec-to-project-html` instead.
 
 

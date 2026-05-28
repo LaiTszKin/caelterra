@@ -1,89 +1,114 @@
 ---
 name: implement
-description: 在當前分支或獨立 worktree 中依 spec 完成實作。按 tasks.md 逐項實作，按 checklist.md 逐項驗收，最後回填 spec 以反映實際代碼狀態。不用於不需 spec 的單檔案變更，不用於無明確 tasks.md 的探索性任務。
+description: 讀取 plan 產出的 PROMPT.md，嚴格按照其中的實作計畫和智能體路由執行實作。不做任何協同決策。不用於沒有 PROMPT.md 的情境，不用於不需 spec 的單檔案變更。
 ---
 
 ## 技能目標
 
-實作用戶指定的 spec，確保所有任務完成且用戶需求被滿足。
+按照 PROMPT.md 定義的實作計畫，機械式執行所有實作任務。
+本技能是純執行器——不分析依賴、不檢測重疊、不決定路由。這些決策已由 `plan` 技能在 PROMPT.md 中完成。
 
 ## 驗收條件
 
-- 對所有被要求實作的 spec，相關文件中的任務 checkboxes 全部被勾選為完成
-- 這些文件包括 `checklist.md`、`tasks.md`、`spec.md`
-- 不包含用戶自行填寫的項目
-- 所有實作已通過測試驗證（測試套件通過 / 編譯成功 / lint 無誤）
-- 若使用 worktree 隔離，需確保 worktree 已清理、無遺留分支
+- PROMPT.md 中所有定義的任務 checkboxes 全部被勾選為完成
+- 所有實作已通過 PROMPT.md 中定義的驗證檢查點
+- 若使用 subagent，所有 worktree 已被清理、無遺留分支
+- spec.md 中的需求 checkboxes 已回填
 
 ## 工作流程
 
-### 1. 定位實作範圍
+### 1. 載入實作計畫
 
-閱讀用戶指定的 spec：
+完整閱讀 PROMPT.md，理解：
+- 工作單元定義與依賴圖（Dependency Graph）
+- 批次排程（Batch Schedule）
+- Subagent 分配（Subagent Assignments）
+- 檔案所有權地圖（File Ownership Map）
+- 驗證檢查點（Verification Checkpoints）
+- 錯誤恢復策略（Error Recovery）
+- 邊界規則（Boundaries）
 
-- `spec.md` 定義了用戶的需求
-- `tasks.md` 定義了詳細的實作任務
-- `checklist.md` 定義了任務的完成和驗收條件
-- `contract.md` 定義了 spec 的外部依賴
-- `design.md` 定義了相關業務鏈路的架構設計
-- `coordination.md`（如有）定義了 batch spec 之中各份 spec 各自的實作邊界
-- `preparation.md`（如有）定義了實作 batch spec 之前各 spec 的共用準備工作
-
-閱讀 repo。理解本次 spec 的實作範圍。
+同時閱讀 spec 文檔組以理解實作上下文（spec.md、tasks.md、design.md、checklist.md）。
 
 ### 2. 判斷是否需要隔離環境
 
-參考 `references/isolation-guidance.md` 判斷本次實作是否需要使用 git worktree 隔離：
+參考 `references/isolation-guidance.md` 判斷是否需要 git worktree 隔離：
 
-- **隔離路徑**：變更涉及多個檔案、實驗性修改、或不希望影響當前工作目錄 → 走隔離路徑（步驟 2a）
-- **快速路徑**：單一或少數檔案變更、範圍明確 → 跳過隔離，直接在當前分支進行（跳到步驟 3）
+- **隔離路徑**：PROMPT.md 定義了多個 subagent 或變更涉及多個檔案 → 走隔離路徑
+- **快速路徑**：PROMPT.md 定義為單一循序執行、範圍明確 → 跳過隔離，直接在當前分支進行
 
-#### 2a. 隔離路徑：前置檢查與創建子分支及 worktree
+#### 2a. 隔離路徑：前置檢查與創建 worktree
 
-在建立 worktree 前，先檢查當前分支的狀態：
-- 若有未提交的變更，先 stash 或提交後再繼續
+在建立 worktree 前：
+- 若有未提交的變更，先 stash 或提交
 - 確認當前分支已同步遠端（若需推送）
 
 滿足前置條件後，從當前分支創建子分支及 worktree。
-分支以規格文檔的實際變更命名，且需符合通用開發規範（如 feat/event-bus-backend）。
+分支命名參考 `references/branch-naming.md`。
 
-### 3. 實作 spec 任務
+### 3. 按批次執行實作
 
-嚴格按照 `tasks.md` 定義的任務逐項實作。
-若有多份 `tasks.md` 存在於多份 spec 中，依照 `coordination.md` 建議的 merge 順序進行實作。
-在確認完成所有任務之後，將 `tasks.md` 中的所有 checkboxes 勾選為完成。
+嚴格按照 PROMPT.md 定義的 Batch Schedule 執行。
 
-若實作的 spec 是 batch spec，且有 `preparation.md`，在開始實作前先完成其規定的任務。
-驗收條件滿足後回填 `preparation.md`。
+#### 3a. 無 Subagent 的批次（循序執行）
 
-**實作範圍守門員**：在實作過程中持續對照 spec 的 In Scope / Out of Scope。若發現超出範圍的修改，暫停並與用戶確認後再繼續。
+按照 PROMPT.md 定義的順序，逐一執行工作單元：
+1. 閱讀對應 spec 的 tasks.md
+2. 逐項完成任務（T1.1, T1.2...）
+3. 執行該工作單元的驗證命令
+4. 將完成的 tasks.md checkboxes 勾選
 
-**實作偏離處理**：若在實作過程中發現 tasks.md 的任務無法照計劃完成（如 spec 的假設與實際程式碼不符、外部依賴變更），按以下流程處理：
+#### 3b. 有 Subagent 路由的批次（並行執行）
+
+按照 PROMPT.md 的 Subagent Assignments 定義：
+
+1. 為每個 subagent 建立專屬的獨立 worktree
+2. 每個 subagent 的工作流程：
+   - 載入 PROMPT.md 中自己的任務清單
+   - 閱讀對應 spec 的 tasks.md
+   - 逐項完成任務，只修改允許修改的檔案
+   - 執行定義的驗證命令
+   - 使用 `commit` 技能提交到所屬 worktree
+3. 等待所有 subagents 完成
+4. 使用 `merge-changes-from-local-branches` 技能合併所有 subagent 變更
+5. 清理所有 worktree
+
+**錯誤恢復**（嚴格按 PROMPT.md 第 8 節執行）：
+- 若 subagent 失敗，重試一次；再次失敗則暫停並通知用戶
+- 同批次其他成功的 subagent 結果保留
+- 已完成的批次不需重做
+
+### 4. 執行驗證檢查點
+
+在每個批次完成後，執行 PROMPT.md 中定義的 Verification Checkpoints：
+- 執行指定驗證命令
+- 確認結果符合預期
+- 未通過驗證的批次必須重新實作
+
+### 5. 實作範圍守門員
+
+在實作過程中持續對照 PROMPT.md 的 Boundaries：
+- **Always**：無條件執行
+- **Ask First**：暫停並與用戶確認
+- **Never**：嚴格禁止
+
+若發現超出 spec 定義範圍的修改需求，暫停並與用戶確認後再繼續。
+
+### 6. 實作偏離處理
+
+若在實作過程中發現 tasks.md 的任務無法照計畫完成：
 1. 暫停該任務的實作
 2. 記錄偏離原因與實際發現
-3. 更新 `spec.md` 中相關需求的 checkboxes 與備註
-4. 通知用戶偏離情況，等待用戶決策後再繼續
+3. 更新 spec.md 中相關需求的 checkboxes 與備註
+4. 通知用戶偏離情況，等待用戶決策
 
-### 4. 驗證實作
+### 7. 回填 spec
 
-按照 `checklist.md` 定義的驗收標準，逐項驗收並檢查任務是否完成。
-未達到驗收標準的任務必須重新實作與驗收。
+確保所有實作任務完成並通過驗收之後，更新 spec.md 中的需求 checkboxes。
 
-此外，必須執行以下技術驗證：
-- 執行專案測試套件，確認所有測試通過
-- 確認代碼可正常編譯
-- 確認 lint 無誤
+### 8. 提交變更
 
-通過後將 `checklist.md` 中的 checkboxes 勾選為完成。
-
-### 5. 回填 spec
-
-確保所有實作任務完成並通過驗收之後，更新 `spec.md` 中的需求 checkboxes。
-以反映實際代碼實作狀態。
-
-### 6. 提交變更
-
-使用 `commit` 將變更提交到分支上。不需要將變更推送到 remote。
+使用 `commit` 技能將變更提交到分支上。不需要推送到 remote。
 
 若與主分支發生合併衝突：
 1. 使用 `git merge main` 將主分支最新變更拉入
@@ -95,11 +120,12 @@ description: 在當前分支或獨立 worktree 中依 spec 完成實作。按 ta
 
 ## 範例
 
-- "實作含四份 spec 的 batch spec，coordination.md 建議 merge 順序為 spec 1 → 2 → 3 → 4" → 從 spec 1 開始逐份完成，在當前分支進行
-- "實作含兩份 spec 的 batch spec，且有 preparation.md，coordination.md 建議順序為 spec 2 → 1" → 先完成 preparation.md，再依順序實作 spec 2、spec 1
-- "實作 event-bus-backend spec，變更範圍大" → 開 worktree 隔離實作，完成後清理
+- "PROMPT.md 定義 3 個批次，Batch 2 有 2 個並行 subagent" → 執行 Batch 1 → 建立 2 個 worktree → 並行實作 → 合併 → 驗證 → 繼續 Batch 3
+- "PROMPT.md 定義單一循序執行" → 直接在當前分支按順序完成所有工作單元
+- "Subagent A 實作失敗" → 按 Error Recovery 重試一次 → 仍失敗 → 暫停，保留 Subagent B 成果，通知用戶
 
 ## 參考資料
 
-- `references/branch-naming.md` - 建議分支命名方式
-- `references/isolation-guidance.md` - 判斷何時需要使用 worktree 隔離
+- `references/branch-naming.md` — 建議分支命名方式
+- `references/isolation-guidance.md` — 判斷何時需要使用 worktree 隔離
+- PROMPT.md — 由 `plan` 技能產出的實作計畫，本技能的唯一執行依據

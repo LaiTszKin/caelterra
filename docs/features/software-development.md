@@ -10,19 +10,25 @@
 - **When** 產生 batch spec
 - **Then** 在 `docs/plans/{YYYY-MM-DD}/{batch_name}/` 下產生多份 spec，並附帶 `coordination.md` 管理跨模組依賴
 
-## 實作新功能
+## 生成實作計畫
 
 - **Given** 已有經批准的 spec
-- **When** 使用 `implement` 技能
-- **Then** 依照 spec 逐步實作功能，並確保最終實作與規劃文件一致
+- **When** 使用 `plan` 技能
+- **Then** 將 spec 轉化為 PROMPT.md，包含依賴分析、批次排程、檔案所有權分配與 subagent 路由策略
 
-- **Given** 多份 spec 需平行實作且環境支援 subagent
-- **When** 使用 `implement-with-subagents` 技能
-- **Then** 每份 spec 分配至獨立 subagent，以 bounded concurrency 平行實作
+- **Given** spec 是 batch spec
+- **When** 使用 `plan` 技能
+- **Then** 分析 coordination.md 與各 spec 的 design.md，建立 spec 級別 DAG、檢測檔案重疊、排程批次、分配 subagent 路由
+
+## 實作新功能
+
+- **Given** 已有 PROMPT.md
+- **When** 使用 `implement` 技能
+- **Then** 嚴格按照 PROMPT.md 的批次排程與 subagent 路由執行實作，不做任何協同決策
 
 - **Given** 需要在隔離環境中實作且不污染主要工作目錄
-- **When** 使用 `implement-with-worktree` 技能
-- **Then** 在獨立的 git worktree 中實作 spec，完成後合併回主要分支
+- **When** implement 判斷需要隔離
+- **Then** 在獨立的 git worktree 中實作，完成後合併回主要分支
 
 ## 增強現有功能
 
@@ -39,16 +45,20 @@
 ## 程式碼審查
 
 - **Given** 變更已實作完成
+- **When** 使用 `review` 技能
+- **Then** 對照原始 spec 檢視變更，從六個維度產出 REPORT.md（僅問題清單，不含修復建議）
+
+- **Given** REPORT.md 產出且有需要修復的問題
 - **When** 使用 `qa` 技能
-- **Then** 對照原始 spec 檢視變更，先確認商業目標達成狀況，再檢查邊界案例、安全性與程式碼品質
+- **Then** 讀取 spec + REPORT.md，生成 FIX.md 修復計畫（含依賴分析、檔案重疊檢測、批次排程、subagent 路由）
+
+- **Given** 已有 FIX.md
+- **When** 使用 `fix` 技能
+- **Then** 嚴格按照 FIX.md 的修復計畫執行，不做任何規劃決策
 
 - **Given** GitHub PR 上有審查意見
 - **When** 使用 `resolve-review-comments` 技能
 - **Then** 逐一處理審查意見並標記為已解決
-
-- **Given** 審查中發現需要修復的問題
-- **When** 使用 `fix` 技能
-- **Then** 依嚴重程度排序處理問題，每個修復獨立驗證，完成後全面再驗證
 
 ## 架構圖同步
 
