@@ -2,15 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolContext } from '../types';
 
-const TEMPLATE_FILENAMES = [
-  'spec.md',
-  'tasks.md',
-  'checklist.md',
-  'contract.md',
-  'design.md',
-];
-const COORDINATION_TEMPLATE = 'coordination.md';
-const PREPARATION_TEMPLATE = 'preparation.md';
+const TEMPLATE_FILENAMES = ['SPEC.md'];
+
 const PLACEHOLDER_NAMES = ['[Feature Name]', '[功能名稱]'];
 
 function slugify(text: string): string {
@@ -67,7 +60,7 @@ export async function createSpecsHandler(args: string[], context: ToolContext): 
         }
       }
 
-      if (key === 'force' || key === 'with-coordination' || key === 'with-preparation') {
+      if (key === 'force') {
         parsed[key] = value === true || value === 'true';
       } else if (key === 'change-name' || key === 'slug') {
         parsed['change-name'] = String(value);
@@ -93,15 +86,13 @@ The tool auto-creates a <today> folder under --output-dir. Batch names
 should group related specs (e.g. "membership-cutover"), NOT include date
 prefixes like "2026-05-22-membership" — that produces nested date folders.
 
-Output layout:
-  Single spec:  <output-dir>/<today>/<change-name>/
-  Batch:        <output-dir>/<today>/<batch-name>/<change-name>/
+Output:
+  Single spec:  <output-dir>/<today>/<change-name>/SPEC.md
+  Batch:        <output-dir>/<today>/<batch-name>/<change-name>/SPEC.md
 
 Options:
   --change-name, --slug   Folder name (defaults to slugified feature_name)
   --batch-name            Batch folder name (do NOT include date prefix)
-  --with-coordination     Create coordination.md (requires --batch-name)
-  --with-preparation      Create preparation.md (requires --batch-name)
   --output-dir            Output base directory (default: docs/plans)
   --template-dir          Template directory
   --force                 Overwrite existing files
@@ -131,15 +122,6 @@ Options:
     stderr.write(`Use a descriptive name without date prefix, e.g. --batch-name "membership-cutover".\n\n`);
   }
 
-  if (parsed['with-coordination'] && !batchName) {
-    stderr.write('Error: --with-coordination requires --batch-name.\n');
-    return 1;
-  }
-  if (parsed['with-preparation'] && !batchName) {
-    stderr.write('Error: --with-preparation requires --batch-name.\n');
-    return 1;
-  }
-
   // Resolve template directory
   const sourceRoot = context.sourceRoot || path.resolve(__dirname, '..', '..', '..');
   const templateDirRaw = (parsed['template-dir'] as string) || path.join(sourceRoot, 'skills', 'spec', 'assets', 'templates');
@@ -152,12 +134,6 @@ Options:
 
   // Check template files exist
   const missingTemplates = TEMPLATE_FILENAMES.filter((name) => !fs.existsSync(path.join(templateDir, name)));
-  if (parsed['with-coordination'] && !fs.existsSync(path.join(templateDir, COORDINATION_TEMPLATE))) {
-    missingTemplates.push(COORDINATION_TEMPLATE);
-  }
-  if (parsed['with-preparation'] && !fs.existsSync(path.join(templateDir, PREPARATION_TEMPLATE))) {
-    missingTemplates.push(PREPARATION_TEMPLATE);
-  }
   if (missingTemplates.length > 0) {
     stderr.write(`Error: Missing template files in ${templateDir}: ${missingTemplates.join(', ')}\n`);
     return 1;
@@ -168,15 +144,11 @@ Options:
 
   // Prevent double-nesting: if outputDir's last component is already today's date,
   // use it directly as the date root rather than appending the date again.
-  // This handles the case where --output-dir already points to an existing
-  // date folder (e.g. docs/plans/2026-05-16).
   const dateRoot = path.basename(outputDir) === today ? outputDir : path.join(outputDir, today);
   const batchRoot = batchName ? path.join(dateRoot, batchName) : null;
   const outputRoot = batchRoot ? path.join(batchRoot, changeName) : path.join(dateRoot, changeName);
 
   const outputPaths = TEMPLATE_FILENAMES.map((name) => path.join(outputRoot, name));
-  const coordinationPath = (parsed['with-coordination'] && batchRoot) ? path.join(batchRoot, COORDINATION_TEMPLATE) : null;
-  const preparationPath = (parsed['with-preparation'] && batchRoot) ? path.join(batchRoot, PREPARATION_TEMPLATE) : null;
 
   const force = parsed['force'] === true;
   const existingFiles = outputPaths.filter((p) => fs.existsSync(p));
@@ -200,26 +172,6 @@ Options:
       'utf-8',
     );
     stdout.write(`${outputPath}\n`);
-  }
-
-  if (coordinationPath && (force || !fs.existsSync(coordinationPath))) {
-    const templateContent = fs.readFileSync(path.join(templateDir, COORDINATION_TEMPLATE), 'utf-8');
-    fs.writeFileSync(
-      coordinationPath,
-      renderContent(templateContent, todayStr, featureName, changeName, batchName),
-      'utf-8',
-    );
-    stdout.write(`${coordinationPath}\n`);
-  }
-
-  if (preparationPath && (force || !fs.existsSync(preparationPath))) {
-    const templateContent = fs.readFileSync(path.join(templateDir, PREPARATION_TEMPLATE), 'utf-8');
-    fs.writeFileSync(
-      preparationPath,
-      renderContent(templateContent, todayStr, featureName, changeName, batchName),
-      'utf-8',
-    );
-    stdout.write(`${preparationPath}\n`);
   }
 
   return 0;

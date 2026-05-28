@@ -2,12 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolContext } from '../types';
 
-const TEMPLATE_RELATIVE_PATH = 'skills/qa/assets/templates/code-review-report.md';
-const OUTPUT_FILENAME = 'code-review-report.md';
-const COORDINATION_FILENAME = 'coordination.md';
-const SPEC_FILENAME = 'spec.md';
+const TEMPLATE_RELATIVE_PATH = 'skills/review/assets/templates/REPORT.md';
+const OUTPUT_FILENAME = 'REPORT.md';
+const SPEC_FILENAMES = ['SPEC.md', 'spec.md'];
 const PLANS_DIR = 'docs/plans';
 const DATE_DIR_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function hasSpecFile(dirPath: string): boolean {
+  return SPEC_FILENAMES.some((name) => fs.existsSync(path.join(dirPath, name)));
+}
 
 function resolveTargetDir(inputPath: string, stderr: { write(msg: string): boolean }): string | null {
   let stat: fs.Stats;
@@ -35,26 +38,18 @@ function resolveTargetDir(inputPath: string, stderr: { write(msg: string): boole
   }
 
   const parentDir = path.dirname(dir);
-  const hasCoordinationInParent = fs.existsSync(path.join(parentDir, COORDINATION_FILENAME));
-  const hasCoordinationHere = fs.existsSync(path.join(dir, COORDINATION_FILENAME));
-  const hasSpecHere = fs.existsSync(path.join(dir, SPEC_FILENAME));
+  const hasSpecHere = hasSpecFile(dir);
+  const hasSpecInParent = hasSpecFile(parentDir);
 
-  if (hasCoordinationHere) {
-    // User pointed at a batch root → output here
+  if (hasSpecHere) {
     return dir;
   }
 
-  if (hasCoordinationInParent && hasSpecHere) {
-    // User pointed at a change within a batch → output at batch root (parent)
+  if (hasSpecInParent) {
     return parentDir;
   }
 
-  if (hasSpecHere) {
-    // Single spec → output here
-    return dir;
-  }
-
-  stderr.write(`Error: ${dir} is not a valid spec directory (no spec.md or coordination.md found).\n`);
+  stderr.write(`Error: ${dir} is not a valid spec directory (no SPEC.md found).\n`);
   return null;
 }
 
@@ -86,41 +81,49 @@ function autoDetectTargetDir(stderr: { write(msg: string): boolean }): string | 
   const datePath = path.join(plansDir, latestDate);
   const subEntries = fs.readdirSync(datePath);
 
-  // Look for batch roots (directories containing coordination.md)
-  const batchRoots: string[] = [];
-  const singleSpecs: string[] = [];
+  // Look for spec directories (containing SPEC.md or spec.md)
+  const singleSpecs: { name: string; path: string }[] = [];
+  const batchDirs: { name: string; path: string }[] = [];
 
   for (const name of subEntries) {
     const subPath = path.join(datePath, name);
     if (!fs.statSync(subPath).isDirectory()) continue;
 
-    if (fs.existsSync(path.join(subPath, COORDINATION_FILENAME))) {
-      batchRoots.push(name);
-    } else if (fs.existsSync(path.join(subPath, SPEC_FILENAME))) {
-      singleSpecs.push(name);
+    if (hasSpecFile(subPath)) {
+      singleSpecs.push({ name, path: subPath });
+    } else {
+      // Check if it's a batch dir (has subdirs with SPEC.md / spec.md)
+      const subSubEntries = fs.readdirSync(subPath);
+      for (const subName of subSubEntries) {
+        const subSubPath = path.join(subPath, subName);
+        if (fs.statSync(subSubPath).isDirectory() && hasSpecFile(subSubPath)) {
+          batchDirs.push({ name, path: subPath });
+          break;
+        }
+      }
     }
   }
 
-  if (batchRoots.length === 1) {
-    return path.join(datePath, batchRoots[0]);
+  if (batchDirs.length === 1) {
+    return batchDirs[0].path;
   }
 
-  if (batchRoots.length > 1) {
+  if (batchDirs.length > 1) {
     stderr.write(`Error: Multiple batch specs found in ${datePath}. Specify the path manually:\n`);
-    for (const name of batchRoots) {
-      stderr.write(`  apltk create-review-report ${path.join(datePath, name)}\n`);
+    for (const bd of batchDirs) {
+      stderr.write(`  apltk create-review-report ${bd.path}\n`);
     }
     return null;
   }
 
   if (singleSpecs.length === 1) {
-    return path.join(datePath, singleSpecs[0]);
+    return singleSpecs[0].path;
   }
 
   if (singleSpecs.length > 1) {
     stderr.write(`Error: Multiple specs found in ${datePath}. Specify the path manually:\n`);
-    for (const name of singleSpecs) {
-      stderr.write(`  apltk create-review-report ${path.join(datePath, name)}\n`);
+    for (const ss of singleSpecs) {
+      stderr.write(`  apltk create-review-report ${ss.path}\n`);
     }
     return null;
   }
@@ -137,7 +140,7 @@ export async function createReviewReportHandler(args: string[], context: ToolCon
   if (args.includes('--help') || args.includes('-h')) {
     stdout.write(`Usage: apltk create-review-report [options] [<spec-path>]
 
-Copy the QA code review report template (code-review-report.md)
+Copy the review report template (REPORT.md)
 to the appropriate spec directory.
 
 Positional:
@@ -145,7 +148,7 @@ Positional:
                  If omitted, auto-detects the latest spec in docs/plans/.
 
 Options:
-  --force, -f    Overwrite existing code-review-report.md if it exists
+  --force, -f    Overwrite existing REPORT.md if it exists
   --help, -h     Show this help message
 
 Examples:
