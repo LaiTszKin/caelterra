@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-import { readTrace, scoreAllTests, buildJudgePrompt } from '../dist/scorer.js';
+import { readTrace, scoreAllTests, buildJudgePrompt, scoreSingleTest } from '../dist/scorer.js';
 import { getProjectRoot } from '../dist/lib/project-root.js';
 
 // ---------------------------------------------------------------------------
@@ -305,6 +305,71 @@ describe('REGTEST-C: scoreAllTests should use scanForDoneAsync', () => {
     if (syncCallMatch) {
       assert.fail(`scoreAllTests should NOT call scanForDone (sync), found: "${syncCallMatch[0]}"`);
     }
+  });
+});
+
+// =========================================================================
+// REGTEST-03 (Round 7): scoring-lock 陳舊鎖不導致 skipped
+// =========================================================================
+describe('REGTEST-03 (R7): scoring-lock 陳舊鎖不導致 skipped', () => {
+  const root = getProjectRoot();
+  const date = `rg-r7-03-${Date.now()}`;
+  const testId = 'Q001';
+  let rBase;
+  let aDir;
+  let resultsTestDir;
+  let lockDir;
+  let origFetch;
+
+  before(() => {
+    origFetch = globalThis.fetch;
+
+    // Seed the test directory with trace.jsonl and question bank
+    const seeded = seedTestRun(root, date, [testId]);
+    rBase = seeded.resultsBase;
+    aDir = seeded.assetsDir;
+    resultsTestDir = path.join(rBase, `test_${testId}`);
+    lockDir = path.join(resultsTestDir, '.scoring-lock');
+
+    // Create a stale .scoring-lock directory
+    fs.mkdirSync(lockDir);
+    const staleTime = new Date(Date.now() - 6 * 60 * 1000); // 6 min ago
+    fs.utimesSync(lockDir, staleTime, staleTime);
+
+    // Mock fetch for judge API calls
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        model: 'judge-model',
+        usage: { total_tokens: 5 },
+        choices: [{ finish_reason: 'stop', message: { content: createJudgeScoreJSON(85) } }],
+      }),
+      text: async () => '',
+    });
+  });
+
+  after(() => {
+    globalThis.fetch = origFetch;
+    cleanup(rBase, aDir);
+  });
+
+  it('should clear stale scoring-lock and score normally (not skipped)', async () => {
+    const env = makeEnv(1);
+
+    // Build a question map so scoreSingleTest does not need to read from disk
+    const questionMap = {};
+    const questions = makeQuestions([testId]);
+    for (const q of questions) {
+      questionMap[q.id] = q;
+    }
+
+    const result = await scoreSingleTest(testId, date, env, questionMap);
+
+    // VERIFY: result should NOT be skipped
+    assert.ok(!result.skipped, 'Stale scoring-lock should be cleared, result should not be skipped');
+    assert.ok(result.score !== null, 'Score should not be null (stale lock was cleared)');
+    assert.ok(result.score.overallScore > 0, 'Score should be positive');
+    assert.equal(result.score.testId, testId, 'Score should be for the correct test');
   });
 });
 

@@ -11,8 +11,8 @@
  * Only uses Node.js built-in modules and lib/ modules. No external dependencies.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, realpathSync, readdirSync, unlinkSync } from 'node:fs';
-import { readdir, readFile } from 'node:fs/promises';
+import { existsSync, mkdirSync, writeFileSync, realpathSync } from 'node:fs';
+import { readdir, readFile, mkdir, writeFile, copyFile, unlink } from 'node:fs/promises';
 import { resolve, join, basename, dirname } from 'node:path';
 
 import type { ScoreResult } from './scorer.js';
@@ -72,10 +72,8 @@ interface RawIssueWithKeywords extends RawIssue {
 
 interface DedupedIssueInternal {
   _index: number;
-  _cluster: RawIssueWithKeywords[];
   _descKeywords: Set<string>;
   _evidKeywords: Set<string>;
-  _suggestedFix?: string;
   category: string;
   severity: string;
   frequency: number;
@@ -640,7 +638,7 @@ function generateTemplateSuggestion(issue: { category: string; description: stri
  * Deduplicate issues: group by category, merge similar issues by keyword similarity.
  * Optionally use judge model for semantic similarity if available.
  *
- * Phase 1: Jaccard similarity within category groups (threshold > 0.35).
+ * Phase 1: Jaccard similarity within category groups (threshold > 0.15).
  * Phase 2 (optional): Judge model semantic similarity refinement via union-find.
  *
  * Ported from scripts/optimize.mjs deduplicateIssues().
@@ -708,9 +706,9 @@ export async function deduplicateIssues(
         // Check evidence similarity
         const evidSim = jaccardSimilarity(base._evidKeywords, candidate._evidKeywords);
 
-        // Merge if description similarity > 0.35 OR they share trace evidence
+        // Merge if description similarity > 0.15 OR they share trace evidence
         // (threshold accounts for stemming normalization and synonym variation)
-        if (descSim > 0.35 || (base.evidence && candidate.evidence && evidSim > 0.4)) {
+        if (descSim > 0.15 || (base.evidence && candidate.evidence && evidSim > 0.4)) {
           cluster.push(candidate);
           used.add(j);
         }
@@ -735,7 +733,6 @@ export async function deduplicateIssues(
       optIdCounter++;
       merged.push({
         _index: optIdCounter,
-        _cluster: cluster,
         _descKeywords: extractKeywords(bestDescription),
         _evidKeywords: new Set(
           cluster.flatMap(i => [...i._evidKeywords]),
@@ -764,7 +761,7 @@ export async function deduplicateIssues(
         affectedTests: item.affectedTests,
         description: item.description,
         evidence: item.evidence,
-        suggestedFix: item._suggestedFix ?? '',
+        suggestedFix: '',
       }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -1127,7 +1124,7 @@ export async function optimizeSkillMd(
   // Read current SKILL.md
   let currentContent: string;
   try {
-    currentContent = readFileSync(skillMdPath, 'utf-8');
+    currentContent = await readFile(skillMdPath, 'utf-8');
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, message: `Cannot read SKILL.md at ${skillMdPath}: ${msg}` };
@@ -1146,8 +1143,60 @@ export async function optimizeSkillMd(
     }
   }
 
-  // Build shared template patch (used by dry-run and judge-unavailable paths)
-  function buildTemplatePatch(skillIssues: OptimizationPlan['issues']): string {
+  // Build diff-style patch for dry-run output (FIX-05)
+  async function buildDiffPatch(skillIssues: OptimizationPlan['issues']): Promise<string> {
+    const relativeSkillPath = skillMdPath.includes('/skills/')
+      ? 'skills/' + skillMdPath.split('/skills/')[1]
+      : basename(skillMdPath);
+
+    const patchLines: string[] = [
+      '## DRY RUN — 以下變更未實際寫入',
+      '',
+      `Generated: ${new Date().toISOString()}`,
+      `Source: ${skillMdPath}`,
+      `Issues analyzed: ${skillIssues.length}`,
+      '',
+      `--- a/${relativeSkillPath}`,
+      `+++ b/${relativeSkillPath}`,
+      '',
+    ];
+
+    for (const issue of skillIssues) {
+      patchLines.push(`### ${issue.id}: ${issue.severity} - ${issue.description.substring(0, 120)}`);
+      patchLines.push('');
+      patchLines.push('FIND:');
+      patchLines.push('```');
+      patchLines.push(`(Section related to: ${issue.description})`);
+      patchLines.push('```');
+      patchLines.push('');
+      patchLines.push('REPLACE:');
+      patchLines.push('```');
+      patchLines.push(`${issue.suggestedFix || '(Review and adjust based on identified issues)'}`);
+      patchLines.push('```');
+      patchLines.push('');
+      patchLines.push(`- **Frequency**: ${issue.frequency} tests affected`);
+      patchLines.push(`- **Affected Tests**: ${issue.affectedTests.join(', ')}`);
+      patchLines.push(`- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`);
+      patchLines.push('');
+      patchLines.push('---');
+      patchLines.push('');
+    }
+
+    patchLines.push('## Template-Based Suggestions');
+    patchLines.push('');
+    patchLines.push(generateSkillTemplateChanges(skillIssues));
+
+    const root = getProjectRoot();
+    const resultsDir = resolve(root, 'results', 'spec', date);
+    await mkdir(resultsDir, { recursive: true });
+    const patchPath = join(resultsDir, 'skill-optimization-patch.md');
+    await writeFile(patchPath, patchLines.join('\n'), 'utf-8');
+
+    return patchPath;
+  }
+
+  // Build shared template patch (used by judge-unavailable path)
+  async function buildTemplatePatch(skillIssues: OptimizationPlan['issues']): Promise<string> {
     const patchLines: string[] = [
       '# SKILL.md Optimization Suggestions',
       '',
@@ -1174,25 +1223,25 @@ export async function optimizeSkillMd(
 
     const root = getProjectRoot();
     const resultsDir = resolve(root, 'results', 'spec', date);
-    mkdirSync(resultsDir, { recursive: true });
+    await mkdir(resultsDir, { recursive: true });
     const patchPath = join(resultsDir, 'skill-optimization-patch.md');
-    writeFileSync(patchPath, patchLines.join('\n'), 'utf-8');
+    await writeFile(patchPath, patchLines.join('\n'), 'utf-8');
 
     return patchPath;
   }
 
   if (dryRun) {
-    const patchPath = buildTemplatePatch(skillIssues);
-    console.log(`Skill optimization patch written: ${patchPath}`);
+    const patchPath = await buildDiffPatch(skillIssues);
+    console.log(`Skill optimization diff patch written: ${patchPath}`);
 
     return {
       success: true,
-      message: `Dry-run patch written to ${patchPath}`,
+      message: `Dry-run diff patch written to ${patchPath}`,
     };
   }
 
   if (!judgeAvailable) {
-    const patchPath = buildTemplatePatch(skillIssues);
+    const patchPath = await buildTemplatePatch(skillIssues);
     console.log(`Skill optimization patch written: ${patchPath}`);
 
     return {
@@ -1205,12 +1254,12 @@ export async function optimizeSkillMd(
   // 1. Backup -- use unique timestamp to prevent overwrite on retry
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const bakPath = skillMdPath + '.bak.' + timestamp;
-  copyFileSync(skillMdPath, bakPath);
+  await copyFile(skillMdPath, bakPath);
   console.log(`Backup created: ${bakPath}`);
 
   // Also keep a latest backup for restore reference
   const latestBakPath = skillMdPath + '.bak';
-  copyFileSync(skillMdPath, latestBakPath);
+  await copyFile(skillMdPath, latestBakPath);
 
   // 2. Get judge model suggestions
   try {
@@ -1233,14 +1282,14 @@ export async function optimizeSkillMd(
     }
 
     // 3. Write updated SKILL.md
-    writeFileSync(skillMdPath, newContent, 'utf-8');
+    await writeFile(skillMdPath, newContent, 'utf-8');
     console.log(`SKILL.md updated: ${skillMdPath}`);
 
     // 4. Validate frontmatter inline (no external CLI dependency)
     const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
     if (!frontmatterMatch) {
       console.error('Frontmatter validation FAILED. Restoring backup...');
-      copyFileSync(latestBakPath, skillMdPath);
+      await copyFile(latestBakPath, skillMdPath);
       return {
         success: false,
         message: 'Frontmatter validation failed: missing YAML delimiters (---). Backup restored.',
@@ -1249,7 +1298,7 @@ export async function optimizeSkillMd(
     const frontmatter = frontmatterMatch[1];
     if (frontmatter.trim().length === 0 || !/^[a-zA-Z]/.test(frontmatter.trim())) {
       console.error('Frontmatter validation FAILED. Restoring backup...');
-      copyFileSync(latestBakPath, skillMdPath);
+      await copyFile(latestBakPath, skillMdPath);
       return {
         success: false,
         message: 'Frontmatter validation failed: empty or malformed content. Backup restored.',
@@ -1261,7 +1310,7 @@ export async function optimizeSkillMd(
     const mdValidation = validateMarkdownStructure(newContent);
     if (!mdValidation.valid) {
       console.error('Markdown structure validation FAILED. Restoring backup...');
-      copyFileSync(latestBakPath, skillMdPath);
+      await copyFile(latestBakPath, skillMdPath);
       return {
         success: false,
         message: `Markdown structure validation failed. Backup restored. Issues: ${mdValidation.issues.join('; ')}`,
@@ -1272,12 +1321,12 @@ export async function optimizeSkillMd(
     const MAX_BACKUPS = 5;
     const backupDir = dirname(skillMdPath);
     const baseName = basename(skillMdPath);
-    const backups = readdirSync(backupDir)
+    const backups = (await readdir(backupDir))
       .filter(f => f.startsWith(baseName + '.bak.'))
       .sort()
       .reverse();
     for (let i = MAX_BACKUPS; i < backups.length; i++) {
-      unlinkSync(join(backupDir, backups[i]));
+      await unlink(join(backupDir, backups[i]));
     }
 
     return { success: true, message: `SKILL.md optimized successfully. Backup: ${latestBakPath}` };
@@ -1285,7 +1334,7 @@ export async function optimizeSkillMd(
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`SKILL.md optimization failed: ${msg}`);
     // Restore backup
-    copyFileSync(latestBakPath, skillMdPath);
+    await copyFile(latestBakPath, skillMdPath);
     console.log(`Backup restored from ${latestBakPath}`);
     return { success: false, message: `Optimization failed: ${msg}. Backup restored.` };
   }

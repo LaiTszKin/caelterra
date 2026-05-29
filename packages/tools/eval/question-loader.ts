@@ -149,7 +149,7 @@ export function sampleQuestions(
  * @param env         - Environment config (used for model API calls)
  * @returns           Original questions plus generated variants to reach targetCount
  */
-export async function supplyQuestions(
+async function supplyQuestions(
   questions: Question[],
   targetCount: number,
   env: EnvConfig,

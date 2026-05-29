@@ -42,13 +42,6 @@ export interface ToolDispatcher {
    * @returns 工具執行結果
    */
   dispatch(toolCall: ToolCall): Promise<MockToolResult>;
-
-  /**
-   * 取得所有已記錄的工具調用記錄。
-   *
-   * @returns 工具調用記錄陣列（包含每個調用的 tool, params, result, timestamp）
-   */
-  getRecords(): Record<string, unknown>[];
 }
 
 // --- Tool Dispatch Implementation ---
@@ -234,6 +227,13 @@ async function executeGrep(
         await walkDir(fullPath);
       } else if (entry.isFile()) {
         try {
+          // 檔案大小檢查：超過 1MB 跳過 (避免將大型檔案載入記憶體)
+          const fileStat = await stat(fullPath);
+          if (fileStat.size > 1024 * 1024) {
+            const relPath = relative(workspaceDir, fullPath);
+            results.push(`[isolation] Skipped large file: ${relPath} (${(fileStat.size / 1024 / 1024).toFixed(1)}MB)`);
+            continue;
+          }
           const content = await readFile(fullPath, 'utf-8');
           const lines = content.split('\n');
           for (let i = 0; i < lines.length; i++) {
@@ -438,12 +438,15 @@ async function executeBash(
     }
   }
 
-  // 修正 2: workspace 路徑穿越防護
-  const hasAbsolutePath = args.some(a => a.startsWith('/') || a.startsWith('~/'));
-  const hasParentTraversal = args.some(a => a.includes('..'));
-  if (hasAbsolutePath || hasParentTraversal) {
-    console.warn(`[isolation] Path escape attempt intercepted: ${command}`);
-    return { success: true, data: `Error: Access denied — paths outside workspace are restricted.`, tool: 'Bash' };
+  // 路徑穿越防護：對每個命令參數做 resolve + relative 檢查（與 executeRead 一致）
+  const normalizedWorkspace = resolve(workspaceDir);
+  for (const arg of args) {
+    const fullPath = resolve(workspaceDir, arg);
+    const rel = relative(normalizedWorkspace, fullPath);
+    if (rel.startsWith('..') || rel === fullPath) {
+      console.warn(`[isolation] Path escape attempt intercepted: ${command}`);
+      return { success: true, data: `Error: Access denied — paths outside workspace are restricted.`, tool: 'Bash' };
+    }
   }
 
   try {
@@ -483,7 +486,7 @@ async function executeInWorkspace(
     case 'Glob':
       return await executeGlob(workspaceDir, params);
     default:
-      return { success: true, data: buildReadResponse(params), tool };
+      throw new Error(`Unknown workspace tool: ${tool}`);
   }
 }
 
@@ -539,10 +542,6 @@ export function createToolDispatcher(
       }
 
       return result;
-    },
-
-    getRecords(): Record<string, unknown>[] {
-      return [];
     },
   };
 

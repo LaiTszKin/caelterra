@@ -17,7 +17,7 @@
  * Only uses Node.js built-in modules and lib/ modules. No external dependencies.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, statSync, rmSync } from 'node:fs';
 import { readFile, mkdir, writeFile, rm, rmdir, readdir, access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 
@@ -297,6 +297,25 @@ export function buildJudgePrompt(
 // --- Single Test Scoring ---
 
 /**
+ * Write score.json and .scored marker atomically.
+ * Shared helper to avoid duplicated write logic in scoreSingleTest.
+ */
+async function writeScoreFiles(
+  score: ScoreResult,
+  testNo: string,
+  scorePath: string,
+  scoredPath: string,
+): Promise<void> {
+  await writeFile(scorePath, JSON.stringify(score, null, 2), 'utf-8');
+  const scoredData = JSON.stringify({
+    testId: testNo,
+    scoredAt: score.scoredAt,
+    overallScore: score.overallScore,
+  });
+  await writeFile(scoredPath, scoredData, 'utf-8');
+}
+
+/**
  * Score a single test by reading its trace, calling the judge model,
  * and writing the result to score.json.
  *
@@ -345,13 +364,32 @@ export async function scoreSingleTest(
   const timeoutMs = env.JUDGE_TIMEOUT > 0 ? env.JUDGE_TIMEOUT * 1000 : 120_000;
 
   // Atomic write: use mkdir as mutex to prevent race between concurrent scorers
+  const STALE_LOCK_MS = 5 * 60 * 1000;
   const lockDir = join(resultsDir, '.scoring-lock');
   try {
     await mkdir(lockDir);
-  } catch {
-    // Lock already held by another process — skip
-    console.warn(`${testNo}: scoring lock held by another process, skipping`);
-    return { testId: testNo, score: null, skipped: true };
+  } catch (err: unknown) {
+    const nodeErr = err as NodeJS.ErrnoException;
+    if (nodeErr.code === 'EEXIST') {
+      // 檢查是否為陳舊鎖 (殘留自 SIGKILL/崩潰)
+      let mtime: number;
+      try {
+        mtime = statSync(lockDir).mtimeMs;
+      } catch {
+        console.warn(`${testNo}: scoring lock held by another process, skipping`);
+        return { testId: testNo, score: null, skipped: true };
+      }
+      if (Date.now() - mtime > STALE_LOCK_MS) {
+        rmSync(lockDir, { recursive: true, force: true });
+        await mkdir(lockDir);
+      } else {
+        console.warn(`${testNo}: scoring lock held by another process, skipping`);
+        return { testId: testNo, score: null, skipped: true };
+      }
+    } else {
+      console.warn(`${testNo}: scoring lock held by another process, skipping`);
+      return { testId: testNo, score: null, skipped: true };
+    }
   }
 
   try {
@@ -379,16 +417,12 @@ export async function scoreSingleTest(
         scorable: false,
         scoringNote: '無法評分：軌跡檔案損壞',
       };
-      await writeFile(scorePath, JSON.stringify(score, null, 2), 'utf-8');
-      const sd = JSON.stringify({
-        testId: testNo,
-        scoredAt: score.scoredAt,
-        overallScore: score.overallScore,
-      });
-      await writeFile(scoredPath, sd, 'utf-8');
+      await writeScoreFiles(score, testNo, scorePath, scoredPath);
       return { testId: testNo, score };
     }
 
+    // ── Judge Model Scoring ───────────────────────────────────────────────
+    // Only reached when the trace has no corruption and scoring should proceed.
     // Call judge model with timeout
     const judgment = await callJudgeModel(prompt, env, { timeoutMs });
 
@@ -397,39 +431,78 @@ export async function scoreSingleTest(
       console.warn(`${testNo}: Judge 輸出解析失敗，使用預設評分結構`);
     }
 
-    // Build ScoreResult from judgment
-    const rawDims = (judgment.dimensions as Array<Record<string, unknown>> | undefined) ?? [];
-    const rawIssues = (judgment.issues as Array<Record<string, unknown>> | undefined) ?? [];
+    // Build ScoreResult from judgment with runtime type validation (FIX-20)
+    const rawDims = Array.isArray(judgment.dimensions) ? judgment.dimensions : [];
+    if (!Array.isArray(judgment.dimensions) && judgment.dimensions !== undefined) {
+      console.warn(`${testNo}: judgment.dimensions 不是陣列 (型別: ${typeof judgment.dimensions})，使用空陣列`);
+    }
+
+    const rawIssues = Array.isArray(judgment.issues) ? judgment.issues : [];
+    if (!Array.isArray(judgment.issues) && judgment.issues !== undefined) {
+      console.warn(`${testNo}: judgment.issues 不是陣列 (型別: ${typeof judgment.issues})，使用空陣列`);
+    }
+
+    // Allowed values for validation
+    const ALLOWED_SEVERITY: Issue['severity'][] = ['P0', 'P1', 'P2'];
+    const ALLOWED_CATEGORY: Issue['category'][] = ['skill', 'apltk', 'other'];
 
     const score: ScoreResult = {
       testId: testNo,
-      overallScore: (judgment.overallScore as number) ?? 0,
-      dimensions: rawDims.map(dim => ({
-        name: (dim.name as string) ?? '',
-        score: (dim.score as number) ?? 0,
-        maxScore: (dim.maxScore as number) ?? 100,
-        weight: (dim.weight as number) ?? 0,
-        comments: (dim.comments as string) ?? '',
-      })),
-      issues: rawIssues.map(issue => ({
-        severity: (issue.severity as Issue['severity']) ?? 'P1',
-        category: (issue.category as Issue['category']) ?? 'other',
-        description: (issue.description as string) ?? '',
-        evidence: (issue.evidence as string) ?? '',
-      })),
+      overallScore: typeof judgment.overallScore === 'number' ? judgment.overallScore : 0,
+      dimensions: rawDims.map((dim, idx) => {
+        const nameOk = typeof dim.name === 'string';
+        const scoreOk = typeof dim.score === 'number';
+        const maxScoreOk = typeof dim.maxScore === 'number';
+        const weightOk = typeof dim.weight === 'number';
+        const commentsOk = typeof dim.comments === 'string';
+
+        if (!nameOk || !scoreOk || !maxScoreOk || !weightOk || !commentsOk) {
+          const badFields: string[] = [];
+          if (!nameOk) badFields.push(`name (${typeof dim.name})`);
+          if (!scoreOk) badFields.push(`score (${typeof dim.score})`);
+          if (!maxScoreOk) badFields.push(`maxScore (${typeof dim.maxScore})`);
+          if (!weightOk) badFields.push(`weight (${typeof dim.weight})`);
+          if (!commentsOk) badFields.push(`comments (${typeof dim.comments})`);
+          console.warn(`${testNo}: dimension[${idx}] 欄位型別不符: ${badFields.join(', ')}，使用預設值`);
+        }
+
+        return {
+          name: typeof dim.name === 'string' ? dim.name : '',
+          score: typeof dim.score === 'number' ? dim.score : 0,
+          maxScore: typeof dim.maxScore === 'number' ? dim.maxScore : 100,
+          weight: typeof dim.weight === 'number' ? dim.weight : 0,
+          comments: typeof dim.comments === 'string' ? dim.comments : '',
+        };
+      }),
+      issues: rawIssues.map((issue, idx) => {
+        const severityOk = typeof issue.severity === 'string' && (ALLOWED_SEVERITY as string[]).includes(issue.severity);
+        const categoryOk = typeof issue.category === 'string' && (ALLOWED_CATEGORY as string[]).includes(issue.category);
+        const descOk = typeof issue.description === 'string';
+        const evidenceOk = typeof issue.evidence === 'string';
+
+        if (!severityOk || !categoryOk || !descOk || !evidenceOk) {
+          const badFields: string[] = [];
+          if (!severityOk) badFields.push(`severity (${typeof issue.severity}: ${String(issue.severity)})`);
+          if (!categoryOk) badFields.push(`category (${typeof issue.category}: ${String(issue.category)})`);
+          if (!descOk) badFields.push(`description (${typeof issue.description})`);
+          if (!evidenceOk) badFields.push(`evidence (${typeof issue.evidence})`);
+          console.warn(`${testNo}: issue[${idx}] 欄位型別不符: ${badFields.join(', ')}，使用預設值`);
+        }
+
+        return {
+          severity: (severityOk ? issue.severity : 'P1') as Issue['severity'],
+          category: (categoryOk ? issue.category : 'other') as Issue['category'],
+          description: typeof issue.description === 'string' ? issue.description : '',
+          evidence: typeof issue.evidence === 'string' ? issue.evidence : '',
+        };
+      }),
       summary: (judgment.summary as string) ?? '',
       scoredAt: new Date().toISOString(),
       scorable: true,
     };
 
     // Write score.json FIRST, then .scored marker
-    await writeFile(scorePath, JSON.stringify(score, null, 2), 'utf-8');
-    const scoredData = JSON.stringify({
-      testId: testNo,
-      scoredAt: score.scoredAt,
-      overallScore: score.overallScore,
-    });
-    await writeFile(scoredPath, scoredData, 'utf-8');
+    await writeScoreFiles(score, testNo, scorePath, scoredPath);
     return { testId: testNo, score };
   } finally {
     // Release lock

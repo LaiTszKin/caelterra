@@ -343,6 +343,55 @@ describe('REGTEST-FIX03: P0 計數 exit code 檢查', () => {
 });
 
 // =========================================================================
+// REGTEST-01 (Round 7): SIGINT handler 不含 process.exit
+// =========================================================================
+describe('REGTEST-01 (R7): SIGINT handler 不含 process.exit', () => {
+  it('sigintHandler should not call process.exit', () => {
+    const source = fs.readFileSync(
+      new URL('../index.ts', import.meta.url), 'utf-8',
+    );
+
+    // Find sigintHandler function definition
+    const sigintHandlerStart = source.indexOf('const sigintHandler = () => {');
+    assert.ok(sigintHandlerStart >= 0, 'sigintHandler must exist in index.ts');
+
+    // Extract the function body by counting braces
+    const afterDecl = source.slice(sigintHandlerStart);
+    const openBrace = afterDecl.indexOf('{');
+    assert.ok(openBrace >= 0, 'sigintHandler must have an opening brace');
+
+    let depth = 0;
+    let closeBrace = -1;
+    for (let i = openBrace; i < afterDecl.length; i++) {
+      if (afterDecl[i] === '{') depth++;
+      if (afterDecl[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          closeBrace = i;
+          break;
+        }
+      }
+    }
+    assert.ok(closeBrace >= 0, 'sigintHandler must have a closing brace');
+
+    const sigintHandlerBody = afterDecl.slice(openBrace, closeBrace + 1);
+
+    // VERIFY: sigintHandler does NOT contain process.exit
+    // (the exit is now in the finally block)
+    assert.ok(
+      !sigintHandlerBody.includes('process.exit'),
+      'sigintHandler should NOT contain process.exit (moved to finally block)',
+    );
+
+    // VERIFY: the sigintHandler sets sigintReceived = true (preserving state)
+    assert.ok(
+      sigintHandlerBody.includes('sigintReceived') && sigintHandlerBody.includes('true'),
+      'sigintHandler should set sigintReceived = true',
+    );
+  });
+});
+
+// =========================================================================
 // REGTEST-01: dry-run 不傳 emptyPlan（關聯 FIX-A）
 // =========================================================================
 describe('REGTEST-01: dry-run 不傳 emptyPlan', () => {

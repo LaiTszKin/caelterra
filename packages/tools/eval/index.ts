@@ -237,7 +237,6 @@ async function evalHandler(
     if (!sigintReceived) {
       sigintReceived = true;
       stderr.write('\n[eval] Interrupted. Preserving completed results...\n');
-      process.exit(1);
     }
   };
 
@@ -296,16 +295,23 @@ async function evalHandler(
     const reportPath = writeReport(report, today, skillName);
     stderr.write(`[6/7] Report written: ${reportPath}\n`);
 
-    // Write to custom output directory if specified
+    // Write to custom output directory if specified (FIX-17: restrict to project root)
     if (outputDir) {
       const customDir = path.resolve(outputDir);
-      fs.mkdirSync(customDir, { recursive: true });
-      const customPath = path.join(
-        customDir,
-        `eval-report-${today}-${skillName}.md`,
-      );
-      fs.writeFileSync(customPath, report, 'utf-8');
-      stderr.write(`[6/7] Report also written: ${customPath}\n`);
+      const relativePath = path.relative(projectRoot, customDir);
+      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        console.warn(
+          `[WARNING] --output-dir "${outputDir}" resolves outside the project root (${projectRoot}). Falling back to default directory.`,
+        );
+      } else {
+        fs.mkdirSync(customDir, { recursive: true });
+        const customPath = path.join(
+          customDir,
+          `eval-report-${today}-${skillName}.md`,
+        );
+        fs.writeFileSync(customPath, report, 'utf-8');
+        stderr.write(`[6/7] Report also written: ${customPath}\n`);
+      }
     }
 
     // 7. Optimisation (optional)
@@ -376,28 +382,39 @@ async function evalHandler(
     }
     stdout.write('\n');
 
+    // FIX-18: Handle empty scores before gate checks
+    if (scores.length === 0) {
+      const hasFailures = testResults.some(r => !r.success);
+      if (hasFailures) {
+        stderr.write(`[FAIL] All ${testResults.length} tests failed or could not be scored. No scores available for gate check.\n`);
+        return 1;
+      }
+      stderr.write('[WARN] No scores available for gate check (all tests were skipped).\n');
+    }
+
     const avgScore = scores.length > 0 ? scores.reduce((sum, s) => sum + s.overallScore, 0) / scores.length : 0;
     const p0Count = scores.reduce((sum, s) => sum + (s.issues?.filter(i => i.severity === 'P0').length || 0), 0);
 
     if (avgScore < env.EVAL_MIN_SCORE && scores.length > 0) {
       stderr.write(`[FAIL] Average overall score ${avgScore.toFixed(1)}% is below threshold ${env.EVAL_MIN_SCORE}.\n`);
-      process.off('SIGINT', sigintHandler);
       return 1;
     }
     if (env.EVAL_MAX_P0 > 0 && p0Count > env.EVAL_MAX_P0) {
       stderr.write(`[FAIL] P0 issue count ${p0Count} exceeds limit ${env.EVAL_MAX_P0}.\n`);
-      process.off('SIGINT', sigintHandler);
       return 1;
     }
-    process.off('SIGINT', sigintHandler);
     return failed > 0 ? 1 : 0;
   } catch (err) {
-    process.off('SIGINT', sigintHandler);
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : '';
     stderr.write(`\nEval failed: ${message}\n`);
     if (stack) stderr.write(`${stack}\n`);
     return 1;
+  } finally {
+    process.off('SIGINT', sigintHandler);
+    if (sigintReceived) {
+      process.exit(1);
+    }
   }
 }
 

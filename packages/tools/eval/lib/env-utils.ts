@@ -17,8 +17,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { getProjectRoot } from './project-root.js';
-
 // --- Public types ---
 
 export interface EnvConfig {
@@ -94,13 +92,16 @@ export function loadEnv(envPath?: string): EnvConfig {
   try {
     content = fs.readFileSync(resolved, 'utf-8');
   } catch (err: unknown) {
-    const nodeErr = err as NodeJS.ErrnoException;
-    if (nodeErr.code === 'ENOENT') {
-      throw new Error(
-        `.env 檔案不存在: "${resolved}"\n` +
-        '請從 .env.example 複製一份並填入實際值:\n' +
-        '  cp .env.example .env',
-      );
+    // FIX-16: 先檢查 err 是否有 code 屬性，而非直接斷言為 NodeJS.ErrnoException
+    if (err && typeof err === 'object' && 'code' in err) {
+      const nodeErr = err as NodeJS.ErrnoException;
+      if (nodeErr.code === 'ENOENT') {
+        throw new Error(
+          `.env 檔案不存在: "${resolved}"\n` +
+          '請從 .env.example 複製一份並填入實際值:\n' +
+          '  cp .env.example .env',
+        );
+      }
     }
     throw new Error(`無法讀取 .env 檔案 "${resolved}": ${(err as Error).message}`);
   }

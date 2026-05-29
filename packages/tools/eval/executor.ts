@@ -13,7 +13,7 @@
  */
 
 import { appendFile, mkdir, writeFile, rm } from 'node:fs/promises';
-import { existsSync, statfsSync, rmSync } from 'node:fs';
+import { existsSync, statfsSync, statSync, rmSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 import type { EnvConfig } from './lib/env-utils.js';
@@ -38,7 +38,7 @@ class DiskSpaceError extends Error {
 // --- Public Types ---
 
 export interface TraceEvent {
-  type: 'start' | 'thinking' | 'response' | 'tool_call' | 'tool_result' | 'error' | 'end' | 'parse_error';
+  type: 'start' | 'thinking' | 'response' | 'tool_call' | 'tool_result' | 'error' | 'end' | 'parse_error' | 'round';
   timestamp: string;
   data: Record<string, unknown>;
   _lineNumber?: number;
@@ -272,6 +272,22 @@ async function executeSingleTest(
       const choices = response.choices as Array<Record<string, unknown>> | undefined;
       const finishReason = choices?.[0]?.finish_reason as string | undefined;
       const assistantMessage = choices?.[0]?.message as Record<string, unknown> | undefined;
+
+      // FIX-04: 記錄每個 LLM 回合到 trace (含 tool_calls 回合)
+      const rawContent = typeof assistantMessage?.content === 'string'
+        ? assistantMessage.content
+        : JSON.stringify(assistantMessage?.content ?? '');
+      await appendTraceBuffered({
+        type: 'round',
+        timestamp: new Date().toISOString(),
+        data: {
+          model: response.model,
+          usage: response.usage,
+          finish_reason: finishReason,
+          content: rawContent.length > 2000 ? rawContent.substring(0, 2000) + '...(truncated)' : rawContent,
+          round: round + 1,
+        },
+      });
 
       if (finishReason === 'stop' || (finishReason !== 'tool_calls' && round > 0)) {
         // 記錄最終 response
@@ -507,15 +523,34 @@ export async function runAllTests(
 
   // 執行階段並發鎖 (FIX-11)
   // 建立不帶 recursive 的鎖定目錄
+  const STALE_LOCK_MS = 5 * 60 * 1000;
   const lockPath = resolve(resultsBase, '.exec-lock');
   try {
     await mkdir(lockPath);
   } catch (err: unknown) {
-    const nodeErr = err as NodeJS.ErrnoException;
-    if (nodeErr.code === 'EEXIST') {
-      throw new Error('Another eval is already in progress');
+    // FIX-16: 先檢查 err 是否有 code 屬性，而非直接斷言為 NodeJS.ErrnoException
+    if (err && typeof err === 'object' && 'code' in err) {
+      const nodeErr = err as NodeJS.ErrnoException;
+      if (nodeErr.code === 'EEXIST') {
+        // 檢查是否為陳舊鎖 (殘留自 SIGKILL/崩潰)
+        let mtime: number;
+        try {
+          mtime = statSync(lockPath).mtimeMs;
+        } catch {
+          throw new Error('Another eval is already in progress');
+        }
+        if (Date.now() - mtime > STALE_LOCK_MS) {
+          rmSync(lockPath, { recursive: true, force: true });
+          await mkdir(lockPath);
+        } else {
+          throw new Error('Another eval is already in progress');
+        }
+      } else {
+        throw new Error(`Cannot create exec lock at ${lockPath}: ${nodeErr.message}`);
+      }
+    } else {
+      throw new Error(`Failed to acquire exec lock: ${(err as Error).message}`);
     }
-    throw new Error(`Cannot create exec lock at ${lockPath}: ${nodeErr.message}`);
   }
 
   // SIGINT handler: 同步清理 exec lock，防止 process.exit 跳過 finally
