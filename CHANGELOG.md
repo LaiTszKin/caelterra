@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.0.3] - 2026-05-29
+
+### Fixed
+
+- Add `chalk` and `@inquirer/prompts` to root dependencies so CLI works when installed globally. After rewriting `@laitszkin/*` imports to relative paths in v4.0.2, the workspace packages' external dependencies were not installed because only root dependencies are resolved during global install.
+
 ## [v4.0.2] - 2026-05-29
 
 ### Fixed

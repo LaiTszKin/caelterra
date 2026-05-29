@@ -1,6 +1,6 @@
 {
   "name": "@laitszkin/tool-open-github-issue",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "description": "Apollo Toolkit — CLI tool",
   "license": "MIT",
   "type": "module",
