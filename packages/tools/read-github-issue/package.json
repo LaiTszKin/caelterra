@@ -1,6 +1,6 @@
 {
   "name": "@laitszkin/tool-read-github-issue",
-  "version": "4.0.3",
+  "version": "4.0.4",
   "description": "Apollo Toolkit — CLI tool",
   "license": "MIT",
   "type": "module",

@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.0.4] - 2026-05-29
+
+### Changed
+
+- Refactor `plan`/`implement`/`qa`/`fix` skills for coordinator-worker agent model. PROMPT.md and FIX.md are now self-contained coordinator prompts: main agent only coordinates (delegation, synthesis, verification), workers are leaf nodes that receive pre-written self-contained task prompts. FIX.md now includes concrete regression test design with dedicated worker prompts and batch scheduling.
+
 ## [v4.0.3] - 2026-05-29
 
 ### Fixed

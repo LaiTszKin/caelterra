@@ -1,6 +1,6 @@
 {
   "name": "@laitszkin/tui",
-  "version": "4.0.3",
+  "version": "4.0.4",
   "description": "Apollo Toolkit — interactive terminal UI components",
   "license": "MIT",
   "type": "module",
