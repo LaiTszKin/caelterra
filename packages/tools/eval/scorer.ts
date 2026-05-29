@@ -16,9 +16,9 @@
  * Only uses Node.js built-in modules and lib/ modules. No external dependencies.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync, watch } from 'node:fs';
-import { resolve, join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readdirSync, mkdirSync, watch } from 'node:fs';
+import { readFile, mkdir, writeFile, rm } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
 
 import type { TraceEvent } from './executor.js';
 import type { EnvConfig } from './lib/env-utils.js';
@@ -27,6 +27,8 @@ import type { JudgeEnv } from './lib/judge-api.js';
 import { promisePool } from './lib/promise-pool.js';
 import { loadQuestions, getScoringCriteria } from './lib/question-utils.js';
 import type { Question, ScoringCriteria } from './lib/question-utils.js';
+import { getProjectRoot } from './lib/project-root.js';
+export { getProjectRoot };
 
 // --- Public Types ---
 
@@ -52,79 +54,46 @@ export interface ScoreResult {
   issues: Issue[];
   summary: string;
   scoredAt: string;
-}
-
-// --- Project Root Resolution ---
-
-/**
- * Resolve the project root directory by looking for assets/spec/.
- *
- * Tries (in order):
- *   1. 3 levels up from source path (packages/tools/eval/ -> project root)
- *   2. 4 levels up from compiled path (packages/tools/eval/dist/ -> project root)
- *   3. Crawl up from process.cwd() (max 10 levels)
- *
- * @returns Absolute path to the project root
- * @throws Error if assets/spec/ cannot be found
- */
-export function getProjectRoot(): string {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-
-  // Source path: packages/tools/eval/scorer.ts -> 3 levels up
-  const sourceCandidate = resolve(__dirname, '..', '..', '..');
-  if (existsSync(join(sourceCandidate, 'assets', 'spec'))) {
-    return sourceCandidate;
-  }
-
-  // Compiled path: packages/tools/eval/dist/scorer.js -> 4 levels up
-  const distCandidate = resolve(__dirname, '..', '..', '..', '..');
-  if (existsSync(join(distCandidate, 'assets', 'spec'))) {
-    return distCandidate;
-  }
-
-  // Fallback: crawl up from cwd (max 10 levels)
-  let dir = process.cwd();
-  for (let i = 0; i < 10; i++) {
-    if (existsSync(join(dir, 'assets', 'spec'))) {
-      return dir;
-    }
-    const parent = resolve(dir, '..');
-    if (parent === dir) break; // reached filesystem root
-    dir = parent;
-  }
-
-  throw new Error('無法確定專案根目錄：找不到 assets/spec/ 目錄');
+  scorable?: boolean;
+  scoringNote?: string;
 }
 
 // --- Trace Reading ---
 
+/** TraceEvent extended with optional JSONL line number annotation. */
+type TraceEventWithLine = TraceEvent & { _lineNumber?: number };
+
 /**
- * Read a JSONL trace file and return an array of trace events.
+ * Read a JSONL trace file and return trace events with a corruption flag.
  *
- * Handles corrupted lines gracefully by recording them as `parse_error` events
- * and continuing to process the remaining lines.
+ * Handles corrupted lines gracefully by recording them as `parse_error` events,
+ * annotates each successfully parsed event with its JSONL line number, and
+ * continues processing the remaining lines.
  *
  * @param tracePath - Absolute path to trace.jsonl
- * @returns Array of TraceEvent objects
+ * @returns Object with events array and hasCorruption flag
  * @throws Error if the trace file does not exist
  */
-export function readTrace(tracePath: string): TraceEvent[] {
+export async function readTrace(tracePath: string): Promise<{ events: TraceEvent[]; hasCorruption: boolean }> {
   if (!existsSync(tracePath)) {
     throw new Error(`Trace 檔案不存在: ${tracePath}`);
   }
 
-  const content = readFileSync(tracePath, 'utf-8');
+  const content = await readFile(tracePath, 'utf-8');
   const lines = content.trim().split('\n');
   const events: TraceEvent[] = [];
+  let hasCorruption = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
     try {
-      events.push(JSON.parse(line) as TraceEvent);
+      const event = JSON.parse(line) as TraceEventWithLine;
+      event._lineNumber = i + 1;
+      events.push(event);
     } catch (err) {
+      hasCorruption = true;
       // Corrupted line: record as parse_error and continue
       events.push({
         type: 'parse_error',
@@ -134,7 +103,7 @@ export function readTrace(tracePath: string): TraceEvent[] {
     }
   }
 
-  return events;
+  return { events, hasCorruption };
 }
 
 // --- Judge Prompt Building ---
@@ -262,6 +231,8 @@ export function buildJudgePrompt(
     '',
     '**重要：若執行狀態為 timeout 或 error，且沒有有效的 agent 輸出，所有維度應評 0 分。**',
     '',
+    'Each issue\'s evidence MUST reference the JSONL line number(s) using the format \'L42: <description>\'.',
+    '',
     '## 輸出格式',
     '請以精確的 JSON 格式回覆（不要包含 markdown 標記，直接回傳 JSON object）：',
     '',
@@ -273,7 +244,7 @@ export function buildJudgePrompt(
     '    { "name": "result_quality", "score": <0-100>, "maxScore": 100, "weight": 0.34, "comments": "<評語>" }',
     '  ],',
     '  "issues": [',
-    '    { "severity": "P0"|"P1"|"P2", "category": "skill"|"apltk"|"other", "description": "<問題描述>", "evidence": "<證據>" }',
+    '    { "severity": "P0"|"P1"|"P2", "category": "skill"|"apltk"|"other", "description": "<問題描述>", "evidence": "L{N}: <證據描述>" }',
     '  ],',
     '  "summary": "<100 字以內的整體評估摘要>"',
     '}',
@@ -312,7 +283,7 @@ export async function scoreSingleTest(
   const scoredPath = join(resultsDir, '.scored');
 
   // Read trace
-  const trace = readTrace(tracePath);
+  const { events: trace, hasCorruption } = await readTrace(tracePath);
 
   // Get scoring criteria
   let scoringCriteria: ScoringCriteria;
@@ -362,12 +333,14 @@ export async function scoreSingleTest(
     })),
     summary: (judgment.summary as string) ?? '',
     scoredAt: new Date().toISOString(),
+    scorable: !hasCorruption,
+    scoringNote: hasCorruption ? '無法評分：軌跡檔案損壞' : undefined,
   };
 
   // Atomic write: use mkdir as mutex to prevent race between concurrent scorers
   const lockDir = join(resultsDir, '.scoring-lock');
   try {
-    mkdirSync(lockDir);
+    await mkdir(lockDir);
   } catch {
     // Lock already held by another process — skip
     console.warn(`${testNo}: scoring lock held by another process, skipping`);
@@ -380,12 +353,12 @@ export async function scoreSingleTest(
       scoredAt: score.scoredAt,
       overallScore: score.overallScore,
     });
-    writeFileSync(scoredPath, scoredData, 'utf-8');
-    writeFileSync(scorePath, JSON.stringify(score, null, 2), 'utf-8');
+    await writeFile(scoredPath, scoredData, 'utf-8');
+    await writeFile(scorePath, JSON.stringify(score, null, 2), 'utf-8');
   } finally {
     // Release lock
     try {
-      rmSync(lockDir, { recursive: true });
+      await rm(lockDir, { recursive: true });
     } catch {
       /* ignore */
     }
@@ -416,6 +389,19 @@ export async function scoreAllTests(date: string, env: EnvConfig): Promise<Score
     return [];
   }
 
+  // Pre-load question map for efficient scoring criteria lookup
+  let questionMap: Record<string, Question> | undefined;
+  try {
+    const questionsPath = resolve(rootDir, 'assets', 'spec', date, 'test-questions.json');
+    const questions = loadQuestions(questionsPath);
+    questionMap = {};
+    for (const q of questions) {
+      questionMap[q.id] = q;
+    }
+  } catch {
+    console.warn('無法載入題目檔案，將在評分時逐題載入');
+  }
+
   console.log(`找到 ${doneTests.length} 個已完成測試，其中 ${unscoredTests.length} 個尚未評分`);
 
   const startTime = Date.now();
@@ -426,7 +412,7 @@ export async function scoreAllTests(date: string, env: EnvConfig): Promise<Score
     unscoredTests,
     async (testNo: string, _i: number) => {
       try {
-        const result = await scoreSingleTest(testNo, date, env);
+        const result = await scoreSingleTest(testNo, date, env, questionMap);
         if (result.score) {
           successCount++;
           console.log(`[${successCount + failCount}/${unscoredTests.length}] ${testNo} 評分完成 (總分: ${result.score.overallScore})`);

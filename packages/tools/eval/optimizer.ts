@@ -11,12 +11,13 @@
  * Only uses Node.js built-in modules and lib/ modules. No external dependencies.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
+import { readdir, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { execSync } from 'node:child_process';
 
 import type { ScoreResult } from './scorer.js';
-import { getProjectRoot } from './scorer.js';
+import { getProjectRoot } from './lib/project-root.js';
 import type { EnvConfig } from './lib/env-utils.js';
 import { callJudgeModelRaw } from './lib/judge-api.js';
 import type { JudgeEnv, Message } from './lib/judge-api.js';
@@ -72,6 +73,8 @@ interface RawIssueWithKeywords extends RawIssue {
 interface DedupedIssueInternal {
   _index: number;
   _cluster: RawIssueWithKeywords[];
+  _descKeywords: Set<string>;
+  _evidKeywords: Set<string>;
   _suggestedFix?: string;
   category: string;
   severity: string;
@@ -196,18 +199,18 @@ function simpleStem(word: string): string {
  * @param sourceRoot - Optional project root directory; defaults to auto-detected root
  * @returns Array of ScoreResult objects
  */
-export function loadAllScores(date: string, sourceRoot?: string): ScoreResult[] {
+export async function loadAllScores(date: string, sourceRoot?: string): Promise<ScoreResult[]> {
   const root = sourceRoot ?? getProjectRoot();
   const resultsBase = resolve(root, 'results', 'spec', date);
 
   if (!existsSync(resultsBase)) {
     console.warn(`Results directory not found: ${resultsBase}`);
-    console.warn('Skipping score loading. Run run-evals.mjs and score.mjs first.');
+    console.warn('Skipping score loading. Run \'apltk eval <skill>\' to generate scores first.');
     return [];
   }
 
-  const entries = readdirSync(resultsBase, { withFileTypes: true });
-  const allScores: ScoreResult[] = [];
+  const entries = await readdir(resultsBase, { withFileTypes: true });
+  const scorePromises: Array<Promise<ScoreResult | null>> = [];
 
   for (const entry of entries) {
     if (!entry.isDirectory() || !entry.name.startsWith('test_')) continue;
@@ -220,17 +223,22 @@ export function loadAllScores(date: string, sourceRoot?: string): ScoreResult[] 
       continue;
     }
 
-    try {
-      const raw = readFileSync(scorePath, 'utf-8');
-      const score = JSON.parse(raw) as ScoreResult;
-      allScores.push(score);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`Warning: Corrupt score.json for ${testNo}: ${msg} -- skipped`);
-    }
+    scorePromises.push(
+      (async (): Promise<ScoreResult | null> => {
+        try {
+          const raw = await readFile(scorePath, 'utf-8');
+          return JSON.parse(raw) as ScoreResult;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`Warning: Corrupt score.json for ${testNo}: ${msg} -- skipped`);
+          return null;
+        }
+      })(),
+    );
   }
 
-  return allScores;
+  const results = await Promise.all(scorePromises);
+  return results.filter((r): r is ScoreResult => r !== null);
 }
 
 /**
@@ -316,6 +324,55 @@ export function jaccardSimilarity(setA: Set<string>, setB: Set<string>): number 
   return intersection / (union - intersection || 1);
 }
 
+// --- ALLOWED_FILES Validation ---
+
+/**
+ * Check whether a file path is within the allowed optimization targets.
+ * Replaces `<name>` placeholders in ALLOWED_FILES with the given skill name.
+ *
+ * @param filePath - Absolute path to the file to check
+ * @param skillName - Skill name used to resolve `<name>` placeholders
+ * @returns true if the file path matches an allowed target
+ */
+export function isAllowedFile(filePath: string, skillName: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/');
+  for (const pattern of ALLOWED_FILES) {
+    const resolved = pattern.replace(/<name>/g, skillName).replace(/\/$/, '');
+    if (normalized.includes(resolved)) return true;
+  }
+  return false;
+}
+
+/**
+ * Validate the Markdown structure of a SKILL.md file.
+ * Checks for: (a) at least one `## ` heading, (b) no unclosed ``` blocks,
+ * (c) file is non-empty.
+ *
+ * @param content - File content to validate
+ * @returns Object with valid flag and list of issues found
+ */
+export function validateMarkdownStructure(content: string): { valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+
+  if (!content || content.trim().length === 0) {
+    issues.push('File is empty.');
+    return { valid: false, issues };
+  }
+
+  // (a) At least one ## heading
+  if (!/^## /m.test(content)) {
+    issues.push('No level-2 heading (## ) found. SKILL.md should have at least one ## section.');
+  }
+
+  // (b) No unclosed fenced code blocks
+  const fenceMatches = content.match(/```/g);
+  if (fenceMatches && fenceMatches.length % 2 !== 0) {
+    issues.push('Unclosed fenced code block (odd number of ``` delimiters).');
+  }
+
+  return { valid: issues.length === 0, issues };
+}
+
 // --- Internal: Dedup Refinement with Judge Model ---
 
 /**
@@ -336,7 +393,7 @@ async function refineDedupWithJudge(
   // Only call judge model if there are enough issues to potentially merge
   if (deduped.length <= 1) return deduped;
 
-  // Build pairs of potentially similar issues (same category)
+  // Build pairs of potentially similar issues (same category + same severity)
   const pairs: Array<{ a: DedupedIssueInternal; b: DedupedIssueInternal }> = [];
   const byCategory: Record<string, DedupedIssueInternal[]> = {};
   for (const issue of deduped) {
@@ -347,9 +404,25 @@ async function refineDedupWithJudge(
 
   for (const [, group] of Object.entries(byCategory)) {
     if (group.length <= 1) continue;
-    for (let i = 0; i < group.length; i++) {
-      for (let j = i + 1; j < group.length; j++) {
-        pairs.push({ a: group[i], b: group[j] });
+
+    // Group by severity to reduce O(n²) pairs: only compare same-severity issues
+    const bySeverity: Record<string, DedupedIssueInternal[]> = {};
+    for (const issue of group) {
+      const sev = issue.severity || 'P2';
+      if (!bySeverity[sev]) bySeverity[sev] = [];
+      bySeverity[sev].push(issue);
+    }
+
+    const MAX_PAIRS_PER_CATEGORY = 100;
+    let pairCount = 0;
+
+    for (const [, sevGroup] of Object.entries(bySeverity)) {
+      if (sevGroup.length <= 1) continue;
+      for (let i = 0; i < sevGroup.length && pairCount < MAX_PAIRS_PER_CATEGORY; i++) {
+        for (let j = i + 1; j < sevGroup.length && pairCount < MAX_PAIRS_PER_CATEGORY; j++) {
+          pairs.push({ a: sevGroup[i], b: sevGroup[j] });
+          pairCount++;
+        }
       }
     }
   }
@@ -361,9 +434,9 @@ async function refineDedupWithJudge(
   const comparisonResults = await promisePool(
     pairs,
     async ({ a, b }) => {
-      // Quick pre-filter: compute keyword similarity on-the-fly, skip if too different
-      const aKeys = extractKeywords(a.description);
-      const bKeys = extractKeywords(b.description);
+      // Quick pre-filter: compute keyword similarity from cached sets, skip if too different
+      const aKeys = a._descKeywords;
+      const bKeys = b._descKeywords;
       const descSim = jaccardSimilarity(aKeys, bKeys);
       if (descSim < 0.25) return null;
 
@@ -622,6 +695,10 @@ export async function deduplicateIssues(
       merged.push({
         _index: optIdCounter,
         _cluster: cluster,
+        _descKeywords: extractKeywords(bestDescription),
+        _evidKeywords: new Set(
+          cluster.flatMap(i => [...i._evidKeywords]),
+        ),
         category,
         severity: maxSeverity,
         frequency: cluster.length,
@@ -850,22 +927,19 @@ function buildSkillOptimizationPrompt(
  *
  * @param currentContent - Current SKILL.md content
  * @param judgeOutput - Raw judge model output with suggested changes
- * @param _hasFrontmatter - Whether the file has YAML frontmatter (unused, kept for API compatibility)
- * @param _frontmatterEnd - Byte offset of frontmatter end (unused, kept for API compatibility)
- * @returns Modified content (or unchanged content if parsing fails)
+ * @returns Object containing modified content and array of conflicts (unmatched FIND patterns)
  */
 function applySkillChanges(
   currentContent: string,
   judgeOutput: string,
-  _hasFrontmatter: boolean,
-  _frontmatterEnd: number,
-): string {
+): { content: string; conflicts: Array<{find: string; replace: string}> } {
   // Attempt to extract structured edits from judge output
   // Look for patterns like "FIND: ... REPLACE WITH: ..." or "AFTER: ... INSERT: ..."
   const findReplacePattern = /(?:FIND|查找|搜尋)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```\s*\n(?:REPLACE WITH|替換為|取代為)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```/gi;
 
   let modifiedContent = currentContent;
   let appliedCount = 0;
+  const conflicts: Array<{find: string; replace: string}> = [];
 
   let match: RegExpExecArray | null;
   while ((match = findReplacePattern.exec(judgeOutput)) !== null) {
@@ -875,12 +949,18 @@ function applySkillChanges(
     if (findText && modifiedContent.includes(findText)) {
       modifiedContent = modifiedContent.replace(findText, replaceText);
       appliedCount++;
+    } else if (findText) {
+      // Track unmatched FIND patterns as conflicts
+      conflicts.push({ find: findText, replace: replaceText });
     }
   }
 
   if (appliedCount > 0) {
     console.log(`Applied ${appliedCount} structured edit(s) from judge model.`);
-    return modifiedContent;
+    if (conflicts.length > 0) {
+      console.warn(`${conflicts.length} FIND pattern(s) had no match in the current content.`);
+    }
+    return { content: modifiedContent, conflicts };
   }
 
   // If no structured edits found, try parsing markdown code blocks
@@ -891,7 +971,7 @@ function applySkillChanges(
     const newHasFrontmatter = newContent.startsWith('---');
     if (newHasFrontmatter) {
       console.log('Applied full content replacement from judge model.');
-      return newContent;
+      return { content: newContent, conflicts };
     }
   }
 
@@ -900,7 +980,7 @@ function applySkillChanges(
   console.warn('Could not parse structured edits from judge output. No changes applied.');
   console.warn('Review the patch file for manual application.');
 
-  return currentContent;
+  return { content: currentContent, conflicts };
 }
 
 /**
@@ -909,12 +989,10 @@ function applySkillChanges(
  * Ported from scripts/optimize.mjs generateSkillTemplateChanges().
  *
  * @param skillIssues - Filtered skill-category issues from the optimization plan
- * @param _currentContent - Current SKILL.md content (unused, kept for API compatibility)
  * @returns Template suggestion string
  */
 function generateSkillTemplateChanges(
   skillIssues: OptimizationPlan['issues'],
-  _currentContent: string,
 ): string {
   const lines: string[] = [];
   lines.push('The following sections may need attention based on identified issues:');
@@ -993,6 +1071,18 @@ export async function optimizeSkillMd(
 
   console.log(`\n=== Optimizing SKILL.md (${skillIssues.length} issues) ===`);
 
+  // ALLOWED_FILES check (FIX-09): verify the target path is within allowed ranges
+  const skillName = skillMdPath.split('/').pop()?.replace('/SKILL.md', '') || '';
+  const resolvedSkillName = skillMdPath.includes('/skills/')
+    ? skillMdPath.split('/skills/')[1]?.split('/')[0] || skillName
+    : skillName;
+  if (!isAllowedFile(skillMdPath, resolvedSkillName)) {
+    return {
+      success: false,
+      message: `File is not in an allowed optimization target: ${skillMdPath}. Allowed patterns: ${ALLOWED_FILES.join(', ')}`,
+    };
+  }
+
   // Read current SKILL.md
   let currentContent: string;
   try {
@@ -1002,10 +1092,18 @@ export async function optimizeSkillMd(
     return { success: false, message: `Cannot read SKILL.md at ${skillMdPath}: ${msg}` };
   }
 
-  // Extract frontmatter bounds
-  const frontmatterMatch = currentContent.match(/^---\n([\s\S]*?)\n---/);
-  const hasFrontmatter = frontmatterMatch !== null;
-  const frontmatterEnd = hasFrontmatter ? frontmatterMatch![0].length : 0;
+  // Markdown structure validation (FIX-10)
+  const mdValidation = validateMarkdownStructure(currentContent);
+  if (!mdValidation.valid) {
+    const issuesStr = mdValidation.issues.join('; ');
+    console.warn(`SKILL.md structure validation failed: ${issuesStr}`);
+    if (!dryRun) {
+      return {
+        success: false,
+        message: `Markdown structure validation failed: ${issuesStr}`,
+      };
+    }
+  }
 
   if (dryRun || !judgeAvailable) {
     // Build a detailed suggestions document
@@ -1053,14 +1151,14 @@ export async function optimizeSkillMd(
         patchLines.push('');
         patchLines.push('## Template-Based Suggestions');
         patchLines.push('');
-        patchLines.push(generateSkillTemplateChanges(skillIssues, currentContent));
+        patchLines.push(generateSkillTemplateChanges(skillIssues));
       }
     } else {
       patchLines.push('---');
       patchLines.push('');
       patchLines.push('## Template-Based Suggestions');
       patchLines.push('');
-      patchLines.push(generateSkillTemplateChanges(skillIssues, currentContent));
+      patchLines.push(generateSkillTemplateChanges(skillIssues));
     }
 
     const root = getProjectRoot();
@@ -1091,7 +1189,15 @@ export async function optimizeSkillMd(
     );
 
     // Parse the judge's suggested changes
-    const newContent = applySkillChanges(currentContent, content, hasFrontmatter, frontmatterEnd);
+    const { content: newContent, conflicts } = applySkillChanges(currentContent, content);
+
+    // Report conflicts (FIX-12): unmatched FIND patterns
+    if (conflicts.length > 0) {
+      console.warn(`Found ${conflicts.length} unmatched FIND pattern(s):`);
+      for (const c of conflicts) {
+        console.warn(`  - FIND pattern not matched: "${c.find.substring(0, 80)}..."`);
+      }
+    }
 
     // 3. Write updated SKILL.md
     writeFileSync(skillMdPath, newContent, 'utf-8');

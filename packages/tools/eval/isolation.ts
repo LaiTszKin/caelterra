@@ -91,8 +91,34 @@ const WRITE_TOOLS: ReadonlySet<string> = new Set([
   'Bash',
 ]);
 
-const READ_RESPONSE = 'Read operation simulated: OK';
-const WRITE_RESPONSE = 'Write operation simulated: file written';
+/**
+ * 建立模擬讀取回應字串，從 params.path 或 params.file_path 動態生成。
+ */
+function buildReadResponse(params: Record<string, unknown>): string {
+  const path =
+    typeof params.path === 'string'
+      ? params.path
+      : typeof params.file_path === 'string'
+        ? params.file_path
+        : '(unknown)';
+  return `Content of ${path}`;
+}
+
+/**
+ * 建立模擬寫入回應字串，從 params 動態生成內容大小資訊。
+ */
+function buildWriteResponse(params: Record<string, unknown>): string {
+  const path =
+    typeof params.path === 'string'
+      ? params.path
+      : typeof params.file_path === 'string'
+        ? params.file_path
+        : '(unknown)';
+  const content = params.content ?? '';
+  const length = typeof content === 'string' ? content.length : 0;
+  return `Written ${path} (${length} bytes)`;
+}
+
 const UNKNOWN_RESPONSE = 'Passthrough: not intercepted';
 
 /**
@@ -120,13 +146,13 @@ export function createToolDispatcher(
       let result: MockToolResult;
 
       if (READ_TOOLS.has(tool)) {
-        result = { success: true, data: READ_RESPONSE, tool };
+        result = { success: true, data: buildReadResponse(params), tool };
       } else if (WRITE_TOOLS.has(tool)) {
         console.warn(
           `[isolation] Write tool intercepted: ${tool}`,
           JSON.stringify(params),
         );
-        result = { success: true, data: WRITE_RESPONSE, tool };
+        result = { success: true, data: buildWriteResponse(params), tool };
       } else {
         console.warn(`[isolation] Unknown tool called: ${tool}`);
         result = { success: true, data: UNKNOWN_RESPONSE, tool };

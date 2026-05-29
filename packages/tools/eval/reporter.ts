@@ -12,9 +12,9 @@
  */
 
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { resolve, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve, join } from 'node:path';
 
+import { getProjectRoot } from './lib/project-root.js';
 import type { ScoreResult, Issue } from './scorer.js';
 
 // --- Report Generation ---
@@ -143,6 +143,21 @@ export function generateReport(
     return a.category.localeCompare(b.category);
   });
 
+  // Build reverse index: issue key -> test IDs (O(1) lookup in issue summary)
+  const issueToTestMap = new Map<string, string[]>();
+  for (const s of scores) {
+    for (const issue of s.issues) {
+      const key = `${issue.severity}:${issue.category}:${issue.description.substring(0, 80)}`;
+      if (!issueToTestMap.has(key)) {
+        issueToTestMap.set(key, []);
+      }
+      const testIds = issueToTestMap.get(key)!;
+      if (!testIds.includes(s.testId)) {
+        testIds.push(s.testId);
+      }
+    }
+  }
+
   // --- Common patterns ---
   const patterns: string[] = [];
 
@@ -263,15 +278,9 @@ export function generateReport(
     );
 
     for (const issue of sortedIssues) {
-      // Glue the issue to its test(s) by matching description context
-      const affectedTests = scores
-        .filter(s => s.issues.some(i =>
-          i.description === issue.description &&
-          i.severity === issue.severity &&
-          i.category === issue.category,
-        ))
-        .map(s => s.testId)
-        .join(', ');
+      // Look up affected tests from reverse index (O(1))
+      const key = `${issue.severity}:${issue.category}:${issue.description.substring(0, 80)}`;
+      const affectedTests = (issueToTestMap.get(key) || []).join(', ');
 
       const ev = issue.evidence.length > 40 ? issue.evidence.substring(0, 40) + '...' : issue.evidence;
       const desc = issue.description.length > 60 ? issue.description.substring(0, 60) + '...' : issue.description;
@@ -288,7 +297,24 @@ export function generateReport(
     '',
   );
 
-  // 7. Footer
+  // 7. Unscorable tests section
+  const unscorableScores = scores.filter(s => s.scorable === false);
+  if (unscorableScores.length > 0) {
+    sections.push(
+      '## 無法評分',
+      '',
+      '以下測試因軌跡檔案損壞而無法評分：',
+      '',
+      '| 題目 ID | 說明 |',
+      '|---------|------|',
+    );
+    for (const s of unscorableScores) {
+      sections.push(`| ${s.testId} | ${s.scoringNote || '未知原因'} |`);
+    }
+    sections.push('');
+  }
+
+  // 8. Footer
   sections.push(
     '---',
     '',
@@ -300,46 +326,6 @@ export function generateReport(
 }
 
 // --- Report Writing ---
-
-/**
- * Resolve the project root directory (same logic as scorer.ts).
- *
- * Tries:
- *   1. 3 levels up from source path
- *   2. 4 levels up from compiled path
- *   3. Crawl up from process.cwd()
- *
- * @returns Absolute path to the project root
- */
-function getProjectRoot(): string {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-
-  // Source path: packages/tools/eval/reporter.ts -> 3 levels up
-  const sourceCandidate = resolve(__dirname, '..', '..', '..');
-  if (existsSync(join(sourceCandidate, 'assets', 'spec'))) {
-    return sourceCandidate;
-  }
-
-  // Compiled path: packages/tools/eval/dist/reporter.js -> 4 levels up
-  const distCandidate = resolve(__dirname, '..', '..', '..', '..');
-  if (existsSync(join(distCandidate, 'assets', 'spec'))) {
-    return distCandidate;
-  }
-
-  // Fallback: crawl up from cwd (max 10 levels)
-  let dir = process.cwd();
-  for (let i = 0; i < 10; i++) {
-    if (existsSync(join(dir, 'assets', 'spec'))) {
-      return dir;
-    }
-    const parent = resolve(dir, '..');
-    if (parent === dir) break;
-    dir = parent;
-  }
-
-  throw new Error('無法確定專案根目錄：找不到 assets/spec/ 目錄');
-}
 
 /**
  * Write the report content to results/spec/{date}/REPORT.md.

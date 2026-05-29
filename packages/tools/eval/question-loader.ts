@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { loadQuestions as libLoadQuestions } from './lib/question-utils.js';
-import type { Question, FileContext, ScoringCriteria } from './lib/question-utils.js';
+import type { Question, FileContext } from './lib/question-utils.js';
 import type { EnvConfig } from './lib/env-utils.js';
 import { callJudgeModel } from './lib/judge-api.js';
 
@@ -56,8 +56,7 @@ export function loadQuestions(filePath: string): Question[] {
   if (!fs.existsSync(resolved)) {
     throw new Error(
       `題目檔案不存在: "${resolved}"\n` +
-      '請確認檔案路徑是否正確。你可使用 assets/spec/ 目錄下的範例題目檔案：\n' +
-      '  node dist/bin/apollo-toolkit.js eval --questions assets/spec/2026-05-28/test-questions.json',
+      '請確認題庫檔案存在於 assets/spec/{date}/test-questions.json，或使用 \'apltk eval <skill>\' 自動載入。需先建立題庫。',
     );
   }
 
@@ -83,7 +82,7 @@ export function sampleQuestions(
   mode: 'fast' | 'standard',
 ): Question[] {
   if (questions.length === 0) {
-    throw new Error('題目陣列為空，無法抽樣');
+    throw new Error('題目陣列為空，無法抽樣。需先建立題庫。');
   }
 
   const byDifficulty = {

@@ -17,11 +17,11 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
 
 import { loadEnv } from './lib/env-utils.js';
+import { getProjectRoot } from './lib/project-root.js';
 import type { EnvConfig } from './lib/env-utils.js';
 import { loadQuestions, sampleQuestions } from './question-loader.js';
 import type { Question } from './question-loader.js';
@@ -47,40 +47,11 @@ import type { DedupedIssue } from './optimizer.js';
  *
  * Priority:
  *   1. context.sourceRoot (if provided by the CLI)
- *   2. 4 levels up from source path (packages/tools/eval/index.ts)
- *   3. 5 levels up from compiled path (packages/tools/eval/dist/index.js)
- *   4. Crawl up from process.cwd()
+ *   2. Delegates to shared getProjectRoot() from lib/project-root.ts
  */
 function resolveProjectRoot(context: ToolContext): string {
   if (context.sourceRoot) return context.sourceRoot;
-
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-
-  // Source path: packages/tools/eval/index.ts → 4 levels up
-  const sourceCandidate = path.resolve(__dirname, '..', '..', '..', '..');
-  if (fs.existsSync(path.join(sourceCandidate, 'assets', 'spec'))) {
-    return sourceCandidate;
-  }
-
-  // Compiled path: packages/tools/eval/dist/index.js → 5 levels up
-  const distCandidate = path.resolve(__dirname, '..', '..', '..', '..', '..');
-  if (fs.existsSync(path.join(distCandidate, 'assets', 'spec'))) {
-    return distCandidate;
-  }
-
-  // Fallback: crawl up from cwd (max 10 levels)
-  let dir = process.cwd();
-  for (let i = 0; i < 10; i++) {
-    if (fs.existsSync(path.join(dir, 'assets', 'spec'))) {
-      return dir;
-    }
-    const parent = path.resolve(dir, '..');
-    if (parent === dir) break;
-    dir = parent;
-  }
-
-  throw new Error('無法確定專案根目錄：找不到 assets/spec/ 目錄');
+  return getProjectRoot();
 }
 
 /**
@@ -194,8 +165,8 @@ function printHelp(stdout: NodeJS.WriteStream): void {
     'Examples:',
     '  apltk eval spec                      Evaluate "spec" skill in fast mode',
     '  apltk eval spec --mode standard      Evaluate with standard sampling (8-12 questions)',
-    '  apltk eval spec --optimise           Evaluate then optimise SKILL.md',
-    '  apltk eval spec --optimise --dry-run Review optimisations without applying',
+    '  apltk eval spec --optimize           Evaluate then optimise SKILL.md',
+    '  apltk eval spec --optimize --dry-run Review optimisations without applying',
     '',
   ].join('\n');
   stdout.write(text);
@@ -322,7 +293,7 @@ async function evalHandler(
     // 7. Optimisation (optional)
     if (optimize) {
       stderr.write('[7/7] Generating optimisation plan...\n');
-      const allScores = loadAllScores(today);
+      const allScores = await loadAllScores(today);
       const rawIssues = extractIssues(allScores);
       const deduped: DedupedIssue[] = await deduplicateIssues(
         rawIssues,
@@ -367,6 +338,11 @@ async function evalHandler(
     }
     stdout.write('\n');
 
+    const avgScore = scores.length > 0 ? scores.reduce((sum, s) => sum + s.overallScore, 0) / scores.length : 0;
+    if (avgScore < 60 && scores.length > 0) {
+      stderr.write(`[FAIL] Average overall score ${avgScore.toFixed(1)}% is below threshold 60.\n`);
+      return 1;
+    }
     return failed > 0 ? 1 : 0;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

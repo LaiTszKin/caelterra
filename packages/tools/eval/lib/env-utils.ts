@@ -16,7 +16,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+
+import { getProjectRoot } from './project-root.js';
 
 // --- Public types ---
 
@@ -177,6 +178,16 @@ export function loadEnv(envPath?: string): EnvConfig {
     return Number.isFinite(n) && n > 0 ? n : defaultVal;
   };
 
+  // Same model warning (FIX-21)
+  if (
+    stringVals.EXEC_MODEL === stringVals.JUDGE_MODEL &&
+    stringVals.EXEC_BASE_URL === stringVals.JUDGE_BASE_URL
+  ) {
+    console.warn(
+      'Warning: EXEC_MODEL and JUDGE_MODEL are the same. Context isolation may be compromised.',
+    );
+  }
+
   return {
     // Required vars
     EXEC_BASE_URL: stringVals.EXEC_BASE_URL,
@@ -218,11 +229,7 @@ function selfTest(): void {
 
   // Test 2: Parse .env content (via env.example for format validation)
   console.log('\n2. 測試解析 .env.example:');
-  const __selfDirname = path.dirname(fileURLToPath(import.meta.url));
-  // NOTE: In the compiled output (dist/lib/), this navigates: dist/lib/ -> dist/ -> eval/
-  // The original scripts/lib/env-utils.mjs navigates: scripts/lib/ -> scripts/
-  // Adjust '../../..' relative to compiled location as needed for your setup.
-  const envExamplePath = path.resolve(__selfDirname, '..', '.env.example');
+  const envExamplePath = path.join(getProjectRoot(), '.env.example');
   try {
     const content = fs.readFileSync(envExamplePath, 'utf-8');
     const lines = content.split('\n').filter(l => l.includes('=') && !l.startsWith('#'));

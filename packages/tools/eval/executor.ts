@@ -13,76 +13,31 @@
  */
 
 import { appendFile, mkdir, writeFile, rm } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { resolve, join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, statfsSync } from 'node:fs';
+import { resolve, join } from 'node:path';
 
 import type { EnvConfig } from './lib/env-utils.js';
 import type { Question, ProjectContext } from './lib/question-utils.js';
 import { callExecModel } from './lib/judge-api.js';
 import { promisePool } from './lib/promise-pool.js';
 import { stripScoringCriteria } from './lib/question-utils.js';
+import { getProjectRoot } from './lib/project-root.js';
+import { createToolDispatcher } from './isolation.js';
+import type { ToolCall } from './isolation.js';
 
 // --- Public Types ---
 
 export interface TraceEvent {
-  type: 'start' | 'thinking' | 'response' | 'error' | 'end';
+  type: 'start' | 'thinking' | 'response' | 'tool_call' | 'tool_result' | 'error' | 'end';
   timestamp: string;
   data: Record<string, unknown>;
+  _lineNumber?: number;
 }
 
 export interface TestResult {
   testId: string;
   success: boolean;
   error?: string;
-}
-
-export interface ToolCallRecord {
-  tool: string;
-  params: Record<string, unknown>;
-  result: Record<string, unknown>;
-}
-
-// --- Module-level constants ---
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-/**
- * 取得專案根目錄的絕對路徑。
- *
- * 從編譯後的 dist/executor.js 往上 4 層：
- *   dist/ -> eval/ -> tools/ -> packages/ -> 專案根目錄
- *
- * 從原始碼 executor.ts 往上 3 層：
- *   eval/ -> tools/ -> packages/ -> 專案根目錄
- *
- * 以 assets/spec/ 目錄是否存在作為驗證。
- * 無法確定時會從 process.cwd() 向上遞迴搜尋。
- */
-function getProjectRoot(): string {
-  // 先嘗試編譯後的路徑 (4 層)
-  const candidate = resolve(__dirname, '..', '..', '..', '..');
-  if (existsSync(join(candidate, 'assets', 'spec'))) {
-    return candidate;
-  }
-  // 再嘗試原始碼的路徑 (3 層)
-  const candidate2 = resolve(__dirname, '..', '..', '..');
-  if (existsSync(join(candidate2, 'assets', 'spec'))) {
-    return candidate2;
-  }
-  // 最後嘗試從 process.cwd() 往上找（最多 10 層）
-  let dir = process.cwd();
-  const maxDepth = 10;
-  for (let i = 0; i < maxDepth; i++) {
-    if (existsSync(join(dir, 'assets', 'spec'))) {
-      return dir;
-    }
-    const parent = resolve(dir, '..');
-    if (parent === dir) break; // 已達檔案系統根目錄
-    dir = parent;
-  }
-  throw new Error('無法確定專案根目錄：找不到 assets/spec/ 目錄');
 }
 
 // --- Core Functions ---
@@ -210,15 +165,20 @@ async function withRetry<T>(
 /**
  * 執行單一測試（一次嘗試，不含重試）。
  *
- * 流程：
+ * 使用多輪 tool-use loop (最多 20 輪)：
  *   1. 建立結果目錄，清理舊的 trace
  *   2. 記錄 start event
  *   3. 使用 lib/question-utils 的 stripScoringCriteria 剝離評分標準
  *   4. 建立隔離工作區目錄 (initWorkspace)
  *   5. 建構 system prompt 並記錄 thinking event
- *   6. 呼叫 callExecModel（含 AbortController timeout）
- *   7. 記錄 response event
- *   8. 記錄 end event，寫入 .done marker（含 testId, completedAt, duration_ms, status）
+ *   6. 建立工具分發器 (createToolDispatcher)
+ *   7. 進入 tool-use loop:
+ *      a. 呼叫 callExecModel（含 AbortController timeout）
+ *      b. 若 finish_reason === 'stop' → 記錄最終 response 並結束循環
+ *      c. 若 finish_reason === 'tool_calls' → 逐一 dispatch 並記錄 tool_call/tool_result
+ *      d. 將 tool_call 和 tool_result 附加到 messages array
+ *      e. 繼續下一輪
+ *   8. 記錄 end event，寫入 .done marker
  *   9. 錯誤處理：timeout 記錄為 'timeout' 狀態，API error 記錄為 'error' 狀態
  */
 async function executeSingleTest(
@@ -261,35 +221,139 @@ async function executeSingleTest(
       data: { systemPrompt, userPrompt: stripped.userPrompt },
     });
 
-    const messages = [
+    // 建立工具分發器 (每個 test 一個)
+    const dispatcher = createToolDispatcher({ workspaceDir });
+
+    // 使用寬鬆型別以容納 tool_calls 和 tool_call_id 欄位
+    const messages: Record<string, unknown>[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: stripped.userPrompt },
     ];
 
-    // 呼叫執行模型（含 AbortController timeout）
-    const controller = new AbortController();
-    const timeoutMs = env.EXEC_TIMEOUT * 1000;
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    // 多輪 tool-use loop (最多 20 輪)
+    const MAX_TOOL_ROUNDS = 20;
+    let finalResponse: Record<string, unknown> | null = null;
+    let totalToolCalls = 0;
 
-    let response: Record<string, unknown>;
-    try {
-      response = await callExecModel(messages, env, controller.signal);
-    } finally {
-      clearTimeout(timeoutId);
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      // 呼叫執行模型（含 AbortController timeout）
+      const controller = new AbortController();
+      const timeoutMs = env.EXEC_TIMEOUT * 1000;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      let response: Record<string, unknown>;
+      try {
+        response = await callExecModel(
+          messages as unknown as Parameters<typeof callExecModel>[0],
+          env,
+          controller.signal,
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      const choices = response.choices as Array<Record<string, unknown>> | undefined;
+      const finishReason = choices?.[0]?.finish_reason as string | undefined;
+      const assistantMessage = choices?.[0]?.message as Record<string, unknown> | undefined;
+
+      if (finishReason === 'stop' || (finishReason !== 'tool_calls' && round > 0)) {
+        // 記錄最終 response
+        await appendTrace(tracePath, {
+          type: 'response',
+          timestamp: new Date().toISOString(),
+          data: {
+            model: response.model,
+            usage: response.usage,
+            message: assistantMessage,
+            finish_reason: finishReason,
+            rounds: round + 1,
+            totalToolCalls,
+          },
+        });
+        finalResponse = response;
+        break;
+      }
+
+      if (finishReason === 'tool_calls') {
+        const toolCalls = assistantMessage?.tool_calls as Array<Record<string, unknown>> | undefined;
+        if (!toolCalls || toolCalls.length === 0) {
+          // 異常：finish_reason 為 tool_calls 但無 tool_calls 資料
+          await appendTrace(tracePath, {
+            type: 'error',
+            timestamp: new Date().toISOString(),
+            data: { error: 'finish_reason is tool_calls but no tool_calls in response' },
+          });
+          break;
+        }
+
+        // 將 assistant message（含 tool_calls）加入 messages
+        messages.push({
+          role: 'assistant',
+          content: (assistantMessage?.content as string | null) ?? null,
+          tool_calls: toolCalls,
+        });
+
+        for (const tc of toolCalls) {
+          const id = tc.id as string;
+          const func = tc.function as Record<string, unknown> | undefined;
+          const toolName = (func?.name as string) || (tc.tool as string) || 'unknown';
+          const rawArgs = func?.arguments as string | undefined;
+          let args: Record<string, unknown>;
+          try {
+            args = rawArgs ? (JSON.parse(rawArgs) as Record<string, unknown>) : {};
+          } catch {
+            args = {};
+          }
+
+          const toolCall: ToolCall = { tool: toolName, params: args };
+          const result = await dispatcher.dispatch(toolCall);
+
+          // 記錄 tool_call event
+          await appendTrace(tracePath, {
+            type: 'tool_call',
+            timestamp: new Date().toISOString(),
+            data: { id, tool: toolName, params: args },
+          });
+
+          // 記錄 tool_result event
+          await appendTrace(tracePath, {
+            type: 'tool_result',
+            timestamp: new Date().toISOString(),
+            data: { id, tool: toolName, result },
+          });
+
+          // 將 tool result 加入 messages
+          messages.push({
+            role: 'tool',
+            content: JSON.stringify(result),
+            tool_call_id: id,
+          });
+
+          totalToolCalls++;
+        }
+
+        // 繼續下一輪
+        continue;
+      }
+
+      // 首輪 finish_reason 非 tool_calls 也非 stop（如 length 或 content_filter）
+      await appendTrace(tracePath, {
+        type: 'response',
+        timestamp: new Date().toISOString(),
+        data: {
+          model: response.model,
+          usage: response.usage,
+          message: assistantMessage,
+          finish_reason: finishReason,
+        },
+      });
+      finalResponse = response;
+      break;
     }
 
-    const choices = response.choices as Array<Record<string, unknown>> | undefined;
-    const assistantMessage = choices?.[0]?.message as Record<string, unknown> | undefined;
-
-    await appendTrace(tracePath, {
-      type: 'response',
-      timestamp: new Date().toISOString(),
-      data: {
-        model: response.model,
-        usage: response.usage,
-        message: assistantMessage,
-      },
-    });
+    if (!finalResponse) {
+      throw new Error('Max tool rounds (20) exceeded without final response');
+    }
 
     const duration = Date.now() - startTime;
     await appendTrace(tracePath, {
@@ -379,6 +443,10 @@ export async function runSingleTest(
 /**
  * 執行所有測試（使用 promisePool 並發控制）。
  *
+ * 加入以下保護機制：
+ *   - 磁碟空間檢查 (FIX-06)：低於 100MB 時中止
+ *   - 執行階段並發鎖 (FIX-11)：防止同一 results 目錄多次執行
+ *
  * @param questions - 題目陣列
  * @param env - 環境設定
  * @param date - 測試日期字串
@@ -391,34 +459,69 @@ export async function runAllTests(
   date: string,
   skillName: string = 'spec',
 ): Promise<TestResult[]> {
-  const total = questions.length;
-  let completed = 0;
-  let failed = 0;
+  const rootDir = getProjectRoot();
+  const resultsBase = resolve(rootDir, 'results', 'spec', date);
 
-  const results = await promisePool(
-    questions,
-    async (question: Question, i: number) => {
-      const label = `[${i + 1}/${total}] ${question.id} (${question.difficulty})`;
+  // 磁碟空間檢查 (FIX-06)
+  try {
+    const stats = statfsSync(resultsBase);
+    const availableMB = (stats.bavail * stats.bsize) / (1024 * 1024);
+    if (availableMB < 100) {
+      throw new Error('Eval aborted: insufficient disk space (< 100MB available)');
+    }
+  } catch (err: unknown) {
+    if ((err as Error).message?.startsWith('Eval aborted')) {
+      throw err;
+    }
+    // statfsSync 不支援或目錄不存在 — 跳過檢查
+    console.warn('  无法检查磁盘空间 (statfsSync 不可用，跳过)');
+  }
 
-      try {
-        const result = await runSingleTest(question, env, date, skillName);
-        completed++;
-        if (result.success) {
-          console.log(`${label} 完成`);
-        } else {
+  // 執行階段並發鎖 (FIX-11)
+  const lockPath = resolve(resultsBase, '.exec-lock');
+  try {
+    await mkdir(lockPath);
+  } catch (err: unknown) {
+    const nodeErr = err as NodeJS.ErrnoException;
+    if (nodeErr.code === 'EEXIST') {
+      throw new Error('Another eval is already in progress');
+    }
+    throw err;
+  }
+
+  try {
+    const total = questions.length;
+    let completed = 0;
+    let failed = 0;
+
+    const results = await promisePool(
+      questions,
+      async (question: Question, i: number) => {
+        const label = `[${i + 1}/${total}] ${question.id} (${question.difficulty})`;
+
+        try {
+          const result = await runSingleTest(question, env, date, skillName);
+          completed++;
+          if (result.success) {
+            console.log(`${label} 完成`);
+          } else {
+            failed++;
+            console.error(`${label} 失败: ${result.error}`);
+          }
+          return result;
+        } catch (err) {
           failed++;
-          console.error(`${label} 失败: ${result.error}`);
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`${label} 最终失败 (重试耗尽): ${msg}`);
+          return { testId: question.id, success: false, error: msg };
         }
-        return result;
-      } catch (err) {
-        failed++;
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`${label} 最终失败 (重试耗尽): ${msg}`);
-        return { testId: question.id, success: false, error: msg };
-      }
-    },
-    env.EXEC_CONCURRENCY,
-  );
+      },
+      env.EXEC_CONCURRENCY,
+    );
 
-  return results;
+    return results;
+  } finally {
+    // 清除並發鎖
+    await rm(lockPath, { recursive: true, force: true });
+  }
 }

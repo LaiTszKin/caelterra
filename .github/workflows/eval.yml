@@ -28,8 +28,18 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+      - name: Check eval secrets
+        id: check-secrets
+        run: |
+          if [ -z "${{ secrets.EXEC_API_KEY }}" ] || [ -z "${{ secrets.JUDGE_API_KEY }}" ]; then
+            echo "::warning::Eval secrets not configured. Skipping skill evaluation."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
       - name: Run skill evaluation
         id: skill-eval
+        if: steps.check-secrets.outputs.skip != 'true'
         run: node dist/bin/apollo-toolkit.js eval spec --mode standard
         env:
           EXEC_BASE_URL: ${{ secrets.EXEC_BASE_URL }}
@@ -38,12 +48,15 @@ jobs:
           JUDGE_BASE_URL: ${{ secrets.JUDGE_BASE_URL }}
           JUDGE_MODEL: ${{ secrets.JUDGE_MODEL }}
           JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
-        continue-on-error: true
+          EVAL_MIN_SCORE: 60
+          EVAL_MAX_P0: 0
       - name: Post result summary
         if: always()
         run: |
           echo "## Skill Eval Gate Results" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.skill-eval.outcome }}" = "success" ]; then
+          if [ "${{ steps.check-secrets.outputs.skip }}" = "true" ]; then
+            echo "⚠️ Eval skipped: secrets not configured." >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.skill-eval.outcome }}" = "success" ]; then
             echo "✅ Evaluation passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Evaluation failed or encountered errors" >> $GITHUB_STEP_SUMMARY
