@@ -192,6 +192,20 @@ function simpleStem(word: string): string {
 // --- Public Functions ---
 
 /**
+ * Validate that a parsed JSON object conforms to the ScoreResult shape.
+ * Returns the object unchanged if valid, or null if invalid.
+ */
+function validateScoreResult(obj: unknown): ScoreResult | null {
+  if (typeof obj !== 'object' || obj === null) return null;
+  const o = obj as Record<string, unknown>;
+  if (typeof o.testId !== 'string') return null;
+  if (typeof o.overallScore !== 'number') return null;
+  if (!Array.isArray(o.dimensions)) return null;
+  if (!Array.isArray(o.issues)) return null;
+  return obj as ScoreResult;
+}
+
+/**
  * Scan results directory and load all score.json files.
  * Skips missing or corrupt files with a warning.
  *
@@ -227,7 +241,12 @@ export async function loadAllScores(date: string, sourceRoot?: string): Promise<
       (async (): Promise<ScoreResult | null> => {
         try {
           const raw = await readFile(scorePath, 'utf-8');
-          return JSON.parse(raw) as ScoreResult;
+          const parsed = validateScoreResult(JSON.parse(raw));
+          if (!parsed) {
+            console.warn(`Warning: Corrupt score.json for ${testNo}: validation failed -- skipped`);
+            return null;
+          }
+          return parsed;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn(`Warning: Corrupt score.json for ${testNo}: ${msg} -- skipped`);

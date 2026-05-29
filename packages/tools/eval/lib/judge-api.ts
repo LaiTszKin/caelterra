@@ -18,20 +18,6 @@ export interface Message {
   tool_call_id?: string;
 }
 
-export interface JudgeEnv {
-  JUDGE_BASE_URL: string;
-  JUDGE_MODEL: string;
-  JUDGE_API_KEY: string;
-  JUDGE_REASONING_EFFORT?: string;
-}
-
-export interface ExecEnv {
-  EXEC_BASE_URL: string;
-  EXEC_MODEL: string;
-  EXEC_API_KEY: string;
-  EXEC_REASONING_EFFORT?: string;
-}
-
 export interface CallOptions {
   timeoutMs?: number;
 }
@@ -69,7 +55,7 @@ export interface ParseErrorResult {
  */
 export async function callJudgeModelRaw(
   messages: Message[],
-  env: JudgeEnv,
+  env: EnvConfig,
   options: CallOptions = {},
 ): Promise<JudgeRawResult> {
   const { timeoutMs = 0 } = options;
@@ -132,7 +118,7 @@ export async function callJudgeModelRaw(
  */
 export async function callJudgeModel(
   prompt: string,
-  env: JudgeEnv,
+  env: EnvConfig,
   options: CallOptions = {},
 ): Promise<Record<string, unknown>> {
   const { content } = await callJudgeModelRaw(
@@ -209,7 +195,7 @@ export function parseJudgeOutput(content: string): Record<string, unknown> {
  */
 export async function callExecModel(
   messages: Message[],
-  env: ExecEnv,
+  env: EnvConfig,
   signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const url = `${env.EXEC_BASE_URL}/v1/chat/completions`;

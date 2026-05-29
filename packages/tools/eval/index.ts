@@ -39,6 +39,7 @@ import {
   optimizeSkillMd,
 } from './optimizer.js';
 import type { DedupedIssue } from './optimizer.js';
+import { promisePool } from './lib/promise-pool.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -305,10 +306,11 @@ async function evalHandler(
       stderr.write(
         `[7/7] Generating suggested fixes for ${deduped.length} issues...\n`,
       );
-      const fixPromises = deduped.map(async (issue) => {
-        issue.suggestedFix = await generateSuggestedFix(issue, env, true);
-      });
-      await Promise.all(fixPromises);
+      const fixResults = await promisePool(
+        deduped,
+        async (issue) => { issue.suggestedFix = await generateSuggestedFix(issue, env, true); },
+        env.JUDGE_CONCURRENCY,
+      );
 
       const plan = generateOptimizationPlan(deduped, today, allScores);
 
@@ -339,8 +341,14 @@ async function evalHandler(
     stdout.write('\n');
 
     const avgScore = scores.length > 0 ? scores.reduce((sum, s) => sum + s.overallScore, 0) / scores.length : 0;
-    if (avgScore < 60 && scores.length > 0) {
-      stderr.write(`[FAIL] Average overall score ${avgScore.toFixed(1)}% is below threshold 60.\n`);
+    const p0Count = scores.reduce((sum, s) => sum + (s.issues?.filter(i => i.severity === 'P0').length || 0), 0);
+
+    if (avgScore < env.EVAL_MIN_SCORE && scores.length > 0) {
+      stderr.write(`[FAIL] Average overall score ${avgScore.toFixed(1)}% is below threshold ${env.EVAL_MIN_SCORE}.\n`);
+      return 1;
+    }
+    if (env.EVAL_MAX_P0 > 0 && p0Count > env.EVAL_MAX_P0) {
+      stderr.write(`[FAIL] P0 issue count ${p0Count} exceeds limit ${env.EVAL_MAX_P0}.\n`);
       return 1;
     }
     return failed > 0 ? 1 : 0;

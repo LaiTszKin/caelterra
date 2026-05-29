@@ -29,7 +29,7 @@ import type { ToolCall } from './isolation.js';
 // --- Public Types ---
 
 export interface TraceEvent {
-  type: 'start' | 'thinking' | 'response' | 'tool_call' | 'tool_result' | 'error' | 'end';
+  type: 'start' | 'thinking' | 'response' | 'tool_call' | 'tool_result' | 'error' | 'end' | 'parse_error';
   timestamp: string;
   data: Record<string, unknown>;
   _lineNumber?: number;
@@ -47,7 +47,7 @@ export interface TestResult {
  * 將 trace event 以 JSONL 格式附加至指定的追蹤檔案。
  * 使用 append-only 模式 (fs.appendFile)。
  */
-export async function appendTrace(
+async function appendTrace(
   tracePath: string,
   event: TraceEvent,
 ): Promise<void> {
@@ -66,7 +66,7 @@ export async function appendTrace(
  * @param date - 日期字串（用於目錄結構）
  * @returns 工作區目錄的絕對路徑
  */
-export async function initWorkspace(
+async function initWorkspace(
   testNo: string,
   projectContext: ProjectContext,
   date: string,
@@ -114,12 +114,12 @@ function buildSystemPrompt(
   skillName: string,
 ): string {
   return [
-    `你是一个 ${skillName}-writing agent，负责根据使用者需求撰写规格文件。`,
+    `你是一个 ${skillName} skill 的 AI agent，负责根据使用者需求完成任务。`,
     '',
     '重要限制：',
     `- 你只能在以下工作目录中读取和写入文件：${workspaceDir}`,
     '- 不要在工作目录之外创建或修改任何文件',
-    '- 将所有产出的 spec 文件都写入工作目录中',
+    '- 将所有产出的文件都写入工作目录中',
     '',
     '项目背景：',
     projectContext.description || '(无)',
@@ -431,7 +431,7 @@ async function executeSingleTest(
  * @param skillName - 技能名稱 (預設 'spec')
  * @returns TestResult
  */
-export async function runSingleTest(
+async function runSingleTest(
   question: Question,
   env: EnvConfig,
   date: string,

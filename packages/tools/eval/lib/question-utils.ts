@@ -74,7 +74,7 @@ export interface StepDefinition {
 /**
  * Scoring dimensions definition (for reference by other modules).
  */
-export const SCORING_DIMENSIONS: ScoringDimensionMeta[] = [
+const SCORING_DIMENSIONS: ScoringDimensionMeta[] = [
   { key: 'outcome', label: '任務完成' },
   { key: 'process', label: '流程遵循' },
   { key: 'style', label: '輸出格式' },
@@ -89,7 +89,7 @@ export interface ScoringDimensionMeta {
 /**
  * Spec skill workflow eight-step definition (used for step coverage validation).
  */
-export const SPEC_WORKFLOW_STEPS: StepDefinition[] = [
+const SPEC_WORKFLOW_STEPS: StepDefinition[] = [
   { key: 'understand-requirements', label: '理解需求' },
   { key: 'design-architecture', label: '拆分設計' },
   { key: 'split-tasks', label: '拆分任務' },

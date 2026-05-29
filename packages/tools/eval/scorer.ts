@@ -16,8 +16,8 @@
  * Only uses Node.js built-in modules and lib/ modules. No external dependencies.
  */
 
-import { existsSync, readdirSync, mkdirSync, watch } from 'node:fs';
-import { readFile, mkdir, writeFile, rm } from 'node:fs/promises';
+import { existsSync, readdirSync } from 'node:fs';
+import { readFile, mkdir, writeFile, rm, readdir, access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 
 import type { TraceEvent } from './executor.js';
@@ -27,7 +27,6 @@ import { promisePool } from './lib/promise-pool.js';
 import { loadQuestionsFromFile, getScoringCriteria } from './lib/question-utils.js';
 import type { Question, ScoringCriteria } from './lib/question-utils.js';
 import { getProjectRoot } from './lib/project-root.js';
-export { getProjectRoot };
 
 // --- Public Types ---
 
@@ -98,7 +97,7 @@ export async function readTrace(tracePath: string): Promise<{ events: TraceEvent
         type: 'parse_error',
         timestamp: new Date().toISOString(),
         data: { line: i + 1, raw: line.substring(0, 200), error: (err as Error).message },
-      } as unknown as TraceEvent);
+      } as TraceEvent);
     }
   }
 
@@ -152,18 +151,23 @@ export function buildJudgePrompt(
   testId: string,
   skillName?: string,
 ): string {
+  function safeString(val: unknown, fallback: string): string {
+    return typeof val === 'string' ? val : fallback;
+  }
+
   const thinkingEvent = trace.find(e => e.type === 'thinking');
   const responseEvent = trace.find(e => e.type === 'response');
   const endEvent = trace.find(e => e.type === 'end');
   const errorEvents = trace.filter(e => e.type === 'error');
 
-  const systemPrompt = thinkingEvent?.data?.systemPrompt as string | undefined ?? '(未記錄)';
-  const userPrompt = thinkingEvent?.data?.userPrompt as string | undefined ?? '(未記錄)';
-  const assistantResponse = (
-    (responseEvent?.data?.message as Record<string, unknown> | undefined)?.content as string | undefined
-  ) ?? '(無回應)';
+  const systemPrompt = safeString(thinkingEvent?.data?.systemPrompt, '(未記錄)');
+  const userPrompt = safeString(thinkingEvent?.data?.userPrompt, '(未記錄)');
+  const assistantResponse = safeString(
+    (responseEvent?.data?.message as Record<string, unknown> | undefined)?.content,
+    '(無回應)',
+  );
   const duration = (endEvent?.data?.duration_ms as number | undefined) ?? 0;
-  const status = (endEvent?.data?.status as string | undefined) ?? 'unknown';
+  const status = safeString(endEvent?.data?.status, 'unknown');
   const errors = errorEvents.map(e => {
     const msg = (e.data?.error ?? e.data?.message ?? 'unknown error') as string;
     return msg;
@@ -204,14 +208,14 @@ export function buildJudgePrompt(
   const skillContext = skillName ? `\n## 測試技能\n${skillName}\n` : '';
 
   // Build trace events summary with JSONL line numbers
-  const traceSummaryLines = trace
-    .filter((e): e is TraceEvent & { _lineNumber: number } => e._lineNumber != null)
-    .map(e => {
+  const traceSummaryLines = trace.map(e => {
       const type = e.type;
       let detail = '';
       if (type === 'tool_call' || type === 'tool_result') {
         const tool = (e.data as Record<string, unknown> | undefined)?.tool;
-        if (tool) detail = ` — ${String(tool)}`;
+        if (tool) {
+          detail = ` — ${String(tool)}`;
+        }
       } else if (type === 'thinking') {
         const up = (e.data as Record<string, unknown> | undefined)?.userPrompt;
         if (typeof up === 'string') detail = ` — "${up.substring(0, 60)}"`;
@@ -220,9 +224,19 @@ export function buildJudgePrompt(
         const content = msg?.content as string | undefined;
         if (content) detail = ` — ${content.substring(0, 100)}`;
       }
-      return `L${e._lineNumber}: ${type}${detail}`;
+      if (type === 'tool_call') {
+        const params = (e.data as Record<string, unknown> | undefined)?.params;
+        if (params !== undefined) detail += `, params: ${JSON.stringify(params).substring(0, 200)}`;
+      } else if (type === 'tool_result') {
+        const result = (e.data as Record<string, unknown> | undefined)?.result;
+        if (result !== undefined) detail += `, result: ${JSON.stringify(result).substring(0, 200)}`;
+      }
+      return `L${e._lineNumber ?? '?'}: ${type}${detail}`;
     });
-  const traceSummary = traceSummaryLines.length > 0 ? traceSummaryLines.join('\n') : '(無事件)';
+  let traceSummary = traceSummaryLines.length > 0 ? traceSummaryLines.join('\n') : '(無事件)';
+  if (traceSummary.length > 5000) {
+    traceSummary = traceSummary.substring(0, 5000) + '\n... (trace truncated)';
+  }
 
   const prompt = [
     '你是一個專業的 AI agent 評審。請根據以下資訊對 agent 的測試表現進行三維度評分。',
@@ -472,7 +486,7 @@ export async function scoreAllTests(date: string, env: EnvConfig): Promise<Score
  * @param resultsBase - Absolute path to results/spec/{date}/
  * @returns Array of test IDs (e.g. ["Q001", "Q002", ...])
  */
-export function scanForDone(resultsBase: string): string[] {
+function scanForDone(resultsBase: string): string[] {
   if (!existsSync(resultsBase)) return [];
 
   const entries = readdirSync(resultsBase, { withFileTypes: true });
@@ -498,138 +512,35 @@ export function scanForDone(resultsBase: string): string[] {
  * @param testNo - Test ID (e.g. "Q001")
  * @returns true if .scored marker exists
  */
-export function isAlreadyScored(resultsBase: string, testNo: string): boolean {
+function isAlreadyScored(resultsBase: string, testNo: string): boolean {
   const scoredPath = join(resultsBase, `test_${testNo}`, '.scored');
   return existsSync(scoredPath);
 }
 
-// --- Watch Mode ---
+// --- Async Directory Scanning ---
 
 /**
- * Watch mode: monitor the results directory for new .done files and score
- * them as they appear.
+ * Scan the results base directory for tests with .done marker, using async I/O.
  *
- * Uses fs.watch as the primary detection mechanism, with a polling fallback
- * every 10 seconds if fs.watch is unavailable.
+ * Uses fs/promises readdir + access for non-blocking directory scanning.
+ * Suitable for concurrent callers that don't want to block the event loop.
  *
- * The function returns a Promise that never resolves (it runs until the
- * process is terminated with SIGINT or SIGTERM).
- *
- * @param date - Date string for directory structure
- * @param env - Environment configuration
+ * @param resultsBase - Absolute path to results/spec/{date}/
+ * @returns Promise resolving to array of test IDs (e.g. ["Q001", "Q002", ...])
  */
-export async function watchMode(date: string, env: EnvConfig): Promise<void> {
-  const rootDir = getProjectRoot();
-  const resultsBase = resolve(rootDir, 'results', 'spec', date);
-
-  // Pre-load question map for efficiency
-  let questionMap: Record<string, Question> | undefined;
+export async function scanForDoneAsync(resultsBase: string): Promise<string[]> {
   try {
-    const questionsPath = resolve(rootDir, 'assets', 'spec', date, 'test-questions.json');
-    const questions = loadQuestionsFromFile(questionsPath);
-    questionMap = {};
-    for (const q of questions) {
-      questionMap[q.id] = q;
-    }
-    console.log(`已載入 ${questions.length} 道題目的評分標準`);
-  } catch {
-    console.warn('無法載入題目檔案，將在評分時逐題載入');
-  }
-
-  const scored = new Set<string>();
-  const pendingQueue: string[] = [];
-  let activeWorkers = 0;
-  let stopped = false;
-
-  /**
-   * Process the next item in the pending queue, respecting concurrency limits.
-   */
-  const processNext = async (): Promise<void> => {
-    if (stopped) return;
-
-    while (activeWorkers < env.JUDGE_CONCURRENCY && pendingQueue.length > 0) {
-      const testNo = pendingQueue.shift();
-      if (!testNo || scored.has(testNo)) continue;
-
-      activeWorkers++;
-      scored.add(testNo);
-
-      scoreSingleTest(testNo, date, env, questionMap)
-        .then(result => {
-          if (result.score) {
-            console.log(`${testNo} 評分完成 (總分: ${result.score.overallScore})`);
-          }
-        })
-        .catch((err: Error) => {
-          console.error(`${testNo} 評分失敗: ${err.message}`);
-          scored.delete(testNo); // Allow retry
-        })
-        .finally(() => {
-          activeWorkers--;
-          processNext();
-        });
-    }
-  };
-
-  /**
-   * Enqueue a test for scoring if it hasn't been scored yet.
-   */
-  function enqueue(testNo: string): void {
-    if (scored.has(testNo) || pendingQueue.includes(testNo)) return;
-    pendingQueue.push(testNo);
-    processNext();
-  }
-
-  /**
-   * Poll the filesystem for newly completed tests.
-   */
-  function pollForDone(): void {
-    if (stopped) return;
-    try {
-      for (const testNo of scanForDone(resultsBase)) {
-        if (!isAlreadyScored(resultsBase, testNo) && !scored.has(testNo)) {
-          enqueue(testNo);
-        }
+    const entries = await readdir(resultsBase, { withFileTypes: true });
+    const doneTests: string[] = [];
+    for (const entry of entries) {
+      if (entry.isDirectory() && entry.name.startsWith('test_')) {
+        const testNo = entry.name.replace('test_', '');
+        try {
+          await access(join(resultsBase, entry.name, '.done'));
+          doneTests.push(testNo);
+        } catch { /* .done not found */ }
       }
-    } catch {
-      /* directory may not exist yet */
     }
-  }
-
-  // Initial scan
-  pollForDone();
-
-  // Primary: fs.watch for real-time detection
-  let watcher: ReturnType<typeof watch> | undefined;
-  try {
-    mkdirSync(resultsBase, { recursive: true });
-    watcher = watch(resultsBase, { recursive: true }, (_eventType: string, filename: string | null) => {
-      if (filename) {
-        // Debounce: delay slightly to ensure file write completes
-        setTimeout(pollForDone, 200);
-      }
-    });
-  } catch {
-    // fs.watch not available, fall back to polling only
-  }
-
-  // Fallback: periodic polling every 10 seconds
-  const interval = setInterval(pollForDone, 10000);
-  console.log('監視模式已啟動，等待 .done 標記...');
-  console.log(`評分並發上限: ${env.JUDGE_CONCURRENCY}`);
-
-  function shutdown(): void {
-    stopped = true;
-    clearInterval(interval);
-    if (watcher) {
-      watcher.close();
-    }
-    console.log('\n監視模式已停止');
-  }
-
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
-
-  // Never resolves on its own
-  await new Promise<void>(() => {});
+    return doneTests;
+  } catch { return []; }
 }

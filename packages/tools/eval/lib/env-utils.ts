@@ -37,6 +37,9 @@ export interface EnvConfig {
   JUDGE_CONCURRENCY: number;
   EXEC_TIMEOUT: number;
   JUDGE_TIMEOUT: number;
+  /* CI gate thresholds */
+  EVAL_MIN_SCORE: number;
+  EVAL_MAX_P0: number;
 }
 
 // --- Constants ---
@@ -45,7 +48,7 @@ export interface EnvConfig {
  * Required environment variables.
  * Keys are variable names, values are descriptions (used in error messages).
  */
-export const REQUIRED_VARS: Record<string, string> = {
+const REQUIRED_VARS: Record<string, string> = {
   EXEC_BASE_URL: 'Execution model API base URL',
   EXEC_MODEL: 'Execution model name',
   EXEC_API_KEY: 'API key for execution model',
@@ -57,13 +60,15 @@ export const REQUIRED_VARS: Record<string, string> = {
 /**
  * Environment variables with default values.
  */
-export const DEFAULTS: Record<string, string> = {
+const DEFAULTS: Record<string, string> = {
   EXEC_REASONING_EFFORT: '',
   JUDGE_REASONING_EFFORT: '',
   EXEC_CONCURRENCY: '10',
   JUDGE_CONCURRENCY: '5',
   EXEC_TIMEOUT: '600',
   JUDGE_TIMEOUT: '120',
+  EVAL_MIN_SCORE: '60',
+  EVAL_MAX_P0: '0',
 };
 
 // --- Main export ---
@@ -204,6 +209,9 @@ export function loadEnv(envPath?: string): EnvConfig {
     JUDGE_CONCURRENCY: parsePositiveInt(stringVals.JUDGE_CONCURRENCY, 5),
     EXEC_TIMEOUT: parsePositiveInt(stringVals.EXEC_TIMEOUT, 600),
     JUDGE_TIMEOUT: parsePositiveInt(stringVals.JUDGE_TIMEOUT, 120),
+    // CI gate thresholds
+    EVAL_MIN_SCORE: parsePositiveInt(stringVals.EVAL_MIN_SCORE ?? '60', 60),
+    EVAL_MAX_P0: parsePositiveInt(stringVals.EVAL_MAX_P0 ?? '0', 0),
   };
 }
 
