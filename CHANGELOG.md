@@ -2,6 +2,19 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.0.5] - 2026-05-29
+
+### Added
+
+- `REPORT.md` template: add Review History section for preserving past review round summaries across multiple review sessions.
+- `FIX.md` template: add Fix History section (Section 11) for preserving past fix round summaries across multiple fix sessions; Boundaries renumbered to Section 12.
+
+### Changed
+
+- `review` skill: when an old REPORT.md exists, archive its verdict and findings summary into the Review History section before overwriting with the new review result.
+- `fix` skill: when an old FIX.md exists, archive its fix summary into the Fix History section before overwriting with the new fix plan.
+- `create-review-report` CLI tool: update description to match current terminology.
+
 ## [v4.0.4] - 2026-05-29
 
 ### Changed
