@@ -1,4 +1,4 @@
 interface:
   display_name: "Implement"
-  short_description: "Implement an approved spec set inside an isolated git worktree"
-  default_prompt: "Use $implement-with-worktree to follow the same docs/plans resolution and read-order rules as $implement (spec then design then contract then checklist then tasks; one directory fully done before the next per coordination.md when multiple apply), identify the parent branch, create or reuse an isolated worktree and matching branch, verify pwd matches git rev-parse --show-toplevel before any write, keep the parent checkout read-only for deliverables, complete every tasks.md line and checklist.md wrap-up in the worktree, backfill planning docs, and finalize with $commit on the worktree branch."
+  short_description: "Implement tasks from an approved spec set by coordinating worker agents"
+  default_prompt: "Read the approved spec set (SPEC.md → DESIGN.md → CHECKLIST.md → tasks), dispatch worker agents following the plan's batch schedule, verify each checkpoint, resolve conflicts, and finalize with $commit."

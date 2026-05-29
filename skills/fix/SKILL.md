@@ -19,7 +19,6 @@ description: 載入 qa 產出的 FIX.md，扮演修復協調器角色（fix coor
 
 - FIX.md 中定義的所有問題已被修復，所有 Gate 驗證通過
 - 完整測試套件和 lint 通過，無回歸
-- 若使用隔離環境，已被清理
 
 ## 工作流程
 
@@ -41,8 +40,6 @@ description: 載入 qa 產出的 FIX.md，扮演修復協調器角色（fix coor
 ### 2. 準備執行環境
 
 - 確認當前分支狀態乾淨
-- 若 FIX.md 定義需隔離環境（多 worker 並行），為每個 worker 準備獨立的隔離工作區
-- 確保所有 worker 工作區之間檔案層級隔離
 
 ### 3. 按批次執行修復
 
@@ -66,12 +63,10 @@ description: 載入 qa 產出的 FIX.md，扮演修復協調器角色（fix coor
 - **複雜修復**：若 FIX.md 標記為複雜，worker 需先進行系統性除錯再修復
 - **Worker 是葉節點**：不允許 worker 自己生成子 worker
 
-### 4. 處理合併與衝突
+### 4. 處理衝突
 
-所有 worker 完成後，若使用隔離環境：
-1. 將所有 worker 的變更合併到主分支
-2. 若有合併衝突，協調器自己解決
-3. 解決後重新執行該批次的 Gate 驗證
+若多個 worker 的修復變更發生衝突，協調器自己解決衝突。
+解決後重新執行該批次的 Gate 驗證。
 
 ### 5. 回歸測試
 
@@ -103,7 +98,7 @@ description: 載入 qa 產出的 FIX.md，扮演修復協調器角色（fix coor
 
 - FIX.md 定義 Batch 1 有 2 個並行修復 → 協調器從 Section 6 擷取 FIX-01 和 FIX-03 的 worker prompt → 派發 2 個 worker → 等待完成 → 消化結果 → 執行 Gate 驗證 → 進入 Batch 2
 - Worker FIX-02 回報失敗 → 協調器繼續該 worker，給予更具體指令 → 第二次仍失敗 → 暫停，保留 FIX-01 成功結果，通知用戶
-- 所有批次完成 → 執行回歸測試 → 合併所有修復 → 提交 → 對照 REPORT.md 確認全部處理 → 回報用戶
+- 所有批次完成 → 執行回歸測試 → 提交 → 對照 REPORT.md 確認全部處理 → 回報用戶
 
 ## 參考資料
 

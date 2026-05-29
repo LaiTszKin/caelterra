@@ -20,7 +20,6 @@ description: 載入 plan 產出的 PROMPT.md，扮演協調器角色（coordinat
 - PROMPT.md 中定義的所有任務完成，所有 Gate 驗證通過
 - 所有 worker 回報的結果已被消化和整合
 - 完整測試套件和 lint 通過
-- 若使用隔離環境，已被清理
 
 ## 工作流程
 
@@ -40,8 +39,6 @@ description: 載入 plan 產出的 PROMPT.md，扮演協調器角色（coordinat
 ### 2. 準備執行環境
 
 - 確認當前分支狀態乾淨
-- 若 PROMPT.md 定義需隔離環境（多 worker 並行），為每個 worker 準備獨立的隔離工作區
-- 確保所有 worker 工作區之間檔案層級隔離
 
 ### 3. 按批次執行
 
@@ -64,12 +61,10 @@ description: 載入 plan 產出的 PROMPT.md，扮演協調器角色（coordinat
 - **繼續 worker**：同一 worker 失敗後重試 → 繼續該 worker（它保有失敗的上下文），給予更具體的指令
 - **Worker 是葉節點**：不允許 worker 自己生成子 worker
 
-### 4. 處理合併與衝突
+### 4. 處理衝突
 
-所有 worker 完成後，若使用隔離環境：
-1. 將所有 worker 的變更合併到主分支
-2. 若有合併衝突，協調器自己解決
-3. 解決後重新執行該批次的 Gate 驗證
+若多個 worker 的變更發生衝突，協調器自己解決衝突。
+解決後重新執行該批次的 Gate 驗證。
 
 ### 5. 最終驗證
 
@@ -97,7 +92,7 @@ description: 載入 plan 產出的 PROMPT.md，扮演協調器角色（coordinat
 
 - PROMPT.md 定義 Batch 1 有 2 個並行任務 → 協調器從 Section 6 擷取 T1.1 和 T1.2 的 worker prompt → 派發 2 個 worker → 等待兩者完成 → 消化結果 → 執行 Gate 驗證 → 進入 Batch 2
 - Worker T2.1 回報失敗 → 協調器繼續該 worker，給予更具體指令 → 第二次仍失敗 → 暫停，保留 T2.2 成功結果，通知用戶
-- 所有批次完成 → 執行最終測試 → 合併所有變更 → 提交 → 回填 SPEC.md → 回報用戶
+- 所有批次完成 → 執行最終測試 → 提交 → 回填 SPEC.md → 回報用戶
 
 ## 參考資料
 
