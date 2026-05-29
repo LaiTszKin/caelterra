@@ -1,6 +1,6 @@
 {
   "name": "@laitszkin/tool-registry",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "Apollo Toolkit — unified tool registration, lookup, and dispatch",
   "license": "MIT",
   "type": "module",

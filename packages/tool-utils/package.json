@@ -1,6 +1,6 @@
 {
   "name": "@laitszkin/tool-utils",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "Apollo Toolkit — shared tool utilities (log parsing, skill discovery)",
   "license": "MIT",
   "type": "module",

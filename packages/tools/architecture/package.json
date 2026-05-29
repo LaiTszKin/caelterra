@@ -1,6 +1,6 @@
 {
   "name": "@laitszkin/tool-architecture",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "Apollo Toolkit — CLI tool",
   "license": "MIT",
   "type": "module",

@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.0.2] - 2026-05-29
+
+### Fixed
+
+- Fix global npm install: rewrite `@laitszkin/*` package imports to relative paths so CLI works when installed globally. Workspace sub-packages are not published to npm; bare specifier imports like `from '@laitszkin/cli'` fail at runtime without this rewrite.
+
 ## [v4.0.1] - 2026-05-29
 
 ### Added
