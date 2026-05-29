@@ -1,0 +1,1665 @@
+[
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": null,
+      "features": {},
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer"
+      ],
+      "features": {
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli"
+      ],
+      "features": {
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": null,
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "progress-display",
+              "kind": "ui",
+              "role": "終端機進度指示",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "workflow-trigger",
+              "kind": "worker",
+              "role": "GitHub Actions workflow on PR skill file change",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "progress-display",
+              "kind": "ui",
+              "role": "終端機進度指示",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "workflow-trigger",
+              "kind": "worker",
+              "role": "GitHub Actions workflow on PR skill file change",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pr-reporter",
+              "kind": "service",
+              "role": "PR評論回報評測結果",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "progress-display",
+              "kind": "ui",
+              "role": "終端機進度指示",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": null,
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "workflow-trigger",
+              "kind": "worker",
+              "role": "GitHub Actions workflow on PR skill file change",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pr-reporter",
+              "kind": "service",
+              "role": "PR評論回報評測結果",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "progress-display",
+              "kind": "ui",
+              "role": "終端機進度指示",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "tool-dispatcher",
+              "kind": "service",
+              "role": "工具調用攔截：read passthrough / write mock",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    },
+    "overlay": {
+      "meta": null,
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-101",
+          "from": {
+            "feature": "eval-cli"
+          },
+          "to": {
+            "feature": "eval-optimizer"
+          },
+          "kind": "call",
+          "label": "trigger optimization after scoring"
+        },
+        {
+          "id": "e-102",
+          "from": {
+            "feature": "eval-cli"
+          },
+          "to": {
+            "feature": "eval-isolation"
+          },
+          "kind": "call",
+          "label": "setup tool mock + context isolation"
+        },
+        {
+          "id": "e-103",
+          "from": {
+            "feature": "eval-ci-gate"
+          },
+          "to": {
+            "feature": "eval-cli"
+          },
+          "kind": "call",
+          "label": "invoke apltk eval --mode standard"
+        }
+      ],
+      "featureOrder": [
+        "eval-optimizer",
+        "eval-cli",
+        "eval-ci-gate",
+        "eval-isolation"
+      ],
+      "features": {
+        "eval-ci-gate": {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "workflow-trigger",
+              "kind": "worker",
+              "role": "GitHub Actions workflow on PR skill file change",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pr-reporter",
+              "kind": "service",
+              "role": "PR評論回報評測結果",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-cli": {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "progress-display",
+              "kind": "ui",
+              "role": "終端機進度指示",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-isolation": {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "tool-dispatcher",
+              "kind": "service",
+              "role": "工具調用攔截：read passthrough / write mock",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "context-factory",
+              "kind": "service",
+              "role": "獨立評分上下文工廠",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        "eval-optimizer": {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      },
+      "removed": {
+        "features": [],
+        "submodules": []
+      }
+    }
+  }
+]

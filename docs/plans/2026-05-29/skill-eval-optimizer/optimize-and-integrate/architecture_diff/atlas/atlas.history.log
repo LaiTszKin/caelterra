@@ -1,0 +1,18 @@
+{"ts":"2026-05-29T10:47:42.566Z","action":"feature add","args":{"slug":"eval-optimizer","title":"優化引擎","story":"從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:44.152Z","action":"feature add","args":{"slug":"eval-cli","title":"CLI命令","story":"註冊apltk eval命令，參數解析、模式選擇、進度顯示"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:45.690Z","action":"feature add","args":{"slug":"eval-ci-gate","title":"PR閘門","story":"GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:47.485Z","action":"feature add","args":{"slug":"eval-isolation","title":"上下文隔離與工具模擬","story":"工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:57.906Z","action":"actor add","args":{"id":"judge-model-api","label":"Judge Model API"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:58.045Z","action":"actor add","args":{"id":"github-actions","label":"GitHub Actions CI"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:58.187Z","action":"actor add","args":{"id":"user-dev","label":"Developer"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:58.326Z","action":"actor add","args":{"id":"skill-files","label":"Skill Files (SKILL.md, scripts/, references/, assets/)"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:15.938Z","action":"submodule add","args":{"feature":"eval-optimizer","slug":"issue-extractor","kind":"service","role":"從score.json提取問題、分類統計"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:16.084Z","action":"submodule add","args":{"feature":"eval-optimizer","slug":"dedup-engine","kind":"service","role":"Jaccard+Judge語意去重"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:16.230Z","action":"submodule add","args":{"feature":"eval-optimizer","slug":"diff-generator","kind":"service","role":"FIND/REPLACE diff生成與備份/復原"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:16.380Z","action":"submodule add","args":{"feature":"eval-cli","slug":"cli-handler","kind":"service","role":"ToolDefinition註冊、參數解析、流程編排"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:16.535Z","action":"submodule add","args":{"feature":"eval-cli","slug":"progress-display","kind":"ui","role":"終端機進度指示"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:16.681Z","action":"submodule add","args":{"feature":"eval-ci-gate","slug":"workflow-trigger","kind":"worker","role":"GitHub Actions workflow on PR skill file change"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:16.829Z","action":"submodule add","args":{"feature":"eval-ci-gate","slug":"pr-reporter","kind":"service","role":"PR評論回報評測結果"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:16.980Z","action":"submodule add","args":{"feature":"eval-isolation","slug":"tool-dispatcher","kind":"service","role":"工具調用攔截：read passthrough / write mock"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:17.130Z","action":"submodule add","args":{"feature":"eval-isolation","slug":"context-factory","kind":"service","role":"獨立評分上下文工廠"},"mode":"spec"}
+{"ts":"2026-05-29T10:50:24.514Z","action":"submodule set","args":{"feature":"eval-ci-gate","slug":"workflow-trigger","kind":"service"},"mode":"spec"}

@@ -1,0 +1,20 @@
+slug: eval-scorer
+title: 評分引擎
+story: 調用LLM評分模型從三維度打分，產出結構化評分JSON
+dependsOn: []
+submodules:
+  - slug: judge-prompt-builder
+    kind: service
+    role: 評分提示詞構建（trace+criteria→prompt）
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: judge-api-client
+    kind: api
+    role: Judge Model HTTP client with parse fallback
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

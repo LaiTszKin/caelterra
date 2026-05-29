@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-atlas-page="macro">
+<head>
+  <meta charset="utf-8">
+  <title>Project architecture</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="assets/architecture.css">
+</head>
+<body>
+  <header class="atlas-header">
+    <h1>Project architecture</h1>
+    
+  </header>
+  <main class="atlas-main">
+    <section class="atlas-canvas" aria-label="Macro architecture diagram">
+      <div class="atlas-canvas__toolbar" role="toolbar" aria-label="Diagram controls">
+        <button type="button" data-pan-zoom="zoom-in" aria-label="Zoom in">+</button>
+        <button type="button" data-pan-zoom="zoom-out" aria-label="Zoom out">−</button>
+        <button type="button" data-pan-zoom="fit" aria-label="Reset view">Fit</button>
+      </div>
+      <div class="atlas-canvas__viewport" data-pan-zoom-viewport>
+<svg class="atlas-svg" viewBox="0 0 1507 710" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Project architecture atlas" data-atlas-svg="macro">
+  <defs>
+    <marker id="arrow-call" class="m-arrow m-arrow--call" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-return" class="m-arrow m-arrow--return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-data-row" class="m-arrow m-arrow--data-row" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-failure" class="m-arrow m-arrow--failure" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+  </defs>
+  <g transform="translate(24,24)">
+    <g class="m-cluster" data-feature="eval-question">
+      <rect class="m-cluster__bg" x="530.00" y="20.00" width="252.00" height="295.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="656.00" y="46.00" text-anchor="middle">評測題庫</text>
+    </g>
+    <g class="m-cluster" data-feature="eval-executor">
+      <rect class="m-cluster__bg" x="20.00" y="183.50" width="259.00" height="295.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="149.50" y="209.50" text-anchor="middle">評測執行器</text>
+    </g>
+    <g class="m-cluster" data-feature="eval-scorer">
+      <rect class="m-cluster__bg" x="547.00" y="347.00" width="319.00" height="295.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="706.50" y="373.00" text-anchor="middle">評分引擎</text>
+    </g>
+    <g class="m-cluster" data-feature="eval-reporter">
+      <rect class="m-cluster__bg" x="1187.00" y="402.00" width="252.00" height="185.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="1313.00" y="428.00" text-anchor="middle">評測報告</text>
+    </g>
+    <a class="m-node m-node--service" href="features/eval-question/question-loader.html" data-feature="eval-question" data-submodule="question-loader" tabindex="0" aria-label="question-loader — 題目載入與JSON Schema驗證 — open sub-module page">
+      <title>question-loader — 題目載入與JSON Schema驗證</title>
+      <rect x="546.00" y="93.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="656.00" y="123.00" text-anchor="middle">question-loader</text>
+      <text class="m-node__kind" x="656.00" y="139.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="656.00" y="159.00" text-anchor="middle">題目載入與JSON Schema驗證</text>
+    </a>
+    <a class="m-node m-node--service" href="features/eval-question/variant-generator.html" data-feature="eval-question" data-submodule="variant-generator" tabindex="0" aria-label="variant-generator — LLM變體生成，保留評分標準 — open sub-module page">
+      <title>variant-generator — LLM變體生成，保留評分標準</title>
+      <rect x="546.00" y="203.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="656.00" y="233.00" text-anchor="middle">variant-generator</text>
+      <text class="m-node__kind" x="656.00" y="249.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="656.00" y="269.00" text-anchor="middle">LLM變體生成，保留評分標準</text>
+    </a>
+    <a class="m-node m-node--service" href="features/eval-executor/trace-recorder.html" data-feature="eval-executor" data-submodule="trace-recorder" tabindex="0" aria-label="trace-recorder — JSONL軌跡記錄與.done標記 — open sub-module page">
+      <title>trace-recorder — JSONL軌跡記錄與.done標記</title>
+      <rect x="39.50" y="256.50" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="149.50" y="286.50" text-anchor="middle">trace-recorder</text>
+      <text class="m-node__kind" x="149.50" y="302.50" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="149.50" y="322.50" text-anchor="middle">JSONL軌跡記錄與.done標記</text>
+    </a>
+    <a class="m-node m-node--api" href="features/eval-executor/exec-api-client.html" data-feature="eval-executor" data-submodule="exec-api-client" tabindex="0" aria-label="exec-api-client — Exec Model HTTP client with retry — open sub-module page">
+      <title>exec-api-client — Exec Model HTTP client with retry</title>
+      <rect x="36.00" y="366.50" width="227.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="149.50" y="396.50" text-anchor="middle">exec-api-client</text>
+      <text class="m-node__kind" x="149.50" y="412.50" text-anchor="middle">API</text>
+      <text class="m-node__role" x="149.50" y="432.50" text-anchor="middle">Exec Model HTTP client with retry</text>
+    </a>
+    <a class="m-node m-node--service" href="features/eval-scorer/judge-prompt-builder.html" data-feature="eval-scorer" data-submodule="judge-prompt-builder" tabindex="0" aria-label="judge-prompt-builder — 評分提示詞構建（trace+criteria→prompt） — open sub-module page">
+      <title>judge-prompt-builder — 評分提示詞構建（trace+criteria→prompt）</title>
+      <rect x="572.50" y="420.00" width="268.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="706.50" y="450.00" text-anchor="middle">judge-prompt-builder</text>
+      <text class="m-node__kind" x="706.50" y="466.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="706.50" y="486.00" text-anchor="middle">評分提示詞構建（trace+criteria→prompt）</text>
+    </a>
+    <a class="m-node m-node--api" href="features/eval-scorer/judge-api-client.html" data-feature="eval-scorer" data-submodule="judge-api-client" tabindex="0" aria-label="judge-api-client — Judge Model HTTP client with parse fallback — open sub-module page">
+      <title>judge-api-client — Judge Model HTTP client with parse fallback</title>
+      <rect x="563.00" y="530.00" width="287.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="706.50" y="560.00" text-anchor="middle">judge-api-client</text>
+      <text class="m-node__kind" x="706.50" y="576.00" text-anchor="middle">API</text>
+      <text class="m-node__role" x="706.50" y="596.00" text-anchor="middle">Judge Model HTTP client with parse fallback</text>
+    </a>
+    <a class="m-node m-node--service" href="features/eval-reporter/report-composer.html" data-feature="eval-reporter" data-submodule="report-composer" tabindex="0" aria-label="report-composer — Markdown報告組合與渲染 — open sub-module page">
+      <title>report-composer — Markdown報告組合與渲染</title>
+      <rect x="1203.00" y="475.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="1313.00" y="505.00" text-anchor="middle">report-composer</text>
+      <text class="m-node__kind" x="1313.00" y="521.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="1313.00" y="541.00" text-anchor="middle">Markdown報告組合與渲染</text>
+    </a>
+    <g class="m-edge m-edge--call m-edge--cross" data-edge="e-001">
+      <path d="M279.00,281.83 L289.00,281.83 L289.00,167.50 L530.00,167.50" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="384.50" y="157.50" text-anchor="middle">
+        <tspan x="384.50">loadQuestions(skill, mode)</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--data-row m-edge--cross" data-edge="e-002">
+      <path d="M279.00,380.17 L289.00,380.17 L289.00,494.50 L547.00,494.50" fill="none" marker-end="url(#arrow-data-row)" />
+      <text class="m-edge__label" x="393.00" y="512.50" text-anchor="middle">
+        <tspan x="393.00">.done marker → trigger scoring</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--data-row m-edge--cross" data-edge="e-003">
+      <path d="M866.00,494.50 L1187.00,494.50" fill="none" marker-end="url(#arrow-data-row)" />
+      <text class="m-edge__label" x="1026.50" y="512.50" text-anchor="middle">
+        <tspan x="1026.50">score.json[] → compose REPORT.md</tspan>
+      </text>
+    </g>
+  </g>
+</svg>
+      </div>
+      <ol class="atlas-legend" aria-label="Edge legend">
+        <li><span class="legend-swatch legend-swatch--call"></span>call</li>
+        <li><span class="legend-swatch legend-swatch--return"></span>return</li>
+        <li><span class="legend-swatch legend-swatch--data-row"></span>data-row</li>
+        <li><span class="legend-swatch legend-swatch--failure"></span>failure</li>
+      </ol>
+    </section>
+    <section class="atlas-index" aria-label="Submodule index">
+      <h2>Submodule index</h2>
+      <ul class="atlas-submodule-index">
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-question/question-loader.html">
+            <span class="atlas-submodule-index__feature">評測題庫</span>
+            <span class="atlas-submodule-index__sub">question-loader</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">題目載入與JSON Schema驗證</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-question/variant-generator.html">
+            <span class="atlas-submodule-index__feature">評測題庫</span>
+            <span class="atlas-submodule-index__sub">variant-generator</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">LLM變體生成，保留評分標準</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-executor/trace-recorder.html">
+            <span class="atlas-submodule-index__feature">評測執行器</span>
+            <span class="atlas-submodule-index__sub">trace-recorder</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">JSONL軌跡記錄與.done標記</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-executor/exec-api-client.html">
+            <span class="atlas-submodule-index__feature">評測執行器</span>
+            <span class="atlas-submodule-index__sub">exec-api-client</span>
+            <span class="atlas-submodule-index__kind">API</span>
+          </a>
+          <p class="atlas-submodule-index__role">Exec Model HTTP client with retry</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-scorer/judge-prompt-builder.html">
+            <span class="atlas-submodule-index__feature">評分引擎</span>
+            <span class="atlas-submodule-index__sub">judge-prompt-builder</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">評分提示詞構建（trace+criteria→prompt）</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-scorer/judge-api-client.html">
+            <span class="atlas-submodule-index__feature">評分引擎</span>
+            <span class="atlas-submodule-index__sub">judge-api-client</span>
+            <span class="atlas-submodule-index__kind">API</span>
+          </a>
+          <p class="atlas-submodule-index__role">Judge Model HTTP client with parse fallback</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-reporter/report-composer.html">
+            <span class="atlas-submodule-index__feature">評測報告</span>
+            <span class="atlas-submodule-index__sub">report-composer</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">Markdown報告組合與渲染</p>
+        </li>
+      </ul>
+    </section>
+  </main>
+  <script src="assets/viewer.client.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+slug: eval-optimizer
+title: 優化引擎
+story: 從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff
+dependsOn: []
+submodules:
+  - slug: issue-extractor
+    kind: service
+    role: 從score.json提取問題、分類統計
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: dedup-engine
+    kind: service
+    role: Jaccard+Judge語意去重
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: diff-generator
+    kind: service
+    role: FIND/REPLACE diff生成與備份/復原
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

@@ -1,0 +1,177 @@
+[
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": null
+      },
+      "actors": [],
+      "features": [],
+      "edges": []
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture",
+        "summary": "",
+        "updatedAt": "2026-05-29T11:15:37.708Z"
+      },
+      "actors": [
+        {
+          "id": "exec-model-api",
+          "label": "Exec Model API (OpenAI-compatible)"
+        },
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API (OpenAI-compatible)"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "filesystem",
+          "label": "Filesystem (trace/score/report)"
+        }
+      ],
+      "features": [
+        {
+          "slug": "eval-question",
+          "title": "評測題庫",
+          "story": "管理評測題庫的載入、驗證、抽樣與LLM變體生成",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-loader",
+              "kind": "service",
+              "role": "題目載入與JSON Schema驗證",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "variant-generator",
+              "kind": "service",
+              "role": "LLM變體生成，保留評分標準",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-executor",
+          "title": "評測執行器",
+          "story": "在隔離環境中執行技能，記錄工具調用軌跡為JSONL",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "trace-recorder",
+              "kind": "service",
+              "role": "JSONL軌跡記錄與.done標記",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "exec-api-client",
+              "kind": "api",
+              "role": "Exec Model HTTP client with retry",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-scorer",
+          "title": "評分引擎",
+          "story": "調用LLM評分模型從三維度打分，產出結構化評分JSON",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "judge-prompt-builder",
+              "kind": "service",
+              "role": "評分提示詞構建（trace+criteria→prompt）",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "judge-api-client",
+              "kind": "api",
+              "role": "Judge Model HTTP client with parse fallback",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-reporter",
+          "title": "評測報告",
+          "story": "彙總評分結果產出結構化Markdown報告",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "report-composer",
+              "kind": "service",
+              "role": "Markdown報告組合與渲染",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-001",
+          "from": {
+            "feature": "eval-executor"
+          },
+          "to": {
+            "feature": "eval-question"
+          },
+          "kind": "call",
+          "label": "loadQuestions(skill, mode)"
+        },
+        {
+          "id": "e-002",
+          "from": {
+            "feature": "eval-executor"
+          },
+          "to": {
+            "feature": "eval-scorer"
+          },
+          "kind": "data-row",
+          "label": ".done marker → trigger scoring"
+        },
+        {
+          "id": "e-003",
+          "from": {
+            "feature": "eval-scorer"
+          },
+          "to": {
+            "feature": "eval-reporter"
+          },
+          "kind": "data-row",
+          "label": "score.json[] → compose REPORT.md"
+        }
+      ]
+    }
+  }
+]

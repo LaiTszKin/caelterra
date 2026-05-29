@@ -1,0 +1,20 @@
+slug: eval-ci-gate
+title: PR閘門
+story: GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果
+dependsOn: []
+submodules:
+  - slug: workflow-trigger
+    kind: service
+    role: GitHub Actions workflow on PR skill file change
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: pr-reporter
+    kind: service
+    role: PR評論回報評測結果
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

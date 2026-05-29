@@ -21,6 +21,7 @@
     { "path": "packages/tool-utils" },
     { "path": "packages/cli" },
     { "path": "packages/tools/architecture" },
+    { "path": "packages/tools/eval" },
     { "path": "packages/tools/create-review-report" },
     { "path": "packages/tools/create-specs" },
     { "path": "packages/tools/docs-to-voice" },

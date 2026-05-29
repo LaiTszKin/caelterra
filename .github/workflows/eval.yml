@@ -1,0 +1,51 @@
+# Skill Eval Gate
+#
+# 每次 PR 修改 skills/ 下的檔案時，自動觸發評測檢查。
+#
+# 需要的 GitHub Secrets 設定（由管理員在 repo Settings > Secrets and variables > Actions 中設定）：
+#   EXEC_BASE_URL  - 執行模型 API 基礎 URL
+#   EXEC_MODEL     - 執行模型名稱
+#   EXEC_API_KEY   - 執行模型 API 金鑰
+#   JUDGE_BASE_URL - 評分模型 API 基礎 URL
+#   JUDGE_MODEL    - 評分模型名稱
+#   JUDGE_API_KEY  - 評分模型 API 金鑰
+
+name: Skill Eval Gate
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**'
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - name: Run skill evaluation
+        id: skill-eval
+        run: node dist/bin/apollo-toolkit.js eval spec --mode standard
+        env:
+          EXEC_BASE_URL: ${{ secrets.EXEC_BASE_URL }}
+          EXEC_MODEL: ${{ secrets.EXEC_MODEL }}
+          EXEC_API_KEY: ${{ secrets.EXEC_API_KEY }}
+          JUDGE_BASE_URL: ${{ secrets.JUDGE_BASE_URL }}
+          JUDGE_MODEL: ${{ secrets.JUDGE_MODEL }}
+          JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
+        continue-on-error: true
+      - name: Post result summary
+        if: always()
+        run: |
+          echo "## Skill Eval Gate Results" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.skill-eval.outcome }}" = "success" ]; then
+            echo "✅ Evaluation passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Evaluation failed or encountered errors" >> $GITHUB_STEP_SUMMARY
+            echo "See workflow logs for details." >> $GITHUB_STEP_SUMMARY
+          fi

@@ -1,0 +1,20 @@
+slug: eval-isolation
+title: 上下文隔離與工具模擬
+story: 工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立
+dependsOn: []
+submodules:
+  - slug: tool-dispatcher
+    kind: service
+    role: 工具調用攔截：read passthrough / write mock
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: context-factory
+    kind: service
+    role: 獨立評分上下文工廠
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

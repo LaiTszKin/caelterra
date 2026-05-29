@@ -1,0 +1,36 @@
+actors:
+  - id: exec-model-api
+    label: Exec Model API (OpenAI-compatible)
+  - id: judge-model-api
+    label: Judge Model API (OpenAI-compatible)
+  - id: user-dev
+    label: Developer
+  - id: filesystem
+    label: Filesystem (trace/score/report)
+edges:
+  - id: e-001
+    from:
+      feature: eval-executor
+    to:
+      feature: eval-question
+    kind: call
+    label: "loadQuestions(skill, mode)"
+  - id: e-002
+    from:
+      feature: eval-executor
+    to:
+      feature: eval-scorer
+    kind: data-row
+    label: ".done marker → trigger scoring"
+  - id: e-003
+    from:
+      feature: eval-scorer
+    to:
+      feature: eval-reporter
+    kind: data-row
+    label: "score.json[] → compose REPORT.md"
+features:
+  - eval-question
+  - eval-executor
+  - eval-scorer
+  - eval-reporter

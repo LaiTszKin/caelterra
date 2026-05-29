@@ -1,0 +1,32 @@
+{"ts":"2026-05-29T10:47:30.370Z","action":"feature add","args":{"slug":"eval-question","title":"評測題庫","story":"管理評測題庫的載入、驗證、抽樣與LLM變體生成"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:35.370Z","action":"feature add","args":{"slug":"eval-executor","title":"評測執行器","story":"在隔離環境中執行技能，記錄工具調用軌跡為JSONL"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:36.398Z","action":"feature add","args":{"slug":"eval-scorer","title":"評分引擎","story":"調用LLM評分模型從三維度打分，產出結構化評分JSON"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:37.545Z","action":"feature add","args":{"slug":"eval-reporter","title":"評測報告","story":"彙總評分結果產出結構化Markdown報告"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:54.472Z","action":"actor add","args":{"id":"exec-model-api","label":"Exec Model API (OpenAI-compatible)"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:54.626Z","action":"actor add","args":{"id":"judge-model-api","label":"Judge Model API (OpenAI-compatible)"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:54.770Z","action":"actor add","args":{"id":"user-dev","label":"Developer"},"mode":"spec"}
+{"ts":"2026-05-29T10:47:54.917Z","action":"actor add","args":{"id":"filesystem","label":"Filesystem (trace/score/report)"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:07.532Z","action":"submodule add","args":{"feature":"eval-question","slug":"question-loader","kind":"service","role":"題目載入與JSON Schema驗證"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:07.680Z","action":"submodule add","args":{"feature":"eval-question","slug":"variant-generator","kind":"service","role":"LLM變體生成，保留評分標準"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:07.831Z","action":"submodule add","args":{"feature":"eval-executor","slug":"trace-recorder","kind":"service","role":"JSONL軌跡記錄與.done標記"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:07.979Z","action":"submodule add","args":{"feature":"eval-executor","slug":"exec-api-client","kind":"api","role":"Exec Model HTTP client with retry"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:08.139Z","action":"submodule add","args":{"feature":"eval-scorer","slug":"judge-prompt-builder","kind":"service","role":"評分提示詞構建（trace+criteria→prompt）"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:08.292Z","action":"submodule add","args":{"feature":"eval-scorer","slug":"judge-api-client","kind":"api","role":"Judge Model HTTP client with parse fallback"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:08.443Z","action":"submodule add","args":{"feature":"eval-reporter","slug":"report-composer","kind":"service","role":"Markdown報告組合與渲染"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:28.042Z","action":"edge add","args":{"from":{"feature":"user-dev"},"to":{"feature":"eval-executor"},"kind":"call","label":"apltk eval <skill>"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:28.171Z","action":"edge add","args":{"from":{"feature":"eval-executor"},"to":{"feature":"eval-question"},"kind":"call","label":"loadQuestions()"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:28.302Z","action":"edge add","args":{"from":{"feature":"eval-executor"},"to":{"feature":"exec-model-api"},"kind":"call","label":"POST /v1/chat/completions"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:28.432Z","action":"edge add","args":{"from":{"feature":"eval-executor"},"to":{"feature":"filesystem"},"kind":"data-row","label":"write trace.jsonl + .done"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:28.561Z","action":"edge add","args":{"from":{"feature":"eval-scorer"},"to":{"feature":"filesystem"},"kind":"data-row","label":"read trace.jsonl"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:28.701Z","action":"edge add","args":{"from":{"feature":"eval-scorer"},"to":{"feature":"judge-model-api"},"kind":"call","label":"POST /v1/chat/completions (score prompt)"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:28.827Z","action":"edge add","args":{"from":{"feature":"eval-scorer"},"to":{"feature":"filesystem"},"kind":"data-row","label":"write score.json + .scored"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:28.958Z","action":"edge add","args":{"from":{"feature":"eval-reporter"},"to":{"feature":"filesystem"},"kind":"data-row","label":"read score.json[] → write REPORT.md"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:50.108Z","action":"edge add","args":{"from":{"feature":"actor::user-dev"},"to":{"feature":"eval-executor"},"kind":"call","label":"apltk eval <skill>"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:50.241Z","action":"edge add","args":{"from":{"feature":"eval-executor"},"to":{"feature":"eval-question"},"kind":"call","label":"loadQuestions()"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:50.376Z","action":"edge add","args":{"from":{"feature":"eval-executor"},"to":{"feature":"actor::exec-model-api"},"kind":"call","label":"POST chat/completions"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:50.507Z","action":"edge add","args":{"from":{"feature":"eval-executor"},"to":{"feature":"actor::filesystem"},"kind":"data-row","label":"trace.jsonl + .done"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:50.654Z","action":"edge add","args":{"from":{"feature":"eval-scorer"},"to":{"feature":"actor::judge-model-api"},"kind":"call","label":"score prompt"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:50.793Z","action":"edge add","args":{"from":{"feature":"eval-scorer"},"to":{"feature":"actor::filesystem"},"kind":"data-row","label":"read trace / write score"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:50.925Z","action":"edge add","args":{"from":{"feature":"eval-reporter"},"to":{"feature":"actor::filesystem"},"kind":"data-row","label":"REPORT.md"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:51.056Z","action":"edge add","args":{"from":{"feature":"eval-executor"},"to":{"feature":"eval-scorer"},"kind":"data-row","label":".done detection → start scoring"},"mode":"spec"}
+{"ts":"2026-05-29T10:48:57.421Z","action":"edge add","args":{"from":{"feature":"user-dev"},"to":{"feature":"eval-executor"},"kind":"call","label":"apltk eval"},"mode":"spec"}

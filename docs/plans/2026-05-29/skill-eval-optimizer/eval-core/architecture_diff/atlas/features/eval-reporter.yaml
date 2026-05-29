@@ -1,0 +1,13 @@
+slug: eval-reporter
+title: 評測報告
+story: 彙總評分結果產出結構化Markdown報告
+dependsOn: []
+submodules:
+  - slug: report-composer
+    kind: service
+    role: Markdown報告組合與渲染
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

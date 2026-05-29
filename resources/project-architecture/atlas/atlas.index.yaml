@@ -1,0 +1,44 @@
+meta:
+  title: Project architecture
+  summary: ''
+  updatedAt: '2026-05-29T11:15:40.382Z'
+actors:
+  - id: judge-model-api
+    label: Judge Model API
+  - id: github-actions
+    label: GitHub Actions CI
+  - id: user-dev
+    label: Developer
+  - id: skill-files
+    label: Skill Files (SKILL.md, scripts/, references/, assets/)
+features:
+  - eval-optimizer
+  - eval-cli
+  - eval-ci-gate
+  - eval-isolation
+  - eval-question
+  - eval-executor
+  - eval-scorer
+  - eval-reporter
+edges:
+  - id: e-101
+    from:
+      feature: eval-cli
+    to:
+      feature: eval-optimizer
+    kind: call
+    label: trigger optimization after scoring
+  - id: e-102
+    from:
+      feature: eval-cli
+    to:
+      feature: eval-isolation
+    kind: call
+    label: setup tool mock + context isolation
+  - id: e-103
+    from:
+      feature: eval-ci-gate
+    to:
+      feature: eval-cli
+    kind: call
+    label: invoke apltk eval --mode standard

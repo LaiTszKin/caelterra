@@ -1,0 +1,20 @@
+slug: eval-executor
+title: 評測執行器
+story: 在隔離環境中執行技能，記錄工具調用軌跡為JSONL
+dependsOn: []
+submodules:
+  - slug: trace-recorder
+    kind: service
+    role: JSONL軌跡記錄與.done標記
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: exec-api-client
+    kind: api
+    role: Exec Model HTTP client with retry
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

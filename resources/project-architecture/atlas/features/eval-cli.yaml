@@ -1,0 +1,20 @@
+slug: eval-cli
+title: CLI命令
+story: 註冊apltk eval命令，參數解析、模式選擇、進度顯示
+dependsOn: []
+submodules:
+  - slug: cli-handler
+    kind: service
+    role: ToolDefinition註冊、參數解析、流程編排
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: progress-display
+    kind: ui
+    role: 終端機進度指示
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []
