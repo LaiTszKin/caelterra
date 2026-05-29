@@ -1,131 +1,104 @@
 ---
 name: implement
-description: 讀取 plan 產出的 PROMPT.md，嚴格按照其中的實作計畫和智能體路由執行實作。不做任何協同決策。不用於沒有 PROMPT.md 的情境，不用於不需 spec 的單檔案變更。
+description: 載入 plan 產出的 PROMPT.md，扮演協調器角色（coordinator），按照其中的任務分解和批次排程，派發 worker 完成實作。協調器不寫程式碼，只負責協調與監工。
 ---
 
 ## 技能目標
 
-按照 PROMPT.md 定義的實作計畫，機械式執行所有實作任務。
-本技能是純執行器——不分析依賴、不檢測重疊、不決定路由。這些決策已由 `plan` 技能在 PROMPT.md 中完成。
+載入 PROMPT.md，**成為協調器**。
+
+協調器的工作不是寫程式碼，而是：
+1. 理解任務範圍與依賴關係
+2. 按批次排程，從 PROMPT.md Section 6 擷取預先寫好的 worker prompt 派發給 worker
+3. 等待 worker 完成，消化結果
+4. 執行驗證檢查點
+5. 處理合併、提交等流程性操作
+6. 遇到阻礙時按錯誤恢復策略處理
 
 ## 驗收條件
 
-- PROMPT.md 中所有定義的任務 checkboxes 全部被勾選為完成
-- 所有實作已通過 PROMPT.md 中定義的驗證檢查點
-- 若使用 subagent，所有 worktree 已被清理、無遺留分支
-- SPEC.md 中的需求 checkboxes 已回填
+- PROMPT.md 中定義的所有任務完成，所有 Gate 驗證通過
+- 所有 worker 回報的結果已被消化和整合
+- 完整測試套件和 lint 通過
+- 若使用隔離環境，已被清理
 
 ## 工作流程
 
-### 1. 載入實作計畫
+### 1. 載入協調器提示詞
 
 完整閱讀 PROMPT.md，理解：
-- 工作單元定義與依賴圖（Dependency Graph）
-- 批次排程（Batch Schedule）
-- Subagent 分配（Subagent Assignments）
-- 檔案所有權地圖（File Ownership Map）
-- 驗證檢查點（Verification Checkpoints）
-- 錯誤恢復策略（Error Recovery）
-- 邊界規則（Boundaries）
+- **Section 1**: 你的角色與職責（你不能做什麼）
+- **Section 3**: 實施範圍與 File Ownership
+- **Section 5**: 任務清單與依賴圖
+- **Section 6**: 每個任務的預先寫好 worker prompt
+- **Section 7**: 批次排程與 Gate 條件
+- **Section 9**: 錯誤恢復策略
+- **Section 10**: 邊界規則
 
-同時閱讀 SPEC.md、DESIGN.md、CHECKLIST.md 以理解實作上下文。
+同時閱讀 SPEC.md、DESIGN.md、CHECKLIST.md 以理解完整的業務與技術上下文。
 
-### 2. 判斷是否需要隔離環境
+### 2. 準備執行環境
 
-參考 `references/isolation-guidance.md` 判斷是否需要 git worktree 隔離：
+- 確認當前分支狀態乾淨
+- 若 PROMPT.md 定義需隔離環境（多 worker 並行），為每個 worker 準備獨立的隔離工作區
+- 確保所有 worker 工作區之間檔案層級隔離
 
-- **隔離路徑**：PROMPT.md 定義了多個 subagent 或變更涉及多個檔案 → 走隔離路徑
-- **快速路徑**：PROMPT.md 定義為單一循序執行、範圍明確 → 跳過隔離，直接在當前分支進行
+### 3. 按批次執行
 
-#### 2a. 隔離路徑：前置檢查與創建 worktree
+嚴格按照 PROMPT.md Section 7 的 Batch Schedule 執行。
 
-在建立 worktree 前：
-- 若有未提交的變更，先 stash 或提交
-- 確認當前分支已同步遠端（若需推送）
+#### 每個批次的執行循環：
 
-滿足前置條件後，從當前分支創建子分支及 worktree。
-分支命名參考 `references/branch-naming.md`。
+1. **派發階段** — 從 Section 6 擷取對應任務的 worker prompt，原樣派發給 worker。同一批次內無依賴的任務可並行派發。
+2. **等待階段** — 等待該批次所有 worker 完成並回報結果。
+3. **消化階段** — 閱讀每個 worker 的回報，確認修改內容符合預期。不可跳過這一步直接進入驗證。
+4. **驗證階段** — 執行該批次的 Gate 驗證命令，確認結果符合預期。
+5. **決策階段** —
+   - 全部通過 → 進入下一批次
+   - 個別 worker 失敗 → 按 Section 9 錯誤恢復策略處理
+   - 測試回歸 → 暫停並報告
 
-### 3. 按批次執行實作
+#### Worker 管理規則：
 
-嚴格按照 PROMPT.md 定義的 Batch Schedule 執行。
+- **新建 worker**：任務之間無上下文重疊 → 從 Section 6 擷取對應 prompt 新建 worker
+- **繼續 worker**：同一 worker 失敗後重試 → 繼續該 worker（它保有失敗的上下文），給予更具體的指令
+- **Worker 是葉節點**：不允許 worker 自己生成子 worker
 
-#### 3a. 無 Subagent 的批次（循序執行）
+### 4. 處理合併與衝突
 
-按照 PROMPT.md 定義的順序，逐一執行工作單元：
-1. 閱讀對應 spec 的 tasks.md
-2. 逐項完成任務（T1.1, T1.2...）
-3. 執行該工作單元的驗證命令
-4. 將完成的 tasks.md checkboxes 勾選
+所有 worker 完成後，若使用隔離環境：
+1. 將所有 worker 的變更合併到主分支
+2. 若有合併衝突，協調器自己解決
+3. 解決後重新執行該批次的 Gate 驗證
 
-#### 3b. 有 Subagent 路由的批次（並行執行）
+### 5. 最終驗證
 
-按照 PROMPT.md 的 Subagent Assignments 定義：
+所有批次完成後，執行 PROMPT.md Section 8 的最終驗證：
+- 完整測試套件
+- Lint
+- 對照 SPEC.md 確認所有需求 checkboxes
 
-1. 為每個 subagent 建立專屬的獨立 worktree
-2. 每個 subagent 的工作流程：
-   - 載入 PROMPT.md 中自己的任務清單
-   - 閱讀對應 spec 的 tasks.md
-   - 逐項完成任務，只修改允許修改的檔案
-   - 執行定義的驗證命令
-   - 使用 `commit` 技能提交到所屬 worktree
-3. 等待所有 subagents 完成
-4. 使用 `merge-changes-from-local-branches` 技能合併所有 subagent 變更
-5. 清理所有 worktree
+### 6. 回填 SPEC.md
 
-**錯誤恢復**（嚴格按 PROMPT.md 第 8 節執行）：
-- 若 subagent 失敗，重試一次；再次失敗則暫停並通知用戶
-- 同批次其他成功的 subagent 結果保留
-- 已完成的批次不需重做
+所有驗證通過後，更新 SPEC.md 中的需求 checkboxes。
 
-### 4. 執行驗證檢查點
+### 7. 提交變更
 
-在每個批次完成後，執行 PROMPT.md 中定義的 Verification Checkpoints：
-- 執行指定驗證命令
-- 確認結果符合預期
-- 未通過驗證的批次必須重新實作
+將所有變更提交。不要在每批次後提交——只在全部完成並通過最終驗證後提交一次。
 
-### 5. 實作範圍守門員
+### 8. 回報用戶
 
-在實作過程中持續對照 PROMPT.md 的 Boundaries：
-- **Always**：無條件執行
-- **Ask First**：暫停並與用戶確認
-- **Never**：嚴格禁止
-
-若發現超出 spec 定義範圍的修改需求，暫停並與用戶確認後再繼續。
-
-### 6. 實作偏離處理
-
-若在實作過程中發現 tasks.md 的任務無法照計畫完成：
-1. 暫停該任務的實作
-2. 記錄偏離原因與實際發現
-3. 更新 spec.md 中相關需求的 checkboxes 與備註
-4. 通知用戶偏離情況，等待用戶決策
-
-### 7. 回填 spec
-
-確保所有實作任務完成並通過驗收之後，更新 SPEC.md 中的需求 checkboxes。
-
-### 8. 提交變更
-
-使用 `commit` 技能將變更提交到分支上。不需要推送到 remote。
-
-若與主分支發生合併衝突：
-1. 使用 `git merge main` 將主分支最新變更拉入
-2. 解決衝突檔案的衝突標記
-3. 確認解決後測試套件依然通過
-4. 完成合併提交
-
-若使用隔離路徑，提交後清理 worktree。
+向用戶報告：
+- 完成了哪些任務
+- 每個批次的驗證結果
+- 任何值得注意的風險或偏離
 
 ## 範例
 
-- "PROMPT.md 定義 3 個批次，Batch 2 有 2 個並行 subagent" → 執行 Batch 1 → 建立 2 個 worktree → 並行實作 → 合併 → 驗證 → 繼續 Batch 3
-- "PROMPT.md 定義單一循序執行" → 直接在當前分支按順序完成所有工作單元
-- "Subagent A 實作失敗" → 按 Error Recovery 重試一次 → 仍失敗 → 暫停，保留 Subagent B 成果，通知用戶
+- PROMPT.md 定義 Batch 1 有 2 個並行任務 → 協調器從 Section 6 擷取 T1.1 和 T1.2 的 worker prompt → 派發 2 個 worker → 等待兩者完成 → 消化結果 → 執行 Gate 驗證 → 進入 Batch 2
+- Worker T2.1 回報失敗 → 協調器繼續該 worker，給予更具體指令 → 第二次仍失敗 → 暫停，保留 T2.2 成功結果，通知用戶
+- 所有批次完成 → 執行最終測試 → 合併所有變更 → 提交 → 回填 SPEC.md → 回報用戶
 
 ## 參考資料
 
-- `references/branch-naming.md` — 建議分支命名方式
-- `references/isolation-guidance.md` — 判斷何時需要使用 worktree 隔離
-- PROMPT.md — 由 `plan` 技能產出的實作計畫，本技能的唯一執行依據
+- PROMPT.md — 協調器提示詞，本技能的唯一執行依據

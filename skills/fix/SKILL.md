@@ -1,97 +1,108 @@
 ---
 name: fix
-description: 讀取 qa 產出的 FIX.md，嚴格按照其中的修復計畫和智能體路由執行修復。不做任何規劃決策。不用於沒有 FIX.md 的情境，不用於未經審查直接修復。
+description: 載入 qa 產出的 FIX.md，扮演修復協調器角色（fix coordinator），按照其中的修復任務和批次排程，派發 worker 完成修復。協調器不寫程式碼，只負責協調與監工。
 ---
 
 ## 技能目標
 
-按照 FIX.md 定義的修復計畫，機械式執行所有修復任務。
-本技能是純執行器——不分析依賴、不檢測重疊、不決定路由。這些決策已由 `qa` 技能在 FIX.md 中完成。
+載入 FIX.md，**成為修復協調器**。
+
+協調器的工作不是寫程式碼，而是：
+1. 理解問題清單與依賴關係
+2. 按批次排程，從 FIX.md Section 6 擷取預先寫好的 worker prompt 派發給 worker
+3. 等待 worker 完成修復，消化結果
+4. 執行驗證檢查點與回歸測試
+5. 處理合併、提交等流程性操作
+6. 遇到阻礙時按錯誤恢復策略處理
 
 ## 驗收條件
 
-- FIX.md 中所有定義的修復問題都已被完全修復
-- 每個修復都經過 FIX.md 中定義的驗證方式確認
-- 無引入新的退化（regression）
-- 若使用 subagent，所有 worktree 已被清理
+- FIX.md 中定義的所有問題已被修復，所有 Gate 驗證通過
+- 完整測試套件和 lint 通過，無回歸
+- 若使用隔離環境，已被清理
 
 ## 工作流程
 
-### 1. 載入修復計畫
+### 1. 載入修復協調器提示詞
 
 完整閱讀 FIX.md，理解：
-- 修復批次排程（Fix Batch Schedule）
-- Subagent 路由分配（Subagent Routing）
-- 每個問題的修復細節（Per-Issue Fix Details）
-- 驗證檢查點（Verification Checkpoints）
+- **Section 1**: 你的角色（你不能做什麼）
+- **Section 3**: 問題清單（每個問題的等級、涉及檔案、複雜度）
+- **Section 4**: 依賴圖與檔案重疊
+- **Section 6**: 每個修復的預先寫好 worker prompt
+- **Section 7**: 批次排程與 Gate 條件
+- **Section 8**: 回歸測試策略
+- **Section 9-11**: 驗證檢查點、錯誤恢復、邊界規則
 
-### 2. 按批次執行修復
+同時閱讀 SPEC.md、DESIGN.md、REPORT.md 以理解完整上下文。
 
-嚴格按照 FIX.md 定義的批次順序執行。
+### 2. 準備執行環境
 
-#### 2a. 無 Subagent 的批次（循序執行）
+- 確認當前分支狀態乾淨
+- 若 FIX.md 定義需隔離環境（多 worker 並行），為每個 worker 準備獨立的隔離工作區
+- 確保所有 worker 工作區之間檔案層級隔離
 
-按照 FIX.md 中定義的問題順序，逐一修復：
-1. 閱讀 Per-Issue Fix Details 中該問題的修復方案
-2. 根據複雜度分類選擇執行方式：
-   - **簡單修復**：直接編輯代碼
-   - **複雜修復**：使用 `systematic-debug` 技能進行系統性除錯
-3. 執行該問題定義的驗證方式
-4. 使用 `commit` 技能提交修復
+### 3. 按批次執行修復
 
-#### 2b. 有 Subagent 路由的批次（並行執行）
+嚴格按照 FIX.md Section 7 的 Fix Batch Schedule 執行。
 
-按照 FIX.md 的 Subagent Routing 定義：
+#### 每個批次的執行循環：
 
-1. 為每個 subagent 建立專屬的獨立 worktree
-2. 每個 subagent 的工作流程：
-   - 閱讀 FIX.md 中自己的 Per-Issue Fix Details
-   - 根據複雜度選擇修復方式（簡單→直接編輯，複雜→`systematic-debug`）
-   - 執行定義的驗證命令
-   - 使用 `commit` 技能提交到所屬 worktree
-3. 等待所有 subagents 完成
-4. 使用 `merge-changes-from-local-branches` 合併所有 subagent 變更
-5. 清理所有 worktree
+1. **派發階段** — 從 Section 6 擷取對應修復的 worker prompt，原樣派發給 worker。同一批次內無依賴的修復可並行派發。
+2. **等待階段** — 等待該批次所有 worker 完成並回報結果。
+3. **消化階段** — 閱讀每個 worker 的回報，確認修復內容符合預期、未引入新問題。
+4. **驗證階段** — 執行該批次的 Gate 驗證命令與回歸測試。
+5. **決策階段** —
+   - 全部通過 → 進入下一批次
+   - 個別 worker 失敗 → 按 Section 10 錯誤恢復策略處理
+   - 修復導致回歸 → 暫停並報告
 
-**錯誤恢復**：
-- 若 subagent 失敗，重試一次；再次失敗則暫停並通知用戶
-- 同批次其他成功的 subagent 結果保留
-- 不因單一失敗廢棄整批成果
+#### Worker 管理規則：
 
-### 3. 執行驗證檢查點
+- **新建 worker**：修復之間無上下文重疊 → 從 Section 6 擷取對應 prompt 新建 worker
+- **繼續 worker**：同一 worker 失敗後重試 → 繼續該 worker（它保有失敗的上下文），給予更具體的指令
+- **複雜修復**：若 FIX.md 標記為複雜，worker 需先進行系統性除錯再修復
+- **Worker 是葉節點**：不允許 worker 自己生成子 worker
 
-在每個批次完成後，執行 FIX.md 中定義的 Verification Checkpoints：
-- 執行指定驗證命令
-- 確認結果符合預期
-- 未通過驗證的批次必須重新修復
+### 4. 處理合併與衝突
 
-### 4. 回歸測試
+所有 worker 完成後，若使用隔離環境：
+1. 將所有 worker 的變更合併到主分支
+2. 若有合併衝突，協調器自己解決
+3. 解決後重新執行該批次的 Gate 驗證
 
-按照 FIX.md 的 Regression Test Strategy：
+### 5. 回歸測試
+
+按照 FIX.md Section 8 的回歸測試策略：
 - 執行必須通過的現有測試
 - 實現並執行新增的回歸測試
-- 若 FIX.md 要求 property-based 測試，一併實現
+- 若要求 property-based 測試，一併實現
 
-### 5. 最終驗證
+### 6. 最終驗證
 
 所有批次完成後：
 - 執行完整測試套件，確認無回歸
 - 確認 lint 通過
 - 對照 REPORT.md，確認所有問題已被處理
 
-### 6. 產出修復摘要
+### 7. 提交變更
 
-記錄本次修復的摘要：
-- 已修復的問題列表（含 P0-P3 分級與 FIX ID）
-- 每個問題的修復方式與涉及檔案
+將所有修復變更提交。不要在每批次後提交——只在全部完成並通過最終驗證後提交一次。
+
+### 8. 回報用戶
+
+向用戶報告：
+- 已修復的問題列表（含等級）
+- 每個修復的涉及檔案
 - 驗證結果（測試通過 / 編譯成功）
+- 任何值得注意的風險或殘餘問題
 
 ## 範例
 
-- "FIX.md 定義 3 個批次，Batch 1 並行 2 個 subagents" → 建立 2 個 worktree → 並行修復 → 合併 → 執行 Checkpoint 1 → 繼續 Batch 2
-- "FIX.md 定義單一批次，循序修復 3 個問題" → 按順序逐一修復 → 每個修復後驗證 → 最終測試
-- "Subagent A 執行失敗" → 重試一次 → 仍失敗 → 暫停，保留 Subagent B 的成果，通知用戶
+- FIX.md 定義 Batch 1 有 2 個並行修復 → 協調器從 Section 6 擷取 FIX-01 和 FIX-03 的 worker prompt → 派發 2 個 worker → 等待完成 → 消化結果 → 執行 Gate 驗證 → 進入 Batch 2
+- Worker FIX-02 回報失敗 → 協調器繼續該 worker，給予更具體指令 → 第二次仍失敗 → 暫停，保留 FIX-01 成功結果，通知用戶
+- 所有批次完成 → 執行回歸測試 → 合併所有修復 → 提交 → 對照 REPORT.md 確認全部處理 → 回報用戶
 
 ## 參考資料
 
-- FIX.md — 由 `qa` 技能產出的修復計畫，本技能的唯一執行依據
+- FIX.md — 修復協調器提示詞，本技能的唯一執行依據
