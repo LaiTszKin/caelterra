@@ -1,8 +1,18 @@
 # 軟體開發流程
 
+## 討論與釐清需求
+
+- **Given** 使用者有模糊的需求或想法，尚未準備好進入 spec 階段
+- **When** 使用 `discuss` 技能
+- **Then** 以「用戶完全不懂技術」為前提，通過結構化四維度提問（功能範圍、使用者場景、約束條件、業務價值）釐清需求，產出 PROPOSAL.md
+
+- **Given** PROPOSAL.md 已產出且用戶確認需求足夠清晰
+- **When** 用戶同意銜接
+- **Then** 將 PROPOSAL.md 交給 `spec` 技能，進一步轉化為 SPEC.md
+
 ## 建立功能規格
 
-- **Given** 使用者有一個新的產品需求
+- **Given** 使用者有一個新的產品需求（或已有 PROPOSAL.md）
 - **When** 使用 `spec` 技能建立 spec
 - **Then** 在 `docs/plans/{YYYY-MM-DD}/{change_name}/` 產生標準化的規劃文件，包含需求分析、實作步驟與驗收標準
 

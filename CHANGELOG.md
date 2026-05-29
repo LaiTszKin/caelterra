@@ -2,6 +2,17 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.0.1] - 2026-05-29
+
+### Added
+
+- `discuss` skill: structured requirements clarification before spec phase. Uses four-dimension questioning (scope, user scenarios, constraints, business value) with mandatory default suggestions and YAGNI/KISS gatekeeping.
+- `PROPOSAL.md` template: captures clarified requirements from discuss skill before formal SPEC.md creation.
+
+### Changed
+
+- Rewrite `PROMPT.md` template: from third-person project-management document to second-person self-contained AI execution prompt. New structure includes Mission, Technical Context (inlined from DESIGN.md), task-level verification, behavior check mapping (from CHECKLIST.md), and self-contained subagent prompts.
+
 ## [v4.0.0] - 2026-05-29
 
 ### Changed
