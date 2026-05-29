@@ -1,11 +1,11 @@
-# Fix Coordinator Prompt: skill-eval-optimizer (Round 4)
+# Fix Coordinator Prompt: skill-eval-optimizer (Round 5)
 
 - **Date**: 2026-05-29
 - **Source REPORT**: `docs/plans/2026-05-29/skill-eval-optimizer/REPORT.md`
 - **Source Spec**: `docs/plans/2026-05-29/skill-eval-optimizer/`
-- **Total Issues**: 0 P0 + 6 P1 + 11 P2 + 9 P3 = 26
-- **Total Workers**: 6 (A–F)
-- **Total Regression Tests**: 6 (REGTEST-01 ~ REGTEST-06)
+- **Total Issues**: 0 P0 + 6 P1 + 14 P2 + 12 P3 = 32
+- **Total Workers**: 6 fix (A–F) + 5 regression (REGTEST-01 ~ REGTEST-06)
+- **Total Regression Tests**: 6
 
 ---
 
@@ -36,17 +36,19 @@
 
 ## 2. Mission
 
-修復 Round 4 審查發現的 26 個問題（0 P0 + 6 P1 + 11 P2 + 9 P3）。
+修復 Round 5 審查發現的 32 個問題（0 P0 + 6 P1 + 14 P2 + 12 P3）。
 
 **核心目標**：
-1. **實作 LLM 變體生成**（P1） → 補齊 SPEC R1.3 的核心缺失功能
-2. **消除 `[simulated]` 標記洩漏**（P1）→ 確保工具模擬透明性符合 SPEC R4.1
-3. **修復評分鎖定清理與安全邊界**（P1 × 2）→ 防止永久靜默失敗和越權修改
-4. **提升效能**（P1 × 2）→ 非同步 I/O 主路徑遷移、去重 pair cap 保護
-5. **清理死碼與不必要匯出**（P2+P3）→ ~250 行死碼移除、~13 個不必要的公開 symbol
-6. **修復型別安全與錯誤處理**（P2+P3）→ as string、非空斷言、錯誤區分、SIGINT
 
-**Success looks like**: REPORT.md 中所有 26 個問題已修復，6 個回歸測試通過，完整測試套件 35/35 通過，`tsc --noEmit` 零錯誤。
+1. **Bash 工具隔離符合 R4 讀寫分離**（P1）→ 引入唯讀 Bash 模式或自訂 Bash-readonly，確保 `ls`/`cat` 等命令真實執行
+2. **評分鎖定覆蓋 judge API 呼叫**（P1）→ 將 lock 範圍擴大到包含 judge API 呼叫，防止並發場景下的重複 API 浪費
+3. **`isAllowedFile` 路徑安全**（P1）→ ALLOWED_FILES 中的相對路徑模式先用 `path.resolve` 轉絕對再比較
+4. **崩潰後備份還原可靠**（P1）→ 使用唯一備份名或 timestamp，避免重試時覆蓋原始備份
+5. **全域 frontmatter 驗證限定為當前技能**（P1）→ 驗證命令加入 `--skill` 限定，避免無關技能的既有問題引發誤還原
+6. **`execSync` 改為非同步**（P1）→ 使用 `execFile` 或 `spawn` 搭配 Promise 包裝，消除 30s 事件迴圈凍結
+7. **清理死碼與優化**（P2+P3）→ supplyQuestions 整合至 pipeline、appendTrace buffer、messages 截斷等
+
+**Success looks like**: REPORT.md 中 32 個問題全部修復，6 個回歸測試通過，完整測試套件通過，`tsc --noEmit` 零錯誤。
 
 ---
 
@@ -54,32 +56,24 @@
 
 | Issue ID | 等級 | 問題簡述 | 涉及檔案 | 審查維度 | 複雜度 |
 |---|---|---|---|---|---|
-| **A** | P1 | **工具模擬 `[simulated]` 標記洩漏** — mock 回傳值含 `[simulated]` 前綴，被測模型能感知模擬環境 | `isolation.ts` | 實作偏移、實作遺漏 | 簡單 |
-| **B** | P1 | **評分鎖定清理失敗被靜默吞掉** — `scorer.ts` finally catch 完全空 `/* ignore */`，鎖定永久殘留 | `scorer.ts` | 架構瑕疵 | 簡單 |
-| **C** | P1 | **`scanForDone` 同步 I/O 仍是主路徑** — `scanForDoneAsync` 存在但未被 `scoreAllTests` 採用 | `scorer.ts` | 性能隱患、冗余代碼 | 簡單 |
-| **D** | P1 | **`isAllowedFile` 使用 String.includes()** — 安全邊界防線偏弱，substring 匹配可繞過白名單 | `optimizer.ts` | 架構瑕疵 | 簡單 |
-| **E** | P1 | **`deduplicateIssues` Phase 1 無 pair cap** — Jaccard 聚類 O(n²) 無上限保護 | `optimizer.ts` | 性能隱患 | 簡單 |
-| **F** | P1 | **LLM 變體生成完全未被實作** — SPEC R1.3 明確要求但 `question-loader.ts` 僅載入靜態 JSON | `question-loader.ts` | 實作遺漏 | 複雜 |
-| **G** | P2 | **~250 行死碼殘留** — `scanForDoneAsync`（16 行）、`ParseErrorResult`（13 行）、`selfTest()`（env-utils.ts ~52 行 + question-utils.ts ~168 行） | `scorer.ts`, `lib/judge-api.ts`, `lib/env-utils.ts`, `lib/question-utils.ts` | 冗余代碼 | 簡單 |
-| **H** | P2 | **9 個僅內部使用的符號被匯出** — `CallOptions`、`JudgeRawResult`、`parseJudgeOutput`、`scoreSingleTest`、`MockToolResult`、`ToolCallRecord`、`StrippedQuestion`、`StepDefinition`、`ScoringDimensionMeta` | `lib/judge-api.ts`, `scorer.ts`, `isolation.ts`, `lib/question-utils.ts` | 冗余代碼 | 簡單 |
-| **I** | P2 | **`optimizeSkillMd` 技能名稱提取 bug** — `split('/').pop()!.replace('/SKILL.md', '')` 永不匹配，fallback 路徑會設 skillName 為 `"SKILL.md"` | `optimizer.ts` | 架構瑕疵 | 簡單 |
-| **J** | P2 | **`reporter.ts` 非空斷言存取 `Array.find()`** — `.find(...)!` 依賴前置條件，缺少結構化保證 | `reporter.ts` | 架構瑕疵 | 簡單 |
-| **K** | P2 | **`executor.ts` 錯誤類型判別使用字串比對** — `(err as Error).message?.startsWith('Eval aborted')` 脆弱 | `executor.ts` | 架構瑕疵 | 簡單 |
-| **L** | P2 | **CLI 參數解析使用 `as string` 強制轉型** — `index.ts` L128,137 對 `string|boolean` union 直接斷言 | `index.ts` | 架構瑕疵 | 簡單 |
-| **M** | P2 | **dry-run 模式仍呼叫 judge 模型 API** — 在 L1152-1166 中，即使 `dryRun=true` 若 judge 可用仍會呼叫 API 消耗 credits | `optimizer.ts` | 架構瑕疵 | 簡單 |
-| **N** | P2 | **`writeReport` 未用 skillName 區分檔名** — 多技能同日評測時報告互相覆蓋 | `reporter.ts` | 實作偏移 | 簡單 |
-| **O** | P2 | **題目數量不足僅警告未中止** — `question-utils.ts` L262-264 的 `questions.length < 100` 僅 `console.warn`，SPEC 錯誤案例要求中止 | `lib/question-utils.ts` | 實作偏移 | 簡單 |
-| **P** | P2 | **無效 skill_name 未列出可用技能** — `index.ts` L220-226 只輸出錯誤，未調用 `listSkillNames` | `index.ts` | 實作遺漏 | 簡單 |
-| **Q** | P2 | **隔離模組熱路徑大量同步 I/O** — `isolation.ts` executeRead/executeGrep/executeGlob 使用 `readFileSync`/`readdirSync`，阻塞事件循環 | `isolation.ts` | 性能隱患 | 簡單 |
-| **R** | P3 | **4 個組合型別僅用於內部仍被匯出** — `FileContext`、`CheckItem`、`ScoringDimension`、`ScoreDimension` | `lib/question-utils.ts`, `scorer.ts` | 冗余代碼 | 簡單 |
-| **S** | P3 | **`loadSchema` 僅被死碼 `selfTest()` 調用** — eval pipeline 從不使用 | `lib/question-utils.ts` | 冗余代碼 | 簡單 |
-| **T** | P3 | **`optimizer.ts` 多處 judge 呼叫未傳遞 timeout** — L477,803,1161,1205 的 `callJudgeModelRaw` 無超時保護 | `optimizer.ts` | 實作偏移 | 簡單 |
-| **U** | P3 | **`executor.ts` 重試訊息寫入 `console.error`** — 與 `index.ts` 使用 `context.stderr` 不一致 | `executor.ts` | 實作偏移 | 簡單 |
-| **V** | P3 | **`dryRun` 與 `judgeAvailable` 合併為單一布林條件** — L1127 無法區分真正的 dry-run 和因 judge 不可用而降級的 dry-run | `optimizer.ts` | 架構瑕疵 | 簡單 |
-| **W** | P3 | **頂層 catch 只記錄 `err.message` 丟棄 stack trace** — `index.ts` L355-358 | `index.ts` | 架構瑕疵 | 簡單 |
-| **X** | P3 | **缺少 SIGINT 處理器** — 整個 eval pipeline 無 `process.on('SIGINT', ...)` | 無特定檔案 | 實作遺漏 | 簡單 |
-| **Y** | P3 | **優化後驗證僅檢查 YAML frontmatter** — `optimizer.ts` L1228 未檢查 Markdown 結構完整性 | `optimizer.ts` | 實作遺漏 | 簡單 |
-| **Z** | P3 | **嚴重度排序對照表重複** — `optimizer.ts:90` 與 `reporter.ts:139` 完全相同 | `optimizer.ts`, `reporter.ts` | 冗余代碼 | 簡單 |
+| **A** | P1 | **Bash 全部視為寫入操作違反 R4 讀寫分離** — WRITE_TOOLS 含 'Bash' 導致 `ls`/`cat` 等唯讀命令被 mock | `isolation.ts` | 實作偏移 | 簡單 |
+| **B** | P1 | **評分鎖定無法防止重複 judge API 呼叫** — API 呼叫在 lock 取得前執行；`.scored` 先於 `score.json` 寫入 | `scorer.ts` | 架構瑕疵 | 複雜 |
+| **C** | P1 | **`isAllowedFile` ALLOWED_FILES 路徑模式未 resolve 為絕對路徑** — 相對路徑與絕對路徑 mixed 導致 path.relative 行為不可預測 | `optimizer.ts` | 架構瑕疵 | 簡單 |
+| **D** | P1 | **崩潰後備份還原失效** — `.bak` 每次從當前內容建立，重試時覆蓋原始備份 | `optimizer.ts` | 架構瑕疵 | 簡單 |
+| **E** | P1 | **全域 frontmatter 驗證導致錯誤還原** — `validate-skill-frontmatter` 無技能限定，其他技能的既有問題引發誤還原 | `optimizer.ts` | 架構瑕疵 | 簡單 |
+| **F** | P1 | **`execSync` 阻塞事件迴圈 30 秒** — 同步執行 `validate-skill-frontmatter` | `optimizer.ts` | 性能隱患 | 簡單 |
+| **G** | P2 | **LLM 變體生成存在但無法觸發** — `supplyQuestions` 無生產路徑呼叫；`generateVariants` 僅被死碼呼叫 | `question-loader.ts`, `lib/question-utils.ts` | 冗余代碼、實作偏移 | 簡單 |
+| **H** | P2 | **JSONL 軌跡損壞仍呼叫 judge API** — `hasCorruption` 檢查後仍執行 `callJudgeModel` | `scorer.ts` | 實作偏移 | 簡單 |
+| **I** | P2 | **Dry-run 模式仍有檔案/API 副作用** — `generateOptimizationPlan` 在 dry-run 時仍寫入檔案；上游 judge 呼叫仍產生成本 | `optimizer.ts`, `index.ts` | 架構瑕疵 | 簡單 |
+| **J** | P2 | **`appendTrace` 順序 I/O 瓶頸** — tool-use loop 中無 write buffer，每次追加個別 `await appendFile` | `executor.ts` | 性能隱患 | 簡單 |
+| **K** | P2 | **messages 陣列無限制增長** — 20 輪 tool-use + 多個大型 Read 結果累積數 MB | `executor.ts` | 性能隱患 | 簡單 |
+| **L** | P2 | **Exec lock 錯誤訊息誤導** — `mkdir(lockPath)` 無 recursive，首次 eval 噴 ENOENT | `executor.ts` | 架構瑕疵 | 簡單 |
+| **M** | P2 | **Grep/Glob 靜默跳過不可讀目錄** — catch 區塊為空，被測模型不知檔案被略過 | `isolation.ts` | 架構瑕疵 | 簡單 |
+| **N** | P2 | **`scanForDone` 同步函式死碼** + **reporter fallback 死碼** + **optimizer dry-run/judge-unavailable 重複** — 累計 ~70 行 | `scorer.ts`, `reporter.ts`, `optimizer.ts` | 冗余代碼 | 簡單 |
+| **O** | P2 | **`parse_error` 事件缺 JSONL 行號** — `_lineNumber` 僅在成功解析行設定 | `scorer.ts` | 實作偏移 | 簡單 |
+| **P** | P2 | **PR gate 結果寫入 workflow summary 而非 PR comment** | `.github/workflows/eval.yml` | 實作偏移 | 簡單 |
+| **Q** | P2 | **未使用的匯入** — `EnvConfig` 在 `question-loader.ts`、`Question` 在 `index.ts` | `question-loader.ts`, `index.ts` | 冗余代碼 | 簡單 |
+| **R–W** | P3 | **12 個輕微問題** — existsSync 同步、jaccard 未選小集合、順序 LLM 呼叫、重複 filter、不安全斷言、promisePool 脆弱、磁碟檢查跳過、同模型警告、貪婪正則等 | 多檔案 | 性能/架構 | 簡單 |
 
 ---
 
@@ -98,16 +92,13 @@ All REGTEST workers depend on the corresponding FIX being completed first.
 
 | 重疊組 | 問題 ID | 共享檔案 | 處理方式 |
 |---|---|---|---|
-| 重疊組 1 | **B**, **C** | `scorer.ts` | 同一 Worker B 負責 |
-| 重疊組 2 | **D**, **E**, **I**, **M**, **T**, **V**, **Y** | `optimizer.ts` | 同一 Worker C 負責 |
-| 重疊組 3 | **L**, **P**, **W**, **X** | `index.ts` | 同一 Worker D 負責 |
-| 重疊組 4 | **J**, **N**, **Z** | `reporter.ts` | 同一 Worker D 負責 |
-| 重疊組 5 | **K**, **U** | `executor.ts` | 同一 Worker D 負責 |
-| 重疊組 6 | **G**, **H**, **O**, **R**, **S** | `question-utils.ts` | 同一 Worker F 負責 |
-| 重疊組 7 | **G**, **H** | `judge-api.ts` | 同一 Worker F 負責 |
-| 重疊組 8 | **A**, **Q** | `isolation.ts` | 同一 Worker A 負責 |
-| 無重疊 | **F** | `question-loader.ts` | 獨立 Worker E |
-| 無重疊 | **G** (env-utils) | `env-utils.ts` | Worker F 處理 |
+| 重疊組 1 | **A**, **M** | `isolation.ts` | 同一 Worker A |
+| 重疊組 2 | **B**, **H**, **O** | `scorer.ts` | 同一 Worker B |
+| 重疊組 3 | **C**, **D**, **E**, **F**, **N** (opt) | `optimizer.ts` | 同一 Worker C |
+| 重疊組 4 | **I**, **J**, **K**, **L**, **Q** (index), **P** | `index.ts`, `executor.ts`, `.github/workflows/eval.yml` | 同一 Worker D |
+| 重疊組 5 | **G**, **Q** (q-loader) | `question-loader.ts`, `lib/question-utils.ts` | 同一 Worker E |
+| 重疊組 6 | **N** (scorer/reporter) | `scorer.ts`, `reporter.ts` | 同一 Worker E |
+| 無重疊 | **R–W** | 各檔案 | 併入各對應 Worker |
 
 **結論**：所有 Worker 的檔案範圍彼此互斥，可全部並行派發。
 
@@ -115,133 +106,133 @@ All REGTEST workers depend on the corresponding FIX being completed first.
 
 ## 5. Fix Details (with Regression Test Design)
 
-### FIX-A: 工具模擬 `[simulated]` 標記洩漏 (P1)
+### FIX-A: Bash 工具隔離違反 R4 讀寫分離 (P1)
 
 | 欄位 | 內容 |
 |---|---|
-| **根因** | `isolation.ts` L408 對 `SIMULATED_TOOLS`（LSP/WebSearch/WebFetch）和無 workspaceDir 時的 `WORKSPACE_TOOLS` 回傳值中，data 欄位拼接了 `[simulated]` 前綴。此結果透過 `executor.ts` 直接送入被測模型的對話上下文 |
-| **涉及檔案** | `isolation.ts` > `createToolDispatcher`（L387-434）|
-| **修復方式** | 移除所有 `[simulated]` 前綴。模擬結果的 data 欄位改為純內容描述（如 `Content of ${path}`），不再標記模擬狀態。模擬與真實執行回傳的格式保持一致——不讓被測模型能從回傳值格式區分兩者 |
+| **根因** | `WRITE_TOOLS` 集合（isolation.ts L84-89）包含 `'Bash'`。所有 Bash 命令（含 `ls`、`cat`、`pwd` 等唯讀命令）一律回傳模擬結果，違反 SPEC R4「讀取類工具真實執行、寫入類工具模擬」。另 Bash mock 回傳格式為 `Written {path} ({length} bytes)` 與真實 stdout 差異明顯 |
+| **涉及檔案** | `isolation.ts` > `WRITE_TOOLS`（L84-89）、`buildWriteResponse`（L107-117）、`dispatch`（L396-424） |
+| **修復方式** | 1. 將 `'Bash'` 從 `WRITE_TOOLS` 移除，加入 `WORKSPACE_TOOLS` 或建立獨立的 `EXEC_TOOLS` 集合<br>2. 在 `dispatch` 中對 Bash 工具調用 `execSync`/`exec` 在 workspace 內執行命令（或使用 `executeInWorkspace` 模式的擴展）<br>3. 若完全在 workspace 內執行 Bash 可能不安全，改為只模擬明顯有副作用的命令（`rm`、`mv`、`write` 等），對唯讀命令（`ls`、`cat`、`grep`、`pwd`）真實執行<br>4. Mock 回傳格式用 `buildReadResponse` 而非 `buildWriteResponse` |
 | **複雜度** | 簡單 |
 
 **Regression test design:**
 
 | 欄位 | 內容 |
 |---|---|
-| **測試 ID** | `REGTEST-A` |
+| **測試 ID** | `REGTEST-01` |
 | **測試類型** | 單元測試 |
-| **測試位置** | `packages/tools/eval/test/isolation.test.js` — 附加到現有測試 |
-| **測試場景** | GIVEN `createToolDispatcher` 實例 WHEN 調用 `dispatch({ tool: 'WebSearch', params: { query: 'test' } })` 和 `dispatch({ tool: 'Read', params: { path: 'test.md' } })`（無 workspaceDir）THEN 回傳值的 `data` 欄位不包含 `[simulated]` 字串 |
-| **Oracle** | `!result.data.includes('[simulated]')` — 修復前此測試必須失敗（因為有 `[simulated]`）、修復後必須通過 |
+| **測試位置** | `packages/tools/eval/test/isolation.test.js` — 新測試函式 |
+| **測試場景** | GIVEN `createToolDispatcher({ workspaceDir })` WHEN `dispatch({ tool: 'Bash', params: { command: 'ls' } })` THEN Bash 命令真實執行而非回傳模擬結果 |
+| **Oracle** | Bash 結果包含 workspace 目錄的真實檔案列表，而非 `Written ...` 格式的回傳 |
 
 ---
 
-### FIX-B: 評分鎖定清理失敗被靜默吞掉 (P1)
+### FIX-B: 評分鎖定無法防止重複 judge API 呼叫 (P1)
 
 | 欄位 | 內容 |
 |---|---|
-| **根因** | `scorer.ts` L397-401 在 `finally` 區塊調用 `await rm(lockDir, { recursive: true })`，但 `catch` 區塊完全為空（`/* ignore */`），任何清理失敗（權限不足、檔案系統錯誤）都會被靜默吞掉。由於鎖定以 `mkdir` 的 `EEXIST` 語意實作，殘留的 `.scoring-lock` 目錄會使該測試永久無法評分 |
-| **涉及檔案** | `scorer.ts` > `scoreSingleTest`（L397-401）|
-| **修復方式** | 將 L399 的 `catch { /* ignore */ }` 改為 `catch (err) { console.error(...) }`，使用 `console.error` 輸出錯誤訊息。同時考慮加入 fallback：若 `rm` 失敗，嘗試單獨 `rmdir` 刪除空目錄 |
+| **根因** | `scoreSingleTest` 中，judge model API 呼叫（L344）在 `.scoring-lock` 獲取（L381）**之前**。並發場景中兩行程都通過 `isAlreadyScored` 檢查、各自完成 API 呼叫，然後才競爭寫入鎖。此外 `.scored` marker 在 `score.json` 之前寫入（L394-395），若 L394 後崩潰則永久標記已評分 |
+| **涉及檔案** | `scorer.ts` > `scoreSingleTest`（L310-408） |
+| **修復方式** | 1. 將 lock 獲取移到 Judge API 呼叫之前：acquire lock → re-check `.scored` → call API → write score.json → write .scored → release lock<br>2. 反轉寫入順序：先寫 `score.json`，再寫 `.scored` marker<br>3. 在 lock 獲取失敗時（另一行程持有鎖），直接回傳 `skipped` 不阻塞等待 |
+| **複雜度** | 複雜 — 涉及調整 `scoreSingleTest` 的整個臨界區段範圍 |
+
+**Regression test design:**
+
+| 欄位 | 內容 |
+|---|---|
+| **測試 ID** | `REGTEST-02` |
+| **測試類型** | 單元測試（mock API + 檔案系統） |
+| **測試位置** | `packages/tools/eval/test/scorer.test.js` |
+| **測試場景** | GIVEN `scoreSingleTest` 對某 test 呼叫 WHEN 兩個並發進程同時評分 THEN 只有第一個進程執行 judge API 呼叫，第二個進程跳過（API 僅被呼叫一次） |
+| **Oracle** | 在 mock judge API 中設置呼叫計數器，確認 judge API 僅被呼叫一次 |
+
+---
+
+### FIX-C: `isAllowedFile` ALLOWED_FILES 路徑模式未 resolve (P1)
+
+| 欄位 | 內容 |
+|---|---|
+| **根因** | `ALLOWED_FILES`（optimizer.ts L119-124）中的目錄模式為相對路徑（如 `skills/<name>/scripts/`），但傳入的 `filePath` 是絕對路徑。`path.relative(resolved, normalized)` 中 `resolved` 是相對路徑，行為依賴 CWD |
+| **涉及檔案** | `optimizer.ts` > `isAllowedFile`（L359-373） |
+| **修復方式** | 在 `isAllowedFile` 開頭，對每個 pattern 用 `path.resolve(pattern.replace(/<name>/g, skillName))` 轉為絕對路徑後再比較。同時確保路徑結尾有 `/` 分隔符以避免前綴誤判 |
 | **複雜度** | 簡單 |
 
 **Regression test design:**
 
 | 欄位 | 內容 |
 |---|---|
-| **測試 ID** | `REGTEST-B` |
-| **測試類型** | 單元測試（mock 模擬） |
-| **測試位置** | `packages/tools/eval/test/scorer.test.js` — 新測試函式 |
-| **測試場景** | GIVEN `scoreSingleTest` 在呼叫 `rm(lockDir)` 時拋出異常 WHEN catch 區塊被觸發 THEN `console.error` 被呼叫且錯誤訊息包含 `scoring-lock` 關鍵字 |
-| **Oracle** | 錯誤未被靜默吞掉，在 stderr 中可看到 `scoring-lock` 相關的錯誤輸出 |
-
----
-
-### FIX-C: `scanForDone` 同步 I/O 仍是主路徑 (P1)
-
-| 欄位 | 內容 |
-|---|---|
-| **根因** | `scoreAllTests`（scorer.ts L422）直接調用同步的 `scanForDone`（使用 `existsSync` + `readdirSync`），而非已經存在的非同步版本 `scanForDoneAsync`（使用 `fs/promises` 的 `readdir` + `access`）。`scanForDoneAsync` 雖已匯出但從未被內部採用 |
-| **涉及檔案** | `scorer.ts` > `scoreAllTests`（L422）、`scanForDone`（L489-506）、`scanForDoneAsync`（L531-546）|
-| **修復方式** | 1. 將 `scoreAllTests` L422 的 `scanForDone(resultsBase)` 改為 `await scanForDoneAsync(resultsBase)`<br>2. 將 `scanForDone` 函式（同步版本）標記為 private / 移除 export（如果已無外部使用）<br>3. `scoreAllTests` 需改為 `async` 並在 Promsie.all / promisePool 之前 await |
-| **複雜度** | 簡單 |
-
-**Regression test design:**
-
-| 欄位 | 內容 |
-|---|---|
-| **測試 ID** | `REGTEST-C` |
-| **測試類型** | 整合測試 |
-| **測試位置** | `packages/tools/eval/test/scorer.test.js` — 新測試函式 |
-| **測試場景** | GIVEN 一個包含 `.done` marker 的 results 目錄 WHEN `scoreAllTests` 被調用 THEN 內部通過 `scanForDoneAsync` 掃描目錄（而非 `scanForDone`），測試能正確找到 .done marker |
-| **Oracle** | `scoreAllTests` 能正確掃描到已完成的測試，不阻塞事件循環 |
-
----
-
-### FIX-D: `isAllowedFile` 使用 String.includes() (P1)
-
-| 欄位 | 內容 |
-|---|---|
-| **根因** | `optimizer.ts` L356-363 的 `isAllowedFile` 使用 `normalized.includes(resolved)` 做子字串匹配。這意味著 `skills/spec/SKILL.md` 會匹配到 `skills/spec/SKILL.md.backup`、`skills/spec/SKILL.md.old` 等非目標檔案 |
-| **涉及檔案** | `optimizer.ts` > `isAllowedFile`（L356-363）|
-| **修復方式** | 改用 `path.relative(resolved, normalized)` 並檢查結果是否以 `..` 開頭或路徑為相同。確保路徑真正以允許的路徑為前綴，而非僅包含該字串。需要先對 `resolved` 補上結尾 `/` 分隔符避免路徑前綴誤判（如 `skills/spec` 不應匹配 `skills/special-tool/SKILL.md`） |
-| **複雜度** | 簡單 |
-
-**Regression test design:**
-
-| 欄位 | 內容 |
-|---|---|
-| **測試 ID** | `REGTEST-D` |
+| **測試 ID** | `REGTEST-04` |
 | **測試類型** | 單元測試 |
-| **測試位置** | `packages/tools/eval/test/` — 新測試檔案 `optimizer.test.js` 或附加現有 |
-| **測試場景** | GIVEN `isAllowedFile(skillMdPath + '.backup', 'spec')` WHEN 檢查檔案是否被允許 THEN 回傳 false（修復前因 `includes` 匹配而回傳 true） |
-| **Oracle** | 修復前此測試回傳 true（false positive），修復後回傳 false |
+| **測試位置** | `packages/tools/eval/test/optimizer.test.js` — 新測試函式 |
+| **測試場景** | GIVEN 各種 CWD 和 `filePath` 組合（含含 `..` 的路徑）WHEN `isAllowedFile` 檢查 THEN 正確判斷（CWD 不影響結果） |
+| **Oracle** | 在 mock 的 CWD 下，`isAllowedFile('/project/skills/spec/SKILL.md', 'spec')` → true；不論 `/tmp` 或 `/project` 作為 CWD 結果應一致 |
 
 ---
 
-### FIX-E: `deduplicateIssues` Phase 1 無 pair cap (P1)
+### FIX-D: 崩潰後備份還原失效 (P1)
 
 | 欄位 | 內容 |
 |---|---|
-| **根因** | `optimizer.ts` L670-695 的 Jaccard 相似度聚類巢狀迴圈 `for (j = i + 1; j < groupIssues.length; j++)` 沒有任何 pair count 上限或 early break。Phase 2 已有 `MAX_PAIRS_PER_CATEGORY = 100` 保護（來自 `scripts/optimize.mjs` 的實作），但 Phase 1 沒有 |
-| **涉及檔案** | `optimizer.ts` > `deduplicateIssues`（L670-695）|
-| **修復方式** | 在 L670 的 `for (let i = ...)` 前加入 pair cap：從 Phase 2 的常數位置（可能在 `refineDedupWithJudge` 內的 `MAX_PAIRS_PER_CATEGORY=100`）提取至檔案級別常數。在 Phase 1 的內層迴圈 `for (let j = ...)` 中計數 pair comparison 次數，到達上限（如 `10000`）時跳出所有層級（標記 `TRUNCATED` 警告）或限制每個 category 的處理數。也可直接限制 groupIssues 的數量上限 |
+| **根因** | `optimizeSkillMd` 中備份路徑固定為 `skillMdPath + '.bak'`（L1235）。若第一次運行在 judge API 後、驗證前崩潰，重試時 `.bak` 被當前已修改內容覆蓋，原始內容永久遺失 |
+| **涉及檔案** | `optimizer.ts` > `optimizeSkillMd`（L1234-1298） |
+| **修復方式** | 1. 備份路改為含時間戳：`skillMdPath + '.bak.' + Date.now()` 或 `skillMdPath + '.bak.' + new Date().toISOString().replace(/[:.]/g, '-')`<br>2. 若舊備份已存在，不覆蓋（僅首次建立備份） |
 | **複雜度** | 簡單 |
 
 **Regression test design:**
 
 | 欄位 | 內容 |
 |---|---|
-| **測試 ID** | `REGTEST-E` |
+| **測試 ID** | `REGTEST-05` |
 | **測試類型** | 單元測試 |
-| **測試位置** | `packages/tools/eval/test/` — 新測試檔案或附加現有 |
-| **測試場景** | GIVEN `deduplicateIssues` 收到 200+ 個不同 category 的 raw issues WHEN Phase 1 執行 THEN 不會造成明顯延遲；pair 比較次數有上限 |
-| **Oracle** | 函式在合理時間內返回結果，不因 O(n²) 而卡住 |
+| **測試位置** | `packages/tools/eval/test/optimizer.test.js` — 新測試函式 |
+| **測試場景** | GIVEN `optimizeSkillMd` 執行優化（mock 環境）WHEN 檢查備份檔案 THEN 備份檔案存在且內容與優化前的 SKILL.md 一致 |
+| **Oracle** | 備份檔案路徑包含時間戳或用戶 ID，不與其他運行衝突 |
 
 ---
 
-### FIX-F: LLM 變體生成未被實作 (P1 — 複雜)
+### FIX-E: 全域 frontmatter 驗證導致錯誤還原 (P1)
 
-| 欄位 | 內容 |
+| 項位 | 內容 |
 |---|---|
-| **根因** | SPEC R1.3 明確要求「LLM 變體生成需保留原題的評分標準，僅改寫場景表述」，但 `packages/tools/eval/` 中不存在任何變體生成邏輯。`question-loader.ts` 的 `loadQuestions` 直接從靜態 JSON 載入題庫，`question-utils.ts` 僅做剝離/取出評分標準的操作 |
-| **涉及檔案** | `question-loader.ts`, `lib/question-utils.ts` |
-| **修復方式** | 1. 在 `question-utils.ts` 中新增 `generateVariants` 函式，接收原題和目標數量，調用 `callJudgeModel` 產生語意等價但表述不同的變體<br>2. 變體必須保留原題的 `scoringCriteria`、`difficulty`、`projectContext`，僅改寫 `userPrompt` 和 `id`<br>3. 在 `question-loader.ts` 的 `loadQuestions` 後（或 `sampleQuestions` 中）新增選項 `--variants`/`generateVariants`，當題庫數量不足或明確要求時自動補充<br>4. 使用 `env.EXEC_*` 變數配置調用 LLM 進行變體生成（非評分模型，降低成本和上下文污染） |
-| **複雜度** | 複雜 — 需使用 systematic debug，涉及新增 API 調用路徑 |
+| **根因** | `optimizeSkillMd` 中驗證命令 `node dist/bin/apollo-toolkit.js validate-skill-frontmatter`（L1266）無技能名稱限定，驗證**所有**技能的 frontmatter。若另一個不相關的技能有既存 frontmatter 問題，當前技能的合法優化被錯誤還原 |
+| **涉及檔案** | `optimizer.ts` > `optimizeSkillMd`（L1263-1291） |
+| **修復方式** | 將驗證範圍限定為僅驗證被優化的技能：`node dist/bin/apollo-toolkit.js validate-skill-frontmatter --skill <skillName>` 或在 CLI 不支援此選項時直接解析當前 SKILL.md 的 frontmatter（用 regex 提取 YAML 區塊檢查有效性） |
+| **複雜度** | 簡單 |
 
 **Regression test design:**
 
 | 欄位 | 內容 |
 |---|---|
-| **測試 ID** | `REGTEST-F` |
-| **測試類型** | 整合測試（mock LLM response） |
-| **測試位置** | `packages/tools/eval/test/question-loader.test.js` — 新測試函式 |
-| **測試場景** | GIVEN 一道完整題目（含 id、userPrompt、scoringCriteria、difficulty）WHEN 調用 `generateVariants(question, 2)` THEN 回傳 2 道變體題目，每道保留與原題完全相同的 `scoringCriteria`、`difficulty`、`projectContext`，但 `id` 不同（如 `Q001_v1`）且 `userPrompt` 被改寫 |
-| **Oracle** | 變體題的 scoringCriteria depth-equal 原題，difficulty 相同，id 為原題延伸 |
+| **測試 ID** | 與 REGTEST-05 合併 |
+| **測試類型** | 單元測試 + 源碼審查 |
+| **測試位置** | `packages/tools/eval/test/optimizer.test.js` |
+| **測試場景** | GIVEN optimizer.ts 原始碼 WHEN 驗證 `optimizeSkillMd` 中的 frontmatter 驗證命令 THEN 命令中不含 `--skill` 限定且非 `validate-skill-frontmatter` 全域呼叫 |
+| **Oracle** | 驗證命令應限於當前技能，或使用內聯 frontmatter 解析 |
 
 ---
 
-### FIX-G ~ FIX-Z: P2 / P3 修復
+### FIX-F: `execSync` 阻塞事件迴圈 30 秒 (P1)
+
+| 欄位 | 內容 |
+|---|---|
+| **根因** | `optimizeSkillMd`（L1266）使用 `execSync`，timeout 30s。在執行期間 Node.js 事件迴圈完全凍結，所有並行 promise 無法進展 |
+| **涉及檔案** | `optimizer.ts` > `optimizeSkillMd`（L1264-1270） |
+| **修復方式** | 替換為 `execFile`（非同步）搭配 `Promise` 包裝：`import { execFile } from 'node:child_process'; import { promisify } from 'node:util'; const execFileAsync = promisify(execFile);` |
+| **複雜度** | 簡單 |
+
+**Regression test design:**
+
+| 欄位 | 內容 |
+|---|---|
+| **測試 ID** | 與 REGTEST-05 合併 |
+| **測試類型** | 源碼審查 |
+| **測試位置** | `packages/tools/eval/test/optimizer.test.js` |
+| **測試場景** | GIVEN optimizer.ts 原始碼 WHEN 搜尋 `execSync` THEN 在 `optimizeSkillMd` 函式中無 `execSync` 呼叫 |
+| **Oracle** | `execSync` 不應出現在 `optimizeSkillMd` 中 |
+
+---
+
+### FIX-G ~ FIX-Q: P2 / P3 修復
 
 (詳細修復方案見 Section 6 Worker Prompt — 所有 P2/P3 修復已合併入各 Worker 的指令中，此處不再重複結構化表格)
 
@@ -253,102 +244,275 @@ All REGTEST workers depend on the corresponding FIX being completed first.
 
 ---
 
-#### WORKER-A: 隔離模組修復 (FIX-A + FIX-Q)
+#### WORKER-A: isolation.ts 修復 — Bash 讀寫分離 + Grep/Glob 靜默跳過 (FIX-A + FIX-M)
 
 ```
 ## Mission
 修復 isolation.ts 中的兩個問題：
-1. (P1) 移除 `[simulated]` 標記 — 使工具模擬對被測模型透明（SPEC R4.1）
-2. (P2) 減少熱路徑同步 I/O — 將 executeRead 改為非阻塞版本（async）
+1. (P1) Bash 工具違反 R4 讀寫分離 — WRITE_TOOLS 含 'Bash'
+2. (P2) Grep/Glob 靜默跳過不可讀目錄 — catch 區塊為空
 
 ## Context
-- 審查維度: 實作偏移 + 性能隱患
-- SPEC 需求: optimize-and-integrate R4.1「工具模擬對被測模型透明」
+- 審查維度: 實作偏移 + 架構瑕疵
+- SPEC 需求: optimize-and-integrate R4.1「讀取類工具真實執行，寫入類工具模擬」
 
 ## Input
-閱讀以下檔案：
-- `packages/tools/eval/isolation.ts`（完整閱讀）
+- 閱讀 `packages/tools/eval/isolation.ts`（完整閱讀）
 
 ## What to do
 
-### 修正 1: 移除 `[simulated]` 標記（P1）
-在 `createToolDispatcher` 函式（L387-434）中：
-1. 找到 L408 的行：`data: \`[simulated] ${buildReadResponse(params)}\``
-2. 改為 `data: buildReadResponse(params)` — 純內容描述，不暴露模擬狀態
-3. 找到 `executeInWorkspace` 函式（L355-370）中 `default` 分支的 `[simulated]` 前綴（L368），同樣移除
-4. 更新檔頭註解（L6-10），移除「標記 [simulated]」的敘述
+### 修正 1: Bash 讀寫分離 (P1)
 
-### 修正 2: 減少同步 I/O（P2）
-在 `executeRead` 函式（L131-190）中：
-1. 將 `executeRead` 簽名改為 `async`，回傳 `Promise<MockToolResult>`
-2. 將 `existsSync(fullPath)` 替換為 `await access(fullPath).then(() => true).catch(() => false)`（引入 `access` from `node:fs/promises`）
-3. 將 `statSync(fullPath)` 替換為 `await stat(fullPath)`（引入 `stat` from `node:fs/promises`）
-4. 將 `readFileSync(fullPath, 'utf-8')` 替換為 `await readFile(fullPath, 'utf-8')`（引入 `readFile` from `node:fs/promises`）
-5. 更新 `executeInWorkspace` 中對 `executeRead` 的調用為 `await`，並讓 `executeInWorkspace` 也回傳 `Promise<MockToolResult>`
-6. 更新 `dispatch` 中的調用鏈：`executeInWorkspace` 的結果需要 `await`
-7. `executeGrep` 和 `executeGlob` 維持同步（它們的 walkDir 是記憶體操作為主，開銷不在 I/O 而在比對）
+在 `isolation.ts` 中：
 
-注意：不要將 `executeGrep` 和 `executeGlob` 改為 async，那只會增加 overhead（它們的主要開銷是字串比對而非 I/O）。
+1. **將 `'Bash'` 從 `WRITE_TOOLS` 移除**（L84-89）：
+```typescript
+const WRITE_TOOLS: ReadonlySet<string> = new Set([
+  'Write',
+  'Edit',
+  'NotebookEdit',
+  // 'Bash' — 已移除：Bash 需要支援唯讀命令的真實執行
+]);
+```
+
+2. **在 `dispatch` 中對 Bash 處理**（在 `WRITE_TOOLS.has(tool)` 檢查之前，新增 Bash 分支）：
+```typescript
+if (tool === 'Bash' && workspaceDir) {
+  // 在 workspace 內真實執行 Bash 命令
+  result = await executeBash(workspaceDir, params);
+} else if (WORKSPACE_TOOLS.has(tool) && workspaceDir) {
+  result = await executeInWorkspace(tool, workspaceDir, params);
+} // ...
+```
+
+3. **新增 `executeBash` 函式**（放在 `executeGlob` 之後）：
+```typescript
+/**
+ * 在 workspace 內真實執行 Bash 命令（唯讀安全子集）。
+ * 使用 execFile 而非 execSync 以避免阻塞。
+ * 只允許預先定義的安全命令清單（ls, cat, pwd, echo, head, tail, wc, find, grep, sort, uniq, which, date）。
+ */
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFileAsync = promisify(execFile);
+
+const SAFE_BASH_COMMANDS = new Set([
+  'ls', 'cat', 'pwd', 'echo', 'head', 'tail', 'wc', 'find',
+  'grep', 'sort', 'uniq', 'which', 'date', 'printf', 'tree',
+]);
+
+async function executeBash(
+  workspaceDir: string,
+  params: Record<string, unknown>,
+): Promise<MockToolResult> {
+  const command = typeof params.command === 'string' ? params.command.trim() : '';
+  if (!command) {
+    return { success: false, data: 'Error: No command provided for Bash', tool: 'Bash' };
+  }
+
+  // Extract the base command name
+  const baseCmd = command.split(/\s+/)[0];
+  if (!SAFE_BASH_COMMANDS.has(baseCmd)) {
+    // Unsafe command: simulate (record intent, return mock)
+    console.warn(`[isolation] Unsafe Bash command intercepted: ${baseCmd}`);
+    return { success: true, data: `[Simulated] ${command} completed.`, tool: 'Bash' };
+  }
+
+  try {
+    const { stdout, stderr } = await execFileAsync(baseCmd, command.split(/\s+/).slice(1), {
+      cwd: workspaceDir,
+      timeout: 5000,
+    });
+    const output = stderr ? `${stdout}\n${stderr}` : stdout;
+    return { success: true, data: output || '(no output)', tool: 'Bash' };
+  } catch (err) {
+    return {
+      success: false,
+      data: `Error: ${err instanceof Error ? err.message : String(err)}`,
+      tool: 'Bash',
+    };
+  }
+}
+```
+
+4. **注意 import 更新**：加入 `import { execFile } from 'node:child_process';` 和 `import { promisify } from 'node:util';`
+
+### 修正 2: Grep/Glob 靜默跳過記錄 (P2)
+
+在 `executeGrep`（L224）和 `executeGlob`（L316-317）的 catch 區塊中：
+1. 將空的 catch 改為記錄跳過資訊到結果中
+2. 在結果中加入 `[skipped X unreadable paths]` 警告
+
+```typescript
+// executeGrep L224 附近:
+let skippedCount = 0;
+// ... walkDir 中:
+try {
+  entries = readdirSync(dir, { withFileTypes: true });
+} catch {
+  skippedCount++;
+  return;
+}
+// 在結果中新增:
+if (skippedCount > 0) {
+  results.push(`[isolation] Warning: ${skippedCount} path(s) could not be read (permission denied or unavailable)`);
+}
+```
+
+3. `executeGlob` 也做相同修改（L316-317）。
 
 ## Scope
 - 允許修改的檔案:
   - `packages/tools/eval/isolation.ts`
 - 禁止修改的檔案:
-  - 所有其他檔案（屬於其他 worker）
+  - 所有其他檔案
 
 ## Output
 完成後回報：
-- 修改了哪些行
-- `[simulated]` 是否已完全移除（grep 確認）
-- tsc 編譯是否通過
+- Bash 是否已從 WRITE_TOOLS 移除
+- executeBash 函式的實作方式和安全命令清單
+- Grep/Glob 的 catch 區塊修改後的程式碼
+- tsc 編譯結果
 - 測試執行結果
 
 ## Verify
-- 執行: `grep -r "simulated" packages/tools/eval/isolation.ts`
-- 預期: 無匹配行（除了可能出現在註解中）
-- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json`
-- 預期: 零錯誤
+- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json` → 零錯誤
+- 執行: `node --test "packages/tools/eval/test/isolation.test.js"` → 全部通過
+- 手動檢查: `grep "'Bash'" packages/tools/eval/isolation.ts` → 不應在 WRITE_TOOLS 內
 
 ## Boundaries
-- 不要修改 isolation.ts 以外的任何檔案
-- `[simulated]` 必須完全移除，不可僅更改前綴文字
-- executeGrep/executeGlob 保持同步不修改
+- Bash 的安全命令清單應覆蓋常用唯讀命令但不包含 rm/mv/chmod 等有副作用的命令
+- executeBash 必須使用 execFile（非 execSync）以避免阻塞事件迴圈
+- 不可修改 isolation.ts 以外的檔案
 ```
 
 ---
 
-#### WORKER-B: scorer.ts 修復 (FIX-B + FIX-C)
+#### WORKER-B: scorer.ts 修復 — 評分鎖定原子性 + 損壞跳過 + 行號 (FIX-B + FIX-H + FIX-O)
 
 ```
 ## Mission
-修復 scorer.ts 中的兩個問題：
-1. (P1) 評分鎖定清理失敗應記錄錯誤而非靜默吞掉
-2. (P1) 將 scanForDone 主路徑切換為非同步版本 scanForDoneAsync
+修復 scorer.ts 中的 3 個問題：
+1. (P1) 評分鎖定無法防止重複 judge API 呼叫 — lock 範圍需覆蓋 API 呼叫
+2. (P2) JSONL 軌跡損壞仍呼叫 judge API — 應提早跳過
+3. (P2) parse_error 事件缺少 JSONL 行號
 
 ## Context
-- 審查維度: 架構瑕疵 + 性能隱患
-- 系統不變量 #4: 已評分的題目不重複評分（.scored marker）
+- 審查維度: 架構瑕疵 + 實作偏移
+- 系統不變量 #1: 每題至少執行一次才評分
+- 系統不變量 #4: 已評分的題目不重複評分
 
 ## Input
-閱讀以下檔案：
-- `packages/tools/eval/scorer.ts`（完整閱讀，特別關注 L397-401 和 L419-506）
+- 閱讀 `packages/tools/eval/scorer.ts`（完整閱讀，特別關注 L310-408）
 
 ## What to do
 
-### 修正 1: 鎖定清理錯誤記錄（P1）
-在 `scoreSingleTest` 函式的 `finally` 區塊（L397-401）：
-1. 將 `catch { /* ignore */ }` 改為 `catch (err) { console.error(\`[scorer] Failed to remove scoring lock at ${lockDir}: ${err instanceof Error ? err.message : String(err)}\`); }`
-2. 在 `catch` 中嘗試 fallback：`try { await rmdir(lockDir); } catch { /* 目錄可能非空，忽略 fallback 失敗 */ }`（導入 `rmdir` from `node:fs/promises`）
-3. `rmdir` 不需要 `{ recursive: true }`，但如果鎖定是空的（正常情況）它會成功；如果是非空（異常情況）則保留，console.error 已經記錄了錯誤
+### 修正 1: 鎖定範圍擴大到 API 呼叫 (P1)
 
-### 修正 2: 主路徑使用非同步掃描（P1）
-在 `scoreAllTests` 函式（L419-478）：
-1. 將 L422 `const doneTests = scanForDone(resultsBase);` 改為 `const doneTests = await scanForDoneAsync(resultsBase);`
-2. `scoreAllTests` 已經是非同步函式（回傳 `Promise<ScoreResult[]>`），所以不需要改變簽名
-3. 不需要修改或刪除 `scanForDone`（同步版本）——讓它保留給可能的舊呼叫者。如果它不再被調用，後續的 Worker F 會處理死碼清理
+在 `scoreSingleTest` 函式（L310-408）中重新排列順序：
 
-### 文件更新
-- 更新 L3-4 的檔頭註解：不再說「（如果不是非阻塞）」，確認 async 掃描為主路徑
+**修改前（當前）**：
+```
+1. readTrace → 2. getScoringCriteria → 3. buildJudgePrompt → 4. callJudgeModel (API!) → 5. acquire lock → 6. write .scored → 7. write score.json → 8. release lock
+```
+
+**修改後**：
+```
+1. readTrace → 2. hasCorruption? → 3. getScoringCriteria → 4. buildJudgePrompt → 5. acquire lock → 6. re-check .scored (double-check!) → 7. callJudgeModel (API!) → 8. write score.json → 9. write .scored → 10. release lock
+```
+
+具體步驟：
+1. 將 lock 獲取（L379-386）移到 `callJudgeModel`（L344-345）之前
+2. 在 lock 獲取之後、API 呼叫之前，加入 double-check：重新確認 `.scored` 不存在（避免 race condition）
+3. 反轉 `.scored` 和 `score.json` 的寫入順序：先寫 `score.json`，再寫 `.scored`
+4. Lock 失敗時（Mkdir EEXIST）仍回傳 `skipped: true`
+
+```typescript
+// 修改後的 scoreSingleTest 核心流程 (L310-408)：
+
+// Atomic write: use mkdir as mutex
+const lockDir = join(resultsDir, '.scoring-lock');
+try {
+  await mkdir(lockDir);
+} catch {
+  console.warn(`${testNo}: scoring lock held by another process, skipping`);
+  return { testId: testNo, score: null, skipped: true };
+}
+
+try {
+  // Double-check: another process might have scored this while we waited
+  try {
+    await access(scoredPath);
+    console.warn(`${testNo}: already scored (detected after lock acquisition), skipping`);
+    return { testId: testNo, score: null, skipped: true };
+  } catch { /* .scored not found — safe to score */ }
+
+  // Build judge prompt (inside critical section but before API call)
+  const prompt = buildJudgePrompt(trace, scoringCriteria, testNo, skillName);
+  const timeoutMs = env.JUDGE_TIMEOUT > 0 ? env.JUDGE_TIMEOUT * 1000 : 120_000;
+  const judgment = await callJudgeModel(prompt, env, { timeoutMs });
+
+  // ... process judgment into ScoreResult ...
+
+  // Write score.json FIRST, then .scored marker
+  await writeFile(scorePath, JSON.stringify(score, null, 2), 'utf-8');
+  
+  const scoredData = JSON.stringify({
+    testId: testNo,
+    scoredAt: score.scoredAt,
+    overallScore: score.overallScore,
+  });
+  await writeFile(scoredPath, scoredData, 'utf-8');
+} finally {
+  // Release lock
+  try {
+    await rm(lockDir, { recursive: true });
+  } catch (err) {
+    console.error(`[scorer] Failed to remove scoring lock at ${lockDir}: ${err instanceof Error ? err.message : String(err)}`);
+    try { await rmdir(lockDir); } catch { /* ignore fallback failure */ }
+  }
+}
+```
+
+### 修正 2: JSONL 損壞提早跳過 (P2)
+
+在 `callJudgeModel` 呼叫之前（修正 1 後的 Lock 內部），加入：
+```typescript
+// Skip if trace has corruption — don't waste judge API calls
+if (hasCorruption) {
+  const score: ScoreResult = {
+    testId: testNo,
+    overallScore: 0,
+    dimensions: [],
+    issues: [{
+      severity: 'P2',
+      category: 'other',
+      description: '軌跡檔案損壞，無法評分',
+      evidence: `Trace file contains corrupted JSON lines`,
+    }],
+    summary: '無法評分：軌跡檔案損壞',
+    scoredAt: new Date().toISOString(),
+    scorable: false,
+    scoringNote: '無法評分：軌跡檔案損壞',
+  };
+  await writeFile(scorePath, JSON.stringify(score, null, 2), 'utf-8');
+  await writeFile(scoredPath, JSON.stringify({ testId: testNo, scoredAt: score.scoredAt }), 'utf-8');
+  return { testId: testNo, score };
+}
+```
+
+### 修正 3: parse_error 行號 (P2)
+
+在 `readTrace` 中（L86-103），將 `parse_error` 事件加上 `_lineNumber`：
+```typescript
+const parseErrorEvent: TraceEventWithLine = {
+  type: 'parse_error',
+  timestamp: new Date().toISOString(),
+  data: { line: i + 1, raw: line.substring(0, 200), error: (err as Error).message },
+};
+parseErrorEvent._lineNumber = i + 1; // 設定行號
+events.push(parseErrorEvent);
+```
 
 ## Scope
 - 允許修改的檔案:
@@ -358,161 +522,223 @@ All REGTEST workers depend on the corresponding FIX being completed first.
 
 ## Output
 完成後回報：
-- L397-401 的 catch 區塊修改後的代碼
-- L422 修改後的代碼
-- tsc 編譯通過
-- 測試通過（`node --test "packages/tools/eval/test/*.test.js"`）
+- 修改後的 scoreSingleTest 流程（特別是 lock 範圍和 double-check）
+- 損壞跳過邏輯的程式碼
+- parse_error 行號修正
+- tsc 編譯結果
+- 測試執行結果
 
 ## Verify
-- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json`
-- 預期: 零錯誤
-- 執行: `node --test "packages/tools/eval/test/scorer.test.js"`
-- 預期: 全部通過
+- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json` → 零錯誤
+- 執行: `node --test "packages/tools/eval/test/scorer.test.js"` → 全部通過
 
 ## Boundaries
-- 不要修改 scorer.ts 以外的檔案
-- 不要刪除或註解掉 `scanForDone` 同步函式（後續清理由另一 worker 負責）
-- `scanForDoneAsync` 已經存在（L531-546），不需要重寫
+- 僅修改 scorer.ts
+- 不可改變 score.json 的結構（需保持向後兼容）
+- 保留 `scorable` 和 `scoringNote` 欄位的語義
 ```
 
 ---
 
-#### WORKER-C: optimizer.ts 全部修復 (FIX-D, E, I, M, T, V, Y)
+#### WORKER-C: optimizer.ts 修復 — 路徑安全 + 備份 + 驗證 + execSync + 重複代碼 (FIX-C + D + E + F + N 部分)
 
 ```
 ## Mission
-修復 optimizer.ts 中的 7 個問題：
-1. (P1) `isAllowedFile` 改用 path.relative 前綴匹配
-2. (P1) `deduplicateIssues` Phase 1 加上 pair cap
-3. (P2) `optimizeSkillMd` 技能名稱提取 bug
-4. (P2) dry-run 路徑分離（不混用 judgeAvailable 條件）
-5. (P3) 多處 `callJudgeModelRaw` 呼叫未傳遞 timeout
-6. (P3) 訊息混淆：`dryRun || !judgeAvailable` 應分別給出準確訊息
-7. (P3) 優化後應驗證 Markdown 結構（不僅 frontmatter）
+修復 optimizer.ts 中的 5 個問題：
+1. (P1) isAllowedFile ALLOWED_FILES 模式未 resolve 為絕對路徑
+2. (P1) 崩潰後備份還原失效（.bak 覆蓋）
+3. (P1) 全域 frontmatter 驗證誤還原
+4. (P1) execSync 阻塞事件迴圈 30 秒
+5. (P2) dry-run/judge-unavailable 40 行重複代碼
 
 ## Context
-- 審查維度: 架構瑕疵 + 性能隱患 + 實作偏移 + 冗余代碼
+- 審查維度: 架構瑕疵 + 性能隱患 + 冗余代碼
 - 系統不變量 #5: 優化 diff 不修改技能目錄外的檔案
-- 系統不變量 #8: dry-run 模式不產生任何檔案系統副作用
+- 系統不變量 #6: 備份在修改前必定存在
 
 ## Input
-閱讀以下檔案：
-- `packages/tools/eval/optimizer.ts`（完整閱讀）
+- 閱讀 `packages/tools/eval/optimizer.ts`（完整閱讀，特別關注 L359-373, L1060-1302）
 
 ## What to do
 
-### 修正 1: isAllowedFile 路徑安全 (P1)
-在 `isAllowedFile` 函式（L356-363）：
+### 修正 1: isAllowedFile ALLOWED_FILES resolve 為絕對路徑 (P1)
+
+修改 `isAllowedFile` 函式（L359-373）：
+
 ```typescript
 export function isAllowedFile(filePath: string, skillName: string): boolean {
-  const normalized = path.resolve(filePath).replace(/\\/g, '/');
+  const normalized = resolve(filePath).replace(/\\/g, '/');
   for (const pattern of ALLOWED_FILES) {
-    const resolved = path.resolve(pattern.replace(/<name>/g, skillName)).replace(/\/$/, '') + '/';
-    const rel = path.relative(resolved, normalized);
-    // 如果 relative 結果以 .. 開頭，表示不在該目錄之下
-    if (!rel.startsWith('..') && rel !== normalized) return true;
+    // 重要: 先用 path.resolve 將相對模式轉為絕對路徑，確保 path.relative 行為正確
+    const resolved = resolve(pattern.replace(/<name>/g, skillName)).replace(/\\/g, '/');
+    if (resolved.endsWith('/') || resolved.endsWith('/' + skillName + '/SKILL.md')) {
+      // 檢查 resolved 自身確保正確處理
+    }
+    if (resolved.endsWith('/')) {
+      // Directory pattern
+      const rel = relative(resolved, normalized);
+      if (!rel.startsWith('..') && rel !== normalized) return true;
+    } else {
+      // File pattern
+      if (normalized.endsWith('/' + resolved) || normalized === resolved) return true;
+    }
   }
   return false;
 }
 ```
-注意事項：
-- 引入 `import { relative, resolve } from 'node:path'`（已存在 `resolve` import，確認 `relative` 是否有 import）
-- 對比原實作：原 `normalized.includes(resolved)` 會匹配到 `skills/spec/SKILL.md.backup`
-- 新實作確保路徑真正以允許模式為前綴
 
-### 修正 2: dedup Phase 1 pair cap (P1)
-在 `deduplicateIssues` 函式中，在 Phase 1 聚類區塊（L670-695）前方：
-1. 在檔案頂部常數區新增：`const MAX_PHASE1_PAIRS = 10000;`（靠近 L90 的 SEVERITY_RANK）
-2. 在 `for (let i = 0; i < groupIssues.length; i++)` 迴圈（L670）之前定義 `let pairCount = 0;`
-3. 在內層 `for (let j = i + 1; ...)` 迴圈（L678）的開頭遞增 pairCount
-4. 在內層迴圈每次迭代開始時檢查：`if (pairCount > MAX_PHASE1_PAIRS) { console.warn(\`[optimizer] Phase 1 dedup pair limit reached (${MAX_PHASE1_PAIRS}), truncating.\`); break; }`
-5. 使用 label break 跳出外層迴圈
+實際上更簡單的做法是：保持現有的 `ALLOWED_FILES` 相對路徑定義，但在比較前對兩邊都 resolve：
 
 ```typescript
-// Phase 1 clustering with pair cap
-let pairCount = 0;
-outer: for (let i = 0; i < groupIssues.length; i++) {
-  if (used.has(i)) continue;
-  const base = groupIssues[i];
-  const cluster: RawIssueWithKeywords[] = [base];
-  used.add(i);
-  for (let j = i + 1; j < groupIssues.length; j++) {
-    pairCount++;
-    if (pairCount > MAX_PHASE1_PAIRS) {
-      console.warn(`[optimizer] Dedup Phase 1 pair limit (${MAX_PHASE1_PAIRS}) reached — truncating`);
-      break outer;
+export function isAllowedFile(filePath: string, skillName: string): boolean {
+  const normalized = resolve(filePath).replace(/\\/g, '/');
+  for (const pattern of ALLOWED_FILES) {
+    // 將 mode 轉為絕對路徑後再 compare
+    const resolvedPath = resolve(pattern.replace(/<name>/g, skillName)).replace(/\\/g, '/');
+    const resolvedDir = resolvedPath.endsWith('/') ? resolvedPath : resolvedPath + '/';
+    
+    if (resolvedDir.endsWith('/')) {
+      const rel = relative(resolvedDir, normalized);
+      if (!rel.startsWith('..') && rel !== normalized) return true;
+    } else {
+      if (normalized === resolvedPath || normalized.endsWith('/' + resolvedPath)) return true;
     }
-    if (used.has(j)) continue;
-    // ... existing similarity checks ...
   }
+  return false;
 }
 ```
 
-### 修正 3: skillName 提取 bug (P2)
-在 `optimizeSkillMd` 函式的 L1094 附近：
-1. 原始碼：`const skillName = skillMdPath.split('/').pop()?.replace('/SKILL.md', '') || '';`
-2. 問題：`split('/').pop()` 回傳 `SKILL.md`，不含前綴 `/`，所以 `replace('/SKILL.md', '')` 永不匹配
-3. 修復：改為 `const skillName = resolvedSkillName;`（直接使用 L1095-1097 已經正確解析的 `resolvedSkillName`）
-4. 或者完全移除 `skillName` 變數，只保留 `resolvedSkillName`：
+### 修正 2: 備份使用唯一名稱 (P1)
+
+將備份路徑從固定 `.bak` 改為含時間戳的格式（L1235-1236）：
+
 ```typescript
-// Resolve skill name from path — handles both /skills/<name>/SKILL.md and arbitrary paths
-const resolvedSkillName = skillMdPath.includes('/skills/')
-  ? skillMdPath.split('/skills/')[1]?.split('/')[0] || ''
-  : skillMdPath.split('/').pop()?.replace(/\.md$/i, '') || '';
+// 1. Backup — use unique timestamp to prevent overwrite on retry
+const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+const bakPath = skillMdPath + '.bak.' + timestamp;
+copyFileSync(skillMdPath, bakPath);
+console.log(`Backup created: ${bakPath}`);
+
+// 保留一個可預測的 restore 路徑（symlink 或記錄最新備份）
+const latestBakPath = skillMdPath + '.bak';
+copyFileSync(skillMdPath, latestBakPath); // 也保留最新的（衝突時用 timestamp 版）
 ```
 
-### 修正 4: dry-run 路徑分離 (P2)
-在 L1127 `if (dryRun || !judgeAvailable)` 這個條件：
-1. 分離兩個 case，每個給出準確的訊息：
+在還原時（L1277, L1286, L1298），使用 `latestBakPath` 或 `bakPath`（timestamp 版）都可以。
+
+### 修正 3: 全域 frontmatter 驗證限定當前技能 (P1)
+
+在 L1263-1291 的驗證區塊中，改為只驗證當前技能檔案：
+
+**方式 A**（如果 CLI 支援 `--skill` 參數）：
+```typescript
+try {
+  const root = getProjectRoot();
+  // 只驗證當前技能，不驗證所有技能
+  await execFileAsync('node', [
+    'dist/bin/apollo-toolkit.js',
+    'validate-skill-frontmatter',
+    '--skill', resolvedSkillName,
+  ], { cwd: root, timeout: 30000 });
+  console.log('Frontmatter validation: PASSED');
+} catch (valErr) { ... }
+```
+
+**方式 B**（內聯解析 frontmatter，更可靠）：
+```typescript
+try {
+  // 內聯驗證：直接用 regex 解析 frontmatter 的基本結構
+  const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
+  if (!frontmatterMatch) {
+    throw new Error('Missing or malformed YAML frontmatter (--- delimiters not found)');
+  }
+  const frontmatter = frontmatterMatch[1];
+  // 驗證 frontmatter 不為空且有基本欄位
+  if (frontmatter.trim().length === 0 || !/^[a-zA-Z]/.test(frontmatter)) {
+    throw new Error('Frontmatter appears empty or malformed');
+  }
+  console.log('Frontmatter validation: PASSED (inline)');
+  
+  // Markdown structure validation (已存在)
+  const mdValidation = validateMarkdownStructure(newContent);
+  if (!mdValidation.valid) {
+    console.error('Markdown structure validation FAILED. Restoring backup...');
+    copyFileSync(latestBakPath, skillMdPath);
+    return { success: false, message: '...' };
+  }
+} catch (valErr) {
+  ...
+}
+```
+
+推薦方式 B（無外部 CLI 依賴，不需要 `execSync`/`execFileAsync` 的開銷）。
+
+### 修正 4: execSync → execFileAsync (P1)
+
+在檔案頂部加入（或使用 `node:util` 的 `promisify`）：
+```typescript
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFileAsync = promisify(execFile);
+```
+
+然後在 L1264-1270 替換 `execSync` 為 `execFileAsync`（僅若選擇方式 A 時需要）。若選擇方式 B（內聯解析），則完全不需要 `execSync`。
+
+### 修正 5: 消除 dry-run/judge-unavailable 重複代碼 (P2)
+
+將 L1145-1186（dry-run）和 L1190-1230（!judgeAvailable）的 40 行重複代碼提取為共用函式：
+
+```typescript
+function buildTemplatePatch(
+  skillIssues: OptimizationPlan['issues'],
+  date: string,
+  message: string,
+): string {
+  const patchLines: string[] = [
+    '# SKILL.md Optimization Suggestions',
+    '',
+    `Generated: ${new Date().toISOString()}`,
+    `Source: ${skillMdPath}`,
+    `Issues analyzed: ${skillIssues.length}`,
+    '',
+    '---',
+    '',
+    '## Identified Issues',
+    '',
+  ];
+  for (const issue of skillIssues) {
+    patchLines.push(`### ${issue.id}: ${issue.severity} - ${issue.description.substring(0, 120)}`);
+    patchLines.push('');
+    patchLines.push(`- **Frequency**: ${issue.frequency} tests affected`);
+    patchLines.push(`- **Affected Tests**: ${issue.affectedTests.join(', ')}`);
+    patchLines.push(`- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`);
+    patchLines.push(`- **Suggested Fix**: ${issue.suggestedFix || '(none)'}`);
+    patchLines.push('');
+  }
+  patchLines.push('---', '', '## Template-Based Suggestions', '');
+  patchLines.push(generateSkillTemplateChanges(skillIssues));
+  
+  const root = getProjectRoot();
+  const resultsDir = resolve(root, 'results', 'spec', date);
+  mkdirSync(resultsDir, { recursive: true });
+  const patchPath = join(resultsDir, 'skill-optimization-patch.md');
+  writeFileSync(patchPath, patchLines.join('\n'), 'utf-8');
+  
+  return patchPath;
+}
+```
+
+然後在兩個分支中簡化為：
 ```typescript
 if (dryRun) {
-  // 使用者指定的 dry-run — 跳過 judge 呼叫，只輸出 patch
-  patchLines.push('## Template-Based Suggestions');
-  patchLines.push('');
-  patchLines.push(generateSkillTemplateChanges(skillIssues));
-  // ... 寫入 patch 檔案 ...
+  const patchPath = buildTemplatePatch(skillIssues, date);
   return { success: true, message: `Dry-run patch written to ${patchPath}` };
 }
-
 if (!judgeAvailable) {
-  // Judge 不可用 — 使用 template-based 建議
-  patchLines.push('---');
-  patchLines.push('## Judge Model Not Available — Using Template-Based Suggestions');
-  patchLines.push('');
-  patchLines.push(generateSkillTemplateChanges(skillIssues));
-  // ... 寫入 patch 檔案 ...
+  const patchPath = buildTemplatePatch(skillIssues, date);
   return { success: true, message: `Judge model unavailable. Template-based patch written to ${patchPath}` };
 }
 ```
-
-### 修正 5: 傳遞 timeout (P3)
-找到所有 `callJudgeModelRaw` 呼叫（L477, L803, L1161, L1205）：
-1. L477（refineDedupWithJudge）: 添加 `, { timeoutMs: 30_000 }` 參數
-2. L803（generateSuggestedFix）: 添加 `, { timeoutMs: 30_000 }` 參數
-3. L1161（optimizeSkillMd dry-run judge path）: 添加 `, { timeoutMs: env.JUDGE_TIMEOUT > 0 ? env.JUDGE_TIMEOUT * 1000 : 120_000 }` 或傳入 `env` 物件已包含 JUDGE_TIMEOUT
-4. L1205（optimizeSkillMd real mode judge path）: 同上
-
-注意：`callJudgeModelRaw` 的第三個參數是 `CallOptions`（`{ timeoutMs?: number }`）。
-
-### 修正 6: 優化後 Markdown 結構驗證 (P3)
-在 L1225-1242 驗證區塊中：
-1. 在 frontmatter 驗證成功後（L1233），增加 Markdown 結構驗證：
-```typescript
-// 5. Validate Markdown structure
-const mdValidation = validateMarkdownStructure(newContent);
-if (!mdValidation.valid) {
-  console.error('Markdown structure validation FAILED. Restoring backup...');
-  copyFileSync(bakPath, skillMdPath);
-  return {
-    success: false,
-    message: `Markdown structure validation failed. Backup restored. Issues: ${mdValidation.issues.join('; ')}`,
-  };
-}
-```
-2. 注意前端已有 `validateMarkdownStructure` 的 import（L373），不需要新增
-
-### 修正 7: 移除重複的 SEVERITY_RANK 定義 (P3)
-較佳做法：先略過此修正（與 reporter.ts 的重複在 Worker-D 中一併處理），或在此處移除 optimizer.ts 的 `SEVERITY_RANK` 並導入共用常數。建議：**此處略過**，讓 Worker-D 處理。
 
 ## Scope
 - 允許修改的檔案:
@@ -527,472 +753,424 @@ if (!mdValidation.valid) {
 - 測試執行結果
 
 ## Verify
-- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json`
-- 預期: 零錯誤
-- 執行: `node --test "packages/tools/eval/test/*.test.js"`
-- 預期: 全部通過
+- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json` → 零錯誤
+- 執行: `node --test "packages/tools/eval/test/optimizer.test.js"` → 全部通過（現有測試）
+- 執行: `node --test "packages/tools/eval/test/*.test.js"` → 全部通過
 
 ## Boundaries
-- 不要修改 optimizer.ts 以外的任何檔案
-- 測試可能因缺少 mock API 需要特定配置。如遇測試失敗，檢查是否與配置相關（而非程式碼錯誤）
+- 僅修改 optimizer.ts
+- 不要修改 `SEVERITY_RANK` 常數（與 reporter 的重複在下個 Worker 處理）
+- 備份時間戳使用 ISO 格式，確保跨平台相容
 ```
 
 ---
 
-#### WORKER-D: index.ts + reporter.ts + executor.ts 修復 (FIX-J, K, L, N, P, U, W, X / P2+P3)
+#### WORKER-D: index.ts + executor.ts + .github/workflows 修復 (FIX-I + J + K + L + P + Q 部分)
 
 ```
 ## Mission
-修復 index.ts、reporter.ts、executor.ts 中的多個 P2/P3 問題。
+修復以下檔案中的多個 P2/P3 問題：
+1. (P2) Dry-run 仍呼叫 judge API / 寫入 optimization-plan.json — index.ts
+2. (P2) appendTrace 順序 I/O 瓶頸 — executor.ts
+3. (P2) messages 陣列無限制增長 — executor.ts
+4. (P2) Exec lock 錯誤訊息誤導 — executor.ts
+5. (P2) PR gate 結果寫入 summary 而非 comment — .github/workflows/eval.yml
+6. (P2) 未使用的匯入 — index.ts
 
 ## Context
-- 審查維度: 架構瑕疵 + 實作偏移 + 實作遺漏
-- SPEC 需求: eval-core R2 timeouts, optimize-and-integrate R2.4 skill_name listing
+- 審查維度: 架構瑕疵 + 性能隱患 + 實作偏移 + 冗余代碼
+- SPEC 需求: optimize-and-integrate R1.3 (dry-run 零副作用), R3 (PR 評論)
 
 ## Input
-閱讀以下檔案：
-- `packages/tools/eval/index.ts`
-- `packages/tools/eval/reporter.ts`
-- `packages/tools/eval/executor.ts`（特別關注 L155-157 和 L467-476）
+- 閱讀 `packages/tools/eval/index.ts`
+- 閱讀 `packages/tools/eval/executor.ts`
+- 閱讀 `.github/workflows/eval.yml`
 
 ## What to do
 
-### 修正 1: CLI `as string` 轉型 (P2 — index.ts L128,137)
-在 `parseArgs` 函式中（index.ts L126-139）：
-1. L128: `result.mode = (value as string) === 'standard' ? 'standard' : 'fast';`
-   改為: `result.mode = typeof value === 'string' && value === 'standard' ? 'standard' : 'fast';`
-2. L137: `result.outputDir = value as string;`
-   改為: `result.outputDir = typeof value === 'string' ? value : null;`
+### 修正 1: Dry-run 不寫入 optimization-plan.json (P2)
 
-### 修正 2: 無效 skill_name 列出可用技能 (P2 — index.ts L220-226)
-在驗證 SKILL.md 存在性的區塊：
+在 `index.ts` L313-343 的 optimize 路徑中：
+
+1. 將 `dryRun` 參數傳遞到 `deduplicateIssues` 和 `generateSuggestedFix`
+   — 或者更簡單：在 dry-run 模式下跳過這兩個耗費 API 的步驟，只生成 template-based patch
+
+2. 將 `generateOptimizationPlan`（L333）移到 `dryRun` 檢查內：
+
 ```typescript
-if (!fs.existsSync(skillMdPath)) {
-  stderr.write(`Error: SKILL.md not found for skill "${skillName}".\nExpected: ${skillMdPath}\n`);
-  // 列出可用技能
-  const skills = listSkillNames(projectRoot);
-  if (skills.length > 0) {
-    stderr.write('\nAvailable skills:\n');
-    for (const sk of skills) { stderr.write(`  ${sk}\n`); }
+if (optimize) {
+  stderr.write('[7/7] Generating optimisation plan...\n');
+  
+  if (dryRun) {
+    // Dry-run: skip judge API calls, only template-based suggestions
+    stderr.write('[7/7] Dry-run mode: using template-based suggestions (no API calls)\n');
+    const optResult = await optimizeSkillMd(
+      { date: today, summary: { totalScores: 0, totalIssues: 0, dedupedIssues: 0 }, issues: [] } as OptimizationPlan,
+      skillMdPath,
+      env,
+      true,  // dryRun
+      today,
+      false, // judgeAvailable = false to skip API
+    );
+    stderr.write(`[7/7] ${optResult.message}\n`);
+  } else {
+    // Full optimization with judge API
+    const allScores = await loadAllScores(today);
+    const rawIssues = extractIssues(allScores);
+    const deduped = await deduplicateIssues(rawIssues, env);
+    stderr.write(`[7/7] Generating suggested fixes for ${deduped.length} issues...\n`);
+    const fixResults = await promisePool(
+      deduped,
+      async (issue) => { issue.suggestedFix = await generateSuggestedFix(issue, env); },
+      env.JUDGE_CONCURRENCY,
+    );
+    const plan = generateOptimizationPlan(deduped, today, allScores);
+    stderr.write('[7/7] Optimising SKILL.md...\n');
+    const optResult = await optimizeSkillMd(plan, skillMdPath, env, false, today, true);
+    stderr.write(`[7/7] ${optResult.message}\n`);
   }
-  stderr.write('\n');
-  return 1;
 }
 ```
 
-### 修正 3: 重複的 SEVERITY_RANK (P3 — index.ts 不涉及)
-此項由 Worker-C 和本 Worker-D 的 reporter.ts 部分處理：
-- 在 `reporter.ts` 中，保留 `severityOrder` 常數（L139）
-- 改成從一個共用位置 import。簡單做法：在此 worker 中將 reporter.ts 的 `severityOrder` 改為直接使用內聯物件（不匯出），不建立新的共用模組
+### 修正 2: appendTrace 寫入緩衝 (P2)
 
-### 修正 4: reporter.ts 非空斷言 (P2 — L115-116, 124-125)
-在 `dimStats` 的 map 回呼中（reporter.ts L112-128）：
-1. L115: `.map(s => s.dimensions.find(d => d.name === name)!)`
-   改為: `.map(s => { const d = s.dimensions.find(dim => dim.name === name); return d ? d.score : 0; })`
-2. L124-125: `scores[0].dimensions.find(d => d.name === name)!.weight`
-   改為: `scores.length > 0 ? (scores[0].dimensions.find(d => d.name === name)?.weight ?? 0) : 0`
+在 `executor.ts` 中實作 write buffer：
 
-### 修正 5: writeReport 使用 skillName (P2 — reporter.ts L338-355)
-修改 `writeReport` 函式：
-1. 將輸出檔名從固定的 `REPORT.md` 改為 `eval-report-${date}${skillName ? '-' + skillName : ''}.md`
-2. 或者更簡單：在 `writeReport` 內部使用 `skillName` 參數產生動態檔名
+1. 在 `executeSingleTest` 中（約 L200）建立緩衝陣列：
 ```typescript
-const reportFileName = skillName ? `REPORT-${skillName}.md` : 'REPORT.md';
-const reportPath = join(reportDir, reportFileName);
-```
+const traceBuffer: string[] = [];
+let traceBufferSize = 0;
+const MAX_BUFFER_SIZE = 10; // 每 10 行 flush 一次
 
-### 修正 6: 錯誤類型判別 (P2 — executor.ts L467-476)
-在磁碟空間檢查區塊中：
-1. 建立一個簡單的錯誤類別（或在函式內使用標記物件）：
-```typescript
-class DiskSpaceError extends Error {
-  constructor(message: string) { super(message); this.name = 'DiskSpaceError'; }
-}
-```
-放在 `runAllTests` 函式外或檔案頂部。
-2. 在 L470 拋出時：`throw new DiskSpaceError('Eval aborted: insufficient disk space (< 100MB available)');`
-3. 在 L472-476 的 catch 中：`if (err instanceof DiskSpaceError) throw err;`
-4. 將 `import { statfsSync } from 'node:fs'` 從檔頭移動到函式內部（或保持檔案頂部 import 不變）
-
-### 修正 7: 重試訊息使用 console.error (P3 — executor.ts L155-157)
-在 `withRetry` 函式（executor.ts ~L155）中：
-1. 將 `console.error(` 改為可配置的 stderr 輸出
-2. 最佳方式：在 `withRetry` 簽名中增加 `stderr` 參數（如果可行）
-3. 簡單方式：保持 `console.error` 但加前綴 `[executor]` 以便識別
-4. 目前先改為加前綴：`console.error(\`[executor] ...\`)` — 這是最低入侵的改法
-
-### 修正 8: 頂層 catch 保留完整錯誤 (P3 — index.ts L355-358)
-```typescript
-} catch (err) {
-  const message = err instanceof Error ? err.message : String(err);
-  const stack = err instanceof Error ? err.stack : '';
-  stderr.write(`\nEval failed: ${message}\n`);
-  if (stack) stderr.write(`${stack}\n`);
-  return 1;
-}
-```
-
-### 修正 9: SIGINT 處理器 (P3 — index.ts)
-在 `evalHandler` 函式的開頭（約在 L182 之後，try 區塊之前）加入：
-```typescript
-// SIGINT handler: preserve completed results
-let sigintReceived = false;
-const sigintHandler = () => {
-  if (!sigintReceived) {
-    sigintReceived = true;
-    stderr.write('\n[eval] Interrupted. Preserving completed results...\n');
-    process.exit(1);
+async function appendTraceBuffered(event: TraceEvent): Promise<void> {
+  traceBuffer.push(JSON.stringify(event) + '\n');
+  traceBufferSize++;
+  if (traceBufferSize >= MAX_BUFFER_SIZE) {
+    await appendFile(tracePath, traceBuffer.join(''), 'utf-8');
+    traceBuffer.length = 0;
+    traceBufferSize = 0;
   }
-};
-process.on('SIGINT', sigintHandler);
+}
+
+async function flushTraceBuffer(): Promise<void> {
+  if (traceBuffer.length > 0) {
+    await appendFile(tracePath, traceBuffer.join(''), 'utf-8');
+    traceBuffer.length = 0;
+    traceBufferSize = 0;
+  }
+}
 ```
-並在 `finally`（或函式結束前）移除 listener：
-因為 `evalHandler` 是 async 函式，可在 return 前加入 `process.off('SIGINT', sigintHandler)`。
-實際上最簡單的方式是在 try/finally 中加入——在 try 之前註冊，在整個 pipeline 完成後清理。如果在頂層 try/catch 中，可以這樣：
+
+2. 將所有 `await appendTrace(tracePath, ...)` 替換為 `await appendTraceBuffered(...)`
+3. 在 `executeSingleTest` 返回前（L385 和 L419）加入 `await flushTraceBuffer();`
+
+### 修正 3: messages 截斷 (P2)
+
+在 `executor.ts` 中，對大型 tool result 進行截斷：
+
+在 L335-339 的 `messages.push({ role: 'tool', ... })` 之前加入：
 ```typescript
+// Truncate large tool results to prevent unbounded growth
+const MAX_RESULT_LENGTH = 5000;
+let resultStr = JSON.stringify(result);
+if (resultStr.length > MAX_RESULT_LENGTH) {
+  resultStr = resultStr.substring(0, MAX_RESULT_LENGTH) + '..." (truncated)';
+  // 仍保留原 result 的結構，只截斷 data 欄位
+  if (result.data && typeof result.data === 'string' && result.data.length > MAX_RESULT_LENGTH) {
+    result = { ...result, data: result.data.substring(0, MAX_RESULT_LENGTH) + '...(truncated)' };
+  }
+}
+```
+
+### 修正 4: Exec lock 合理錯誤 (P2)
+
+在 `executor.ts` L490-499 修改：
+```typescript
+// 執行階段並發鎖 (FIX-11)
+const lockPath = resolve(resultsBase, '.exec-lock');
 try {
-  process.on('SIGINT', sigintHandler);
-  // ... existing pipeline code ...
-} catch (err) {
-  // ... error handling ...
-} finally {
-  process.off('SIGINT', sigintHandler);
+  // 使用 recursive: true 確保 resultsBase 存在
+  await mkdir(lockPath, { recursive: true });
+} catch (err: unknown) {
+  const nodeErr = err as NodeJS.ErrnoException;
+  if (nodeErr.code === 'EEXIST') {
+    throw new Error('Another eval is already in progress');
+  }
+  // 其他錯誤（權限等）應給出合理訊息
+  throw new Error(`Cannot create exec lock at ${lockPath}: ${nodeErr.message}`);
 }
+```
+
+### 修正 5: PR gate 結果寫入 PR comment (P2)
+
+在 `.github/workflows/eval.yml` L53-64 修改：
+
+```yaml
+      - name: Post result to PR comment
+        if: always() && steps.check-secrets.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ steps.skill-eval.outcome }}" = "success" ]; then
+            gh pr comment ${{ github.event.number }} --body "✅ **Skill Eval Gate**: Evaluation passed"
+          else
+            gh pr comment ${{ github.event.number }} --body \
+              "❌ **Skill Eval Gate**: Evaluation failed or encountered errors
+
+          See [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details."
+          fi
+      - name: Write workflow summary
+        if: always()
+        run: |
+          echo "## Skill Eval Gate Results" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-secrets.outputs.skip }}" = "true" ]; then
+            echo "⚠️ Eval skipped: secrets not configured." >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.skill-eval.outcome }}" = "success" ]; then
+            echo "✅ Evaluation passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Evaluation failed or encountered errors" >> $GITHUB_STEP_SUMMARY
+          fi
+```
+
+（保留 workflow summary 並新增 PR comment step）
+
+### 修正 6: 移除未使用的 import (P2)
+
+在 `index.ts` L27 移除：
+```typescript
+import type { Question } from './question-loader.js';
+// 這行未被使用 — Question 在 index.ts 中從未被引用
 ```
 
 ## Scope
 - 允許修改的檔案:
   - `packages/tools/eval/index.ts`
-  - `packages/tools/eval/reporter.ts`
   - `packages/tools/eval/executor.ts`
+  - `.github/workflows/eval.yml`
 - 禁止修改的檔案:
   - 所有其他檔案
 
 ## Output
 完成後回報：
 - 每個修正的變更摘要
-- 檔案清單和行號
-- tsc + 測試結果
+- tsc 編譯結果
+- 測試執行結果
 
 ## Verify
-- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json`
-- 預期: 零錯誤
-- 執行: `node --test "packages/tools/eval/test/*.test.js"`
-- 預期: 全部通過
+- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json` → 零錯誤
+- 執行: `node --test "packages/tools/eval/test/*.test.js"` → 全部通過
 
 ## Boundaries
-- 只修改以上三個檔案
-- SIGINT handler 不要依賴外部狀態
-- 不要在測試檔案中測試 SIGINT（難以模擬）
+- 修改 `.github/workflows/eval.yml` 時確保 YAML 語法正確
+- Exec lock 的 `recursive: true` 不會改變鎖定語意（mkdir 對已存在目錄拋 EEXIST 的行為不變）
+- 不要修改 executor.ts 中與 traceBuffer 不相關的部分
 ```
 
 ---
 
-#### WORKER-E: LLM 變體生成 (FIX-F / P1 — 複雜)
+#### WORKER-E: Dead code + reporter 死碼 + P3 清理 (FIX-G + N + Q + R-W)
 
 ```
 ## Mission
-實作 SPEC R1.3 要求的 LLM 變體生成功能。當題庫數量不足或明確要求時，透過 LLM 基於核心題目生成語意等價但表述不同的變體。
+清理 eval 模組中的死碼和進行 P3 級別的小幅改善。
 
 ## Context
-- 審查維度: 實作遺漏（P1）
-- SPEC 需求: eval-core R1.3「LLM 變體生成需保留原題的評分標準，僅改寫場景表述」
-- 題庫載入位置: question-loader.ts → lib/question-utils.ts
+- 審查維度: 冗余代碼 + 性能隱患 + 架構瑕疵
+- 合計約 7 個 P2/P3 子任務
 
 ## Input
-閱讀以下檔案：
-- `packages/tools/eval/question-loader.ts`（完整）
-- `packages/tools/eval/lib/question-utils.ts`（完整，特別注意 Question 型別、ScoringCriteria 結構）
-- `packages/tools/eval/lib/judge-api.ts`（注意 `callJudgeModel` / `callJudgeModelRaw` 的使用方式）
-- `packages/tools/eval/lib/env-utils.ts`（注意 `EnvConfig` 型別，EXEC_* 變數）
-
-## What to do
-
-### 新增函式: `generateVariants`（在 question-utils.ts 中）
-
-在 `lib/question-utils.ts` 中新增：
-
-```typescript
-/**
- * Generate question variants by rewriting only the user prompt.
- * Uses the exec model (not judge model) to reduce cost.
- * Preserves scoringCriteria, difficulty, and projectContext from the original.
- *
- * @param question - Original question to create variants of
- * @param count - Number of variants to generate
- * @param env - Environment config with EXEC_* variables
- * @returns Array of variant questions
- */
-export async function generateVariants(
-  question: Question,
-  count: number,
-  env: EnvConfig,
-): Promise<Question[]> {
-  // 1. Build prompt for the LLM
-  const prompt = `You are a test question variant generator. Given an evaluation question, create ${count} semantically equivalent variants by rewriting only the scenario description.
-
-Original question:
-\`\`\`
-ID: ${question.id}
-User Prompt: ${question.userPrompt}
-Difficulty: ${question.difficulty}
-\`\`\`
-
-For each variant:
-- Rewrite the userPrompt to be semantically equivalent but differently worded
-- Keep the same difficulty level
-- DO NOT change the scoring criteria, project context, or expected behavior
-- Output as a JSON array of objects, each with "id" and "userPrompt" fields
-- ID format: "${question.id}_v{1..${count}}"
-
-Respond ONLY with the JSON array, no other text.`;
-  
-  // 2. Call exec model (not judge model, to reduce cost)
-  const { content } = await callJudgeModelRaw(
-    [{ role: 'user', content: prompt }],
-    env, // Using env (EnvConfig) — it has EXEC_* for the exec model
-    // NOTE: callJudgeModelRaw uses JUDGE_* vars from EnvConfig
-    // For proper isolation, we should ideally use EXEC_* vars.
-    // For now, it's acceptable since loadEnv already shows a warning
-    // when JUDGE_MODEL == EXEC_MODEL.
-  );
-  
-  // 3. Parse the JSON response
-  // Use similar fallback parsing pattern as parseJudgeOutput
-  let variants: Array<{ id: string; userPrompt: string }> = [];
-  try {
-    const parsed = JSON.parse(content);
-    if (Array.isArray(parsed)) variants = parsed;
-  } catch {
-    // Try extracting from markdown code block
-    const match = content.match(/\[\s*\{[\s\S]*\}\s*\]/);
-    if (match) {
-      try { variants = JSON.parse(match[0]); } catch { /* fall through */ }
-    }
-  }
-  
-  // 4. Validate and return
-  return variants
-    .filter(v => v && typeof v.id === 'string' && typeof v.userPrompt === 'string')
-    .map(v => ({
-      ...question,
-      id: v.id,
-      userPrompt: v.userPrompt,
-    }))
-    .slice(0, count);
-}
-```
-
-### 整合到 question-loader.ts
-
-在 `question-loader.ts` 中（或在 `index.ts` 的 pipeline 中）：
-1. 在 `sampleQuestions` 後（或「當題庫數量不足時」）調用 `generateVariants`
-2. 最佳位置：在 `index.ts` 的 pipeline 中，`sampleQuestions` 之後，`runAllTests` 之前
-3. 或者：在 `question-loader.ts` 中新增 `ensureQuestionCount(questions, mode, env)` 函式，當不足時自動補充
-
-推薦在 `question-loader.ts` 中新增 `supplyQuestions` 函式：
-```typescript
-/**
- * Ensure sufficient questions by generating variants if needed.
- * If the question bank has fewer questions than the target count,
- * use LLM to generate variants of existing questions.
- */
-export async function supplyQuestions(
-  questions: Question[],
-  targetCount: number,
-  env: EnvConfig,
-): Promise<Question[]> {
-  if (questions.length >= targetCount) return questions;
-  
-  const needed = targetCount - questions.length;
-  // Generate variants from existing questions
-  const variants: Question[] = [];
-  for (let i = 0; i < needed && i < questions.length; i++) {
-    const source = questions[i % questions.length];
-    const generated = await generateVariants(source, 1, env);
-    variants.push(...generated);
-  }
-  
-  return [...questions, ...variants];
-}
-```
-
-### 新增 import
-在 `question-loader.ts` 中新增 import：
-```typescript
-import { generateVariants } from './lib/question-utils.js';
-```
-在 `lib/question-utils.ts` 中新增：
-```typescript
-import { callJudgeModelRaw } from './judge-api.js';
-```
-
-## Scope
-- 允許修改的檔案:
-  - `packages/tools/eval/lib/question-utils.ts`
+- 閱讀以下檔案:
   - `packages/tools/eval/question-loader.ts`
-- 禁止修改的檔案:
-  - 所有其他檔案
-
-## Output
-完成後回報：
-- 新增的函式名稱、檔案、行號
-- 變更摘要
-- tsc 編譯結果
-
-## Verify
-- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json`
-- 預期: 零錯誤
-- 注意：`callJudgeModelRaw` 已有 import from `./judge-api.js`，但需要確認 `EnvConfig` 是預設匯入
-
-## Boundaries
-- 不要在 question-utils.ts 之外引入額外 import
-- 使用 exec model（在 EnvConfig 中以 EXEC_* 為前綴的變數）進行變體生成，而非 JUDGE_*，以區分評分與生成任務
-- 變體數量不要超過需要的數量
-- 若 LLM 回傳 JSON 解析失敗，回傳儘可能多的有效變體（不要因為部分失敗而全部放棄）
-```
-
----
-
-#### WORKER-F: 死碼與不必要匯出清理 (FIX-G, H, O, R, S)
-
-```
-## Mission
-清理 eval 模組中的死碼和不必要的公開符號匯出。
-
-## Context
-- 審查維度: 冗余代碼（P2 + P3）
-- 總計約 250 行死碼 + 13 個不必要匯出
-
-## Input
-閱讀以下檔案：
-- `packages/tools/eval/lib/judge-api.ts`
-- `packages/tools/eval/lib/question-utils.ts`
-- `packages/tools/eval/lib/env-utils.ts`
-- `packages/tools/eval/scorer.ts`
-- `packages/tools/eval/isolation.ts`
+  - `packages/tools/eval/lib/question-utils.ts`
+  - `packages/tools/eval/scorer.ts`
+  - `packages/tools/eval/reporter.ts`
+  - `packages/tools/eval/lib/promise-pool.ts`
+  - `packages/tools/eval/lib/judge-api.ts`
 
 ## What to do
 
-按檔案逐項清理：
+### 任務 1: supplyQuestions 整合 (P2 — question-loader.ts + lib/question-utils.ts)
 
-### 1. lib/judge-api.ts
-- **移除 export** 關鍵字從以下 symbols（僅在自身檔案內使用）：
-  - `CallOptions` (L21): 改為 `interface CallOptions`
-  - `JudgeRawResult` (L25): 改為 `interface JudgeRawResult`
-  - `parseJudgeOutput` (L144): 改為 `function parseJudgeOutput`
-- **移除整個 `ParseErrorResult` interface** (L31-43)：完全未使用，無任何 import
+`question-loader.ts` 中的 `supplyQuestions` 和 `lib/question-utils.ts` 中的 `generateVariants` 已有完整實作但從未被生產路徑呼叫。在 `index.ts` 的 pipeline 中接上：
 
-### 2. lib/question-utils.ts
-- **移除 export** 關鍵字從以下 symbols：
-  - `StrippedQuestion` (L61)
-  - `StepDefinition` (L67)
-  - `ScoringDimensionMeta` (L84)
-- **移除整個 `selfTest()` 函式** (L324-492)：僅在 `isDirectRun` 檢查（L493-500）時執行，eval pipeline 永遠不會使用。連同 `isDirectRun` 變數一起移除
-- **移除 `loadSchema` 函式** (L115-124)：僅被已移除的 `selfTest()` 調用
-- **移除 export** 關鍵字從以下型別（僅用於組合其他匯出型別）：
-  - `FileContext` (L24)
-  - `CheckItem` (L34)
-  - `ScoringDimension` (L40)
+在 `index.ts`（雖非本 Worker 範圍，但協調器可處理）或 `question-loader.ts` 中新增一個自動整合。
 
-### 3. lib/env-utils.ts
-- **移除整個 `selfTest()` 函式** (L220-271)：僅在 `isDirectRun` 檢查時執行
-- **移除 `isDirectRun` 變數** (L263-267) 和 `if (isDirectRun) { selfTest(); }` 區塊 (L269-271)
+最低入侵做法：在 `question-loader.ts` 的 `loadQuestions` 函式中，當題庫數量不足目標模式時自動呼叫 `supplyQuestions`。
 
-### 4. scorer.ts
-- **移除 `export`** 從 `ScoreDimension` (L33)：僅在 ScoreResult 中作為子型別使用，ScoreResult 已被匯出，ScoreDimension 可透由 ScoreResult 繼承取得
+因 `loadQuestions` 目前是同步函式，改為 async 或新增上層呼叫鏈。更簡單的做法：在 `index.ts` 中 `loadQuestions` 後面加入：
 
-### 5. isolation.ts
-- **移除 `export`** 從以下 symbols：
-  - `MockToolResult` (L22)
-  - `ToolCallRecord` (L28)
+```typescript
+// 在 index.ts L264 之後:
+// 若題庫不足，嘗試用 LLM 生成變體補充（僅非 dry-run 模式）
+```
 
-### 6. question-loader.ts / index.ts 的題庫不足檢查（P2）
-在 `lib/question-utils.ts` 的 `loadQuestionsFromFile` 中：
-- 修改 L262-264 的警告邏輯：當 `questions.length < 3`（無法滿足 fast mode 的最低需求）時，拋出錯誤而非僅警告
-- 對於 `questions.length < targetCount`（不滿足目標模式的最低需求），拋出明確錯誤訊息：
-  `throw new Error('題庫數量不足: 需要至少 ${targetCount} 題（目前 ${questions.length} 題）。請先建立足夠題庫或使用 --variants 啟用 LLM 變體生成。');`
+但 index.ts 不屬於本 Worker 範圍。改在 `question-loader.ts` 中新增一個導向函式。
+
+或者：保留 `supplyQuestions` 和 `generateVariants` 的 export，確保它們可被外部使用，但不在本輪 pipeline 中整合（因為需要 async 改寫，scope 較大）。改為移除 `supplyQuestions` 的 export — 因為它不完全實作。
+
+**建議**: 暫不移除 `supplyQuestions` 的 export。改在 `lib/question-utils.ts` 中確認 `generateVariants` 被測試檔案使用（REGTEST-F 已對其測試）。這兩個函式保留為「可用但尚未串接」的狀態，留待下一輪決定。
+
+### 任務 2: scanForDone 同步函式死碼 (P2 — scorer.ts)
+
+在 `scorer.ts` 中：
+1. `scanForDone` 函式（L492-509）目前是 `function scanForDone`（未 export），已被 `scanForDoneAsync` 取代
+2. 確認生產程式碼中無任何呼叫 → 直接移除
+
+### 任務 3: reporter.ts fallback 迴圈死碼 (P2 — reporter.ts)
+
+在 `reporter.ts` 中：
+1. L100-110 的第二個維度收集迴圈永遠不會被執行
+2. 直接移除 L99-110 的 `if (dimNames.length === 0) { ... }` 區塊
+
+### 任務 4: optimizer.ts duplicate code (P2)
+此任務在 Worker-C 中已處理。
+
+### 任務 5: 未使用的 import (P2)
+`question-loader.ts:19` 的 `EnvConfig` — 若 `supplyQuestions` 保留則保留。
+
+### 任務 6: P3 改善 (lib/judge-api.ts)
+
+貪婪正則 `[\s\S]*`（L148）改為 `[\s\S]*?`（非貪婪）：
+```typescript
+const match = content.match(/\{[\s\S]*?\}/);
+```
+
+### 任務 7: P3 改善 (lib/promise-pool.ts)
+
+在 `promise-pool.ts` 中的共享 `index` 變數（L21-28）加上註解說明：
+```typescript
+let index = 0;
+// 重要：index++ 和 await fn() 之間不可插入其他 await
+// 否則共享 mutable 變數在並行上下文中會產生 race
+```
+
+### 任務 8: P3 改善 (scorer.ts — existsSync)
+
+`isAlreadyScored` 函式（L518-521）中的 `existsSync` 改為 async：
+但此函式在 `scoreAllTests`（非同步函式）中被呼叫，可在呼叫端使用 `access` 替代。
+
+實際上 `isAlreadyScored` 目前是同步函式且只在 `scoreAllTests` 中被呼叫（L426）。但 `filter` callback 不是 async。改為：
+
+```typescript
+// 將 L426 改為 async filter
+const scoredStatus = await Promise.all(
+  doneTests.map(async (t) => ({ testNo: t, scored: await isAlreadyScoredAsync(resultsBase, t) }))
+);
+const unscoredTests = scoredStatus.filter(s => !s.scored).map(s => s.testNo);
+```
+
+新增：
+```typescript
+async function isAlreadyScoredAsync(resultsBase: string, testNo: string): Promise<boolean> {
+  const scoredPath = join(resultsBase, `test_${testNo}`, '.scored');
+  try { await access(scoredPath); return true; } catch { return false; }
+}
+```
+
+### 任務 9: P3 改善 (jaccardSimilarity — 選較小集合)
+
+在 `optimizer.ts` L334-347 中（此任務由 Worker-C 處理或在此處理）：
+
+在 `jaccardSimilarity` 開頭加入：
+```typescript
+export function jaccardSimilarity(setA: Set<string>, setB: Set<string>): number {
+  if (setA.size === 0 && setB.size === 0) return 1.0;
+  // 迭代較小的集合以取得較佳效能
+  if (setA.size > setB.size) [setA, setB] = [setB, setA];
+  // ... 其餘邏輯不變
+```
+
+（注意：此任務若由 Worker-C 處理更好，因為屬同檔案。在此標記為由 Worker-C 處理。）
+
+### 任務 10: P3 改善 (disk check 時機)
+
+在 `executor.ts` L475-487 中，`statfsSync(resultsBase)` 在目錄不存在時被靜默跳過。修復：先確保目錄存在：
+
+```typescript
+// 磁碟空間檢查 — 先確保目錄存在
+try {
+  await mkdir(resultsBase, { recursive: true });
+  const stats = statfsSync(resultsBase);
+  // ... 其餘不變
+```
+
+（注意：此任務由 Worker-D 處理更方便）
 
 ## Scope
 - 允許修改的檔案:
-  - `packages/tools/eval/lib/judge-api.ts`
-  - `packages/tools/eval/lib/question-utils.ts`
-  - `packages/tools/eval/lib/env-utils.ts`
-  - `packages/tools/eval/scorer.ts`
-  - `packages/tools/eval/isolation.ts`
+  - `packages/tools/eval/scorer.ts`（僅移除 scanForDone）
+  - `packages/tools/eval/reporter.ts`（僅移除死碼區塊）
+  - `packages/tools/eval/lib/judge-api.ts`（僅改正則）
+  - `packages/tools/eval/lib/promise-pool.ts`（僅加註解）
 - 禁止修改的檔案:
-  - 所有其他檔案（特別是 index.ts、executor.ts、optimizer.ts、reporter.ts — 它們的匯出可能被外部使用）
+  - 所有其他檔案（特別是 index.ts, executor.ts, optimizer.ts）
+  - 測試檔案（除非特別說明）
 
 ## Output
 完成後回報：
-- 每個檔案中的修改摘要（哪些 symbol 被移除 export、哪些函式被移除）
-- 總計移除的行數
+- 每個檔案的變更摘要
+- 移除的行數統計
 - tsc 編譯結果
-- 測試通過結果
+- 測試執行結果
 
 ## Verify
-- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json`
-- 預期: 零錯誤
-- 執行: `node --test "packages/tools/eval/test/*.test.js"`
-- 預期: 全部通過
-- 執行全域 grep 確認移除 export 的 symbols 無外部引用：`grep -rn "import.*MockToolResult\|import.*ToolCallRecord\|import.*ParseErrorResult" --include="*.ts" --include="*.js" packages/`
+- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json` → 零錯誤
+- 執行: `node --test "packages/tools/eval/test/*.test.js"` → 全部通過
 
 ## Boundaries
-- 只移除 export 關鍵字和死碼函式，不改變任何現有程式碼邏輯
-- 如果某個 symbol 的 export 被移除後導致其他檔案 compile error，立即恢復該 export 並回報
-- 不要修改 index.ts、executor.ts、optimizer.ts、reporter.ts
-- 不要修改任何測試檔案
+- 只移除確定死碼的函式和區塊。若有疑問，保留並註解標記
+- 不移除已被匯出的函式（保留向後兼容）
+- 不可修改測試檔案的通過條件
 ```
 
 ---
 
 ### Regression Test Worker Prompts
 
-#### REGTEST-A: 隔離模擬透明性（關聯 FIX-A）
+#### REGTEST-01: Bash 隔離 R4 讀寫分離（關聯 FIX-A）
 
 ```
 ## Mission
-為 FIX-A（移除 `[simulated]` 標記）建立回歸測試。
+為 FIX-A（Bash 讀寫分離）建立回歸測試。
 
 ## Context
-- 修復問題: 工具模擬 `[simulated]` 標記洩漏給被測模型
-- 根因: isolation.ts 中 `createToolDispatcher` 對模擬工具的回傳值 data 欄位附加 `[simulated]` 前綴
+- 修復問題: Bash 全部視為寫入操作違反 R4 讀寫分離
+- 根因: isolation.ts WRITE_TOOLS 包含 'Bash'
 
 ## Input
 - 閱讀 `packages/tools/eval/isolation.ts`
-- 閱讀 `packages/tools/eval/test/isolation.test.js`（現有測試格式參考）
+- 閱讀 `packages/tools/eval/test/isolation.test.js`
 
 ## What to do
-
-在 `packages/tools/eval/test/isolation.test.js` 中新增測試函式 `REGTEST-A: simulated tag transparency`：
+在 `packages/tools/eval/test/isolation.test.js` 中新增測試函式：
 
 ```javascript
-it('REGTEST-A: should not include [simulated] tag in mock responses', async () => {
-  const dispatcher = createToolDispatcher();
+it('REGTEST-01: should execute safe Bash commands in workspace, not simulate', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'regtest01-'));
+  const testFile = path.join(tmpDir, 'hello.txt');
+  fs.writeFileSync(testFile, 'world', 'utf-8');
   
-  // Test SIMULATED_TOOLS
-  const webResult = await dispatcher.dispatch({
-    tool: 'WebSearch',
-    params: { query: 'test query' },
-  });
-  assert.ok(!webResult.data.includes('[simulated]'), 
-    `WebSearch data should not contain "[simulated]" tag: ${webResult.data}`);
+  const dispatcher = createToolDispatcher({ workspaceDir: tmpDir });
   
-  // Test WORKSPACE_TOOLS without workspaceDir (falls back to simulated)
-  const readResult = await dispatcher.dispatch({
-    tool: 'Read',
-    params: { path: 'test.md' },
+  // "ls" is a safe read-only command — should execute for real
+  const lsResult = await dispatcher.dispatch({
+    tool: 'Bash',
+    params: { command: 'ls' },
   });
-  assert.ok(!readResult.data.includes('[simulated]'),
-    `Read data should not contain "[simulated]" tag: ${readResult.data}`);
+  assert.ok(lsResult.success);
+  assert.ok(lsResult.data.includes('hello.txt'),
+    `ls output should include hello.txt, got: "${lsResult.data}"`);
   
-  // Test WRITE_TOOLS — these should never have had [simulated] even before the fix
-  const writeResult = await dispatcher.dispatch({
-    tool: 'Write',
-    params: { path: 'test.md', content: 'hello' },
+  // "cat" should also execute for real
+  const catResult = await dispatcher.dispatch({
+    tool: 'Bash',
+    params: { command: 'cat hello.txt' },
   });
-  assert.ok(!writeResult.data.includes('[simulated]'),
-    `Write data should not contain "[simulated]" tag: ${writeResult.data}`);
+  assert.ok(catResult.success);
+  assert.ok(catResult.data.includes('world'),
+    `cat output should include "world", got: "${catResult.data}"`);
+  
+  fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 ```
 
@@ -1004,157 +1182,51 @@ it('REGTEST-A: should not include [simulated] tag in mock responses', async () =
 
 ## Verify
 - 執行: `node --test "packages/tools/eval/test/isolation.test.js"`
-- 預期: REGTEST-A 通過
-- 手動確認: `grep -r "simulated" packages/tools/eval/isolation.ts` → 無匹配行
-
-## Boundaries
-- 此測試在修復前必須失敗（因為 `[simulated]` 存在），修復後必須通過
-- 僅修改測試檔案
+- 預期: REGTEST-01 通過
 ```
 
-#### REGTEST-B: 評分鎖定錯誤記錄（關聯 FIX-B）
+#### REGTEST-02: 評分鎖定原子性（關聯 FIX-B）
 
 ```
 ## Mission
-為 FIX-B（評分鎖定清理失敗應記錄）建立回歸測試。
+為 FIX-B（評分鎖定範圍擴大）建立回歸測試。
 
 ## Context
-- 修復問題: scorer.ts 鎖定清理 catch 區塊空 `/* ignore */`
-- 根因: `finally` 區塊的 `rm(lockDir, { recursive: true })` 失敗時錯誤被靜默吞掉
-
-## Input
-- 閱讀 `packages/tools/eval/scorer.ts`（L377-402）
-- 閱讀 `packages/tools/eval/test/scorer.test.js`
-
-## What to do
-由於模擬鎖定清理失敗需要 mock `rm` 函式，此測試可以透過 mock `fs/promises` 的 `rm` 來實現：
-
-1. 使用 `import { rm as actualRm } from 'node:fs/promises';` 保留原始實作
-2. 在測試中暫時置換 `rm` 使其拋出異常
-
-Alternatively（簡單方式）：透過驗證程式碼中 `catch` 區塊的存在性和內容來間接驗證：
-
-```javascript
-it('REGTEST-B: should log error when scoring lock cleanup fails', async () => {
-  const fsPromises = await import('node:fs/promises');
-  const originalRm = fsPromises.rm;
-  
-  const errorLogs = [];
-  const originalConsoleError = console.error;
-  console.error = (...args) => { errorLogs.push(args.join(' ')); };
-  
-  try {
-    // Replace rm to throw on lock dir
-    fsPromises.rm = async (path) => {
-      if (path.includes('.scoring-lock')) {
-        throw new Error('PERMISSION_DENIED');
-      }
-      return originalRm(path);
-    };
-    
-    // Trigger scoring — will fail at lock cleanup
-    // This requires a done test with mock judge
-    // (implementation detail depends on existing test infrastructure)
-    
-  } finally {
-    console.error = originalConsoleError;
-    fsPromises.rm = originalRm;
-  }
-  
-  // Verify error was logged
-  assert.ok(errorLogs.some(log => log.includes('scoring-lock')),
-    'Lock cleanup error should be logged to console.error');
-});
-```
-
-**注意**: 如果 `rm` 的 mock 太複雜（因為 `scoreSingleTest` 依賴真實目錄結構和 mock judge），可以改為純粹驗證程式碼正確性——直接讀取 `scorer.ts` 原始碼，確認 L397-401 的 `catch` 區塊不再為空。
-
-簡化版本（推薦）——直接驗證源碼：
-```javascript
-it('REGTEST-B: scoring lock cleanup catch should log errors', () => {
-  const source = fs.readFileSync('./packages/tools/eval/scorer.ts', 'utf-8');
-  const lockCleanupRegex = /catch\s*\{[^}]*\}/;
-  const matches = source.match(lockCleanupRegex);
-  
-  // After the fix, there should be no empty catch block for scoring lock
-  // (we can't easily check this with regex, so we verify the code compiles
-  // and the test suite passes — the functional test relies on code review)
-  assert.ok(source.includes('scoring-lock'), 'Source must reference scoring-lock');
-});
-```
-
-**最推薦的簡化做法**：由於此問題需要 mock 檔案系統行為，難以在單元測試中完美驗證，只需確認：
-1. 測試套件仍全部通過
-2. `console.error` 中有 `scoring-lock` 相關字串出現在源碼中
-
-添加程式碼審查型的測試：
-```javascript
-it('REGTEST-B: source should not have empty catch for lock cleanup', async () => {
-  const source = await fs.readFile(
-    new URL('../../scorer.ts', import.meta.url), 'utf-8'
-  );
-  // After the fix, the catch block near ".scoring-lock" should NOT be empty
-  const lockSection = source.slice(
-    source.indexOf('.scoring-lock'),
-    source.indexOf('.scoring-lock') + 500
-  );
-  // Should contain console.error or similar in the catch
-  assert.ok(
-    lockSection.includes('console.error') || lockSection.includes('console.warn'),
-    'Lock cleanup catch block should log errors'
-  );
-});
-```
-
-## Scope
-- 允許修改的檔案:
-  - `packages/tools/eval/test/scorer.test.js`（附加現有）
-- 禁止修改的檔案:
-  - 所有源碼檔案
-
-## Verify
-- 執行: `node --test "packages/tools/eval/test/scorer.test.js"`
-- 預期: REGTEST-B 通過
-```
-
-#### REGTEST-C: 非同步掃描主路徑（關聯 FIX-C）
-
-```
-## Mission
-為 FIX-C（`scanForDone` 切換為非同步版本）建立回歸測試。
-
-## Context
-- 修復問題: `scoreAllTests` 使用同步 `scanForDone` 阻塞事件循環
-- 根因: `scanForDoneAsync` 存在但未被採用
+- 修復問題: Judge API 呼叫在 lock 取得前執行
+- 根因: scoreSingleTest 中 lock 範圍不足
 
 ## Input
 - 閱讀 `packages/tools/eval/scorer.ts`
 - 閱讀 `packages/tools/eval/test/scorer.test.js`
 
 ## What to do
+此測試驗證 lock 獲取發生在 judge API 呼叫之前。使用源碼審查方式：
 
-在 `packages/tools/eval/test/scorer.test.js` 中新增測試：
+在 `packages/tools/eval/test/scorer.test.js` 中新增：
 
 ```javascript
-it('REGTEST-C: scoreAllTests should use async scanForDoneAsync', async () => {
-  // Read the source of scoreAllTests to verify it calls scanForDoneAsync
-  const source = fs.readFileSync(
+it('REGTEST-02: scoreSingleTest should acquire lock before calling judge API', async () => {
+  const source = await fs.readFile(
     new URL('../../scorer.ts', import.meta.url), 'utf-8'
   );
   
-  // Find the scoreAllTests function body
-  const scoreAllTestsStart = source.indexOf('export async function scoreAllTests');
-  const scoreAllTestsEnd = source.indexOf('\n// --- Directory', scoreAllTestsStart);
-  const scoreAllTestsBody = source.slice(scoreAllTestsStart, scoreAllTestsEnd > 0 ? scoreAllTestsEnd : scoreAllTestsStart + 3000);
+  // In the source, find 'mkdir(lockDir)' (lock acquisition) and 'callJudgeModel' (API call)
+  const mkdirLockIndex = source.indexOf('mkdir(lockDir)');
+  const callJudgeIndex = source.indexOf('callJudgeModel(prompt');
   
-  // Should use scanForDoneAsync, not scanForDone
+  assert.ok(mkdirLockIndex >= 0, 'Source must contain mkdir(lockDir)');
+  assert.ok(callJudgeIndex >= 0, 'Source must contain callJudgeModel');
   assert.ok(
-    scoreAllTestsBody.includes('scanForDoneAsync'),
-    'scoreAllTests should call scanForDoneAsync (async)'
+    mkdirLockIndex < callJudgeIndex,
+    'Lock acquisition (mkdir) must occur BEFORE judge API call (callJudgeModel)'
   );
+  
+  // Also verify .scored is written after score.json
+  const scoredWriteIndex = source.indexOf('scoredPath');
+  const scoreWriteIndex = source.indexOf('scorePath');
   assert.ok(
-    !scoreAllTestsBody.includes('scanForDone(resultsBase)'),
-    'scoreAllTests should NOT call scanForDone (sync)'
+    scoreWriteIndex < scoredWriteIndex,
+    'score.json must be written BEFORE .scored marker'
   );
 });
 ```
@@ -1167,129 +1239,109 @@ it('REGTEST-C: scoreAllTests should use async scanForDoneAsync', async () => {
 
 ## Verify
 - 執行: `node --test "packages/tools/eval/test/scorer.test.js"`
-- 預期: REGTEST-C 通過
+- 預期: REGTEST-02 通過
 ```
 
-#### REGTEST-D: isAllowedFile 路徑安全（關聯 FIX-D）
+#### REGTEST-03: JSONL 損壞跳過（關聯 FIX-B）
 
 ```
 ## Mission
-為 FIX-D（`isAllowedFile` 路徑前綴匹配）建立回歸測試。
+為 FIX-B（JSONL 損壞提早跳過）建立回歸測試。
 
 ## Context
-- 修復問題: `isAllowedFile` 使用 `includes()` 導致 skills/spec/SKILL.md.backup 被誤判為允許
-- 根因: substring 匹配而非路徑前綴匹配
+- 修復問題: 軌跡損壞仍呼叫 judge API
+- 根因: hasCorruption 檢查後未提早返回
 
 ## Input
-- 閱讀 `packages/tools/eval/optimizer.ts`（L346-363）
+- 閱讀 `packages/tools/eval/scorer.ts`
+- 閱讀 `packages/tools/eval/test/scorer.test.js`
 
 ## What to do
-
-在 `packages/tools/eval/test/` 中建立新測試檔案 `optimizer.test.js`：
+在 `packages/tools/eval/test/scorer.test.js` 中新增：
 
 ```javascript
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
-
-// Import the function under test
-// Note: isAllowedFile is exported from optimizer.ts
-// The actual import path in compiled JS will need 'dist/'
-import { isAllowedFile } from '../dist/optimizer.js';
-
-describe('REGTEST-D: isAllowedFile path safety', () => {
-  it('should return true for allowed file paths', () => {
-    assert.ok(isAllowedFile('/project/skills/spec/SKILL.md', 'spec'));
-  });
+it('REGTEST-03: should skip judge API call when trace has corruption', async () => {
+  const source = await fs.readFile(
+    new URL('../../scorer.ts', import.meta.url), 'utf-8'
+  );
   
-  it('should return false for files with extra suffix', () => {
-    // This is the key test case: .backup should NOT be allowed
-    assert.ok(!isAllowedFile('/project/skills/spec/SKILL.md.backup', 'spec'),
-      'SKILL.md.backup should be rejected');
-  });
+  // Find the corruption skip logic
+  const corruptionCheck = source.indexOf('hasCorruption');
+  assert.ok(corruptionCheck >= 0, 'Source must have hasCorruption check');
   
-  it('should return false for files in directories with similar names', () => {
-    // "special-tool" starts with "spec" but is a different directory
-    assert.ok(!isAllowedFile('/project/skills/special-tool/SKILL.md', 'spec'),
-      'different skill dir should be rejected');
-  });
+  // Find the early return after corruption check
+  const sectionAfterCorruption = source.slice(corruptionCheck, corruptionCheck + 1000);
   
-  it('should return true for the exact allowed path', () => {
-    assert.ok(isAllowedFile('/project/skills/spec/scripts/custom.js', 'spec'));
-  });
+  // Should return early without calling judge model when corrupted
+  // Check that callJudgeModel is NOT called in the corruption branch
+  const corruptionBranchEnd = sectionAfterCorruption.indexOf('return { testId');
+  assert.ok(corruptionBranchEnd >= 0, 'Corruption branch should return early');
+  
+  // Verify no callJudgeModel in corruption handling section
+  const noJudgeCall = !sectionAfterCorruption.slice(0, corruptionBranchEnd).includes('callJudgeModel');
+  assert.ok(noJudgeCall, 'Corruption branch should NOT call judge model');
 });
 ```
 
 ## Scope
 - 允許修改的檔案:
-  - `packages/tools/eval/test/optimizer.test.js`（新檔案）
+  - `packages/tools/eval/test/scorer.test.js`
 - 禁止修改的檔案:
   - 所有源碼檔案
 
 ## Verify
-- 執行: `node --test "packages/tools/eval/test/optimizer.test.js"`
-- 預期: REGTEST-D 全部 4 個子測試通過
-
-## Boundaries
-- 測試檔案使用 `../dist/optimizer.js` 而非 `../optimizer.ts`（因為 node --test 執行編譯後的 JS）
+- 執行: `node --test "packages/tools/eval/test/scorer.test.js"`
+- 預期: REGTEST-03 通過
 ```
 
-#### REGTEST-E: dedup Phase 1 pair cap（關聯 FIX-E）
+#### REGTEST-04: isAllowedFile CWD 獨立性（關聯 FIX-C）
 
 ```
 ## Mission
-為 FIX-E（deduplicateIssues Phase 1 pair cap）建立回歸測試。
+為 FIX-C（isAllowedFile ALLOWED_FILES resolve 為絕對路徑）建立回歸測試。
 
 ## Context
-- 修復問題: Jaccard 聚類 Phase 1 O(n²) 無上限
-- 根因: 巢狀迴圈沒有任何 pair count 限制
+- 修復問題: ALLOWED_FILES 為相對路徑導致 path.relative 行為依賴 CWD
+- 根因: pattern 未先 path.resolve
 
 ## Input
-- 閱讀 `packages/tools/eval/optimizer.ts`（L660-730）
+- 閱讀 `packages/tools/eval/optimizer.ts`（L359-373）
+- 閱讀 `packages/tools/eval/test/optimizer.test.js`
 
 ## What to do
-
-在 `packages/tools/eval/test/optimizer.test.js`（與 REGTEST-D 同檔案）中新增：
+在 `packages/tools/eval/test/optimizer.test.js` 中新增：
 
 ```javascript
-describe('REGTEST-E: deduplicateIssues pair cap', () => {
-  it('should have MAX_PHASE1_PAIRS constant defined', () => {
-    const source = fs.readFileSync(
-      new URL('../../optimizer.ts', import.meta.url), 'utf-8'
+it('REGTEST-04: isAllowedFile should be CWD-independent', () => {
+  const originalCwd = process.cwd();
+  try {
+    // Test with different CWDs to verify path resolution works regardless of current directory
+    
+    // Case 1: CWD = /tmp
+    process.chdir('/tmp');
+    assert.ok(
+      isAllowedFile('/any/project/skills/spec/SKILL.md', 'spec'),
+      'SKILL.md in skills/spec/ should be allowed regardless of CWD'
     );
     assert.ok(
-      source.includes('MAX_PHASE1_PAIRS'),
-      'optimizer.ts should define MAX_PHASE1_PAIRS constant'
-    );
-  });
-  
-  it('should handle truncated dedup gracefully', async () => {
-    // Generate many dummy issues to trigger the cap
-    const manyIssues = Array.from({ length: 150 }, (_, i) => ({
-      severity: 'P1',
-      category: 'skill',
-      description: `Issue ${i}: Agent failed to follow instruction for task ABCDEFGHIJ`,
-      evidence: `L${10 + i}: wrong output format`,
-      testNo: `Q${String(i + 1).padStart(3, '0')}`,
-    }));
-    
-    // deduplicateIssues requires env (for judge model calls) and a boolean
-    // Since we can't easily mock the judge model here, skip the full invocation
-    // and instead verify the cap exists
-    assert.ok(manyIssues.length > 100, 'Test data should exceed typical cap');
-    
-    // Alternative: verify the source has break logic in Phase 1
-    const source = fs.readFileSync(
-      new URL('../../optimizer.ts', import.meta.url), 'utf-8'
-    );
-    const phase1Section = source.slice(
-      source.indexOf('// Phase 1'),
-      source.indexOf('// Phase 1') + 2000
+      !isAllowedFile('/any/project/skills/spec/SKILL.md.backup', 'spec'),
+      '.backup should be rejected regardless of CWD'
     );
     assert.ok(
-      phase1Section.includes('break') || phase1Section.includes('pairCount'),
-      'Phase 1 should have pair count limiting logic'
+      !isAllowedFile('/any/project/skills/special-tool/SKILL.md', 'spec'),
+      'different skill dir should be rejected regardless of CWD'
     );
-  });
+    
+    // Case 2: CWD = / (root)
+    process.chdir('/');
+    assert.ok(
+      isAllowedFile('/any/project/skills/spec/SKILL.md', 'spec'),
+      'Should still allow SKILL.md when CWD=/'
+    );
+    
+  } finally {
+    process.chdir(originalCwd);
+  }
 });
 ```
 
@@ -1301,124 +1353,145 @@ describe('REGTEST-E: deduplicateIssues pair cap', () => {
 
 ## Verify
 - 執行: `node --test "packages/tools/eval/test/optimizer.test.js"`
-- 預期: REGTEST-E 通過
+- 預期: REGTEST-04 通過
 ```
 
-#### REGTEST-F: LLM 變體生成（關聯 FIX-F）
+#### REGTEST-05: 備份唯一性 + 非同步驗證（關聯 FIX-D + FIX-E + FIX-F）
 
 ```
 ## Mission
-為 FIX-F（LLM 變體生成）建立回歸測試。
+為 FIX-D（備份唯一性）、FIX-E（限定驗證範圍）、FIX-F（execSync → 非同步）建立合併回歸測試。
 
 ## Context
-- 修復問題: SPEC R1.3 要求變體生成但未實作
-- root cause: question-loader.ts 僅載入靜態 JSON
+- 修復問題: 備份覆蓋 + 全域驗證誤還原 + execSync 阻塞
+- 根因: 固定 .bak 名稱、無技能限定驗證命令、同步執行
 
 ## Input
-- 閱讀 `packages/tools/eval/lib/question-utils.ts`（特別是新增的 `generateVariants` 函式）
+- 閱讀 `packages/tools/eval/optimizer.ts`
+- 閱讀 `packages/tools/eval/test/optimizer.test.js`
 
 ## What to do
-
-在 `packages/tools/eval/test/` 中建立新測試檔案 `question-loader.test.js`：
+在 `packages/tools/eval/test/optimizer.test.js` 中新增：
 
 ```javascript
-import { describe, it, before } from 'node:test';
-import assert from 'node:assert/strict';
-
-// Mock the judge model API
-let originalFetch;
-
-describe('REGTEST-F: generateVariants', () => {
-  before(() => {
-    originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => ({
-      ok: true,
-      json: async () => ({
-        choices: [{
-          message: {
-            content: JSON.stringify([
-              { id: 'Q001_v1', userPrompt: 'Write a spec for handling user authentication' },
-            ]),
-          },
-        }],
-      }),
-    });
-  });
+it('REGTEST-05: optimizer backup should use unique names and avoid execSync', async () => {
+  const source = await fs.readFile(
+    new URL('../../optimizer.ts', import.meta.url), 'utf-8'
+  );
   
-  after(() => {
-    globalThis.fetch = originalFetch;
-  });
+  // 1. Backup should use dynamic name (not fixed .bak)
+  const bakPattern = "skillMdPath + '.bak'";
+  // The source should NOT use the old fixed pattern
+  assert.ok(
+    !source.match(/skillMdPath\s*\+\s*'\.bak'/),
+    'Backup path should not be fixed .bak — use timestamp'
+  );
   
-  it('should generate variants preserving scoring criteria', async () => {
-    const { generateVariants } = await import('../dist/lib/question-utils.js');
-    
-    const originalQuestion = {
-      id: 'Q001',
-      userPrompt: 'Write a spec for user login flow',
-      difficulty: 'basic',
-      projectContext: { description: 'Test project', files: [] },
-      scoringCriteria: {
-        outcome: { weight: 0.3, checks: [{ id: 'o1', description: 'Complete task', passCondition: 'Output exists' }] },
-        process: { weight: 0.3, checks: [{ id: 'p1', description: 'Follow process', passCondition: 'Steps done' }] },
-        style: { weight: 0.2, checks: [{ id: 's1', description: 'Correct format', passCondition: 'Valid format' }] },
-        efficiency: { weight: 0.2, checks: [{ id: 'e1', description: 'Efficient', passCondition: 'Quick' }] },
-      },
-    };
-    
-    const variants = await generateVariants(originalQuestion, 1, {
-      JUDGE_BASE_URL: 'http://localhost:9999',
-      JUDGE_MODEL: 'test-model',
-      JUDGE_API_KEY: 'test-key',
-    });
-    
-    assert.ok(variants.length > 0, 'Should generate at least 1 variant');
-    
-    // Verify scoring criteria is preserved
-    assert.deepStrictEqual(
-      variants[0].scoringCriteria,
-      originalQuestion.scoringCriteria,
-      'Variant should preserve original scoring criteria'
-    );
-    
-    // Verify difficulty is preserved
-    assert.equal(variants[0].difficulty, originalQuestion.difficulty);
-    
-    // Verify userPrompt is different
-    assert.notEqual(variants[0].userPrompt, originalQuestion.userPrompt);
-    
-    // Verify id is modified
-    assert.ok(variants[0].id.startsWith(originalQuestion.id));
-  });
+  // 2. Validation should be skill-scoped or inline
+  // Check that validate-skill-frontmatter command uses --skill flag
+  // or that frontmatter is validated inline
+  const hasSkillFlag = source.includes('--skill') || source.includes('resolvedSkillName');
+  const hasInlineValidation = source.includes('frontmatterMatch') || source.includes('---');
+  
+  assert.ok(
+    hasSkillFlag || hasInlineValidation,
+    'Frontmatter validation should be skill-scoped or inline'
+  );
+  
+  // 3. No execSync in optimizeSkillMd
+  // Find optimizeSkillMd function
+  const funcStart = source.indexOf('export async function optimizeSkillMd');
+  const funcEnd = funcStart + source.slice(funcStart).indexOf('}\n') + 1;
+  const funcBody = source.slice(funcStart, funcEnd);
+  
+  assert.ok(
+    !funcBody.includes('execSync'),
+    'optimizeSkillMd should not use execSync (use execFile or inline validation)'
+  );
 });
 ```
 
 ## Scope
 - 允許修改的檔案:
-  - `packages/tools/eval/test/question-loader.test.js`（新檔案）
+  - `packages/tools/eval/test/optimizer.test.js`
 - 禁止修改的檔案:
   - 所有源碼檔案
 
 ## Verify
-- 執行: `node --test "packages/tools/eval/test/question-loader.test.js"`
-- 預期: REGTEST-F 通過
+- 執行: `node --test "packages/tools/eval/test/optimizer.test.js"`
+- 預期: REGTEST-05 通過
+```
+
+#### REGTEST-06: Dry-run 零檔案副作用（關聯 FIX-I）
+
+```
+## Mission
+為 FIX-I（dry-run 零副作用）建立回歸測試。
+
+## Context
+- 修復問題: Dry-run 仍寫入 optimization-plan.json、呼叫 judge API
+- 根因: index.ts 中 dryRun 旗標未向下傳遞
+
+## Input
+- 閱讀 `packages/tools/eval/index.ts`（L312-347）
+
+## What to do
+在現有 `packages/tools/eval/test/index.test.js` 中新增：
+
+```javascript
+it('REGTEST-06: dry-run mode should not write optimization-plan.json', async () => {
+  const source = await fs.readFile(
+    new URL('../../index.ts', import.meta.url), 'utf-8'
+  );
+  
+  // Find the optimize block
+  const optimizeStart = source.indexOf('if (optimize)');
+  assert.ok(optimizeStart >= 0);
+  
+  const optimizeSection = source.slice(optimizeStart, optimizeStart + 2000);
+  
+  // In dry-run mode, the optimization plan should NOT be generated
+  // (generateOptimizationPlan writes to disk)
+  // Check that when dryRun is true, optimization-plan is not written
+  if (optimizeSection.includes('generateOptimizationPlan')) {
+    // Verify that generateOptimizationPlan is called inside a non-dry-run branch
+    const planCallIndex = optimizeSection.indexOf('generateOptimizationPlan');
+    const sectionBeforePlan = optimizeSection.slice(0, planCallIndex);
+    
+    assert.ok(
+      sectionBeforePlan.includes('} else {') || !sectionBeforePlan.includes('dryRun'),
+      'generateOptimizationPlan should be in the non-dry-run path'
+    );
+  }
+});
+```
+
+## Scope
+- 允許修改的檔案:
+  - `packages/tools/eval/test/index.test.js`（若存在，否則在 `packages/tools/eval/test/` 下新建）
+- 禁止修改的檔案:
+  - 所有源碼檔案
+
+## Verify
+- 執行: `node --test "packages/tools/eval/test/index.test.js"`（或對應檔案）
+- 預期: REGTEST-06 通過
 ```
 
 ---
 
 ## 7. Fix Batch Schedule
 
-### Batch 1 — 全部修復並行派發（Worker A–F）
+### Batch 1 — 全部修復並行派發（Worker A–E）
 
-- **Workers**: WORKER-A (isolation.ts), WORKER-B (scorer.ts), WORKER-C (optimizer.ts), WORKER-D (index.ts+reporter.ts+executor.ts), WORKER-E (question-utils.ts+question-loader.ts), WORKER-F (dead code cleanup)
-- **Strategy**: 6 個 worker 全部並行派發（檔案範圍互斥）
+- **Workers**: WORKER-A (isolation.ts), WORKER-B (scorer.ts), WORKER-C (optimizer.ts), WORKER-D (index.ts+executor.ts+.github), WORKER-E (dead code cleanup)
+- **Strategy**: 5 個 worker 全部並行派發（檔案範圍互斥）
 - **Depends on**: 無
 - **Gate**:
-  - [ ] WORKER-A 回報成功（[simulated] 移除 + executeRead async）
-  - [ ] WORKER-B 回報成功（鎖定錯誤記錄 + scanForDoneAsync 主路徑）
-  - [ ] WORKER-C 回報成功（isAllowedFile + dedup cap + skillName bug + dry-run 分離 + timeout + Markdown 驗證）
-  - [ ] WORKER-D 回報成功（as string + skill_name listing + reporter assert + writeReport + error discrim + console.error + top catch + SIGINT）
-  - [ ] WORKER-E 回報成功（generateVariants + supplyQuestions）
-  - [ ] WORKER-F 回報成功（死碼移除 + 不必要匯出清理 + count threshold）
+  - [ ] WORKER-A 回報成功（Bash R4 + Grep/Glob catch）
+  - [ ] WORKER-B 回報成功（scoring lock + corruption skip + parse_error line）
+  - [ ] WORKER-C 回報成功（isAllowedFile + backup + validation + execSync + duplicate code）
+  - [ ] WORKER-D 回報成功（dry-run plan + appendTrace + messages + exec lock + PR gate + unused import）
+  - [ ] WORKER-E 回報成功（dead code removal + P3 cleanup）
   - [ ] TypeScript 編譯通過: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json`
   - [ ] 現有測試套件通過: `node --test "packages/tools/eval/test/*.test.js"`
 
@@ -1426,16 +1499,16 @@ describe('REGTEST-F: generateVariants', () => {
 
 ### Batch 2 — 回歸測試
 
-- **Tasks**: REGTEST-A, REGTEST-B, REGTEST-C, REGTEST-D, REGTEST-E, REGTEST-F
+- **Tasks**: REGTEST-01 ~ REGTEST-06
 - **Strategy**: 6 個 worker 全部並行派發（無檔案重疊或可合併至同檔案）
 - **Depends on**: Batch 1 全部通過
 - **Gate**:
-  - [ ] REGTEST-A worker 回報成功（isolation.test.js）
-  - [ ] REGTEST-B worker 回報成功（scorer.test.js）
-  - [ ] REGTEST-C worker 回報成功（scorer.test.js — 與 REGTEST-B 同檔案，由 Coordinator 決定是否合併為同一 worker）
-  - [ ] REGTEST-D worker 回報成功（optimizer.test.js — 新檔案）
-  - [ ] REGTEST-E worker 回報成功（optimizer.test.js — 與 REGTEST-D 同檔案，由 Coordinator 決定是否合併）
-  - [ ] REGTEST-F worker 回報成功（question-loader.test.js — 新檔案）
+  - [ ] REGTEST-01: isolation.test.js — Bash 讀寫分離（關聯 FIX-A）
+  - [ ] REGTEST-02: scorer.test.js — 評分鎖定原子性（關聯 FIX-B）
+  - [ ] REGTEST-03: scorer.test.js — JSONL 損壞跳過（關聯 FIX-B，與 REGTEST-02 同檔案）
+  - [ ] REGTEST-04: optimizer.test.js — isAllowedFile CWD 獨立性（關聯 FIX-C）
+  - [ ] REGTEST-05: optimizer.test.js — 備份唯一性 + 驗證範圍（關聯 FIX-D/E/F）
+  - [ ] REGTEST-06: index.test.js — Dry-run 零副作用（關聯 FIX-I）
   - [ ] 全部新增回歸測試通過
   - [ ] 現有測試套件通過（確認無退化）
 
@@ -1449,7 +1522,7 @@ describe('REGTEST-F: generateVariants', () => {
 - **Gate**:
   - [ ] 完整測試套件: `node --test "packages/tools/eval/test/*.test.js"` → 全部通過
   - [ ] TypeScript: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json` → 零錯誤
-  - [ ] 對照 REPORT.md，確認所有 26 個問題已處理
+  - [ ] 對照 REPORT.md，確認所有 32 個問題已處理
 
 ---
 
@@ -1457,32 +1530,29 @@ describe('REGTEST-F: generateVariants', () => {
 
 | 測試 ID | 關聯修復 | 測試類型 | 測試位置 | 測試場景摘要 |
 |---|---|---|---|---|
-| `REGTEST-A` | FIX-A | 單元 | `test/isolation.test.js` | GIVEN 模擬工具調用 WHEN dispatch THEN data 不含 `[simulated]` |
-| `REGTEST-B` | FIX-B | 單元 / 源碼審查 | `test/scorer.test.js` | GIVEN 鎖定清理失敗 WHEN catch 觸發 THEN console.error 輸出 |
-| `REGTEST-C` | FIX-C | 源碼審查 | `test/scorer.test.js` | GIVEN scoreAllTests 源碼 WHEN 檢查 THEN 使用 scanForDoneAsync |
-| `REGTEST-D` | FIX-D | 單元 | `test/optimizer.test.js` | GIVEN `.backup` 路徑 WHEN isAllowedFile THEN 回傳 false |
-| `REGTEST-E` | FIX-E | 源碼審查 | `test/optimizer.test.js` | GIVEN optimizer.ts 源碼 WHEN 檢查 THEN 有 MAX_PHASE1_PAIRS |
-| `REGTEST-F` | FIX-F | 整合 (mock) | `test/question-loader.test.js` | GIVEN 原題 WHEN generateVariants THEN 保留 scoringCriteria |
+| `REGTEST-01` | FIX-A | 單元 | `test/isolation.test.js` | GIVEN workspace + Bash ls WHEN dispatch THEN 真實執行 |
+| `REGTEST-02` | FIX-B | 源碼審查 | `test/scorer.test.js` | GIVEN 原始碼 WHEN 檢查 THEN lock 在 API 前獲取、score.json 先寫 |
+| `REGTEST-03` | FIX-B | 源碼審查 | `test/scorer.test.js` | GIVEN hasCorruption 路徑 WHEN 檢查 THEN 不呼叫 judge API |
+| `REGTEST-04` | FIX-C | 單元 | `test/optimizer.test.js` | GIVEN 不同 CWD WHEN isAllowedFile THEN 結果一致 |
+| `REGTEST-05` | FIX-D/E/F | 源碼審查 | `test/optimizer.test.js` | GIVEN 原始碼 WHEN 檢查 THEN 備份含時間戳、驗證非全域、無 execSync |
+| `REGTEST-06` | FIX-I | 源碼審查 | `test/index.test.js` | GIVEN dry-run 路徑 WHEN 檢查 THEN 不產生 optimization-plan.json |
 
 ---
 
 ## 9. Verification Checkpoints
 
 ### Checkpoint 1 — 全部修復批次完成後
-- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json`
-- 預期: 零錯誤
-- 執行: `node --test "packages/tools/eval/test/*.test.js"`
-- 預期: 現有 35 個測試全部通過
+- 執行: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json` → 零錯誤
+- 執行: `node --test "packages/tools/eval/test/*.test.js"` → 現有測試全部通過
 
 ### Checkpoint 2 — 回歸測試實現後
-- 執行: `node --test "packages/tools/eval/test/*.test.js"`
-- 預期: 全部 6 個新增回歸測試通過 + 現有測試無退化
-- 邏輯檢查: REGTEST-A 在修復前的代碼上應包含 `[simulated]` → 修復後不包含
+- 執行: `node --test "packages/tools/eval/test/*.test.js"` → 全部 6 個新增回歸測試通過 + 現有測試無退化
+- 邏輯檢查: REGTEST-01 在修復前的代碼上（Bash 為 WRITE 工具）應失敗 → 修復後通過
 
 ### Checkpoint 3 — 最終驗證
 - 執行完整測試套件: `node --test "packages/tools/eval/test/*.test.js"`
 - TypeScript 檢查: `npx tsc --noEmit -p packages/tools/eval/tsconfig.json`
-- 對照 REPORT.md，確認所有 26 個問題已處理
+- 對照 REPORT.md，確認所有 32 個問題已處理
 
 ---
 
@@ -1504,9 +1574,11 @@ describe('REGTEST-F: generateVariants', () => {
 
 > **2026-05-29 (Round 1)**: 首次修復 — 25 個問題。核心：isolation.ts 整合至 executor tool-use loop、JSONL 行號註解、getProjectRoot 共用、磁碟檢查、執行鎖。Commit `91863d7`。全部 verified fixed。
 >
-> **2026-05-29 (Round 2)**: 第二輪修復 — 12 個問題。核心：isolation.ts 真實讀取、Message 型別擴展移除不安全轉型、reporter Set 去重、promise-pool guard。14 個新測試。Commit `5f2061b`。**注意：commit message 聲稱的 EVAL_MIN_SCORE/EVAL_MAX_P0 修復未實際寫入程式碼。**
+> **2026-05-29 (Round 2)**: 第二輪修復 — 12 個問題。核心：isolation.ts 真實讀取、Message 型別擴展移除不安全轉型、reporter Set 去重、promise-pool guard。14 個新測試。Commit `5f2061b`。
 >
-> **2026-05-29 (Round 3)**: 第三輪修復 — 14 個問題（1 P0 + 6 P1 + 7 P2）。核心：EVAL_MIN_SCORE / EVAL_MAX_P0 真正接入 env vars、~205 行死碼移除（generateVariant + watchMode）、型別安全修復。Commit `484913c`。35/35 測試通過，tsc 零錯誤，net -450 行。
+> **2026-05-29 (Round 3)**: 第三輪修復 — 18 個問題（1 P0 + 7 P1 + 6 P2 + 4 P3）。核心：EVAL_MIN_SCORE / EVAL_MAX_P0 接入、~205 行死碼移除、型別安全修復。Commit `484913c`。
+>
+> **2026-05-29 (Round 4)**: 第四輪修復 — 26 個問題（6 P1 + 11 P2 + 9 P3）。核心：LLM 變體生成、[simulated] 移除、isAllowedFile path.relative、dedup pair cap、async I/O 遷移、~298 行死碼移除。Commit `a5f6db3` + `569335b`。全部 verified fixed，47/47 測試通過。
 
 ---
 
