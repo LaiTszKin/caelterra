@@ -1,6 +1,6 @@
 {
   "name": "@laitszkin/cli",
-  "version": "4.0.5",
+  "version": "4.0.6",
   "description": "Apollo Toolkit — CLI command management (install, uninstall, tool routing)",
   "license": "MIT",
   "type": "module",

@@ -2,6 +2,24 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.0.6] - 2026-05-30
+
+### Changed
+
+- `design` skill: support batch specs — read all SPEC.md files under a batch directory, produce a single unified DESIGN.md + CHECKLIST.md + Architecture Diff covering the entire batch scope. Updated workflow steps (判断規格類型, 統一調研, 統一設計, 統一驗證策略) and added batch spec example.
+- `design` skill: add mandatory test coverage requirements to CHECKLIST.md generation — all public functions must have unit tests, medium-risk paths (I/O, external deps, state changes) must have integration or property-based tests, high-risk paths (cross-module, financial/auth/data consistency) must have E2E or integrated PBT.
+- `review` skill: restructure from six per-dimension subagents to per-requirement subagents — each subagent reviews one spec requirement across all six review dimensions (幻覺/冗余/偏移/遺漏/架構/性能). Cross-subagent finding overlap is handled at synthesis phase.
+- `implement`/`fix` skills: remove worktree isolation pattern — coordinator no longer creates isolated worktrees for workers; conflicts are resolved directly by the coordinator. Worker merge step removed from workflow. Related `isolation-guidance.md` reference document deleted.
+- `implement` skill OpenAI agent config: update description to match new coordinator-worker model.
+
+### Fixed
+
+- `design` skill: add missing batch spec example to workflow examples section.
+
+### Documentation
+
+- `docs/features/software-development.md`: remove worktree isolation section to reflect current implement/fix skill implementation.
+
 ## [v4.0.5] - 2026-05-29
 
 ### Added

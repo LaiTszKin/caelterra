@@ -36,10 +36,6 @@
 - **When** 使用 `implement` 技能
 - **Then** 嚴格按照 PROMPT.md 的批次排程與 subagent 路由執行實作，不做任何協同決策
 
-- **Given** 需要在隔離環境中實作且不污染主要工作目錄
-- **When** implement 判斷需要隔離
-- **Then** 在獨立的 git worktree 中實作，完成後合併回主要分支
-
 ## 增強現有功能
 
 - **Given** 既有程式碼需要擴充
