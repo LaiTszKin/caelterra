@@ -37,7 +37,7 @@ import {
   generateOptimizationPlan,
   optimizeSkillMd,
 } from './optimizer.js';
-import type { DedupedIssue, OptimizationPlan } from './optimizer.js';
+import type { DedupedIssue } from './optimizer.js';
 import { promisePool } from './lib/promise-pool.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -311,17 +311,25 @@ async function evalHandler(
     // 7. Optimisation (optional)
     if (optimize) {
       if (dryRun) {
-        // Dry-run: skip judge API calls entirely, only template-based suggestions
-        stderr.write('[7/7] Dry-run mode: generating template-based suggestions...\n');
-        // Pass empty plan + judgeAvailable=false to skip API calls in optimizeSkillMd
-        const emptyPlan = {
-          date: today,
-          generatedAt: new Date().toISOString(),
-          summary: { totalScores: 0, totalIssues: 0, dedupedIssues: 0 },
-          issues: [],
-        };
+        // Dry-run: load actual scores, extract issues, but skip judge API calls
+        stderr.write('[7/7] Dry-run mode: loading scores for optimization preview...\n');
+        const allScores = await loadAllScores(today);
+        const rawIssues = extractIssues(allScores);
+        stderr.write(`[7/7] Extracted ${rawIssues.length} raw issues\n`);
+        // Convert RawIssue[] to DedupedIssue[] format without API calls (no dedup, no suggested fix)
+        const dedupedLike: DedupedIssue[] = rawIssues.map(r => ({
+          category: r.category,
+          severity: r.severity,
+          frequency: 1,
+          affectedTests: [r.testNo],
+          description: r.description,
+          evidence: [r.evidence],
+          suggestedFix: '',
+        }));
+        const plan = generateOptimizationPlan(dedupedLike, today, allScores);
+        stderr.write('[7/7] Generating dry-run optimization patch...\n');
         const optResult = await optimizeSkillMd(
-          emptyPlan as unknown as OptimizationPlan,
+          plan,
           skillMdPath,
           env,
           true,   // dryRun

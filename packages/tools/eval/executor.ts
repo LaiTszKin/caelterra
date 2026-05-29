@@ -13,7 +13,7 @@
  */
 
 import { appendFile, mkdir, writeFile, rm } from 'node:fs/promises';
-import { existsSync, statfsSync } from 'node:fs';
+import { existsSync, statfsSync, rmSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 import type { EnvConfig } from './lib/env-utils.js';
@@ -51,17 +51,6 @@ export interface TestResult {
 }
 
 // --- Core Functions ---
-
-/**
- * 將 trace event 以 JSONL 格式附加至指定的追蹤檔案。
- * 使用 append-only 模式 (fs.appendFile)。
- */
-async function appendTrace(
-  tracePath: string,
-  event: TraceEvent,
-): Promise<void> {
-  await appendFile(tracePath, JSON.stringify(event) + '\n', 'utf-8');
-}
 
 /**
  * 建立隔離的工作區目錄和初始檔案。
@@ -498,6 +487,9 @@ export async function runAllTests(
   const rootDir = getProjectRoot();
   const resultsBase = resolve(rootDir, 'results', 'spec', date);
 
+  // 先確保 resultsBase 目錄存在，再進行磁碟空間檢查
+  await mkdir(resultsBase, { recursive: true });
+
   // 磁碟空間檢查 (FIX-06)
   try {
     const stats = statfsSync(resultsBase);
@@ -509,13 +501,12 @@ export async function runAllTests(
     if (err instanceof DiskSpaceError) {
       throw err;
     }
-    // statfsSync 不支援或目錄不存在 — 跳過檢查
+    // statfsSync 不支援 — 跳過檢查
     console.warn('  无法检查磁盘空间 (statfsSync 不可用，跳过)');
   }
 
   // 執行階段並發鎖 (FIX-11)
-  // 先確保 resultsBase 目錄存在（不影響鎖定語意），再建立不帶 recursive 的鎖定目錄
-  await mkdir(resultsBase, { recursive: true });
+  // 建立不帶 recursive 的鎖定目錄
   const lockPath = resolve(resultsBase, '.exec-lock');
   try {
     await mkdir(lockPath);
@@ -526,6 +517,13 @@ export async function runAllTests(
     }
     throw new Error(`Cannot create exec lock at ${lockPath}: ${nodeErr.message}`);
   }
+
+  // SIGINT handler: 同步清理 exec lock，防止 process.exit 跳過 finally
+  const sigintCleanup = () => {
+    try { rmSync(lockPath, { recursive: true, force: true }); } catch {}
+    process.exit(1);
+  };
+  process.once('SIGINT', sigintCleanup);
 
   try {
     const total = questions.length;
@@ -559,7 +557,8 @@ export async function runAllTests(
 
     return results;
   } finally {
-    // 清除並發鎖
+    // 清除 SIGINT handler 與並發鎖
+    process.removeListener('SIGINT', sigintCleanup);
     await rm(lockPath, { recursive: true, force: true });
   }
 }

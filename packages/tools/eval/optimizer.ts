@@ -11,9 +11,9 @@
  * Only uses Node.js built-in modules and lib/ modules. No external dependencies.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, realpathSync, readdirSync, unlinkSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { resolve, join, basename, dirname } from 'node:path';
 
 import type { ScoreResult } from './scorer.js';
 import { getProjectRoot } from './lib/project-root.js';
@@ -21,6 +21,7 @@ import type { EnvConfig } from './lib/env-utils.js';
 import { callJudgeModelRaw } from './lib/judge-api.js';
 import type { Message } from './lib/judge-api.js';
 import { promisePool } from './lib/promise-pool.js';
+import { SEVERITY_RANK } from './lib/constants.js';
 
 // --- Public Types ---
 
@@ -84,9 +85,6 @@ interface DedupedIssueInternal {
 }
 
 // --- Constants ---
-
-/** Severity ranking for consistent sorting. Lower rank = more severe. */
-const SEVERITY_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2 };
 
 /** Maximum Phase 1 pair comparisons before truncation. */
 const MAX_PHASE1_PAIRS = 10000;
@@ -335,9 +333,10 @@ export function jaccardSimilarity(setA: Set<string>, setB: Set<string>): number 
 
   let intersection = 0;
   const union = setA.size + setB.size;
+  const [smaller, larger] = setA.size <= setB.size ? [setA, setB] : [setB, setA];
 
-  for (const item of setA) {
-    if (setB.has(item)) {
+  for (const item of smaller) {
+    if (larger.has(item)) {
       intersection++;
     }
   }
@@ -356,7 +355,13 @@ export function jaccardSimilarity(setA: Set<string>, setB: Set<string>): number 
  * @returns true if the file path matches an allowed target
  */
 export function isAllowedFile(filePath: string, skillName: string): boolean {
-  const normalized = resolve(filePath).replace(/\\/g, '/');
+  let normalized: string;
+  try {
+    normalized = realpathSync(filePath).replace(/\\/g, '/');
+  } catch {
+    // File doesn't exist or can't be resolved → fallback to path.resolve
+    normalized = resolve(filePath).replace(/\\/g, '/');
+  }
   for (const pattern of ALLOWED_FILES) {
     const resolved = pattern.replace(/<name>/g, skillName);
     if (resolved.endsWith('/')) {
@@ -1261,6 +1266,18 @@ export async function optimizeSkillMd(
         success: false,
         message: `Markdown structure validation failed. Backup restored. Issues: ${mdValidation.issues.join('; ')}`,
       };
+    }
+
+    // 6. Clean up old backups (keep latest MAX_BACKUPS)
+    const MAX_BACKUPS = 5;
+    const backupDir = dirname(skillMdPath);
+    const baseName = basename(skillMdPath);
+    const backups = readdirSync(backupDir)
+      .filter(f => f.startsWith(baseName + '.bak.'))
+      .sort()
+      .reverse();
+    for (let i = MAX_BACKUPS; i < backups.length; i++) {
+      unlinkSync(join(backupDir, backups[i]));
     }
 
     return { success: true, message: `SKILL.md optimized successfully. Backup: ${latestBakPath}` };

@@ -15,6 +15,7 @@ import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 import { getProjectRoot } from './lib/project-root.js';
+import { SEVERITY_RANK } from './lib/constants.js';
 import type { ScoreResult, Issue } from './scorer.js';
 
 // --- Report Generation ---
@@ -121,9 +122,8 @@ export function generateReport(
   }
 
   // Sort: P0 first, then P1, then P2; within each severity, by category
-  const severityOrder: Record<string, number> = { P0: 0, P1: 1, P2: 2 };
   const sortedIssues = [...allIssues].sort((a, b) => {
-    const sevDiff = (severityOrder[a.severity] ?? 99) - (severityOrder[b.severity] ?? 99);
+    const sevDiff = (SEVERITY_RANK[a.severity] ?? 99) - (SEVERITY_RANK[b.severity] ?? 99);
     if (sevDiff !== 0) return sevDiff;
     return a.category.localeCompare(b.category);
   });
@@ -265,7 +265,7 @@ export function generateReport(
       const key = `${issue.severity}:${issue.category}:${issue.description.substring(0, 80)}`;
       const affectedTests = [...(issueToTestMap.get(key) || [])].join(', ');
 
-      const ev = issue.evidence.length > 40 ? issue.evidence.substring(0, 40) + '...' : issue.evidence;
+      const ev = issue.evidence.length > 80 ? issue.evidence.substring(0, 80) + '...' : issue.evidence;
       const desc = issue.description.length > 60 ? issue.description.substring(0, 60) + '...' : issue.description;
       sections.push(`| ${issue.severity} | ${issue.category} | ${affectedTests || '(多個)'} | ${desc} | ${ev} |`);
     }

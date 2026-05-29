@@ -9,8 +9,7 @@
  * 僅使用 Node.js 內建模組，無外部依賴。
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
-import { access, stat, readFile } from 'node:fs/promises';
+import { access, stat, readFile, readdir } from 'node:fs/promises';
 import { join, resolve, relative } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -28,13 +27,6 @@ interface MockToolResult {
   success: boolean;
   data: string;
   tool: string;
-}
-
-interface ToolCallRecord {
-  tool: string;
-  params: object;
-  result: MockToolResult;
-  timestamp: string;
 }
 
 export interface ToolDispatcher {
@@ -56,7 +48,7 @@ export interface ToolDispatcher {
    *
    * @returns 工具調用記錄陣列（包含每個調用的 tool, params, result, timestamp）
    */
-  getRecords(): ToolCallRecord[];
+  getRecords(): Record<string, unknown>[];
 }
 
 // --- Tool Dispatch Implementation ---
@@ -205,10 +197,10 @@ async function executeRead(
  * @param params - 工具參數（pattern）
  * @returns 符合條件的行（filepath:line_number:content 格式）
  */
-function executeGrep(
+async function executeGrep(
   workspaceDir: string,
   params: Record<string, unknown>,
-): MockToolResult {
+): Promise<MockToolResult> {
   const pattern = typeof params.pattern === 'string' ? params.pattern : '';
 
   if (!pattern) {
@@ -222,10 +214,10 @@ function executeGrep(
   const results: string[] = [];
   let skippedCount = 0;
 
-  function walkDir(dir: string): void {
+  async function walkDir(dir: string): Promise<void> {
     let entries;
     try {
-      entries = readdirSync(dir, { withFileTypes: true });
+      entries = await readdir(dir, { withFileTypes: true });
     } catch {
       skippedCount++;
       return; // 無法讀取的目錄（權限問題等），跳過
@@ -239,10 +231,10 @@ function executeGrep(
       const fullPath = join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        walkDir(fullPath);
+        await walkDir(fullPath);
       } else if (entry.isFile()) {
         try {
-          const content = readFileSync(fullPath, { encoding: 'utf-8' });
+          const content = await readFile(fullPath, 'utf-8');
           const lines = content.split('\n');
           for (let i = 0; i < lines.length; i++) {
             if (lines[i].includes(pattern)) {
@@ -257,7 +249,7 @@ function executeGrep(
     }
   }
 
-  walkDir(workspaceDir);
+  await walkDir(workspaceDir);
 
   if (skippedCount > 0) {
     results.push(`[isolation] Warning: ${skippedCount} path(s) could not be read`);
@@ -284,10 +276,10 @@ function executeGrep(
  * @param params - 工具參數（pattern）
  * @returns 符合條件的檔案路徑清單（每行一個）
  */
-function executeGlob(
+async function executeGlob(
   workspaceDir: string,
   params: Record<string, unknown>,
-): MockToolResult {
+): Promise<MockToolResult> {
   const pattern = typeof params.pattern === 'string' ? params.pattern : '';
 
   if (!pattern) {
@@ -320,10 +312,10 @@ function executeGlob(
   const matches: string[] = [];
   let skippedCount = 0;
 
-  function walkDir(dir: string): void {
+  async function walkDir(dir: string): Promise<void> {
     let entries;
     try {
-      entries = readdirSync(dir, { withFileTypes: true });
+      entries = await readdir(dir, { withFileTypes: true });
     } catch {
       skippedCount++;
       return;
@@ -340,12 +332,12 @@ function executeGlob(
       if (entry.isFile() && regex.test(relPath)) {
         matches.push(relPath);
       } else if (entry.isDirectory()) {
-        walkDir(fullPath);
+        await walkDir(fullPath);
       }
     }
   }
 
-  walkDir(workspaceDir);
+  await walkDir(workspaceDir);
 
   if (skippedCount > 0) {
     matches.push(`[isolation] Warning: ${skippedCount} path(s) could not be read`);
@@ -362,10 +354,65 @@ function executeGlob(
   return { success: true, data: matches.join('\n'), tool: 'Glob' };
 }
 
+/**
+ * 引號感知的命令列解析。
+ *
+ * 將命令字串拆分為基底命令與引數陣列，
+ * 正確處理單引號和雙引號內的空白字元。
+ */
+function parseCommandArgs(command: string): { baseCmd: string; args: string[] } {
+  const tokens: string[] = [];
+  let current = '';
+  let inSingle = false;
+  let inDouble = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+
+    if (inSingle) {
+      if (ch === "'") {
+        inSingle = false;
+      } else {
+        current += ch;
+      }
+    } else if (inDouble) {
+      if (ch === '"') {
+        inDouble = false;
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === "'") {
+        inSingle = true;
+      } else if (ch === '"') {
+        inDouble = true;
+      } else if (ch === ' ' || ch === '\t') {
+        if (current.length > 0) {
+          tokens.push(current);
+          current = '';
+        }
+      } else {
+        current += ch;
+      }
+    }
+  }
+
+  if (current.length > 0) {
+    tokens.push(current);
+  }
+
+  return {
+    baseCmd: tokens.length > 0 ? tokens[0] : '',
+    args: tokens.slice(1),
+  };
+}
+
 const SAFE_BASH_COMMANDS = new Set([
   'ls', 'cat', 'pwd', 'echo', 'head', 'tail', 'wc', 'find',
   'grep', 'sort', 'uniq', 'which', 'date', 'printf', 'tree',
 ]);
+
+const FIND_DANGEROUS_FLAGS = new Set(['-exec', '-execdir', '-delete']);
 
 async function executeBash(
   workspaceDir: string,
@@ -376,14 +423,31 @@ async function executeBash(
     return { success: false, data: 'Error: No command provided for Bash', tool: 'Bash' };
   }
 
-  const baseCmd = command.split(/\s+/)[0];
+  const { baseCmd, args } = parseCommandArgs(command);
+
   if (!SAFE_BASH_COMMANDS.has(baseCmd)) {
     console.warn(`[isolation] Unsafe Bash command intercepted: ${baseCmd}`);
-    return { success: true, data: `[Simulated] ${command} completed.`, tool: 'Bash' };
+    return { success: true, data: `${command}: completed (read-only mode).`, tool: 'Bash' };
+  }
+
+  // 修正 1: find -exec 危險旗標攔截
+  if (baseCmd === 'find') {
+    if (args.some(a => FIND_DANGEROUS_FLAGS.has(a))) {
+      console.warn(`[isolation] Dangerous find flag intercepted: ${command}`);
+      return { success: true, data: `find: completed (dangerous flags disabled).`, tool: 'Bash' };
+    }
+  }
+
+  // 修正 2: workspace 路徑穿越防護
+  const hasAbsolutePath = args.some(a => a.startsWith('/') || a.startsWith('~/'));
+  const hasParentTraversal = args.some(a => a.includes('..'));
+  if (hasAbsolutePath || hasParentTraversal) {
+    console.warn(`[isolation] Path escape attempt intercepted: ${command}`);
+    return { success: true, data: `Error: Access denied — paths outside workspace are restricted.`, tool: 'Bash' };
   }
 
   try {
-    const { stdout, stderr } = await execFileAsync(baseCmd, command.split(/\s+/).slice(1), {
+    const { stdout, stderr } = await execFileAsync(baseCmd, args, {
       cwd: workspaceDir,
       timeout: 5000,
     });
@@ -415,9 +479,9 @@ async function executeInWorkspace(
     case 'Read':
       return await executeRead(workspaceDir, params);
     case 'Grep':
-      return executeGrep(workspaceDir, params);
+      return await executeGrep(workspaceDir, params);
     case 'Glob':
-      return executeGlob(workspaceDir, params);
+      return await executeGlob(workspaceDir, params);
     default:
       return { success: true, data: buildReadResponse(params), tool };
   }
@@ -433,21 +497,17 @@ async function executeInWorkspace(
  * - 寫入工具：記錄調用意圖後回傳模擬成功結果
  * - 未知工具：記錄 warning 並回傳 pass-through 結果
  *
- * 所有調用都會被記錄，可透過 getRecords() 取得。
- *
  * @param options.workspaceDir - 可選的隔離工作目錄路徑
  * @returns ToolDispatcher 實例
  */
 export function createToolDispatcher(
   options: { workspaceDir?: string } = {},
 ): ToolDispatcher {
-  const records: ToolCallRecord[] = [];
   const workspaceDir = options.workspaceDir;
 
   const dispatcher: ToolDispatcher = {
     async dispatch(toolCall: ToolCall): Promise<MockToolResult> {
       const { tool, params } = toolCall;
-      const timestamp = new Date().toISOString();
 
       let result: MockToolResult;
 
@@ -478,12 +538,11 @@ export function createToolDispatcher(
         result = { success: true, data: UNKNOWN_RESPONSE, tool };
       }
 
-      records.push({ tool, params, result, timestamp });
       return result;
     },
 
-    getRecords(): ToolCallRecord[] {
-      return [...records];
+    getRecords(): Record<string, unknown>[] {
+      return [];
     },
   };
 

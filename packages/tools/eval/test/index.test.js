@@ -341,3 +341,75 @@ describe('REGTEST-FIX03: P0 計數 exit code 檢查', () => {
     );
   });
 });
+
+// =========================================================================
+// REGTEST-01: dry-run 不傳 emptyPlan（關聯 FIX-A）
+// =========================================================================
+describe('REGTEST-01: dry-run 不傳 emptyPlan', () => {
+  it('dry-run mode should not pass empty plan', () => {
+    const source = fs.readFileSync(
+      new URL('../index.ts', import.meta.url), 'utf-8',
+    );
+
+    // Find dry-run branch in index.ts
+    const dryRunStart = source.indexOf('if (dryRun)');
+    assert.ok(dryRunStart >= 0, 'Source must contain dryRun branch');
+
+    const dryRunSection = source.slice(dryRunStart, dryRunStart + 1500);
+
+    // Should NOT contain emptyPlan
+    assert.ok(
+      !dryRunSection.includes('emptyPlan'),
+      'Dry-run path should not use emptyPlan',
+    );
+    // Should NOT contain empty issues array
+    assert.ok(
+      !dryRunSection.includes('issues: []'),
+      'Dry-run path should not pass empty issues array',
+    );
+
+    // Should call loadAllScores or extractIssues to collect actual data
+    assert.ok(
+      dryRunSection.includes('loadAllScores') || dryRunSection.includes('extractIssues'),
+      'Dry-run path should collect actual scoring data (loadAllScores or extractIssues)',
+    );
+  });
+});
+
+// =========================================================================
+// REGTEST-06: SIGINT 不導致 stale lock（關聯 FIX-G）
+// =========================================================================
+describe('REGTEST-06: SIGINT handler 應清理 exec lock', () => {
+  it('SIGINT handler should clean up exec lock', () => {
+    const execSource = fs.readFileSync(
+      new URL('../executor.ts', import.meta.url), 'utf-8',
+    );
+
+    // The executor should have a SIGINT cleanup handler
+    const sigintIndex = execSource.indexOf('SIGINT');
+    assert.ok(sigintIndex >= 0, 'Executor must handle SIGINT');
+
+    // The SIGINT handler should contain lock cleanup (rmSync or rm of lockPath)
+    const sigintSection = execSource.slice(sigintIndex, sigintIndex + 500);
+
+    // Check that the SIGINT handler cleans up the lock before process.exit
+    const hasLockCleanup = sigintSection.includes('lockPath') || sigintSection.includes('exec-lock');
+    assert.ok(hasLockCleanup, 'SIGINT handler should clean up exec lock before exit');
+
+    // Check that finally block also cleans up (normal path)
+    // Use lastIndexOf because the first 'finally {' is in executeSingleTest (timeout cleanup),
+    // while the lock cleanup 'finally {' is at the end of runAllTests.
+    const finallyIndex = execSource.lastIndexOf('finally {');
+    assert.ok(finallyIndex >= 0, 'Executor must have finally block for lock cleanup');
+
+    const finallySection = execSource.slice(finallyIndex, finallyIndex + 300);
+    assert.ok(
+      finallySection.includes('lockPath') || finallySection.includes('exec-lock'),
+      'Finally block should also clean up exec lock',
+    );
+
+    // Check for process.once('SIGINT', ...) pattern for safe handler registration
+    const onceSigintIndex = execSource.indexOf("once('SIGINT'");
+    assert.ok(onceSigintIndex >= 0, 'SIGINT handler should use process.once to avoid duplicate registration');
+  });
+});

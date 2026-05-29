@@ -30,8 +30,11 @@ jobs:
       - run: npm run build
       - name: Check eval secrets
         id: check-secrets
+        env:
+          EXEC_KEY: ${{ secrets.EXEC_API_KEY }}
+          JUDGE_KEY: ${{ secrets.JUDGE_API_KEY }}
         run: |
-          if [ -z "${{ secrets.EXEC_API_KEY }}" ] || [ -z "${{ secrets.JUDGE_API_KEY }}" ]; then
+          if [ -z "$EXEC_KEY" ] || [ -z "$JUDGE_KEY" ]; then
             echo "::warning::Eval secrets not configured. Skipping skill evaluation."
             echo "skip=true" >> $GITHUB_OUTPUT
           else

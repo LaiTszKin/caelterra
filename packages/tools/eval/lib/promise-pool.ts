@@ -26,7 +26,6 @@ export async function promisePool<T, R>(
   async function worker(): Promise<void> {
     while (index < items.length) {
       const i = index++;
-      if (i >= items.length) break;
       results[i] = await fn(items[i], i);
     }
   }

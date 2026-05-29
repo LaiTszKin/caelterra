@@ -143,3 +143,127 @@ describe('FIX-A: Bash 讀寫分離', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });
+
+// =========================================================================
+// Round 6: FIX-B 與 FIX-C — Bash 安全防護（find -exec 攔截、路徑穿越防護）
+// =========================================================================
+describe('Round 6: FIX-B & FIX-C — Bash 安全防護', () => {
+  it('REGTEST-02: should block find -exec dangerous flags', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'regtest02-'));
+    const testFile = path.join(tmpDir, 'test.txt');
+    fs.writeFileSync(testFile, 'hello', 'utf-8');
+
+    const dispatcher = createToolDispatcher({ workspaceDir: tmpDir });
+
+    // find with -exec should be intercepted
+    const result = await dispatcher.dispatch({
+      tool: 'Bash',
+      params: { command: 'find . -name "*.txt" -exec cat {} \\;' },
+    });
+    assert.ok(result.success);
+    // Should NOT contain actual file content (intercepted)
+    assert.ok(
+      !result.data.includes('hello'),
+      `find -exec result should be intercepted, got: "${result.data}"`
+    );
+
+    // Regular find (without dangerous flags) should work
+    const safeResult = await dispatcher.dispatch({
+      tool: 'Bash',
+      params: { command: 'find . -name "*.txt"' },
+    });
+    assert.ok(safeResult.success);
+    assert.ok(safeResult.data.includes('test.txt'),
+      `Safe find should list files, got: "${safeResult.data}"`);
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('REGTEST-03: should block absolute paths outside workspace', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'regtest03-'));
+    const dispatcher = createToolDispatcher({ workspaceDir: tmpDir });
+
+    // cat /etc/passwd should be blocked (absolute path)
+    const result1 = await dispatcher.dispatch({
+      tool: 'Bash',
+      params: { command: 'cat /etc/passwd' },
+    });
+    assert.ok(result1.success);
+    assert.ok(
+      !result1.data.includes('root:'),
+      `Absolute path cat should be blocked, got: "${result1.data}"`
+    );
+
+    // cat ../../etc/passwd should also be blocked (parent traversal)
+    const result2 = await dispatcher.dispatch({
+      tool: 'Bash',
+      params: { command: 'cat ../../etc/passwd' },
+    });
+    assert.ok(result2.success);
+    assert.ok(
+      !result2.data.includes('root:'),
+      `Parent traversal should be blocked, got: "${result2.data}"`
+    );
+
+    // cat ./local-file (relative path within workspace) should work
+    const localFile = path.join(tmpDir, 'local.txt');
+    fs.writeFileSync(localFile, 'workspace content', 'utf-8');
+    const result3 = await dispatcher.dispatch({
+      tool: 'Bash',
+      params: { command: 'cat local.txt' },
+    });
+    assert.ok(result3.success);
+    assert.ok(result3.data.includes('workspace content'),
+      `Relative path within workspace should work, got: "${result3.data}"`);
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+});
+
+// =========================================================================
+// Round 6: FIX-D 與 FIX-E — 透明度與 async I/O
+// =========================================================================
+describe('Round 6: FIX-D & FIX-E — 透明度與 async I/O', () => {
+  it('REGTEST-04: unsafe Bash commands should not leak [Simulated] marker', () => {
+    const source = fs.readFileSync(
+      new URL('../isolation.ts', import.meta.url), 'utf-8'
+    );
+
+    // Verify no [Simulated] string in the source
+    const simulatedMatches = source.match(/\[Simulated\]/g);
+    assert.ok(
+      !simulatedMatches || simulatedMatches.length === 0,
+      'Source should not contain [Simulated] marker (violates R4.1 transparency)'
+    );
+  });
+
+  it('REGTEST-05: executeGrep/executeGlob should not use sync I/O', () => {
+    const source = fs.readFileSync(
+      new URL('../isolation.ts', import.meta.url), 'utf-8'
+    );
+
+    // Find executeGrep function body
+    const grepStart = source.indexOf('function executeGrep');
+    const grepEnd = grepStart + 5000;
+    const grepBody = source.slice(grepStart, grepEnd);
+
+    assert.ok(
+      !grepBody.includes('readdirSync'),
+      'executeGrep should not use readdirSync (use async readdir)'
+    );
+    assert.ok(
+      !grepBody.includes('readFileSync'),
+      'executeGrep should not use readFileSync (use async readFile)'
+    );
+
+    // Find executeGlob function body
+    const globStart = source.indexOf('function executeGlob');
+    const globEnd = globStart + 5000;
+    const globBody = source.slice(globStart, globEnd);
+
+    assert.ok(
+      !globBody.includes('readdirSync'),
+      'executeGlob should not use readdirSync (use async readdir)'
+    );
+  });
+});

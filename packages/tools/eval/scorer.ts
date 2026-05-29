@@ -17,7 +17,7 @@
  * Only uses Node.js built-in modules and lib/ modules. No external dependencies.
  */
 
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile, mkdir, writeFile, rm, rmdir, readdir, access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 
@@ -172,7 +172,8 @@ export function buildJudgePrompt(
   const duration = (endEvent?.data?.duration_ms as number | undefined) ?? 0;
   const status = safeString(endEvent?.data?.status, 'unknown');
   const errors = errorEvents.map(e => {
-    const msg = (e.data?.error ?? e.data?.message ?? 'unknown error') as string;
+    const raw = e.data?.error ?? e.data?.message ?? 'unknown error';
+    const msg = typeof raw === 'string' ? raw : String(raw);
     return msg;
   });
 
