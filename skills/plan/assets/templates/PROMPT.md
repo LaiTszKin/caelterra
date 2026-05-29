@@ -1,191 +1,262 @@
-# Implementation Plan: [Spec/Batch Name]
+# Implementation Prompt: [Spec/Batch Name]
 
 - **Date**: [YYYY-MM-DD]
 - **Type**: [Single Spec / Batch Spec]
-- **Source Spec(s)**: [spec 目錄路徑清單]
+- **Source Spec**: [SPEC.md 路徑]
+- **Source Design**: [DESIGN.md 路徑]
+- **Source Checklist**: [CHECKLIST.md 路徑]
 
 ---
 
-## 1. Executive Summary
+## 1. Mission
 
-[一段話概述本次實作的範圍、目標、以及整體執行策略（循序 / 部分並行 / 完全並行）。]
+[一段話告訴 AI agent：你要做什麼、為什麼要做。從 SPEC.md 的 Goal 和業務價值提煉。]
+
+**Success looks like**: [一句話描述實作完成後的最終可觀測結果。]
 
 ---
 
-## 2. Dependency Graph
+## 2. Scope & Boundaries
 
-### 2.1 工作單元定義
+### What you WILL implement
 
-| 工作單元 ID | 對應 Spec / 任務 | 目標檔案 | 依賴 |
+[從 SPEC.md 的 In Scope + BDD 需求清單提煉。條列式，每條一句話。]
+
+### What you will NOT implement
+
+[從 SPEC.md 的 Out of Scope 提煉。明確告訴 agent 不要做什麼，防止過度實作。]
+
+### File ownership
+
+| 檔案路徑 | 擁有者（工作單元 ID 或 Subagent） | 備註 |
+|---|---|---|
+| `[path]` | [W1 / Subagent A / 主流程] | [說明] |
+
+---
+
+## 3. Technical Context
+
+### Architecture (from DESIGN.md)
+
+[從 DESIGN.md 的模組清單和互動錨點提煉。只放與本次實作相關的部份。]
+
+**Modules you will touch**:
+
+| 模組 | 職責 | 你將如何修改它 |
+|---|---|---|
+| `[module-key]` | [一句話職責] | [具體修改方式] |
+
+**Key interaction anchors** (you must respect these):
+
+| ID | Caller → Callee | 跨越的資訊 | 失敗傳播期望 |
 |---|---|---|---|
-| `W1` | [spec-name / tasks.md T1.1–T1.3] | `src/a.ts`, `src/b.ts` | — |
-| `W2` | [spec-name / tasks.md T2.1–T2.4] | `src/c.ts`, `src/d.ts` | W1 |
-| `W3` | [spec-name / tasks.md T3.1–T3.2] | `src/e.ts` | — |
+| `INT-###` | `A` → `B` | […] | […] |
 
-### 2.2 依賴圖
+### Invariants you MUST NOT break
 
-```
-W1 ──→ W2
-W3 ──→ W4
-```
+[從 DESIGN.md 的系統不變量提煉。這些是硬約束，任何修改都不得違反。]
 
-[說明關鍵依賴的原因：共享檔案 / INT 錨點順序 / 資料流依賴。]
+| 不變量 | 違反的症狀（如果你打破了，你會看到…） |
+|---|---|
+| […] | […] |
 
----
+### Technical decisions you must follow
 
-## 3. Batch Schedule
+[從 DESIGN.md 的技術取捨提煉。每個決策一句話 + 為什麼這樣選。]
 
-### Batch 1 — [前置準備 / 獨立基礎]
-
-**執行方式**: [循序 / 並行]
-**工作單元**: W1 ∥ W3
-
-**完成條件**:
-- [ ] [具體可驗證的條件]
-- [ ] 測試通過: `[command]`
+| 決策 | 原因 | 這意味著你必須… |
+|---|---|---|
+| […] | […] | […] |
 
 ---
 
-### Batch 2 — [核心實作]
+## 4. Task Units
 
-**執行方式**: 並行 (2 subagents)
-**工作單元**: W2 ∥ W4
-**依賴**: Batch 1 完成
+[每個任務是一個原子工作單元，可獨立完成、獨立驗證。任務 ID 格式：`T{批次}.{序號}`。]
 
-**完成條件**:
-- [ ] [具體可驗證的條件]
-- [ ] 測試通過: `[command]`
+### Dependency Graph
+
+```
+T1.1 ──→ T2.1 ──→ T3.1
+T1.2 ──→ T2.1
+T1.3 （獨立）
+```
+
+[說明依賴原因：檔案重疊 / 資料流 / INT 錨點順序。]
+
+---
+
+### T{批次}.{序號}: [任務名稱]
+
+- **Goal**: [一句話描述這個任務要做什麼]
+- **Files**: `[檔案路徑清單]`
+- **Depends on**: [任務 ID 或 `—`（無依賴）]
+- **What to do**:
+  1. [具體步驟 1 — 精確到函式/行級別]
+  2. [具體步驟 2]
+- **Why**: [為什麼這樣做 — 對應 SPEC 需求 R?.? 或 DESIGN 的 INT-###]
+- **Verify**:
+  - 執行: `[驗證命令]`
+  - 預期結果: [你應該看到什麼]
+
+---
+
+[重複以上區塊，為每個任務填寫。]
+
+---
+
+## 5. Batch Schedule
+
+[按依賴圖排程。同一批次內的任務無檔案重疊、無邏輯依賴，可並行。]
+
+### Batch 1 — [名稱]
+
+- **Execution**: [循序 / 並行 (N subagents)]
+- **Tasks**: T1.1, T1.2, T1.3
+- **Completion checklist**:
+  - [ ] T1.1 驗證通過
+  - [ ] T1.2 驗證通過
+  - [ ] T1.3 驗證通過
+  - [ ] [批次層級的整合驗證命令]
+
+---
+
+### Batch 2 — [名稱]
+
+- **Execution**: [循序 / 並行 (N subagents)]
+- **Tasks**: T2.1, T2.2
+- **Depends on**: Batch 1
+- **Completion checklist**:
+  - [ ] T2.1 驗證通過
+  - [ ] T2.2 驗證通過
+  - [ ] [批次層級的整合驗證命令]
 
 ---
 
 ### Batch N — [收尾 / 整合]
 
-**執行方式**: 循序
-**工作單元**: W5
-
-**完成條件**:
-- [ ] [整合驗證]
-- [ ] 完整測試套件通過: `[command]`
+- **Execution**: 循序
+- **Tasks**: T{N}.1
+- **Depends on**: [所有前置批次]
+- **Completion checklist**:
+  - [ ] [最終整合驗證]
+  - [ ] 完整測試套件通過: `[command]`
+  - [ ] Lint 通過: `[command]`
 
 ---
 
-## 4. Subagent Assignments
+## 6. Subagent Assignments
+
+[僅在需要並行處理的批次中定義。每個 subagent 獲得一份完整的自包含提示詞。]
 
 ### Batch 2 — Subagent A: [名稱]
 
-- **工作單元**: W2
-- **目標**: [這個 subagent 要完成什麼，一句話描述]
-- **工作目錄**: `[spec 目錄路徑]`
-- **任務清單**:
-  - [ ] T1.1: [任務描述] — `[目標檔案]`
-  - [ ] T1.2: [任務描述] — `[目標檔案]`
-- **允許修改的檔案**:
-  - `src/a.ts`
-  - `src/b.ts`
-- **禁止修改的檔案**:
-  - `src/c.ts`（屬於 Subagent B）
-  - `package-lock.json`（由 Batch N 統一處理）
-- **風險標記**: [auth / schema / migration / 外部 API / 無]
-- **驗證命令**: `[test/lint 命令]`
+- **Responsible for**: T2.1
+- **Goal**: [一句話]
 
 **Subagent Prompt**:
 
 ```
-[完整的 subagent 提示詞，包含:
-- 任務背景與目標
-- 需要閱讀的 spec/doc 檔案路徑
-- 具體任務清單與預期結果
-- 允許/禁止修改的檔案邊界
-- 驗證命令
-- 風險標記與注意事項]
+You are implementing [任務名稱] as part of [Spec Name].
+
+## Mission
+[從 Section 1 複製或精簡]
+
+## Your Task
+- Task ID: T2.1
+- Files you MAY modify:
+  - `[path]` — [說明]
+- Files you MUST NOT touch:
+  - `[path]`（屬於 Subagent B）
+
+## What to do
+1. [具體步驟]
+2. [具體步驟]
+
+## Verification
+- Run: `[command]`
+- Expected: [你應該看到什麼]
+
+## Boundaries
+- NEVER modify files owned by other subagents
+- NEVER introduce new external dependencies without asking
+- If you encounter unexpected obstacles, STOP and report — do not improvise
 ```
+
+---
 
 ### Batch 2 — Subagent B: [名稱]
 
-- **工作單元**: W3
-- **目標**: [這個 subagent 要完成什麼]
-- **工作目錄**: `[spec 目錄路徑]`
-- **任務清單**:
-  - [ ] T2.1: [任務描述] — `[目標檔案]`
-- **允許修改的檔案**:
-  - `src/c.ts`
-- **禁止修改的檔案**:
-  - `src/a.ts`, `src/b.ts`（屬於 Subagent A）
-- **風險標記**: [auth / schema / migration / 外部 API / 無]
-- **驗證命令**: `[test/lint 命令]`
+- **Responsible for**: T2.2
+- **Goal**: [一句話]
 
 **Subagent Prompt**:
 
 ```
-[完整的 subagent 提示詞，包含:
-- 任務背景與目標
-- 需要閱讀的 spec/doc 檔案路徑
-- 具體任務清單與預期結果
-- 允許/禁止修改的檔案邊界
-- 驗證命令
-- 風險標記與注意事項]
+[同上結構 — 每個 subagent prompt 是完全自包含的，不需參考外部文檔]
 ```
-
----
-
-## 5. File Ownership Map
-
-| 檔案路徑 | 擁有者 | 備註 |
-|---|---|---|
-| `src/a.ts` | Subagent A (Batch 2) | — |
-| `src/b.ts` | Subagent A (Batch 2) | — |
-| `src/c.ts` | Subagent B (Batch 2) | — |
-| `package-lock.json` | Batch N (主流程) | 最終統一更新 |
-
----
-
-## 6. Lockfile Strategy
-
-[由 Batch N 統一更新 / 由 Subagent X 負責 / 不修改]
 
 ---
 
 ## 7. Verification Checkpoints
 
-### Checkpoint 1 — Batch 1 完成後
-- 執行: `[command]`
-- 預期: [預期結果]
+[從 CHECKLIST.md 的行為測試對照 (CL-### → R?.?) 和 Hardening 清單提煉。]
 
-### Checkpoint 2 — Batch 2 合併後
-- 執行: `[command]`
-- 預期: [預期結果]
-- 整合檢查: [coordination.md 定義的 integration checkpoints]
+### Per-batch verification
 
-### Checkpoint N — 最終驗證
-- 執行完整測試套件: `[command]`
-- 確認 lint 通過: `[command]`
+| 批次 | 驗證命令 | 預期結果 |
+|---|---|---|
+| Batch 1 | `[command]` | [預期] |
+| Batch 2 | `[command]` | [預期] |
+| Batch N | `[command]` | [預期] |
+
+### Key behavior checks (from CHECKLIST.md)
+
+| ID | 可觀察行為 | 對應 SPEC 需求 | 驗證方式 |
+|---|---|---|---|
+| CL-01 | [行為描述] | R?.? | `[test command]` |
+| CL-02 | [行為描述] | R?.? | `[test command]` |
+
+### Final verification
+
+- [ ] 完整測試套件通過: `[command]`
+- [ ] Lint 通過: `[command]`
+- [ ] [CHECKLIST.md 中要求的 hardening 檢查]
 
 ---
 
-## 8. Error Recovery
+## 8. Boundaries
+
+### ALWAYS — 無條件遵守
+
+- [ ] 每個任務完成後立即執行其 Verify 命令
+- [ ] 遵循 Technical Context 中定義的模組邊界與不變量
+- [ ] 遵循 File Ownership — 不修改其他工作單元擁有的檔案
+- [ ] 任務失敗時遵循 Error Recovery 策略，不自行發明替代方案
+
+### ASK FIRST — 暫停並向用戶確認
+
+- [ ] 修改 schema / migration / 持久化相關檔案
+- [ ] 需要新增外部依賴
+- [ ] 發現 SPEC/DESIGN 中未定義的修改需求
+- [ ] 任務的 Verify 命令失敗且無法在 2 次嘗試內修復
+
+### NEVER — 嚴格禁止
+
+- [ ] 修改其他 subagent 擁有的檔案（見 File Ownership）
+- [ ] 提交 secrets、API keys、或憑證
+- [ ] 跳過驗證檢查點直接進入下一批次
+- [ ] 在未通過當前批次所有驗證的情況下開始下一批次
+- [ ] 擅自擴大實作範圍（見 Scope & Boundaries）
+
+---
+
+## 9. Error Recovery
 
 | 失敗場景 | 處理方式 |
 |---|---|
-| Subagent 執行失敗 | 重試一次；再次失敗則暫停，通知用戶 |
-| 同批次其他 subagent 成功 | 保留成功結果，不廢棄 |
-| 合併衝突 | 手動解決衝突後重新執行該批次驗證 |
-| 測試回歸 | 暫停，標記問題後等待用戶決策 |
-
----
-
-## 9. Boundaries
-
-### Always
-- [ ] 每個批次完成後執行驗證命令
-- [ ] 遵循 `design.md` 定義的模組邊界
-- [ ] 遵循 `contract.md` 定義的外部依賴約束
-
-### Ask First
-- [ ] 修改 schema / migration 相關檔案
-- [ ] 新增外部依賴
-- [ ] 超出 spec 定義範圍的變更
-
-### Never
-- [ ] 修改其他 subagent 擁有的檔案（見 File Ownership Map）
-- [ ] 提交 secrets 或 API keys
-- [ ] 跳過驗證檢查點直接進入下一批次
+| 單一任務 Verify 失敗 | 修正後重試，最多 2 次；仍失敗則暫停並報告 |
+| Subagent 執行失敗 | 重試一次；再次失敗則暫停，保留同批次其他成功的結果 |
+| 合併衝突（subagent 結果合併時） | 手動解決衝突後重新執行該批次驗證 |
+| 測試回歸（現有測試在新代碼上失敗） | 暫停，標記問題後等待用戶決策。不要為了讓測試通過而降低測試標準 |
+| 發現 SPEC/DESIGN 矛盾或不可行的設計 | 暫停，記錄具體矛盾點，通知用戶 |
