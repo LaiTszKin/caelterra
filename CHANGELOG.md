@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.0.10] - 2026-06-01
+
+### Documentation
+
+- `design`, `plan`, `qa`, `spec` skills: standardized output file path references in acceptance criteria to `docs/plans/<YYYY-MM-DD>/<spec_name>/` format for consistency with actual output layout.
+
 ## [v4.0.9] - 2026-05-31
 
 ### Changed
