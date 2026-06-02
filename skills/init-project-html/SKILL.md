@@ -61,6 +61,22 @@ At load time, check the project state to select the correct mode:
 然後閱讀 `sample-demo/` 了解預期的輸出格式與抽象層級。
 
 按照功能模塊定義，全面檢索代碼庫。
+
+### CodeGraph 加速（如已安裝 CodeGraph）
+
+如果專案已安裝 `@colbymchenry/codegraph`，可以使用：
+
+```bash
+apltk codegraph survey
+```
+
+取得整個專案的結構調查報告——包含所有檔案、公開函式、呼叫關係，以及建議的 submodule 分組。Subagent 不需逐個 grep/Read 檔案，直接分析這份報告即可。
+
+針對特定功能模組：
+```bash
+apltk codegraph survey src/features/<slug>/
+```
+
 將其拆分為單個或多個功能模塊（對應 C4 Container 層級）。
 接著，識別功能模塊下的子模塊（對應 C4 Component 層級），並進行深度閱讀。
 
@@ -103,3 +119,4 @@ At load time, check the project state to select the correct mode:
 - `assets/architecture-page.template.html`: 模板 html。
 - `references/architecture.css`: 風格模板。
 - `sample-demo/`：完整示例輸出，用於理解基礎 atlas 的最終形態與 C4 層級對應。
+- `apltk codegraph` 命令：`init`, `sync`, `status`, `search`, `explore`, `survey`, `list-apis`, `verify`

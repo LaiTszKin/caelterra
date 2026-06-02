@@ -144,7 +144,25 @@ Compare the existing architecture diagram against the current code to assess its
 - If the baseline atlas differs significantly from the code (> 20% entries inconsistent), flag the risk in the architecture diff
 - If the baseline atlas is reliable, the diff can be layered directly on top of it
 
+#### 5b.1 Query CodeGraph for integration surface
+
+If the project has been indexed with CodeGraph (`.codegraph/` exists):
+
+```bash
+apltk codegraph list-apis --all
+```
+
+This returns the complete public API directory of the existing system—every symbol, its parameters, callers, and file location—deterministically parsed by tree-sitter. Use this data to understand which existing services and repositories the new feature can integrate with.
+
+For deeper context on a specific area:
+
+```bash
+apltk codegraph explore "feature-name"
+```
+
 #### 5c. Define the Diff by C4 Level
+
+When defining feature and submodule boundaries, prefer CodeGraph queries (from `apltk codegraph list-apis --all` or `apltk codegraph survey`) over manual grep/Read discovery — CodeGraph produces deterministic, tree-sitter-parsed results that are always consistent with the actual code.
 
 1. **System Context**: Define external actors, system boundaries, cross-system edges
 2. **Container level** (features): Define new or modified features and the edges between them
@@ -212,3 +230,4 @@ Before delivering, run two passes — completeness then quality.
 - `assets/templates/CHECKLIST.md` — CHECKLIST.md template
 - `references/architecture.md` — `apltk architecture` CLI reference (all mutation commands, for when you need more than render/validate/diff)
 - `references/definition.md` — C4 model level definitions (if you need more detail than the summary in Step 5c)
+- `apltk codegraph` commands: `init`, `sync`, `status`, `search`, `explore`, `survey`, `list-apis`, `verify`

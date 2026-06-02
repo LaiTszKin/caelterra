@@ -17,6 +17,7 @@ const TOOL_MODULE_NAMES = [
   '@laitszkin/tool-generate-storyboard-images',
   '@laitszkin/tool-enforce-video-aspect-ratio',
   '@laitszkin/tool-architecture',
+  '@laitszkin/tool-codegraph',
   '@laitszkin/tool-eval',
   '@laitszkin/tool-create-specs',
   '@laitszkin/tool-create-review-report',
