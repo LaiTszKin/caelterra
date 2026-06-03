@@ -2,6 +2,14 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.1.4] - 2026-06-04
+
+### Fixed
+
+- **`apltk codegraph --help` without `@colbymchenry/codegraph`**: `findProjectRoot()` moved after `--help` checks so that help output works without the optional dependency installed. Previously it crashed with `MODULE_NOT_FOUND` because the handler tried to load the module before checking for help flags.
+- **`@colbymchenry/codegraph` not found in global installs**: Added as `optionalDependencies` in root `package.json` so `npm install -g @laitszkin/apollo-toolkit` includes it when available.
+- **`rewrite-imports.mjs` missing `codegraph` from tool names list**: The postbuild script's hardcoded `TOOL_NAMES` list omitted `codegraph`, causing `isKnownToolName('codegraph')` to return false in CI-built packages.
+
 ## [v4.1.3] - 2026-06-04
 
 ### Fixed
