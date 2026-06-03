@@ -1,8 +1,7 @@
-import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError } from '@laitszkin/tool-utils';
+import { UserInputError, createToolRunner } from '@laitszkin/tool-utils';
 
 function getCodexHome(): string {
   return process.env.CODEX_HOME || path.join(process.env.HOME || '', '.codex');
@@ -54,21 +53,20 @@ function filterSessionsByHours(sessions: Session[], hours: number): Session[] {
   });
 }
 
-export async function extractConversationsHandler(
-  argv: string[],
-  context: ToolContext,
-): Promise<number> {
-  const stdout = context.stdout ?? process.stdout;
-
-  try {
-    const { values } = parseArgs({
-      args: argv,
-      options: {
-        hours: { type: 'string', default: '24' },
-        format: { type: 'string', default: 'text' },
-      },
-      allowPositionals: true,
-    });
+const schema = {
+  options: {
+    hours: { type: 'string' as const, default: '24' },
+    format: { type: 'string' as const, default: 'text' },
+  },
+  allowPositionals: true,
+  usage: 'apltk extract-conversations [options]',
+  description: 'Extract recent Codex sessions for memory updates.',
+  handler: async (
+    values: Record<string, unknown>,
+    _positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    const stdout = context.stdout ?? process.stdout;
 
     const hours = parseInt(values.hours as string, 10);
     if (isNaN(hours) || hours <= 0) {
@@ -121,16 +119,8 @@ export async function extractConversationsHandler(
     }
 
     return 0;
-  } catch (err) {
-    const stderr = context.stderr ?? process.stderr;
-    if (err instanceof UserInputError) {
-      stderr.write(`${err.message}\n`);
-      return err.statusCode;
-    }
-    stderr.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-}
+  },
+};
 
 // ---- Tool definition ----
 
@@ -139,5 +129,5 @@ export const tool: ToolDefinition = {
   category: 'Codex memory & learning',
   description: 'Extract recent Codex sessions for memory updates.',
   aliases: ['extract-codex-conversations', 'extract-skill-conversations'],
-  handler: extractConversationsHandler,
+  handler: createToolRunner(schema),
 };

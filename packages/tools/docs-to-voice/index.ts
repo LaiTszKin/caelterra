@@ -4,33 +4,12 @@ import path from 'node:path';
 import https from 'node:https';
 import http from 'node:http';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { parseArgs } from 'node:util';
-import { UserInputError, SystemError } from '@laitszkin/tool-utils';
+import { UserInputError, SystemError, createToolRunner } from '@laitszkin/tool-utils';
 
 const DEFAULT_API_ENDPOINT =
   'https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
 const DEFAULT_API_MODEL = 'qwen3-tts';
 const DEFAULT_API_VOICE = 'Cherry';
-
-interface DocsToVoiceArgs {
-  inputText: string | null;
-  inputFile: string | null;
-  projectDir: string;
-  projectName: string | null;
-  outputName: string | null;
-  mode: string;
-  voice: string | null;
-  rate: string | null;
-  speechRate: string | null;
-  apiEndpoint: string;
-  apiModel: string;
-  apiVoice: string;
-  apiKey: string | null;
-  maxChars: string | null;
-  noAutoProsody: boolean;
-  force: boolean;
-  help: boolean;
-}
 
 interface TimelineEntry {
   index: number;
@@ -41,62 +20,15 @@ interface TimelineEntry {
   endMs: number;
 }
 
-function parseCliArgs(args: string[]): DocsToVoiceArgs {
-  const { values } = parseArgs({
-    options: {
-      'text': { type: 'string' },
-      'input': { type: 'string' },
-      'input-file': { type: 'string' },
-      'project-dir': { type: 'string', default: '.' },
-      'project-name': { type: 'string' },
-      'output-name': { type: 'string' },
-      'engine': { type: 'string' },
-      'mode': { type: 'string', default: 'say' },
-      'voice': { type: 'string' },
-      'rate': { type: 'string' },
-      'speech-rate': { type: 'string' },
-      'api-endpoint': { type: 'string', default: DEFAULT_API_ENDPOINT },
-      'api-model': { type: 'string', default: DEFAULT_API_MODEL },
-      'api-voice': { type: 'string', default: DEFAULT_API_VOICE },
-      'api-key': { type: 'string' },
-      'max-chars': { type: 'string' },
-      'no-auto-prosody': { type: 'boolean', default: false },
-      'force': { type: 'boolean', default: false },
-      'help': { type: 'boolean', default: false },
-    },
-    allowPositionals: true,
-  });
-
-  return {
-    inputText: (values['text'] as string | undefined) ?? null,
-    inputFile: (values['input'] as string | undefined) || (values['input-file'] as string | undefined) || null,
-    projectDir: (values['project-dir'] as string) || '.',
-    projectName: (values['project-name'] as string | undefined) ?? null,
-    outputName: (values['output-name'] as string | undefined) ?? null,
-    mode: ((values['mode'] as string | undefined) || (values['engine'] as string | undefined) || 'say').toLowerCase(),
-    voice: (values['voice'] as string | undefined) ?? null,
-    rate: (values['rate'] as string | undefined) ?? null,
-    speechRate: (values['speech-rate'] as string | undefined) ?? null,
-    apiEndpoint: (values['api-endpoint'] as string) || DEFAULT_API_ENDPOINT,
-    apiModel: (values['api-model'] as string) || DEFAULT_API_MODEL,
-    apiVoice: (values['api-voice'] as string) || DEFAULT_API_VOICE,
-    apiKey: (values['api-key'] as string | undefined) ?? null,
-    maxChars: (values['max-chars'] as string | undefined) ?? null,
-    noAutoProsody: !!values['no-auto-prosody'],
-    force: !!values['force'],
-    help: !!values['help'],
-  };
-}
-
-function readInputText(opts: DocsToVoiceArgs): string {
-  if (opts.inputFile) {
-    const inputPath = path.resolve(opts.inputFile);
+function readInputText(inputFile: string | null, inputText: string | null): string {
+  if (inputFile) {
+    const inputPath = path.resolve(inputFile);
     if (!fs.existsSync(inputPath)) {
       throw new Error(`Input file not found: ${inputPath}`);
     }
     return fs.readFileSync(inputPath, 'utf-8');
   }
-  return opts.inputText || '';
+  return inputText || '';
 }
 
 function splitSentences(rawText: string): string[] {
@@ -454,300 +386,318 @@ function requestAlibabaCloudTTS(
   });
 }
 
-export async function docsToVoiceHandler(args: string[], context: ToolContext): Promise<number> {
-  const stdout = context.stdout || process.stdout;
-  const stderr = context.stderr || process.stderr;
+const schema = {
+  options: {
+    'text': { type: 'string' as const },
+    'input': { type: 'string' as const },
+    'input-file': { type: 'string' as const },
+    'project-dir': { type: 'string' as const, default: '.' },
+    'project-name': { type: 'string' as const },
+    'output-name': { type: 'string' as const },
+    'engine': { type: 'string' as const },
+    'mode': { type: 'string' as const, default: 'say' },
+    'voice': { type: 'string' as const },
+    'rate': { type: 'string' as const },
+    'speech-rate': { type: 'string' as const },
+    'api-endpoint': { type: 'string' as const, default: DEFAULT_API_ENDPOINT },
+    'api-model': { type: 'string' as const, default: DEFAULT_API_MODEL },
+    'api-voice': { type: 'string' as const, default: DEFAULT_API_VOICE },
+    'api-key': { type: 'string' as const },
+    'max-chars': { type: 'string' as const },
+    'no-auto-prosody': { type: 'boolean' as const, default: false },
+    'force': { type: 'boolean' as const, default: false },
+  },
+  allowPositionals: true,
+  usage: 'apltk docs-to-voice [options]',
+  description: 'Convert text into audio and sentence timelines.',
+  handler: async (
+    values: Record<string, unknown>,
+    _positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    const stdout = context.stdout ?? process.stdout;
+    const stderr = context.stderr ?? process.stderr;
 
-  try {
-    const opts = parseCliArgs(args);
+    try {
+      // Resolve args (previously handled by parseCliArgs)
+      const inputText: string | null = (values['text'] as string | undefined) ?? null;
+      const inputFile: string | null = (values['input'] as string | undefined) || (values['input-file'] as string | undefined) || null;
+      const projectDir: string = (values['project-dir'] as string) || '.';
+      const projectName: string | null = (values['project-name'] as string | undefined) ?? null;
+      const outputName: string | null = (values['output-name'] as string | undefined) ?? null;
+      const mode: string = ((values['mode'] as string | undefined) || (values['engine'] as string | undefined) || 'say').toLowerCase();
+      const voice: string | null = (values['voice'] as string | undefined) ?? null;
+      const rate: string | null = (values['rate'] as string | undefined) ?? null;
+      const speechRate: string | null = (values['speech-rate'] as string | undefined) ?? null;
+      const apiEndpoint: string = (values['api-endpoint'] as string) || DEFAULT_API_ENDPOINT;
+      const apiModel: string = (values['api-model'] as string) || DEFAULT_API_MODEL;
+      const apiVoice: string = (values['api-voice'] as string) || DEFAULT_API_VOICE;
+      const apiKey: string | null = (values['api-key'] as string | undefined) ?? null;
+      const maxChars: string | null = (values['max-chars'] as string | undefined) ?? null;
+      const noAutoProsody: boolean = !!values['no-auto-prosody'];
+      const force: boolean = !!values['force'];
 
-    if (opts.help) {
-      stdout.write(`Usage: apltk docs-to-voice [options]
+      if (mode !== 'say' && mode !== 'api') {
+        throw new UserInputError('--mode must be one of: say, api');
+      }
 
-Convert text into audio and sentence timelines.
-
-Options:
-  --input, --input-file <path>  Path to input text file
-  --text <string>               Raw text input
-  --project-dir <path>          Root project directory (default: .)
-  --project-name <name>         Folder name under DIR/audio/
-  --output-name <name>          Output filename
-  --engine, --mode <mode>       TTS mode: say (default) | api
-  --voice <name>                macOS say voice
-  --rate <wpm>                  macOS say rate
-  --speech-rate <factor>        Speech rate multiplier (e.g. 1.2)
-  --api-endpoint <url>          Alibaba Cloud TTS endpoint
-  --api-model <name>            Alibaba Cloud model (default: qwen3-tts)
-  --api-voice <name>            Alibaba Cloud voice (default: Cherry)
-  --api-key <key>               Alibaba Cloud API key
-  --max-chars <n>               Max chars per TTS chunk (0 disables)
-  --no-auto-prosody             Disable punctuation pause enhancement
-  --force                       Overwrite existing files
-`);
-      return 0;
-    }
-
-    if (opts.mode !== 'say' && opts.mode !== 'api') {
-      throw new UserInputError('--mode must be one of: say, api');
-    }
-
-    const sourceText = readInputText(opts);
-    if (!sourceText.trim()) {
-      throw new UserInputError('No text content found for conversion.');
-    }
-
-    // Resolve output directory
-    const projectDir = path.resolve(opts.projectDir);
-    const projectName = opts.projectName || path.basename(projectDir);
-    if (!projectName) {
-      throw new UserInputError('Unable to determine project name.');
-    }
-
-    const outputDir = path.join(projectDir, 'audio', projectName);
-    fs.mkdirSync(outputDir, { recursive: true });
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const outputName = opts.outputName || `voice-${timestamp}`;
-    const hasExtension = outputName.includes('.');
-
-    if (opts.mode === 'say') {
-      // macOS say mode
-      const textChunks = splitTextForTts(sourceText, opts.maxChars ? parseInt(opts.maxChars, 10) || null : null);
-      if (textChunks.length === 0) {
+      const sourceText = readInputText(inputFile, inputText);
+      if (!sourceText.trim()) {
         throw new UserInputError('No text content found for conversion.');
       }
 
-      // Check if `say` is available
-      try {
-        execSync('which say', { stdio: 'ignore' });
-      } catch {
-        throw new UserInputError("macOS 'say' command not found.");
+      // Resolve output directory
+      const resolvedProjectDir = path.resolve(projectDir);
+      const resolvedProjectName = projectName || path.basename(resolvedProjectDir);
+      if (!resolvedProjectName) {
+        throw new UserInputError('Unable to determine project name.');
       }
 
-      const finalOutputName = hasExtension ? outputName : `${outputName}.aiff`;
-      const outputPath = path.join(outputDir, finalOutputName);
+      const outputDir = path.join(resolvedProjectDir, 'audio', resolvedProjectName);
+      fs.mkdirSync(outputDir, { recursive: true });
 
-      if (fs.existsSync(outputPath) && !opts.force) {
-        throw new UserInputError(`Output already exists: ${outputPath}. Use --force to overwrite.`);
-      }
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const outName = outputName || `voice-${timestamp}`;
+      const hasExtension = outName.includes('.');
 
-      // Build prosody-enhanced text
-      const chunks = opts.noAutoProsody ? textChunks : textChunks.map(buildAutoProsodyText);
-
-      if (chunks.length === 1) {
-        // Single say command
-        const sayArgs = ['-o', outputPath];
-        if (opts.voice) sayArgs.push('-v', opts.voice);
-        if (opts.rate) sayArgs.push('-r', opts.rate);
-
-        const tmpFile = path.join(fs.mkdtempSync('docs-to-voice-'), 'input.txt');
-        fs.mkdirSync(path.dirname(tmpFile), { recursive: true });
-        fs.writeFileSync(tmpFile, chunks[0], 'utf-8');
-        sayArgs.push('-f', tmpFile);
-
-        try {
-          execSync(`say ${sayArgs.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`, {
-            stdio: 'ignore',
-            timeout: 300000,
-          });
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : 'unknown error';
-          throw new Error(`say mode failed: ${msg}`);
-        } finally {
-          try { fs.unlinkSync(tmpFile); fs.rmdirSync(path.dirname(tmpFile)); } catch { /* ignore */ }
+      if (mode === 'say') {
+        // macOS say mode
+        const textChunks = splitTextForTts(sourceText, maxChars ? parseInt(maxChars, 10) || null : null);
+        if (textChunks.length === 0) {
+          throw new UserInputError('No text content found for conversion.');
         }
+
+        // Check if `say` is available
+        try {
+          execSync('which say', { stdio: 'ignore' });
+        } catch {
+          throw new UserInputError("macOS 'say' command not found.");
+        }
+
+        const finalOutputName = hasExtension ? outName : `${outName}.aiff`;
+        const outputPath = path.join(outputDir, finalOutputName);
+
+        if (fs.existsSync(outputPath) && !force) {
+          throw new UserInputError(`Output already exists: ${outputPath}. Use --force to overwrite.`);
+        }
+
+        // Build prosody-enhanced text
+        const chunks = noAutoProsody ? textChunks : textChunks.map(buildAutoProsodyText);
+
+        if (chunks.length === 1) {
+          // Single say command
+          const sayArgs = ['-o', outputPath];
+          if (voice) sayArgs.push('-v', voice);
+          if (rate) sayArgs.push('-r', rate);
+
+          const tmpFile = path.join(fs.mkdtempSync('docs-to-voice-'), 'input.txt');
+          fs.mkdirSync(path.dirname(tmpFile), { recursive: true });
+          fs.writeFileSync(tmpFile, chunks[0], 'utf-8');
+          sayArgs.push('-f', tmpFile);
+
+          try {
+            execSync(`say ${sayArgs.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`, {
+              stdio: 'ignore',
+              timeout: 300000,
+            });
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'unknown error';
+            throw new Error(`say mode failed: ${msg}`);
+          } finally {
+            try { fs.unlinkSync(tmpFile); fs.rmdirSync(path.dirname(tmpFile)); } catch { /* ignore */ }
+          }
+        } else {
+          // Multiple chunks: generate then concat
+          const tempDir = fs.mkdtempSync('docs-to-voice-say-');
+          const partPaths: string[] = [];
+          const partExt = path.extname(outputPath) || '.aiff';
+
+          try {
+            for (let i = 0; i < chunks.length; i++) {
+              const partPath = path.join(tempDir, `part-${String(i + 1).padStart(4, '0')}${partExt}`);
+              const sArgs = ['-o', partPath];
+              if (voice) sArgs.push('-v', voice);
+              if (rate) sArgs.push('-r', rate);
+
+              const tFile = path.join(tempDir, `chunk-${i}.txt`);
+              fs.writeFileSync(tFile, chunks[i], 'utf-8');
+              sArgs.push('-f', tFile);
+
+              execSync(
+                `say ${sArgs.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`,
+                { stdio: 'ignore', timeout: 300000 },
+              );
+              partPaths.push(partPath);
+            }
+
+            concatAudioFiles(partPaths, outputPath);
+          } finally {
+            try { fs.rmSync(tempDir, { recursive: true }); } catch { /* ignore */ }
+          }
+        }
+
+        // Apply speech rate if requested
+        if (speechRate) {
+          const rateVal = parseFloat(speechRate);
+          if (rateVal > 0) applySpeechRateToAudio(outputPath, rateVal);
+        }
+
+        // Write timeline files
+        writeTimelineFiles(sourceText, outputPath, null);
+        stdout.write(`${outputPath}\n`);
       } else {
-        // Multiple chunks: generate then concat
-        const tempDir = fs.mkdtempSync('docs-to-voice-say-');
+        // API mode
+        if (!apiKey) {
+          throw new UserInputError('--api-key is required for api mode.');
+        }
+
+        const sentences = splitSentences(sourceText);
+        if (sentences.length === 0) {
+          throw new UserInputError('No text content found for conversion.');
+        }
+
+        const maxCharsNum = maxChars ? parseInt(maxChars, 10) || null : null;
+
+        // Build request items from sentences
+        interface RequestItem {
+          sentenceIndex: number;
+          text: string;
+        }
+        const requestItems: RequestItem[] = [];
+        for (let si = 0; si < sentences.length; si++) {
+          const sentence = sentences[si];
+          if (maxCharsNum && sentence.length > maxCharsNum) {
+            for (let i = 0; i < sentence.length; i += maxCharsNum) {
+              requestItems.push({ sentenceIndex: si, text: sentence.slice(i, i + maxCharsNum) });
+            }
+          } else {
+            requestItems.push({ sentenceIndex: si, text: sentence });
+          }
+        }
+
+        if (requestItems.length === 0) {
+          throw new UserInputError('No text content found for conversion.');
+        }
+
+        const tempDir = fs.mkdtempSync('docs-to-voice-api-');
         const partPaths: string[] = [];
-        const partExt = path.extname(outputPath) || '.aiff';
+        let partExt = '';
+        const sentenceDurations = new Array(sentences.length).fill(0);
+        const sentenceDurationKnown = new Array(sentences.length).fill(true);
 
         try {
-          for (let i = 0; i < chunks.length; i++) {
-            const partPath = path.join(tempDir, `part-${String(i + 1).padStart(4, '0')}${partExt}`);
-            const sayArgs = ['-o', partPath];
-            if (opts.voice) sayArgs.push('-v', opts.voice);
-            if (opts.rate) sayArgs.push('-r', opts.rate);
-
-            const tmpFile = path.join(tempDir, `chunk-${i}.txt`);
-            fs.writeFileSync(tmpFile, chunks[i], 'utf-8');
-            sayArgs.push('-f', tmpFile);
-
-            execSync(
-              `say ${sayArgs.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`,
-              { stdio: 'ignore', timeout: 300000 },
+          for (let i = 0; i < requestItems.length; i++) {
+            const item = requestItems[i];
+            const apiResult = await requestAlibabaCloudTTS(
+              apiEndpoint,
+              apiKey,
+              apiModel,
+              apiVoice,
+              item.text,
             );
+
+            const currentExt = apiResult.audioFormat || 'wav';
+            if (!partExt) partExt = currentExt;
+
+            const partPath = path.join(tempDir, `part-${String(i + 1).padStart(4, '0')}.${currentExt}`);
+            if (apiResult.audioUrl) {
+              await downloadBinary(apiResult.audioUrl, partPath);
+            } else if (apiResult.audioData) {
+              fs.writeFileSync(partPath, Buffer.from(apiResult.audioData, 'base64'));
+            } else {
+              throw new Error('No audio data in API response.');
+            }
+
+            if (!fs.existsSync(partPath) || fs.statSync(partPath).size === 0) {
+              throw new Error(`Failed to generate audio chunk ${i + 1}.`);
+            }
             partPaths.push(partPath);
+
+            const partDuration = readDurationSeconds(partPath);
+            if (partDuration === null || partDuration <= 0) {
+              sentenceDurationKnown[item.sentenceIndex] = false;
+            } else {
+              sentenceDurations[item.sentenceIndex] += partDuration;
+            }
+          }
+
+          const finalOutputName = hasExtension
+            ? outName
+            : `${outName}.${partExt || 'wav'}`;
+          const outputPath = path.join(outputDir, finalOutputName);
+
+          if (fs.existsSync(outputPath) && !force) {
+            throw new UserInputError(`Output already exists: ${outputPath}. Use --force to overwrite.`);
           }
 
           concatAudioFiles(partPaths, outputPath);
+
+          // Build timeline durations
+          let timelineDurations: number[] | null = null;
+          const unknownIndexes = sentenceDurationKnown
+            .map((known, idx) => (known ? -1 : idx))
+            .filter((idx) => idx >= 0);
+
+          if (unknownIndexes.length === 0 && sentenceDurations.reduce((a, b) => a + b, 0) > 0) {
+            timelineDurations = sentenceDurations;
+          } else if (unknownIndexes.length > 0) {
+            const outputDuration = readDurationSeconds(outputPath);
+            const knownTotal = sentenceDurations.reduce(
+              (sum, val, idx) => (sentenceDurationKnown[idx] ? sum + val : sum),
+              0,
+            );
+
+            if (outputDuration && outputDuration > knownTotal) {
+              const remaining = outputDuration - knownTotal;
+              const unknownWeights = unknownIndexes.map((idx) => sentenceWeight(sentences[idx]));
+              const totalUnknownWeight = unknownWeights.reduce((a, b) => a + b, 0);
+
+              if (totalUnknownWeight > 0) {
+                for (let wi = 0; wi < unknownIndexes.length; wi++) {
+                  sentenceDurations[unknownIndexes[wi]] +=
+                    remaining * (unknownWeights[wi] / totalUnknownWeight);
+                }
+                timelineDurations = sentenceDurations;
+              }
+            }
+          }
+
+          // Apply speech rate if requested
+          if (speechRate) {
+            const rateVal = parseFloat(speechRate);
+            if (rateVal > 0) {
+              applySpeechRateToAudio(outputPath, rateVal);
+              if (timelineDurations) {
+                timelineDurations = timelineDurations.map((d) => d / rateVal);
+              }
+            }
+          }
+
+          writeTimelineFiles(sourceText, outputPath, timelineDurations);
+          stdout.write(`${outputPath}\n`);
         } finally {
           try { fs.rmSync(tempDir, { recursive: true }); } catch { /* ignore */ }
         }
       }
 
-      // Apply speech rate if requested
-      if (opts.speechRate) {
-        const rate = parseFloat(opts.speechRate);
-        if (rate > 0) applySpeechRateToAudio(outputPath, rate);
+      return 0;
+    } catch (err: unknown) {
+      if (err instanceof UserInputError) {
+        stderr.write(`${err.message}\n`);
+      } else if (err instanceof SystemError) {
+        stderr.write(`${err.message}\n${err.stack}\n`);
+      } else {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        stderr.write(`Error: ${msg}\n`);
       }
-
-      // Write timeline files
-      writeTimelineFiles(sourceText, outputPath, null);
-      stdout.write(`${outputPath}\n`);
-    } else {
-      // API mode
-      const apiKey = opts.apiKey;
-      if (!apiKey) {
-        throw new UserInputError('--api-key is required for api mode.');
-      }
-
-      const sentences = splitSentences(sourceText);
-      if (sentences.length === 0) {
-        throw new UserInputError('No text content found for conversion.');
-      }
-
-      const maxChars = opts.maxChars ? parseInt(opts.maxChars, 10) || null : null;
-
-      // Build request items from sentences
-      interface RequestItem {
-        sentenceIndex: number;
-        text: string;
-      }
-      const requestItems: RequestItem[] = [];
-      for (let si = 0; si < sentences.length; si++) {
-        const sentence = sentences[si];
-        if (maxChars && sentence.length > maxChars) {
-          for (let i = 0; i < sentence.length; i += maxChars) {
-            requestItems.push({ sentenceIndex: si, text: sentence.slice(i, i + maxChars) });
-          }
-        } else {
-          requestItems.push({ sentenceIndex: si, text: sentence });
-        }
-      }
-
-      if (requestItems.length === 0) {
-        throw new UserInputError('No text content found for conversion.');
-      }
-
-      const tempDir = fs.mkdtempSync('docs-to-voice-api-');
-      const partPaths: string[] = [];
-      let partExt = '';
-      const sentenceDurations = new Array(sentences.length).fill(0);
-      const sentenceDurationKnown = new Array(sentences.length).fill(true);
-
-      try {
-        for (let i = 0; i < requestItems.length; i++) {
-          const item = requestItems[i];
-          const apiResult = await requestAlibabaCloudTTS(
-            opts.apiEndpoint,
-            apiKey,
-            opts.apiModel,
-            opts.apiVoice,
-            item.text,
-          );
-
-          const currentExt = apiResult.audioFormat || 'wav';
-          if (!partExt) partExt = currentExt;
-
-          const partPath = path.join(tempDir, `part-${String(i + 1).padStart(4, '0')}.${currentExt}`);
-          if (apiResult.audioUrl) {
-            await downloadBinary(apiResult.audioUrl, partPath);
-          } else if (apiResult.audioData) {
-            fs.writeFileSync(partPath, Buffer.from(apiResult.audioData, 'base64'));
-          } else {
-            throw new Error('No audio data in API response.');
-          }
-
-          if (!fs.existsSync(partPath) || fs.statSync(partPath).size === 0) {
-            throw new Error(`Failed to generate audio chunk ${i + 1}.`);
-          }
-          partPaths.push(partPath);
-
-          const partDuration = readDurationSeconds(partPath);
-          if (partDuration === null || partDuration <= 0) {
-            sentenceDurationKnown[item.sentenceIndex] = false;
-          } else {
-            sentenceDurations[item.sentenceIndex] += partDuration;
-          }
-        }
-
-        const finalOutputName = hasExtension
-          ? outputName
-          : `${outputName}.${partExt || 'wav'}`;
-        const outputPath = path.join(outputDir, finalOutputName);
-
-        if (fs.existsSync(outputPath) && !opts.force) {
-          throw new UserInputError(`Output already exists: ${outputPath}. Use --force to overwrite.`);
-        }
-
-        concatAudioFiles(partPaths, outputPath);
-
-        // Build timeline durations
-        let timelineDurations: number[] | null = null;
-        const unknownIndexes = sentenceDurationKnown
-          .map((known, idx) => (known ? -1 : idx))
-          .filter((idx) => idx >= 0);
-
-        if (unknownIndexes.length === 0 && sentenceDurations.reduce((a, b) => a + b, 0) > 0) {
-          timelineDurations = sentenceDurations;
-        } else if (unknownIndexes.length > 0) {
-          const outputDuration = readDurationSeconds(outputPath);
-          const knownTotal = sentenceDurations.reduce(
-            (sum, val, idx) => (sentenceDurationKnown[idx] ? sum + val : sum),
-            0,
-          );
-
-          if (outputDuration && outputDuration > knownTotal) {
-            const remaining = outputDuration - knownTotal;
-            const unknownWeights = unknownIndexes.map((idx) => sentenceWeight(sentences[idx]));
-            const totalUnknownWeight = unknownWeights.reduce((a, b) => a + b, 0);
-
-            if (totalUnknownWeight > 0) {
-              for (let wi = 0; wi < unknownIndexes.length; wi++) {
-                sentenceDurations[unknownIndexes[wi]] +=
-                  remaining * (unknownWeights[wi] / totalUnknownWeight);
-              }
-              timelineDurations = sentenceDurations;
-            }
-          }
-        }
-
-        // Apply speech rate if requested
-        if (opts.speechRate) {
-          const rate = parseFloat(opts.speechRate);
-          if (rate > 0) {
-            applySpeechRateToAudio(outputPath, rate);
-            if (timelineDurations) {
-              timelineDurations = timelineDurations.map((d) => d / rate);
-            }
-          }
-        }
-
-        writeTimelineFiles(sourceText, outputPath, timelineDurations);
-        stdout.write(`${outputPath}\n`);
-      } finally {
-        try { fs.rmSync(tempDir, { recursive: true }); } catch { /* ignore */ }
-      }
+      return 1;
     }
-
-    return 0;
-  } catch (err: unknown) {
-    if (err instanceof UserInputError) {
-      stderr.write(`${err.message}\n`);
-    } else if (err instanceof SystemError) {
-      stderr.write(`${err.message}\n${err.stack}\n`);
-    } else {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      stderr.write(`Error: ${msg}\n`);
-    }
-    return 1;
-  }
-}
+  },
+};
 
 export const tool: ToolDefinition = {
   name: 'docs-to-voice',
   category: 'media',
   description: 'Convert text into audio and sentence timelines.',
-  handler: docsToVoiceHandler,
+  handler: createToolRunner(schema),
 };
