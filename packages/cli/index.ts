@@ -49,156 +49,28 @@ export {
   execCommand,
 };
 import type { CliContext, InstallMode, ParsedArguments } from './types.js';
+import { AppError, UserInputError, SystemError } from '@laitszkin/tool-utils';
+import { InstallArgsParser } from './parsers/install-parser.js';
+import { UninstallArgsParser } from './parsers/uninstall-parser.js';
+import { ToolArgsParser } from './parsers/tool-parser.js';
+import { HelpTextBuilder } from './help-text-builder.js';
 
-function buildModeUsagePattern(): string {
-  return `${VALID_MODES.join('|')}|all`;
-}
-
-function buildInteractiveModeHint(): string {
-  const quotedModes = [...VALID_MODES, 'all'].map((mode) => `\`${mode}\``);
-  return `${quotedModes.slice(0, -1).join(', ')}, or ${quotedModes.at(-1)}`;
-}
+// ---- Backward-compatible help text wrappers (delegate to HelpTextBuilder) ---
 
 function buildHelpText({ version, colorEnabled }: { version: string; colorEnabled: boolean }): string {
-  const examples = [
-    { command: 'apltk --help', result: 'Shows the top-level Apollo Toolkit guide, including install modes and bundled task-tool discovery.' },
-    { command: 'apltk tools --help', result: 'Lists bundled tools by task so you can decide which CLI helper to inspect next.' },
-    { command: 'apltk architecture --help', result: 'Shows the architecture atlas command tree, task guidance, and action-specific follow-up help paths.' },
-    { command: 'apltk tools architecture --help', result: 'Shows what the architecture atlas tool is for, then prints its native command tree and examples.' },
-    { command: 'apltk filter-logs app.log --start 2026-03-24T10:00:00Z', result: 'Prints only the log lines whose timestamps fall within the requested time window.' },
-  ];
-  return [
-    buildBanner({ version, colorEnabled }),
-    '',
-    'Usage:',
-    `  apltk [install] [${buildModeUsagePattern()}]...`,
-    `  apollo-toolkit [install] [${buildModeUsagePattern()}]...`,
-    `  apltk uninstall [${buildModeUsagePattern()}]... [--yes]`,
-    '  apltk tools',
-    '  apltk <tool> [...args]',
-    '  apltk tools <tool> [...args]',
-    '  apltk --help',
-    '  apollo-toolkit --help',
-    '',
-    'Common goals:',
-    '  - Install or refresh skills in one or more agent targets: `apltk install --help`',
-    '  - Remove manifest-tracked installs from selected targets: `apltk uninstall --help`',
-    '  - Discover which bundled helper tool matches a task: `apltk tools --help`',
-    '  - Inspect one tool deeply before running it: `apltk tools <tool> --help`',
-    '',
-    'Bundled tools:',
-    formatToolList(),
-    '',
-    buildToolDiscoveryHelp(),
-    '',
-    'Options:',
-    '  --home <path>  Override Apollo Toolkit home directory',
-    '  --symlink      Install skills as symlinks instead of copied directories',
-    '  --copy         Install skills as copied directories instead of symlinks',
-    '  --yes, -y      Skip uninstall confirmation',
-    '  --help         Show this help text',
-    '',
-    'Examples:',
-    formatExamples(examples),
-  ].join('\n');
+  return new HelpTextBuilder({ version, colorEnabled }).overview();
 }
 
 function buildToolsHelp({ version, colorEnabled }: { version: string; colorEnabled: boolean }): string {
-  const examples = [
-    { command: 'apltk tools', result: 'Lists all bundled tools plus the task-oriented discovery guide.' },
-    { command: 'apltk tools open-github-issue --help', result: 'Shows when to use the GitHub issue publisher, then prints its exact script flags and examples.' },
-    { command: 'apltk tools architecture --help', result: 'Shows when to use the architecture atlas CLI, then prints its native command tree.' },
-  ];
-  return [
-    buildBanner({ version, colorEnabled }),
-    '',
-    'Usage:',
-    '  apltk tools',
-    '  apltk <tool> [...args]',
-    '  apltk tools <tool> [...args]',
-    '',
-    buildToolDiscoveryHelp(),
-    '',
-    'Bundled tools:',
-    formatToolList(),
-    '',
-    'Tip:',
-    '  Pass `--help` after a tool name to view task guidance, native script flags, and concrete examples.',
-    '',
-    'Examples:',
-    formatExamples(examples),
-  ].join('\n');
+  return new HelpTextBuilder({ version, colorEnabled }).toolsHelp();
 }
 
 function buildInstallHelpText({ version, colorEnabled }: { version: string; colorEnabled: boolean }): string {
-  const examples = [
-    { command: 'apltk', result: 'Launches the interactive installer, opens the target selector, and then walks through link-mode confirmation.' },
-    { command: 'apltk codex openclaw --symlink', result: 'Performs a non-interactive install into `codex` and `openclaw` targets using symlinks.' },
-    { command: 'npx @laitszkin/apollo-toolkit all --copy', result: 'Installs a copied snapshot into every supported target instead of symlinking.' },
-  ];
-  return [
-    buildBanner({ version, colorEnabled }),
-    '',
-    'Usage:',
-    `  apltk [install] [${buildModeUsagePattern()}]...`,
-    `  apollo-toolkit [install] [${buildModeUsagePattern()}]...`,
-    '',
-    'Use this when:',
-    '  - You want to install or refresh Apollo Toolkit skills in one or more agent targets.',
-    '  - You need to choose between symlink mode (auto-updating) and copy mode (stable snapshot).',
-    '',
-    'Supported targets:',
-    buildSupportedTargetLines({ targets: [...TARGET_DEFINITIONS], colorEnabled }),
-    '',
-    'Behavior notes:',
-    '  - Running `apltk` with no targets opens the interactive installer and target selector.',
-    '  - `--symlink` keeps installed skills connected to the managed toolkit checkout in `~/.apollo-toolkit`.',
-    '  - `--copy` installs a snapshot that only changes when you run the installer again.',
-    '  - The installer can optionally include codex-exclusive skills in non-codex targets after prompting.',
-    '',
-    'Options:',
-    '  --home <path>  Override Apollo Toolkit home directory',
-    '  --symlink      Install skills as symlinks (recommended)',
-    '  --copy         Install skills as copied directories',
-    '  --help         Show this install help',
-    '',
-    'Examples:',
-    formatExamples(examples),
-  ].join('\n');
+  return new HelpTextBuilder({ version, colorEnabled }).install();
 }
 
 function buildUninstallHelpText({ version, colorEnabled }: { version: string; colorEnabled: boolean }): string {
-  const examples = [
-    { command: 'apltk uninstall', result: 'Opens the interactive uninstall selector when running in a TTY and then asks for confirmation before removal.' },
-    { command: 'apltk uninstall codex agents --yes', result: 'Removes Apollo Toolkit-managed installs from `codex` and `agents` without another confirmation prompt.' },
-    { command: 'apltk uninstall codex --home /tmp/custom-home', result: 'Uses the custom managed toolkit home while removing manifest-tracked installs from the selected target.' },
-  ];
-  return [
-    buildBanner({ version, colorEnabled }),
-    '',
-    'Usage:',
-    `  apltk uninstall [${buildModeUsagePattern()}]... [--yes]`,
-    '',
-    'Use this when:',
-    '  - You want to remove Apollo Toolkit-managed skills from one or more agent targets.',
-    '  - You need to clean up manifest-tracked historical installs as well as the current installed skills.',
-    '',
-    'Supported targets:',
-    buildSupportedTargetLines({ targets: [...TARGET_DEFINITIONS], colorEnabled }),
-    '',
-    'Behavior notes:',
-    '  - With no explicit targets, uninstall opens the interactive selector in a TTY and otherwise falls back to all targets.',
-    '  - Uninstall removes manifest-tracked current and historical Apollo Toolkit skill directories.',
-    '  - `--yes` skips the confirmation prompt after the target list is resolved.',
-    '',
-    'Options:',
-    '  --home <path>  Override Apollo Toolkit home directory',
-    '  --yes, -y      Skip uninstall confirmation',
-    '  --help         Show this uninstall help',
-    '',
-    'Examples:',
-    formatExamples(examples),
-  ].join('\n');
+  return new HelpTextBuilder({ version, colorEnabled }).uninstall();
 }
 
 function readPackageJson(sourceRoot: string): { version: string; name: string } {
@@ -206,100 +78,95 @@ function readPackageJson(sourceRoot: string): { version: string; name: string } 
 }
 
 function parseArguments(argv: string[]): ParsedArguments {
-  const args = [...argv];
-  const result: ParsedArguments = {
+  // Normalise "tool" alias to "tools"
+  const normalised = [...argv];
+  if (normalised[0] === 'tool') {
+    normalised[0] = 'tools';
+  }
+
+  // Delegate to the appropriate parser based on the first argument.
+  if (normalised[0] === 'uninstall') {
+    const cmd = new UninstallArgsParser().parse(normalised);
+    return {
+      command: 'uninstall',
+      modes: cmd.modes,
+      showHelp: cmd.showHelp,
+      showToolsHelp: false,
+      toolkitHome: cmd.toolkitHome,
+      toolName: null,
+      toolArgs: [],
+      linkMode: null,
+      assumeYes: cmd.assumeYes,
+      explicitInstallCommand: false,
+      helpTopic: cmd.helpTopic,
+    };
+  }
+
+  if (normalised[0] === 'tools') {
+    const cmd = new ToolArgsParser().parse(normalised);
+    if (cmd.command === 'tools-help') {
+      return {
+        command: 'tools-help',
+        modes: [],
+        showHelp: false,
+        showToolsHelp: true,
+        toolkitHome: null,
+        toolName: null,
+        toolArgs: [],
+        linkMode: null,
+        assumeYes: false,
+        explicitInstallCommand: false,
+        helpTopic: 'overview',
+      };
+    }
+    return {
+      command: 'tool',
+      modes: [],
+      showHelp: false,
+      showToolsHelp: false,
+      toolkitHome: null,
+      toolName: cmd.toolName,
+      toolArgs: cmd.toolArgs,
+      linkMode: null,
+      assumeYes: false,
+      explicitInstallCommand: false,
+      helpTopic: 'overview',
+    };
+  }
+
+  // Direct tool name (no "tools" prefix)
+  const firstArg = normalised[0];
+  if (firstArg && isKnownToolName(firstArg)) {
+    return {
+      command: 'tool',
+      modes: [],
+      showHelp: false,
+      showToolsHelp: false,
+      toolkitHome: null,
+      toolName: firstArg,
+      toolArgs: normalised.slice(1),
+      linkMode: null,
+      assumeYes: false,
+      explicitInstallCommand: false,
+      helpTopic: 'overview',
+    };
+  }
+
+  // Default: install (includes explicit "install" keyword)
+  const cmd = new InstallArgsParser().parse(normalised);
+  return {
     command: 'install',
-    modes: [],
-    showHelp: false,
+    modes: cmd.modes,
+    showHelp: cmd.showHelp,
     showToolsHelp: false,
-    toolkitHome: null,
+    toolkitHome: cmd.toolkitHome,
     toolName: null,
     toolArgs: [],
-    linkMode: null,
+    linkMode: cmd.linkMode,
     assumeYes: false,
-    explicitInstallCommand: false,
-    helpTopic: 'overview',
+    explicitInstallCommand: cmd.explicitInstallCommand,
+    helpTopic: cmd.helpTopic,
   };
-
-  if (args[0] === 'uninstall') {
-    result.command = 'uninstall';
-    args.shift();
-    while (args.length > 0) {
-      const arg = args.shift()!;
-      if (arg === '--help' || arg === '-h') {
-        result.showHelp = true;
-      } else if (arg === '--yes' || arg === '-y') {
-        result.assumeYes = true;
-      } else if (arg === '--home') {
-        const toolkitHome = args.shift();
-        if (!toolkitHome) throw new Error('Missing value for --home');
-        result.toolkitHome = path.resolve(toolkitHome);
-      } else {
-        result.modes.push(arg as InstallMode);
-      }
-    }
-    if (result.showHelp) result.helpTopic = 'uninstall';
-    return result;
-  }
-
-  if (args[0] === 'tools' || args[0] === 'tool') {
-    args.shift();
-    const nextArg: string | undefined = args[0];
-    if (args.length === 0 || nextArg === '--help' || nextArg === '-h') {
-      result.command = 'tools-help';
-      result.showToolsHelp = true;
-      return result;
-    }
-    result.command = 'tool';
-    result.toolName = args.shift() || null;
-    result.toolArgs = args;
-    return result;
-  }
-
-  const firstArg = args[0];
-  if (firstArg && isKnownToolName(firstArg)) {
-    result.command = 'tool';
-    result.toolName = args.shift() || null;
-    result.toolArgs = args;
-    return result;
-  }
-
-  while (args.length > 0) {
-    const arg = args.shift()!;
-    if (arg === '--help' || arg === '-h') {
-      result.showHelp = true;
-      continue;
-    }
-    if (arg === '--home') {
-      const toolkitHome = args.shift();
-      if (!toolkitHome) throw new Error('Missing value for --home');
-      result.toolkitHome = path.resolve(toolkitHome);
-      continue;
-    }
-    if (arg === '--symlink') {
-      result.linkMode = 'symlink';
-      continue;
-    }
-    if (arg === '--copy') {
-      result.linkMode = 'copy';
-      continue;
-    }
-    if (arg === 'install') {
-      result.explicitInstallCommand = true;
-      continue;
-    }
-    result.modes.push(arg as InstallMode);
-  }
-
-  if (result.showHelp) {
-    const installContextRequested = result.explicitInstallCommand
-      || result.modes.length > 0
-      || result.linkMode !== null
-      || result.toolkitHome !== null;
-    result.helpTopic = installContextRequested ? 'install' : 'overview';
-  }
-
-  return result;
 }
 
 function buildSymlinkInfo({ colorEnabled }: { colorEnabled: boolean }): string {
@@ -580,7 +447,15 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
     printSummary({ stdout, version: packageJson.version, toolkitHome, modes, installResult, env });
     return 0;
   } catch (error) {
-    stderr.write(`Error: ${(error as Error).message}\n`);
+    if (error instanceof UserInputError) {
+      stderr.write(`${error.message}\n`);
+    } else if (error instanceof SystemError) {
+      stderr.write(`${error.message}\n${error.stack}\n`);
+    } else if (error instanceof AppError) {
+      stderr.write(`Error: ${error.message}\n`);
+    } else {
+      stderr.write(`Error: ${(error as Error).message}\n`);
+    }
     return 1;
   }
 }

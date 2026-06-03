@@ -4,6 +4,8 @@ import https from 'node:https';
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { parseArgs } from 'node:util';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
 interface StoryboardArgs {
   contentName: string | null;
@@ -21,92 +23,48 @@ interface StoryboardArgs {
   help: boolean;
 }
 
-function parseArgs(args: string[]): StoryboardArgs {
-  const parsed: StoryboardArgs = {
-    contentName: null,
-    projectDir: '.',
-    envFile: null,
-    apiUrl: null,
-    apiKey: null,
-    promptsFile: null,
-    prompts: [],
-    imageModel: null,
-    aspectRatio: null,
-    imageSize: null,
-    quality: null,
-    style: null,
-    help: false,
+function parseCliArgs(args: string[]): StoryboardArgs {
+  const { values, positionals } = parseArgs({
+    options: {
+      'input': { type: 'string' },
+      'content-name': { type: 'string' },
+      'project-dir': { type: 'string', default: '.' },
+      'env-file': { type: 'string' },
+      'api-url': { type: 'string' },
+      'api-key': { type: 'string' },
+      'prompts-file': { type: 'string' },
+      'prompt': { type: 'string', multiple: true },
+      'image-model': { type: 'string' },
+      'aspect-ratio': { type: 'string' },
+      'image-size': { type: 'string' },
+      'size': { type: 'string' },
+      'quality': { type: 'string' },
+      'style': { type: 'string' },
+      'help': { type: 'boolean', default: false },
+    },
+    allowPositionals: true,
+  });
+
+  const contentName = (values['input'] as string | undefined) ||
+    (values['content-name'] as string | undefined) ||
+    positionals[0] ||
+    null;
+
+  return {
+    contentName,
+    projectDir: (values['project-dir'] as string) || '.',
+    envFile: (values['env-file'] as string | undefined) ?? null,
+    apiUrl: (values['api-url'] as string | undefined) ?? null,
+    apiKey: (values['api-key'] as string | undefined) ?? null,
+    promptsFile: (values['prompts-file'] as string | undefined) ?? null,
+    prompts: (values['prompt'] as string[] | undefined) || [],
+    imageModel: (values['image-model'] as string | undefined) ?? null,
+    aspectRatio: (values['aspect-ratio'] as string | undefined) ?? null,
+    imageSize: (values['image-size'] as string | undefined) || (values['size'] as string | undefined) || null,
+    quality: (values['quality'] as string | undefined) ?? null,
+    style: (values['style'] as string | undefined) ?? null,
+    help: !!values['help'],
   };
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === '--help' || arg === '-h') {
-      parsed.help = true;
-      continue;
-    }
-    if (arg.startsWith('--')) {
-      const eqIndex = arg.indexOf('=');
-      let key: string;
-      let value: string;
-
-      if (eqIndex !== -1) {
-        key = arg.slice(2, eqIndex);
-        value = arg.slice(eqIndex + 1);
-      } else {
-        key = arg.slice(2);
-        if (key === 'prompt') {
-          // --prompt can be multiple
-          value = args[++i] || '';
-          parsed.prompts.push(value);
-          continue;
-        }
-        value = args[++i] || '';
-      }
-
-      switch (key) {
-        case 'input':
-        case 'content-name':
-          parsed.contentName = value;
-          break;
-        case 'project-dir':
-          parsed.projectDir = value;
-          break;
-        case 'env-file':
-          parsed.envFile = value;
-          break;
-        case 'api-url':
-          parsed.apiUrl = value;
-          break;
-        case 'api-key':
-          parsed.apiKey = value;
-          break;
-        case 'prompts-file':
-          parsed.promptsFile = value;
-          break;
-        case 'image-model':
-          parsed.imageModel = value;
-          break;
-        case 'aspect-ratio':
-          parsed.aspectRatio = value;
-          break;
-        case 'image-size':
-        case 'size':
-          parsed.imageSize = value;
-          break;
-        case 'quality':
-          parsed.quality = value;
-          break;
-        case 'style':
-          parsed.style = value;
-          break;
-      }
-    } else if (!parsed.contentName && !arg.startsWith('-')) {
-      // positional: content name
-      parsed.contentName = arg;
-    }
-  }
-
-  return parsed;
 }
 
 function sanitizeComponent(name: string, fallback: string): string {
@@ -289,9 +247,9 @@ export async function generateStoryboardImagesHandler(args: string[], context: T
   const stderr = context.stderr || process.stderr;
 
   try {
-    const opts = parseArgs(args);
+    const opts = parseCliArgs(args);
 
-    if (opts.help || (!opts.contentName)) {
+    if (opts.help) {
       stdout.write(`Usage: apltk generate-storyboard-images --input <name> [options]
 
 Generate storyboard images from prompts via OpenAI-compatible API.
@@ -312,7 +270,11 @@ Options:
 
 Either --prompts-file or at least one --prompt is required.
 `);
-      return opts.contentName ? 1 : 0;
+      return 0;
+    }
+
+    if (!opts.contentName) {
+      throw new UserInputError('--input or --content-name is required.');
     }
 
     const projectDir = path.resolve(opts.projectDir);
@@ -355,12 +317,10 @@ Either --prompts-file or at least one --prompt is required.
     const style = opts.style || process.env.OPENAI_IMAGE_STYLE || null;
 
     if (!apiUrl) {
-      stderr.write('Error: Missing API URL. Set --api-url or OPENAI_API_URL.\n');
-      return 1;
+      throw new UserInputError('Missing API URL. Set --api-url or OPENAI_API_URL.');
     }
     if (!apiKey) {
-      stderr.write('Error: Missing API key. Set --api-key or OPENAI_API_KEY.\n');
-      return 1;
+      throw new UserInputError('Missing API key. Set --api-key or OPENAI_API_KEY.');
     }
 
     // Build prompt items
@@ -370,13 +330,11 @@ Either --prompts-file or at least one --prompt is required.
     } else if (opts.prompts.length > 0) {
       promptItems = opts.prompts.map((p, i) => ({ title: `scene-${i + 1}`, prompt: p.trim() }));
     } else {
-      stderr.write('Error: Either --prompts-file or at least one --prompt is required.\n');
-      return 1;
+      throw new UserInputError('Either --prompts-file or at least one --prompt is required.');
     }
 
     if (promptItems.length === 0) {
-      stderr.write('Error: No prompts provided.\n');
-      return 1;
+      throw new UserInputError('No prompts provided.');
     }
 
     const outputDir = path.join(projectDir, 'pictures', sanitizeComponent(contentName, 'untitled-content'));

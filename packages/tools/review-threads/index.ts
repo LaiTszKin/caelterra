@@ -1,6 +1,8 @@
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError } from '@laitszkin/tool-utils';
 
 const LIST_QUERY = `
 query($owner: String!, $name: String!, $number: Int!, $after: String) {
@@ -62,68 +64,49 @@ interface ReviewThreadsArgs {
   dryRun: boolean;
 }
 
-function parseArgs(argv: string[]): ReviewThreadsArgs {
-  const args: ReviewThreadsArgs = {
-    command: '',
-    repo: null,
-    pr: null,
-    state: 'unresolved',
-    output: 'table',
-    threadId: [],
-    threadIdFile: null,
-    allUnresolved: false,
-    dryRun: false,
+function parseArgsFn(argv: string[]): ReviewThreadsArgs {
+  const { values, positionals } = parseArgs({
+    options: {
+      repo: { type: 'string' },
+      pr: { type: 'string' },
+      state: { type: 'string' },
+      output: { type: 'string' },
+      'thread-id': { type: 'string', multiple: true },
+      'thread-id-file': { type: 'string' },
+      'all-unresolved': { type: 'boolean' },
+      'dry-run': { type: 'boolean' },
+    },
+    allowPositionals: true,
+  });
+
+  const command = positionals[0] ?? '';
+
+  const state = (values.state as string | undefined) ?? 'unresolved';
+  if (!['unresolved', 'resolved', 'all'].includes(state)) {
+    throw new UserInputError(`Invalid state: ${state}. Use unresolved, resolved, or all.`);
+  }
+
+  const output = (values.output as string | undefined) ?? 'table';
+  if (output !== 'table' && output !== 'json') {
+    throw new UserInputError(`Invalid output: ${output}. Use table or json.`);
+  }
+
+  const pr = values.pr ? parseInt(values.pr as string, 10) : null;
+  if (values.pr !== undefined && (pr === null || pr <= 0)) {
+    throw new UserInputError('Invalid --pr value: must be a positive integer.');
+  }
+
+  return {
+    command,
+    repo: (values.repo as string) ?? null,
+    pr,
+    state,
+    output,
+    threadId: (values['thread-id'] as string[]) ?? [],
+    threadIdFile: (values['thread-id-file'] as string) ?? null,
+    allUnresolved: values['all-unresolved'] === true,
+    dryRun: values['dry-run'] === true,
   };
-
-  // First argument is the subcommand (list/resolve)
-  let i = 0;
-  if (i < argv.length && !argv[i].startsWith('-')) {
-    args.command = argv[i++];
-  }
-
-  while (i < argv.length) {
-    const arg = argv[i];
-    switch (arg) {
-      case '--repo':
-        if (i + 1 < argv.length) args.repo = argv[++i];
-        break;
-      case '--pr':
-        if (i + 1 < argv.length) {
-          const n = parseInt(argv[++i], 10);
-          if (n > 0) args.pr = n;
-        }
-        break;
-      case '--state':
-        if (i + 1 < argv.length) {
-          const val = argv[++i];
-          if (['unresolved', 'resolved', 'all'].includes(val)) args.state = val;
-        }
-        break;
-      case '--output':
-        if (i + 1 < argv.length) {
-          const val = argv[++i];
-          if (val === 'table' || val === 'json') args.output = val;
-        }
-        break;
-      case '--thread-id':
-        if (i + 1 < argv.length) args.threadId.push(argv[++i]);
-        break;
-      case '--thread-id-file':
-        if (i + 1 < argv.length) args.threadIdFile = argv[++i];
-        break;
-      case '--all-unresolved':
-        args.allUnresolved = true;
-        break;
-      case '--dry-run':
-        args.dryRun = true;
-        break;
-      default:
-        break;
-    }
-    i++;
-  }
-
-  return args;
 }
 
 // ---- Utilities ----
@@ -459,31 +442,11 @@ async function cmdList(
   args: ReviewThreadsArgs,
   context: ToolContext,
 ): Promise<number> {
-  const { stdout, stderr } = context;
+  const { stdout } = context;
 
-  let repo: string;
-  try {
-    repo = await resolveRepo(args.repo);
-  } catch (err) {
-    stderr!.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-
-  let prNumber: number;
-  try {
-    prNumber = await resolvePrNumber(repo, args.pr);
-  } catch (err) {
-    stderr!.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-
-  let threads: Array<Record<string, unknown>>;
-  try {
-    threads = await fetchReviewThreads(repo, prNumber);
-  } catch (err) {
-    stderr!.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
+  const repo = await resolveRepo(args.repo);
+  const prNumber = await resolvePrNumber(repo, args.pr);
+  const threads = await fetchReviewThreads(repo, prNumber);
 
   const filtered = filterThreads(threads, args.state);
   const normalized = filtered.map(normalizeThread);
@@ -512,40 +475,17 @@ async function cmdResolve(
   args: ReviewThreadsArgs,
   context: ToolContext,
 ): Promise<number> {
-  const { stdout, stderr } = context;
+  const { stdout } = context;
 
-  let repo: string;
-  try {
-    repo = await resolveRepo(args.repo);
-  } catch (err) {
-    stderr!.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-
-  let prNumber: number;
-  try {
-    prNumber = await resolvePrNumber(repo, args.pr);
-  } catch (err) {
-    stderr!.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-
-  let threads: Array<Record<string, unknown>>;
-  try {
-    threads = await fetchReviewThreads(repo, prNumber);
-  } catch (err) {
-    stderr!.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
+  const repo = await resolveRepo(args.repo);
+  const prNumber = await resolvePrNumber(repo, args.pr);
+  const threads = await fetchReviewThreads(repo, prNumber);
 
   const unresolved = filterThreads(threads, 'unresolved').map(normalizeThread);
   const threadIds = collectThreadIds(args, unresolved);
 
   if (threadIds.length === 0) {
-    stderr!.write(
-      'Error: no thread IDs selected. Use --thread-id, --thread-id-file, or --all-unresolved.\n',
-    );
-    return 1;
+    throw new UserInputError('No thread IDs selected. Use --thread-id, --thread-id-file, or --all-unresolved.');
   }
 
   const { resolved, failed } = await resolveThreads(threadIds, args.dryRun);
@@ -570,17 +510,21 @@ export async function reviewThreadsHandler(
   context: ToolContext,
 ): Promise<number> {
   const { stderr } = context;
-  const args = parseArgs(argv);
 
   try {
+    const args = parseArgsFn(argv);
+
     switch (args.command) {
       case 'list':
         return await cmdList(args, context);
       case 'resolve':
         return await cmdResolve(args, context);
       default:
-        stderr!.write(`Unsupported command: ${args.command}\n`);
-        return 1;
+        throw new UserInputError(
+          args.command
+            ? `Unsupported command: ${args.command}`
+            : 'Missing command. Use list or resolve.',
+        );
     }
   } catch (err) {
     stderr!.write(`Error: ${(err as Error).message}\n`);

@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError } from '@laitszkin/tool-utils';
 
 const SWIFT_SCRIPT = [
   'import Foundation',
@@ -25,23 +27,16 @@ export async function extractPdfTextHandler(args: string[], context: ToolContext
   const stdout = context.stdout || process.stdout;
   const stderr = context.stderr || process.stderr;
 
-  // Find positional pdfPath arg
-  let pdfPath = '';
-  let showHelp = false;
+  try {
+    const { values, positionals } = parseArgs({
+      options: {
+        help: { type: 'boolean', short: 'h' },
+      },
+      allowPositionals: true,
+    });
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === '--help' || arg === '-h') {
-      showHelp = true;
-      break;
-    }
-    if (!arg.startsWith('-')) {
-      pdfPath = arg;
-    }
-  }
-
-  if (showHelp || !pdfPath) {
-    stdout.write(`Usage: apltk extract-pdf-text-pdfkit <path>
+    if (values.help) {
+      stdout.write(`Usage: apltk extract-pdf-text-pdfkit <path>
 
 Extract per-page text from a PDF through macOS PDFKit.
 
@@ -56,46 +51,54 @@ Output format:
   === PAGE 2 ===
   ...
 `);
-    return pdfPath ? 1 : 0;
+      return 0;
+    }
+
+    const pdfPath = (positionals[0] as string) ?? '';
+    if (!pdfPath) {
+      throw new UserInputError('PDF path is required.');
+    }
+
+    const resolvedPath = path.resolve(pdfPath);
+
+    return new Promise((resolve) => {
+      const child = spawn('swift', ['-', resolvedPath], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: context.env || process.env as Record<string, string>,
+      });
+
+      // Write the Swift script to stdin for inline execution
+      child.stdin!.write(SWIFT_SCRIPT);
+      child.stdin!.end();
+
+      let stdoutText = '';
+      let stderrText = '';
+
+      child.stdout.on('data', (chunk: Buffer) => {
+        stdoutText += String(chunk);
+      });
+      child.stderr.on('data', (chunk: Buffer) => {
+        stderrText += String(chunk);
+      });
+
+      child.on('error', () => {
+        resolve(1);
+      });
+
+      child.on('close', (code: number | null) => {
+        if (stdoutText) {
+          stdout.write(stdoutText);
+        }
+        if (stderrText) {
+          stderr.write(stderrText);
+        }
+        resolve(typeof code === 'number' ? code : 1);
+      });
+    });
+  } catch (err) {
+    stderr.write(`Error: ${(err as Error).message}\n`);
+    return 1;
   }
-
-  const resolvedPath = path.resolve(pdfPath);
-
-  return new Promise((resolve) => {
-    const child = spawn('swift', ['-', resolvedPath], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: context.env || process.env as Record<string, string>,
-    });
-
-    // Write the Swift script to stdin for inline execution
-    child.stdin!.write(SWIFT_SCRIPT);
-    child.stdin!.end();
-
-    let stdoutText = '';
-    let stderrText = '';
-
-    child.stdout.on('data', (chunk: Buffer) => {
-      stdoutText += String(chunk);
-    });
-    child.stderr.on('data', (chunk: Buffer) => {
-      stderrText += String(chunk);
-    });
-
-    child.on('error', (err: Error) => {
-      stderr.write(`Failed to start swift: ${err.message}\n`);
-      resolve(1);
-    });
-
-    child.on('close', (code: number | null) => {
-      if (stdoutText) {
-        stdout.write(stdoutText);
-      }
-      if (stderrText) {
-        stderr.write(stderrText);
-      }
-      resolve(typeof code === 'number' ? code : 1);
-    });
-  });
 }
 
 export const tool: ToolDefinition = {

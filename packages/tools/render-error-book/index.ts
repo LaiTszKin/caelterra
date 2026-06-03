@@ -2,6 +2,8 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { parseArgs } from 'node:util';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
 interface ErrorBookData {
   title?: string;
@@ -178,12 +180,17 @@ export async function renderErrorBookHandler(args: string[], context: ToolContex
   const stdout = context.stdout || process.stdout;
   const stderr = context.stderr || process.stderr;
 
-  let inputFile = '';
-  let outputFile = '';
+  try {
+    const { values, positionals } = parseArgs({
+      options: {
+        'input': { type: 'string' },
+        'output': { type: 'string' },
+        'help': { type: 'boolean', default: false },
+      },
+      allowPositionals: true,
+    });
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === '--help' || arg === '-h') {
+    if (values['help']) {
       stdout.write(`Usage: apltk render-error-book --input <json> --output <pdf>
 
 Options:
@@ -192,81 +199,53 @@ Options:
 `);
       return 0;
     }
-    if (arg === '--input') {
-      inputFile = args[++i] || '';
-    } else if (arg === '--output') {
-      outputFile = args[++i] || '';
-    } else if (!inputFile && !arg.startsWith('-')) {
-      // positional: first is input, second is output (backward compat)
-      if (!inputFile) {
-        inputFile = arg;
-      } else if (!outputFile) {
-        outputFile = arg;
-      }
+
+    const inputFile = (values['input'] as string | undefined) || positionals[0] || '';
+    const outputFile = (values['output'] as string | undefined) || positionals[1] || '';
+
+    if (!inputFile) {
+      throw new UserInputError('--input is required.');
     }
-  }
-
-  if (!inputFile) {
-    stderr.write('Error: --input is required.\n');
-    return 1;
-  }
-  if (!outputFile) {
-    stderr.write('Error: --output is required.\n');
-    return 1;
-  }
-
-  const inputPath = path.resolve(inputFile);
-  const outputPath = path.resolve(outputFile);
-
-  if (!fs.existsSync(inputPath)) {
-    stderr.write(`Error: Input file not found: ${inputPath}\n`);
-    return 1;
-  }
-
-  let data: ErrorBookData;
-  try {
-    const raw = fs.readFileSync(inputPath, 'utf-8');
-    data = JSON.parse(raw) as ErrorBookData;
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Invalid JSON';
-    stderr.write(`Error: Failed to parse input JSON: ${msg}\n`);
-    return 1;
-  }
-
-  // Generate HTML
-  const htmlContent = buildHtmlContent(data);
-
-  // Try to convert to PDF
-  const tmpHtmlFile = path.join(
-    fs.mkdtempSync('error-book-'),
-    'output.html',
-  );
-  fs.mkdirSync(path.dirname(tmpHtmlFile), { recursive: true });
-  fs.writeFileSync(tmpHtmlFile, htmlContent, 'utf-8');
-
-  let converted = false;
-
-  // Try pandoc first
-  try {
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    execSync(
-      `pandoc "${tmpHtmlFile}" -o "${outputPath}" --pdf-engine=weasyprint 2>/dev/null || ` +
-      `pandoc "${tmpHtmlFile}" -o "${outputPath}" --pdf-engine=wkhtmltopdf 2>/dev/null || ` +
-      `pandoc "${tmpHtmlFile}" -o "${outputPath}"`,
-      { stdio: 'ignore', timeout: 60000 },
-    );
-    if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) {
-      converted = true;
+    if (!outputFile) {
+      throw new UserInputError('--output is required.');
     }
-  } catch {
-    // Fall through
-  }
 
-  // Try wkhtmltopdf
-  if (!converted) {
+    const inputPath = path.resolve(inputFile);
+    const outputPath = path.resolve(outputFile);
+
+    if (!fs.existsSync(inputPath)) {
+      throw new UserInputError(`Input file not found: ${inputPath}`);
+    }
+
+    let data: ErrorBookData;
     try {
+      const raw = fs.readFileSync(inputPath, 'utf-8');
+      data = JSON.parse(raw) as ErrorBookData;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Invalid JSON';
+      throw new UserInputError(`Failed to parse input JSON: ${msg}`);
+    }
+
+    // Generate HTML
+    const htmlContent = buildHtmlContent(data);
+
+    // Try to convert to PDF
+    const tmpHtmlFile = path.join(
+      fs.mkdtempSync('error-book-'),
+      'output.html',
+    );
+    fs.mkdirSync(path.dirname(tmpHtmlFile), { recursive: true });
+    fs.writeFileSync(tmpHtmlFile, htmlContent, 'utf-8');
+
+    let converted = false;
+
+    // Try pandoc first
+    try {
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
       execSync(
-        `wkhtmltopdf "${tmpHtmlFile}" "${outputPath}"`,
+        `pandoc "${tmpHtmlFile}" -o "${outputPath}" --pdf-engine=weasyprint 2>/dev/null || ` +
+        `pandoc "${tmpHtmlFile}" -o "${outputPath}" --pdf-engine=wkhtmltopdf 2>/dev/null || ` +
+        `pandoc "${tmpHtmlFile}" -o "${outputPath}"`,
         { stdio: 'ignore', timeout: 60000 },
       );
       if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) {
@@ -275,28 +254,47 @@ Options:
     } catch {
       // Fall through
     }
-  }
 
-  // Clean up temp file
-  try {
-    fs.unlinkSync(tmpHtmlFile);
-    fs.rmdirSync(path.dirname(tmpHtmlFile));
-  } catch {
-    // ignore cleanup errors
-  }
+    // Try wkhtmltopdf
+    if (!converted) {
+      try {
+        execSync(
+          `wkhtmltopdf "${tmpHtmlFile}" "${outputPath}"`,
+          { stdio: 'ignore', timeout: 60000 },
+        );
+        if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) {
+          converted = true;
+        }
+      } catch {
+        // Fall through
+      }
+    }
 
-  if (converted) {
-    stdout.write(`${outputPath}\n`);
+    // Clean up temp file
+    try {
+      fs.unlinkSync(tmpHtmlFile);
+      fs.rmdirSync(path.dirname(tmpHtmlFile));
+    } catch {
+      // ignore cleanup errors
+    }
+
+    if (converted) {
+      stdout.write(`${outputPath}\n`);
+      return 0;
+    }
+
+    // Fallback: write HTML and report
+    const htmlOutputPath = outputPath.replace(/\.pdf$/i, '.html') + '.html';
+    fs.mkdirSync(path.dirname(htmlOutputPath), { recursive: true });
+    fs.writeFileSync(htmlOutputPath, htmlContent, 'utf-8');
+    stdout.write(`${htmlOutputPath}\n`);
+    stderr.write('Warning: No PDF converter found (pandoc/wkhtmltopdf). HTML was written instead.\n');
     return 0;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    stderr.write(`Error: ${msg}\n`);
+    return 1;
   }
-
-  // Fallback: write HTML and report
-  const htmlOutputPath = outputPath.replace(/\.pdf$/i, '.html') + '.html';
-  fs.mkdirSync(path.dirname(htmlOutputPath), { recursive: true });
-  fs.writeFileSync(htmlOutputPath, htmlContent, 'utf-8');
-  stdout.write(`${htmlOutputPath}\n`);
-  stderr.write('Warning: No PDF converter found (pandoc/wkhtmltopdf). HTML was written instead.\n');
-  return 0;
 }
 
 export const tool: ToolDefinition = {

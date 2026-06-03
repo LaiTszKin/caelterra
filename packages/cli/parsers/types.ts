@@ -1,0 +1,55 @@
+import type { InstallMode } from '../types.js';
+
+/**
+ * Parsed result for the install (default) command mode.
+ */
+export interface InstallCommand {
+  command: 'install';
+  modes: InstallMode[];
+  showHelp: boolean;
+  toolkitHome: string | null;
+  linkMode: 'copy' | 'symlink' | null;
+  explicitInstallCommand: boolean;
+  helpTopic: 'overview' | 'install';
+}
+
+/**
+ * Parsed result for the uninstall command mode.
+ */
+export interface UninstallCommand {
+  command: 'uninstall';
+  modes: InstallMode[];
+  showHelp: boolean;
+  toolkitHome: string | null;
+  assumeYes: boolean;
+  helpTopic: 'uninstall';
+}
+
+/**
+ * Parsed result for a direct tool invocation.
+ */
+export interface ToolCommand {
+  command: 'tool';
+  toolName: string | null;
+  toolArgs: string[];
+}
+
+/**
+ * Parsed result for the tools listing help screen.
+ */
+export interface ToolsHelpCommand {
+  command: 'tools-help';
+  showToolsHelp: boolean;
+}
+
+/**
+ * Union of all parsed commands returned by the CLI arg parsers.
+ */
+export type ParsedCommand = InstallCommand | UninstallCommand | ToolCommand | ToolsHelpCommand;
+
+/**
+ * Parser interface for turning raw argv arrays into strongly-typed command objects.
+ */
+export interface CommandParser<T> {
+  parse(argv: string[]): T;
+}

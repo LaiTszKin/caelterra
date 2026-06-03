@@ -1,3 +1,4 @@
+import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
@@ -91,6 +92,13 @@ async function validateSkillFrontmatterHandler(
   context: ToolContext,
 ): Promise<number> {
   const stdout = context.stdout ?? process.stdout;
+
+  parseArgs({
+    args,
+    options: {},
+    allowPositionals: true,
+  });
+
   const root = repoRoot(context);
   const skillDirs = iterSkillDirs(root);
 

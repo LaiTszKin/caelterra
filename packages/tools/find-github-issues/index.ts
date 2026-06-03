@@ -1,5 +1,7 @@
 import { execFile } from 'node:child_process';
+import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError } from '@laitszkin/tool-utils';
 
 const ISSUE_FIELDS = 'number,title,state,updatedAt,url,labels,assignees';
 
@@ -12,54 +14,42 @@ interface FindIssuesArgs {
   output: 'table' | 'json';
 }
 
-function parseArgs(argv: string[]): FindIssuesArgs {
-  const args: FindIssuesArgs = {
-    repo: null,
-    state: 'open',
-    limit: 50,
-    label: [],
-    search: null,
-    output: 'table',
-  };
+function parseArgsFn(argv: string[]): FindIssuesArgs {
+  const { values } = parseArgs({
+    options: {
+      repo: { type: 'string' },
+      state: { type: 'string' },
+      limit: { type: 'string' },
+      label: { type: 'string', multiple: true },
+      search: { type: 'string' },
+      output: { type: 'string' },
+    },
+    allowPositionals: true,
+  });
 
-  let i = 0;
-  while (i < argv.length) {
-    const arg = argv[i];
-    switch (arg) {
-      case '--repo':
-        if (i + 1 < argv.length) args.repo = argv[++i];
-        break;
-      case '--state':
-        if (i + 1 < argv.length) {
-          const val = argv[++i];
-          if (['open', 'closed', 'all'].includes(val)) args.state = val;
-        }
-        break;
-      case '--limit':
-        if (i + 1 < argv.length) {
-          const n = parseInt(argv[++i], 10);
-          if (n > 0) args.limit = n;
-        }
-        break;
-      case '--label':
-        if (i + 1 < argv.length) args.label.push(argv[++i]);
-        break;
-      case '--search':
-        if (i + 1 < argv.length) args.search = argv[++i];
-        break;
-      case '--output':
-        if (i + 1 < argv.length) {
-          const val = argv[++i];
-          if (val === 'table' || val === 'json') args.output = val;
-        }
-        break;
-      default:
-        break;
-    }
-    i++;
+  const state = (values.state as string | undefined) ?? 'open';
+  if (state !== 'open' && state !== 'closed' && state !== 'all') {
+    throw new UserInputError(`Invalid state: ${state}. Use open, closed, or all.`);
   }
 
-  return args;
+  const limit = values.limit ? parseInt(values.limit as string, 10) : 50;
+  if (limit <= 0) {
+    throw new UserInputError('Invalid limit: must be a positive number.');
+  }
+
+  const output = (values.output as string | undefined) ?? 'table';
+  if (output !== 'table' && output !== 'json') {
+    throw new UserInputError(`Invalid output: ${output}. Use table or json.`);
+  }
+
+  return {
+    repo: (values.repo as string) ?? null,
+    state,
+    limit,
+    label: (values.label as string[]) ?? [],
+    search: (values.search as string) ?? null,
+    output,
+  };
 }
 
 interface CommandResult {
@@ -182,31 +172,35 @@ export async function findGitHubIssuesHandler(
   context: ToolContext,
 ): Promise<number> {
   const { stdout, stderr } = context;
-  const args = parseArgs(argv);
 
-  const cmd = buildCommand(args);
-  const result = await runGh(cmd);
-
-  if (result.exitCode !== 0) {
-    stderr!.write(result.stderr.trim() || 'gh issue list failed.\n');
-    return result.exitCode;
-  }
-
-  let issues: Array<Record<string, unknown>>;
   try {
-    issues = JSON.parse(result.stdout);
-  } catch {
-    stderr!.write('Error: unable to parse gh output as JSON.\n');
+    const args = parseArgsFn(argv);
+
+    const cmd = buildCommand(args);
+    const result = await runGh(cmd);
+
+    if (result.exitCode !== 0) {
+      throw new UserInputError(result.stderr.trim() || 'gh issue list failed.');
+    }
+
+    let issues: Array<Record<string, unknown>>;
+    try {
+      issues = JSON.parse(result.stdout);
+    } catch {
+      throw new UserInputError('Unable to parse gh output as JSON.');
+    }
+
+    if (args.output === 'json') {
+      stdout!.write(JSON.stringify(issues, null, 2) + '\n');
+      return 0;
+    }
+
+    printTable(issues, context);
+    return 0;
+  } catch (err) {
+    stderr!.write(`Error: ${(err as Error).message}\n`);
     return 1;
   }
-
-  if (args.output === 'json') {
-    stdout!.write(JSON.stringify(issues, null, 2) + '\n');
-    return 0;
-  }
-
-  printTable(issues, context);
-  return 0;
 }
 
 // ---- Tool definition ----

@@ -1,5 +1,7 @@
 import { execFile } from 'node:child_process';
+import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError } from '@laitszkin/tool-utils';
 
 const ISSUE_FIELDS =
   'number,title,body,state,author,labels,assignees,comments,createdAt,updatedAt,closedAt,url';
@@ -11,37 +13,24 @@ interface ReadIssueArgs {
   json: boolean;
 }
 
-function parseArgs(argv: string[]): ReadIssueArgs {
-  const args: ReadIssueArgs = {
-    issue: null,
-    repo: null,
-    comments: false,
-    json: false,
+function parseArgsFn(argv: string[]): ReadIssueArgs {
+  const { values, positionals } = parseArgs({
+    options: {
+      repo: { type: 'string' },
+      comments: { type: 'boolean' },
+      json: { type: 'boolean' },
+    },
+    allowPositionals: true,
+  });
+
+  const issue = (positionals[0] as string | undefined) ?? null;
+
+  return {
+    issue,
+    repo: (values.repo as string) ?? null,
+    comments: values.comments === true,
+    json: values.json === true,
   };
-
-  let i = 0;
-  while (i < argv.length) {
-    const arg = argv[i];
-    switch (arg) {
-      case '--repo':
-        if (i + 1 < argv.length) args.repo = argv[++i];
-        break;
-      case '--comments':
-        args.comments = true;
-        break;
-      case '--json':
-        args.json = true;
-        break;
-      default:
-        if (!arg.startsWith('-')) {
-          args.issue = arg;
-        }
-        break;
-    }
-    i++;
-  }
-
-  return args;
 }
 
 interface CommandResult {
@@ -143,38 +132,39 @@ export async function readGitHubIssueHandler(
   context: ToolContext,
 ): Promise<number> {
   const { stdout, stderr } = context;
-  const args = parseArgs(argv);
 
-  if (!args.issue) {
-    stderr!.write(
-      'Error: issue number or URL is required.\n',
-    );
-    return 1;
-  }
-
-  const cmd = buildCommand(args);
-  const result = await runGh(cmd);
-
-  if (result.exitCode !== 0) {
-    stderr!.write(result.stderr.trim() || 'gh issue view failed.\n');
-    return result.exitCode;
-  }
-
-  let issue: Record<string, unknown>;
   try {
-    issue = JSON.parse(result.stdout);
-  } catch {
-    stderr!.write('Error: unable to parse gh output as JSON.\n');
+    const args = parseArgsFn(argv);
+
+    if (!args.issue) {
+      throw new UserInputError('Issue number or URL is required.');
+    }
+
+    const cmd = buildCommand(args);
+    const result = await runGh(cmd);
+
+    if (result.exitCode !== 0) {
+      throw new UserInputError(result.stderr.trim() || 'gh issue view failed.');
+    }
+
+    let issue: Record<string, unknown>;
+    try {
+      issue = JSON.parse(result.stdout);
+    } catch {
+      throw new UserInputError('Unable to parse gh output as JSON.');
+    }
+
+    if (args.json) {
+      stdout!.write(JSON.stringify(issue, null, 2) + '\n');
+      return 0;
+    }
+
+    printSummary(issue, args.comments, context);
+    return 0;
+  } catch (err) {
+    stderr!.write(`Error: ${(err as Error).message}\n`);
     return 1;
   }
-
-  if (args.json) {
-    stdout!.write(JSON.stringify(issue, null, 2) + '\n');
-    return 0;
-  }
-
-  printSummary(issue, args.comments, context);
-  return 0;
 }
 
 // ---- Tool definition ----

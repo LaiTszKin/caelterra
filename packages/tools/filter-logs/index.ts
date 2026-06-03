@@ -1,119 +1,96 @@
+import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 import {
   extractTimestamp,
   inWindow,
   iterInputLines,
   parseCliTimestamp,
   buildTimezone,
-  validateTimeWindow,
 } from '@laitszkin/tool-utils';
-
-interface FilterLogsArgs {
-  paths: string[];
-  start: string | null;
-  end: string | null;
-  assumeTimezone: string;
-  keepUndated: boolean;
-  countOnly: boolean;
-}
-
-function parseArgs(argv: string[]): FilterLogsArgs {
-  const args: FilterLogsArgs = {
-    paths: [],
-    start: null,
-    end: null,
-    assumeTimezone: 'UTC',
-    keepUndated: false,
-    countOnly: false,
-  };
-
-  let i = 0;
-  while (i < argv.length) {
-    const arg = argv[i];
-    if (arg === '--start' && i + 1 < argv.length) {
-      args.start = argv[++i];
-    } else if (arg === '--end' && i + 1 < argv.length) {
-      args.end = argv[++i];
-    } else if (arg === '--assume-timezone' && i + 1 < argv.length) {
-      args.assumeTimezone = argv[++i];
-    } else if (arg === '--keep-undated') {
-      args.keepUndated = true;
-    } else if (arg === '--count-only') {
-      args.countOnly = true;
-    } else if (arg.startsWith('-')) {
-      // skip unknown flags
-    } else {
-      args.paths.push(arg);
-    }
-    i++;
-  }
-
-  return args;
-}
 
 async function filterLogsHandler(
   argv: string[],
   context: ToolContext,
 ): Promise<number> {
   const stdout = context.stdout ?? process.stdout;
-  const stderr = context.stderr ?? process.stderr;
-  const args = parseArgs(argv);
 
   try {
-    buildTimezone(args.assumeTimezone);
-  } catch (err) {
-    stderr.write(
-      `Error: invalid timezone: ${args.assumeTimezone}\n`,
-    );
-    return 1;
-  }
+    const { values, positionals } = parseArgs({
+      args: argv,
+      options: {
+        start: { type: 'string' },
+        end: { type: 'string' },
+        'assume-timezone': { type: 'string', default: 'UTC' },
+        'keep-undated': { type: 'boolean', default: false },
+        'count-only': { type: 'boolean', default: false },
+      },
+      allowPositionals: true,
+    });
 
-  let start: Date | null = null;
-  let end: Date | null = null;
+    const assumeTimezone = values['assume-timezone'] as string;
 
-  try {
-    if (args.start) {
-      start = parseCliTimestamp(args.start, args.assumeTimezone);
+    try {
+      buildTimezone(assumeTimezone);
+    } catch {
+      throw new UserInputError(`invalid timezone: ${assumeTimezone}`);
     }
-    if (args.end) {
-      end = parseCliTimestamp(args.end, args.assumeTimezone);
+
+    let start: Date | null = null;
+    let end: Date | null = null;
+
+    try {
+      if (values.start) {
+        start = parseCliTimestamp(values.start as string, assumeTimezone);
+      }
+      if (values.end) {
+        end = parseCliTimestamp(values.end as string, assumeTimezone);
+      }
+    } catch (err) {
+      throw new UserInputError((err as Error).message);
     }
+
+    if (start && end && start > end) {
+      throw new UserInputError('--start must be earlier than or equal to --end.');
+    }
+
+    const keepUndated = values['keep-undated'] as boolean;
+    const countOnly = values['count-only'] as boolean;
+    let matches = 0;
+
+    try {
+      for await (const line of iterInputLines(positionals)) {
+        const timestamp = extractTimestamp(line, assumeTimezone);
+        if (timestamp === null && !keepUndated) {
+          continue;
+        }
+        if (timestamp !== null && !inWindow(timestamp, start, end)) {
+          continue;
+        }
+
+        matches++;
+        if (!countOnly) {
+          stdout.write(line + '\n');
+        }
+      }
+    } catch (err) {
+      throw new SystemError((err as Error).message);
+    }
+
+    if (countOnly) {
+      stdout.write(String(matches) + '\n');
+    }
+
+    return 0;
   } catch (err) {
+    const stderr = context.stderr ?? process.stderr;
+    if (err instanceof UserInputError || err instanceof SystemError) {
+      stderr.write(`${err.message}\n`);
+      return err.statusCode;
+    }
     stderr.write(`Error: ${(err as Error).message}\n`);
     return 1;
   }
-
-  if (!validateTimeWindow(start, end, stderr)) {
-    return 1;
-  }
-
-  let matches = 0;
-
-  try {
-    for await (const line of iterInputLines(args.paths)) {
-      const timestamp = extractTimestamp(line, args.assumeTimezone);
-      if (timestamp === null && !args.keepUndated) {
-        continue;
-      }
-      if (timestamp !== null && !inWindow(timestamp, start, end)) {
-        continue;
-      }
-
-      matches++;
-      if (!args.countOnly) {
-        stdout.write(line + '\n');
-      }
-    }
-  } catch (err) {
-    stderr.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-
-  if (args.countOnly) {
-    stdout.write(String(matches) + '\n');
-  }
-
-  return 0;
 }
 
 export const tool: ToolDefinition = {

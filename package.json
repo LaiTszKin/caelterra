@@ -1,6 +1,6 @@
 {
   "name": "@laitszkin/apollo-toolkit",
-  "version": "4.1.4",
+  "version": "5.0.0",
   "description": "Apollo Toolkit npm installer for managed skill copying across Codex, OpenClaw, and Trae.",
   "license": "MIT",
   "author": "LaiTszKin",
@@ -28,6 +28,7 @@
     "prepublishOnly": "npm run build",
     "watch": "tsc --build --watch",
     "test": "scripts/test.sh",
+    "test:coverage": "find test -name '*.test.js' -not -path '*/create-specs*' | sort | tr '\\n' ' ' | xargs node --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=60 --test-coverage-functions=75 --test-coverage-exclude='packages/tools/**' --test",
     "test:ts": "node --test dist/test/"
   },
   "engines": {

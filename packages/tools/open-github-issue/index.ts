@@ -5,7 +5,9 @@ import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join as joinPath } from 'node:path';
 import { cwd } from 'node:process';
+import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 const README_ACCEPT = 'application/vnd.github.raw+json';
@@ -95,88 +97,47 @@ interface OpenIssueArgs {
   dryRun: boolean;
 }
 
-function parseArgs(argv: string[]): OpenIssueArgs {
-  const args: OpenIssueArgs = {
-    payloadFile: null,
-    title: null,
-    issueType: null,
-    problemDescription: null,
-    suspectedCause: null,
-    reproduction: null,
-    proposal: null,
-    reason: null,
-    suggestedArchitecture: null,
-    impact: null,
-    evidence: null,
-    suggestedAction: null,
-    severity: null,
-    affectedScope: null,
-    repo: null,
-    dryRun: false,
+function parseArgsFn(argv: string[]): OpenIssueArgs {
+  const { values } = parseArgs({
+    options: {
+      'payload-file': { type: 'string' },
+      title: { type: 'string' },
+      'issue-type': { type: 'string' },
+      'problem-description': { type: 'string' },
+      'suspected-cause': { type: 'string' },
+      reproduction: { type: 'string' },
+      proposal: { type: 'string' },
+      reason: { type: 'string' },
+      'suggested-architecture': { type: 'string' },
+      impact: { type: 'string' },
+      evidence: { type: 'string' },
+      'suggested-action': { type: 'string' },
+      severity: { type: 'string' },
+      'affected-scope': { type: 'string' },
+      repo: { type: 'string' },
+      'dry-run': { type: 'boolean' },
+    },
+    allowPositionals: true,
+  });
+
+  return {
+    payloadFile: (values['payload-file'] as string) ?? null,
+    title: (values.title as string) ?? null,
+    issueType: (values['issue-type'] as string) ?? null,
+    problemDescription: (values['problem-description'] as string) ?? null,
+    suspectedCause: (values['suspected-cause'] as string) ?? null,
+    reproduction: (values.reproduction as string) ?? null,
+    proposal: (values.proposal as string) ?? null,
+    reason: (values.reason as string) ?? null,
+    suggestedArchitecture: (values['suggested-architecture'] as string) ?? null,
+    impact: (values.impact as string) ?? null,
+    evidence: (values.evidence as string) ?? null,
+    suggestedAction: (values['suggested-action'] as string) ?? null,
+    severity: (values.severity as string) ?? null,
+    affectedScope: (values['affected-scope'] as string) ?? null,
+    repo: (values.repo as string) ?? null,
+    dryRun: values['dry-run'] === true,
   };
-
-  let i = 0;
-  while (i < argv.length) {
-    const arg = argv[i];
-    switch (arg) {
-      case '--payload-file':
-        if (i + 1 < argv.length) args.payloadFile = argv[++i];
-        break;
-      case '--title':
-        if (i + 1 < argv.length) args.title = argv[++i];
-        break;
-      case '--issue-type':
-        if (i + 1 < argv.length) args.issueType = argv[++i];
-        break;
-      case '--problem-description':
-        if (i + 1 < argv.length) args.problemDescription = argv[++i];
-        break;
-      case '--suspected-cause':
-        if (i + 1 < argv.length) args.suspectedCause = argv[++i];
-        break;
-      case '--reproduction':
-        if (i + 1 < argv.length) args.reproduction = argv[++i];
-        break;
-      case '--proposal':
-        if (i + 1 < argv.length) args.proposal = argv[++i];
-        break;
-      case '--reason':
-        if (i + 1 < argv.length) args.reason = argv[++i];
-        break;
-      case '--suggested-architecture':
-        if (i + 1 < argv.length) args.suggestedArchitecture = argv[++i];
-        break;
-      case '--impact':
-        if (i + 1 < argv.length) args.impact = argv[++i];
-        break;
-      case '--evidence':
-        if (i + 1 < argv.length) args.evidence = argv[++i];
-        break;
-      case '--suggested-action':
-        if (i + 1 < argv.length) args.suggestedAction = argv[++i];
-        break;
-      case '--severity':
-        if (i + 1 < argv.length) args.severity = argv[++i];
-        break;
-      case '--affected-scope':
-        if (i + 1 < argv.length) args.affectedScope = argv[++i];
-        break;
-      case '--repo':
-        if (i + 1 < argv.length) args.repo = argv[++i];
-        break;
-      case '--dry-run':
-        args.dryRun = true;
-        break;
-      default:
-        if (!arg.startsWith('-')) {
-          // unsupported positional — ignore per Python behavior
-        }
-        break;
-    }
-    i++;
-  }
-
-  return args;
 }
 
 // ---- Utilities ----
@@ -757,17 +718,13 @@ function hydrateArgs(args: OpenIssueArgs): OpenIssueArgs {
 
 async function resolveRepoAsync(
   explicitRepo: string | null,
-  context: ToolContext,
 ): Promise<string> {
   if (explicitRepo) return validateRepo(explicitRepo);
 
   // Try to resolve from git remote
   const result = await runCommand('git', ['remote', 'get-url', 'origin']);
   if (result.exitCode !== 0) {
-    context.stderr!.write(
-      'Unable to resolve origin remote. Pass --repo owner/repo.\n',
-    );
-    throw new Error('--repo resolution failed');
+    throw new UserInputError('Unable to resolve origin remote. Pass --repo owner/repo.');
   }
 
   const remote = result.stdout.trim();
@@ -775,10 +732,7 @@ async function resolveRepoAsync(
     /github\.com[:/](?<owner>[A-Za-z0-9_.-]+)\/(?<repo>[A-Za-z0-9_.-]+?)(?:\.git)?$/,
   );
   if (!match?.groups) {
-    context.stderr!.write(
-      'Origin remote is not a GitHub repository. Pass --repo owner/repo.\n',
-    );
-    throw new Error('--repo resolution failed');
+    throw new UserInputError('Origin remote is not a GitHub repository. Pass --repo owner/repo.');
   }
 
   return `${match.groups.owner}/${match.groups.repo}`;
@@ -803,44 +757,33 @@ export async function openGitHubIssueHandler(
 ): Promise<number> {
   const { stdout, stderr, env } = context;
 
-  let args: OpenIssueArgs;
   try {
-    args = hydrateArgs(parseArgs(argv));
+    const args = hydrateArgs(parseArgsFn(argv));
     validateIssueContent(args);
-  } catch (err) {
-    stderr!.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
 
-  const ghAuthenticated = await hasGhAuth();
-  const token = getToken(env || {});
+    const ghAuthenticated = await hasGhAuth();
+    const token = getToken(env || {});
 
-  let repo: string;
-  try {
-    repo = await resolveRepoAsync(args.repo, context);
-  } catch {
-    return 1;
-  }
+    const repo = await resolveRepoAsync(args.repo);
+    const readmeContent = await fetchRemoteReadme(repo, ghAuthenticated, token);
+    const language = detectIssueLanguage(readmeContent);
 
-  const readmeContent = await fetchRemoteReadme(repo, ghAuthenticated, token);
-  const language = detectIssueLanguage(readmeContent);
-
-  const issueBody = buildIssueBody({
-    issueType: args.issueType || ISSUE_TYPE_PROBLEM,
-    language,
-    title: args.title || '',
-    problemDescription: args.problemDescription,
-    suspectedCause: args.suspectedCause,
-    reproduction: args.reproduction,
-    proposal: args.proposal,
-    reason: args.reason,
-    suggestedArchitecture: args.suggestedArchitecture,
-    impact: args.impact,
-    evidence: args.evidence,
-    suggestedAction: args.suggestedAction,
-    severity: args.severity,
-    affectedScope: args.affectedScope,
-  });
+    const issueBody = buildIssueBody({
+      issueType: args.issueType || ISSUE_TYPE_PROBLEM,
+      language,
+      title: args.title || '',
+      problemDescription: args.problemDescription,
+      suspectedCause: args.suspectedCause,
+      reproduction: args.reproduction,
+      proposal: args.proposal,
+      reason: args.reason,
+      suggestedArchitecture: args.suggestedArchitecture,
+      impact: args.impact,
+      evidence: args.evidence,
+      suggestedAction: args.suggestedAction,
+      severity: args.severity,
+      affectedScope: args.affectedScope,
+    });
 
   let mode = 'draft-only';
   let issueUrl = '';
@@ -883,33 +826,37 @@ export async function openGitHubIssueHandler(
     }
   }
 
-  const output: IssueResult = {
-    repo,
-    issue_type: args.issueType || ISSUE_TYPE_PROBLEM,
-    language: language === 'zh' ? 'zh' : 'en',
-    mode,
-    issue_url: issueUrl,
-    issue_title: args.title || '',
-    issue_body: issueBody,
-    publish_error: publishError,
-  };
+    const output: IssueResult = {
+      repo,
+      issue_type: args.issueType || ISSUE_TYPE_PROBLEM,
+      language: language === 'zh' ? 'zh' : 'en',
+      mode,
+      issue_url: issueUrl,
+      issue_title: args.title || '',
+      issue_body: issueBody,
+      publish_error: publishError,
+    };
 
-  stdout!.write(JSON.stringify(output, null, 2) + '\n');
+    stdout!.write(JSON.stringify(output, null, 2) + '\n');
 
-  if (mode === 'draft-only') {
-    if (publishError) {
-      stderr!.write(
-        `Issue publish failed. Return draft only: ${publishError}\n`,
-      );
-    } else {
-      stderr!.write(
-        'No authenticated gh CLI session and no GitHub token found. ' +
-          'Return draft issue body only.\n',
-      );
+    if (mode === 'draft-only') {
+      if (publishError) {
+        stderr!.write(
+          `Issue publish failed. Return draft only: ${publishError}\n`,
+        );
+      } else {
+        stderr!.write(
+          'No authenticated gh CLI session and no GitHub token found. ' +
+            'Return draft issue body only.\n',
+        );
+      }
     }
-  }
 
-  return 0;
+    return 0;
+  } catch (err) {
+    stderr!.write(`Error: ${(err as Error).message}\n`);
+    return 1;
+  }
 }
 
 // ---- Tool definition ----

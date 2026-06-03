@@ -1,3 +1,4 @@
+import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
@@ -185,6 +186,13 @@ async function validateOpenaiAgentConfigHandler(
   context: ToolContext,
 ): Promise<number> {
   const stdout = context.stdout ?? process.stdout;
+
+  parseArgs({
+    args,
+    options: {},
+    allowPositionals: true,
+  });
+
   const root = repoRoot(context);
   const skillDirs = iterSkillDirs(root);
 

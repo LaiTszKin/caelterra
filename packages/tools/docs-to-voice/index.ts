@@ -4,6 +4,8 @@ import path from 'node:path';
 import https from 'node:https';
 import http from 'node:http';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { parseArgs } from 'node:util';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
 const DEFAULT_API_ENDPOINT =
   'https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
@@ -39,102 +41,51 @@ interface TimelineEntry {
   endMs: number;
 }
 
-function parseArgs(args: string[]): DocsToVoiceArgs {
-  const parsed: DocsToVoiceArgs = {
-    inputText: null,
-    inputFile: null,
-    projectDir: '.',
-    projectName: null,
-    outputName: null,
-    mode: 'say',
-    voice: null,
-    rate: null,
-    speechRate: null,
-    apiEndpoint: DEFAULT_API_ENDPOINT,
-    apiModel: DEFAULT_API_MODEL,
-    apiVoice: DEFAULT_API_VOICE,
-    apiKey: null,
-    maxChars: null,
-    noAutoProsody: false,
-    force: false,
-    help: false,
+function parseCliArgs(args: string[]): DocsToVoiceArgs {
+  const { values } = parseArgs({
+    options: {
+      'text': { type: 'string' },
+      'input': { type: 'string' },
+      'input-file': { type: 'string' },
+      'project-dir': { type: 'string', default: '.' },
+      'project-name': { type: 'string' },
+      'output-name': { type: 'string' },
+      'engine': { type: 'string' },
+      'mode': { type: 'string', default: 'say' },
+      'voice': { type: 'string' },
+      'rate': { type: 'string' },
+      'speech-rate': { type: 'string' },
+      'api-endpoint': { type: 'string', default: DEFAULT_API_ENDPOINT },
+      'api-model': { type: 'string', default: DEFAULT_API_MODEL },
+      'api-voice': { type: 'string', default: DEFAULT_API_VOICE },
+      'api-key': { type: 'string' },
+      'max-chars': { type: 'string' },
+      'no-auto-prosody': { type: 'boolean', default: false },
+      'force': { type: 'boolean', default: false },
+      'help': { type: 'boolean', default: false },
+    },
+    allowPositionals: true,
+  });
+
+  return {
+    inputText: (values['text'] as string | undefined) ?? null,
+    inputFile: (values['input'] as string | undefined) || (values['input-file'] as string | undefined) || null,
+    projectDir: (values['project-dir'] as string) || '.',
+    projectName: (values['project-name'] as string | undefined) ?? null,
+    outputName: (values['output-name'] as string | undefined) ?? null,
+    mode: ((values['mode'] as string | undefined) || (values['engine'] as string | undefined) || 'say').toLowerCase(),
+    voice: (values['voice'] as string | undefined) ?? null,
+    rate: (values['rate'] as string | undefined) ?? null,
+    speechRate: (values['speech-rate'] as string | undefined) ?? null,
+    apiEndpoint: (values['api-endpoint'] as string) || DEFAULT_API_ENDPOINT,
+    apiModel: (values['api-model'] as string) || DEFAULT_API_MODEL,
+    apiVoice: (values['api-voice'] as string) || DEFAULT_API_VOICE,
+    apiKey: (values['api-key'] as string | undefined) ?? null,
+    maxChars: (values['max-chars'] as string | undefined) ?? null,
+    noAutoProsody: !!values['no-auto-prosody'],
+    force: !!values['force'],
+    help: !!values['help'],
   };
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === '--help' || arg === '-h') {
-      parsed.help = true;
-      continue;
-    }
-    if (arg.startsWith('--')) {
-      const eqIndex = arg.indexOf('=');
-      let key: string;
-      let value: string;
-
-      if (eqIndex !== -1) {
-        key = arg.slice(2, eqIndex);
-        value = arg.slice(eqIndex + 1);
-      } else {
-        key = arg.slice(2);
-        value = args[++i] || '';
-      }
-
-      switch (key) {
-        case 'text':
-          parsed.inputText = value;
-          break;
-        case 'input':
-        case 'input-file':
-          parsed.inputFile = value;
-          break;
-        case 'project-dir':
-          parsed.projectDir = value;
-          break;
-        case 'project-name':
-          parsed.projectName = value;
-          break;
-        case 'output-name':
-          parsed.outputName = value;
-          break;
-        case 'engine':
-        case 'mode':
-          parsed.mode = value.toLowerCase();
-          break;
-        case 'voice':
-          parsed.voice = value;
-          break;
-        case 'rate':
-          parsed.rate = value;
-          break;
-        case 'speech-rate':
-          parsed.speechRate = value;
-          break;
-        case 'api-endpoint':
-          parsed.apiEndpoint = value;
-          break;
-        case 'api-model':
-          parsed.apiModel = value;
-          break;
-        case 'api-voice':
-          parsed.apiVoice = value;
-          break;
-        case 'api-key':
-          parsed.apiKey = value;
-          break;
-        case 'max-chars':
-          parsed.maxChars = value;
-          break;
-        case 'no-auto-prosody':
-          parsed.noAutoProsody = true;
-          break;
-        case 'force':
-          parsed.force = true;
-          break;
-      }
-    }
-  }
-
-  return parsed;
 }
 
 function readInputText(opts: DocsToVoiceArgs): string {
@@ -508,7 +459,7 @@ export async function docsToVoiceHandler(args: string[], context: ToolContext): 
   const stderr = context.stderr || process.stderr;
 
   try {
-    const opts = parseArgs(args);
+    const opts = parseCliArgs(args);
 
     if (opts.help) {
       stdout.write(`Usage: apltk docs-to-voice [options]
@@ -537,22 +488,19 @@ Options:
     }
 
     if (opts.mode !== 'say' && opts.mode !== 'api') {
-      stderr.write('Error: --mode must be one of: say, api\n');
-      return 1;
+      throw new UserInputError('--mode must be one of: say, api');
     }
 
     const sourceText = readInputText(opts);
     if (!sourceText.trim()) {
-      stderr.write('Error: No text content found for conversion.\n');
-      return 1;
+      throw new UserInputError('No text content found for conversion.');
     }
 
     // Resolve output directory
     const projectDir = path.resolve(opts.projectDir);
     const projectName = opts.projectName || path.basename(projectDir);
     if (!projectName) {
-      stderr.write('Error: Unable to determine project name.\n');
-      return 1;
+      throw new UserInputError('Unable to determine project name.');
     }
 
     const outputDir = path.join(projectDir, 'audio', projectName);
@@ -566,24 +514,21 @@ Options:
       // macOS say mode
       const textChunks = splitTextForTts(sourceText, opts.maxChars ? parseInt(opts.maxChars, 10) || null : null);
       if (textChunks.length === 0) {
-        stderr.write('Error: No text content found for conversion.\n');
-        return 1;
+        throw new UserInputError('No text content found for conversion.');
       }
 
       // Check if `say` is available
       try {
         execSync('which say', { stdio: 'ignore' });
       } catch {
-        stderr.write("Error: macOS 'say' command not found.\n");
-        return 1;
+        throw new UserInputError("macOS 'say' command not found.");
       }
 
       const finalOutputName = hasExtension ? outputName : `${outputName}.aiff`;
       const outputPath = path.join(outputDir, finalOutputName);
 
       if (fs.existsSync(outputPath) && !opts.force) {
-        stderr.write(`Error: Output already exists: ${outputPath}. Use --force to overwrite.\n`);
-        return 1;
+        throw new UserInputError(`Output already exists: ${outputPath}. Use --force to overwrite.`);
       }
 
       // Build prosody-enhanced text
@@ -654,14 +599,12 @@ Options:
       // API mode
       const apiKey = opts.apiKey;
       if (!apiKey) {
-        stderr.write('Error: --api-key is required for api mode.\n');
-        return 1;
+        throw new UserInputError('--api-key is required for api mode.');
       }
 
       const sentences = splitSentences(sourceText);
       if (sentences.length === 0) {
-        stderr.write('Error: No text content found for conversion.\n');
-        return 1;
+        throw new UserInputError('No text content found for conversion.');
       }
 
       const maxChars = opts.maxChars ? parseInt(opts.maxChars, 10) || null : null;
@@ -684,8 +627,7 @@ Options:
       }
 
       if (requestItems.length === 0) {
-        stderr.write('Error: No text content found for conversion.\n');
-        return 1;
+        throw new UserInputError('No text content found for conversion.');
       }
 
       const tempDir = fs.mkdtempSync('docs-to-voice-api-');
@@ -736,8 +678,7 @@ Options:
         const outputPath = path.join(outputDir, finalOutputName);
 
         if (fs.existsSync(outputPath) && !opts.force) {
-          stderr.write(`Error: Output already exists: ${outputPath}. Use --force to overwrite.\n`);
-          return 1;
+          throw new UserInputError(`Output already exists: ${outputPath}. Use --force to overwrite.`);
         }
 
         concatAudioFiles(partPaths, outputPath);

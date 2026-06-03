@@ -2,6 +2,8 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { parseArgs } from 'node:util';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
 interface KatexArgs {
   tex: string | null;
@@ -28,131 +30,66 @@ interface KatexArgs {
   minRuleThickness: number | null;
 }
 
-function parseArgs(args: string[]): KatexArgs {
-  const parsed: KatexArgs = {
-    tex: null,
-    inputFile: null,
-    outputFormat: 'html-fragment',
-    katexFormat: 'htmlAndMathml',
-    displayMode: false,
-    leqno: false,
-    fleqn: false,
-    colorIsTextColor: false,
-    noThrowOnError: false,
-    outputFile: null,
-    cssHref: 'https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css',
-    title: 'KaTeX Render',
-    lang: 'en',
-    help: false,
-    macro: [],
-    macroFile: null,
-    errorColor: null,
-    strict: null,
-    trust: null,
-    maxSize: null,
-    maxExpand: null,
-    minRuleThickness: null,
+function parseCliArgs(args: string[]): KatexArgs {
+  const { values } = parseArgs({
+    options: {
+      'tex': { type: 'string' },
+      'input-file': { type: 'string' },
+      'output-format': { type: 'string', default: 'html-fragment' },
+      'katex-format': { type: 'string', default: 'htmlAndMathml' },
+      'display-mode': { type: 'boolean', default: false },
+      'leqno': { type: 'boolean', default: false },
+      'fleqn': { type: 'boolean', default: false },
+      'color-is-text-color': { type: 'boolean', default: false },
+      'no-throw-on-error': { type: 'boolean', default: false },
+      'output-file': { type: 'string' },
+      'css-href': { type: 'string', default: 'https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css' },
+      'title': { type: 'string', default: 'KaTeX Render' },
+      'lang': { type: 'string', default: 'en' },
+      'help': { type: 'boolean', default: false },
+      'macro': { type: 'string', multiple: true },
+      'macro-file': { type: 'string' },
+      'error-color': { type: 'string' },
+      'strict': { type: 'string' },
+      'trust': { type: 'string' },
+      'max-size': { type: 'string' },
+      'max-expand': { type: 'string' },
+      'min-rule-thickness': { type: 'string' },
+    },
+    allowPositionals: true,
+  });
+
+  const rawOpts = {
+    tex: (values['tex'] as string | undefined) ?? null,
+    inputFile: (values['input-file'] as string | undefined) ?? null,
+    outputFormat: (values['output-format'] as string) || 'html-fragment',
+    katexFormat: (values['katex-format'] as string) || 'htmlAndMathml',
+    displayMode: !!values['display-mode'],
+    leqno: !!values['leqno'],
+    fleqn: !!values['fleqn'],
+    colorIsTextColor: !!values['color-is-text-color'],
+    noThrowOnError: !!values['no-throw-on-error'],
+    outputFile: (values['output-file'] as string | undefined) ?? null,
+    cssHref: (values['css-href'] as string) || 'https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css',
+    title: (values['title'] as string) || 'KaTeX Render',
+    lang: (values['lang'] as string) || 'en',
+    help: !!values['help'],
+    macro: (values['macro'] as string[] | undefined) || [],
+    macroFile: (values['macro-file'] as string | undefined) ?? null,
+    errorColor: (values['error-color'] as string | undefined) ?? null,
+    strict: (values['strict'] as string | undefined) ?? null,
+    trust: (values['trust'] as string | undefined) ?? null,
+    maxSize: (values['max-size'] as string | undefined) ?? null,
+    maxExpand: (values['max-expand'] as string | undefined) ?? null,
+    minRuleThickness: (values['min-rule-thickness'] as string | undefined) ?? null,
   };
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === '--help' || arg === '-h') {
-      parsed.help = true;
-      continue;
-    }
-
-    if (arg.startsWith('--')) {
-      const eqIndex = arg.indexOf('=');
-      let key: string;
-      let value: string | boolean | null;
-
-      if (eqIndex !== -1) {
-        key = arg.slice(2, eqIndex);
-        value = arg.slice(eqIndex + 1);
-      } else {
-        key = arg.slice(2);
-        const next = args[i + 1];
-        if (next !== undefined && !next.startsWith('--')) {
-          value = next;
-          i++;
-        } else {
-          value = true;
-        }
-      }
-
-      switch (key) {
-        case 'tex':
-          parsed.tex = String(value);
-          break;
-        case 'input-file':
-          parsed.inputFile = String(value);
-          break;
-        case 'output-format':
-          if (['html-fragment', 'html-page', 'markdown-inline', 'markdown-block', 'json'].includes(String(value))) {
-            parsed.outputFormat = String(value);
-          }
-          break;
-        case 'katex-format':
-          if (['html', 'mathml', 'htmlAndMathml'].includes(String(value))) {
-            parsed.katexFormat = String(value);
-          }
-          break;
-        case 'display-mode':
-          parsed.displayMode = value === true || value === 'true';
-          break;
-        case 'leqno':
-          parsed.leqno = value === true || value === 'true';
-          break;
-        case 'fleqn':
-          parsed.fleqn = value === true || value === 'true';
-          break;
-        case 'color-is-text-color':
-          parsed.colorIsTextColor = value === true || value === 'true';
-          break;
-        case 'no-throw-on-error':
-          parsed.noThrowOnError = value === true || value === 'true';
-          break;
-        case 'output-file':
-          parsed.outputFile = String(value);
-          break;
-        case 'css-href':
-          parsed.cssHref = String(value);
-          break;
-        case 'title':
-          parsed.title = String(value);
-          break;
-        case 'lang':
-          parsed.lang = String(value);
-          break;
-        case 'macro':
-          parsed.macro.push(String(value));
-          break;
-        case 'macro-file':
-          parsed.macroFile = String(value);
-          break;
-        case 'error-color':
-          parsed.errorColor = String(value);
-          break;
-        case 'strict':
-          parsed.strict = String(value);
-          break;
-        case 'trust':
-          parsed.trust = String(value);
-          break;
-        case 'max-size':
-          parsed.maxSize = Number(value);
-          break;
-        case 'max-expand':
-          parsed.maxExpand = Number(value);
-          break;
-        case 'min-rule-thickness':
-          parsed.minRuleThickness = Number(value);
-          break;
-      }
-    }
-  }
-
-  return parsed;
+  return {
+    ...rawOpts,
+    maxSize: rawOpts.maxSize ? Number(rawOpts.maxSize) : null,
+    maxExpand: rawOpts.maxExpand ? Number(rawOpts.maxExpand) : null,
+    minRuleThickness: rawOpts.minRuleThickness ? Number(rawOpts.minRuleThickness) : null,
+  };
 }
 
 function loadTex(opts: KatexArgs): string {
@@ -228,7 +165,7 @@ export async function renderKatexHandler(args: string[], context: ToolContext): 
   const stderr = context.stderr || process.stderr;
 
   try {
-    const opts = parseArgs(args);
+    const opts = parseCliArgs(args);
 
     if (opts.help) {
       stdout.write(`Usage: apltk render-katex [options]
@@ -251,8 +188,7 @@ Options:
 
     const tex = loadTex(opts);
     if (!tex) {
-      stderr.write('Error: Input TeX is empty.\n');
-      return 1;
+      throw new UserInputError('Input TeX is empty.');
     }
 
     // Build npx katex command
@@ -303,8 +239,7 @@ Options:
       renderedHtml = result.trim();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'KaTeX CLI failed.';
-      stderr.write(`Error: ${message}\n`);
-      return 1;
+      throw new SystemError(message);
     } finally {
       try {
         fs.unlinkSync(tmpFile);

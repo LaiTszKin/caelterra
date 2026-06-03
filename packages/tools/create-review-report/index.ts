@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError } from '@laitszkin/tool-utils';
 
 const TEMPLATE_RELATIVE_PATH = 'skills/review/assets/templates/REPORT.md';
 const OUTPUT_FILENAME = 'REPORT.md';
@@ -13,13 +15,12 @@ function hasSpecFile(dirPath: string): boolean {
   return SPEC_FILENAMES.some((name) => fs.existsSync(path.join(dirPath, name)));
 }
 
-function resolveTargetDir(inputPath: string, stderr: { write(msg: string): boolean }): string | null {
+function resolveTargetDir(inputPath: string): string {
   let stat: fs.Stats;
   try {
     stat = fs.statSync(inputPath);
   } catch {
-    stderr.write(`Error: Path not found: ${inputPath}\n`);
-    return null;
+    throw new UserInputError(`Path not found: ${inputPath}`);
   }
 
   // If it's a file, use its parent directory
@@ -30,12 +31,10 @@ function resolveTargetDir(inputPath: string, stderr: { write(msg: string): boole
   try {
     dirStat = fs.statSync(dir);
   } catch {
-    stderr.write(`Error: Directory not found: ${dir}\n`);
-    return null;
+    throw new UserInputError(`Directory not found: ${dir}`);
   }
   if (!dirStat.isDirectory()) {
-    stderr.write(`Error: Not a directory: ${dir}\n`);
-    return null;
+    throw new UserInputError(`Not a directory: ${dir}`);
   }
 
   const parentDir = path.dirname(dir);
@@ -50,8 +49,7 @@ function resolveTargetDir(inputPath: string, stderr: { write(msg: string): boole
     return parentDir;
   }
 
-  stderr.write(`Error: ${dir} is not a valid spec directory (no SPEC.md found).\n`);
-  return null;
+  throw new UserInputError(`${dir} is not a valid spec directory (no SPEC.md found).`);
 }
 
 function findLatestDateDir(baseDir: string): string | null {
@@ -66,17 +64,15 @@ function findLatestDateDir(baseDir: string): string | null {
   return dateDirs.length > 0 ? dateDirs[0] : null;
 }
 
-function autoDetectTargetDir(stderr: { write(msg: string): boolean }): string | null {
+function autoDetectTargetDir(): string {
   const plansDir = path.resolve(PLANS_DIR);
   if (!fs.existsSync(plansDir)) {
-    stderr.write(`Error: No ${PLANS_DIR}/ directory found. Specify the spec path manually.\n`);
-    return null;
+    throw new UserInputError(`No ${PLANS_DIR}/ directory found. Specify the spec path manually.`);
   }
 
   const latestDate = findLatestDateDir(plansDir);
   if (!latestDate) {
-    stderr.write(`Error: No dated spec directories found in ${PLANS_DIR}/. Specify the spec path manually.\n`);
-    return null;
+    throw new UserInputError(`No dated spec directories found in ${PLANS_DIR}/. Specify the spec path manually.`);
   }
 
   const datePath = path.join(plansDir, latestDate);
@@ -110,11 +106,11 @@ function autoDetectTargetDir(stderr: { write(msg: string): boolean }): string | 
   }
 
   if (batchDirs.length > 1) {
-    stderr.write(`Error: Multiple batch specs found in ${datePath}. Specify the path manually:\n`);
+    let msg = `Multiple batch specs found in ${datePath}. Specify the path manually:`;
     for (const bd of batchDirs) {
-      stderr.write(`  apltk create-review-report ${bd.path}\n`);
+      msg += `\n  apltk create-review-report ${bd.path}`;
     }
-    return null;
+    throw new UserInputError(msg);
   }
 
   if (singleSpecs.length === 1) {
@@ -122,15 +118,14 @@ function autoDetectTargetDir(stderr: { write(msg: string): boolean }): string | 
   }
 
   if (singleSpecs.length > 1) {
-    stderr.write(`Error: Multiple specs found in ${datePath}. Specify the path manually:\n`);
+    let msg = `Multiple specs found in ${datePath}. Specify the path manually:`;
     for (const ss of singleSpecs) {
-      stderr.write(`  apltk create-review-report ${ss.path}\n`);
+      msg += `\n  apltk create-review-report ${ss.path}`;
     }
-    return null;
+    throw new UserInputError(msg);
   }
 
-  stderr.write(`Error: No specs found in ${datePath}.\n`);
-  return null;
+  throw new UserInputError(`No specs found in ${datePath}.`);
 }
 
 export async function createReviewReportHandler(args: string[], context: ToolContext): Promise<number> {
@@ -138,8 +133,17 @@ export async function createReviewReportHandler(args: string[], context: ToolCon
   const stderr = context.stderr || process.stderr;
   const sourceRoot = context.sourceRoot || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 
-  if (args.includes('--help') || args.includes('-h')) {
-    stdout.write(`Usage: apltk create-review-report [options] [<spec-path>]
+  try {
+    const { values, positionals } = parseArgs({
+      options: {
+        force: { type: 'boolean', short: 'f' },
+        help: { type: 'boolean', short: 'h' },
+      },
+      allowPositionals: true,
+    });
+
+    if (values.help) {
+      stdout.write(`Usage: apltk create-review-report [options] [<spec-path>]
 
 Copy the review report template (REPORT.md)
 to the appropriate spec directory.
@@ -158,42 +162,35 @@ Examples:
   apltk create-review-report docs/plans/2026-05-21/my-batch
   apltk create-review-report --force
 `);
+      return 0;
+    }
+
+    const force = values.force === true;
+
+    // Resolve template path
+    const templatePath = path.join(sourceRoot, TEMPLATE_RELATIVE_PATH);
+    if (!fs.existsSync(templatePath)) {
+      throw new UserInputError(`Review report template not found: ${templatePath}`);
+    }
+
+    // Resolve target directory
+    const targetDir = positionals.length > 0
+      ? resolveTargetDir(path.resolve(positionals[0]))
+      : autoDetectTargetDir();
+
+    // Copy template
+    const outputPath = path.join(targetDir, OUTPUT_FILENAME);
+    if (fs.existsSync(outputPath) && !force) {
+      throw new UserInputError(`${outputPath} already exists. Use --force to overwrite.`);
+    }
+
+    fs.copyFileSync(templatePath, outputPath);
+    stdout.write(`${outputPath}\n`);
     return 0;
-  }
-
-  const force = args.includes('--force') || args.includes('-f');
-  const positionalArgs = args.filter((a) => !a.startsWith('--'));
-
-  // Resolve template path
-  const templatePath = path.join(sourceRoot, TEMPLATE_RELATIVE_PATH);
-  if (!fs.existsSync(templatePath)) {
-    stderr.write(`Error: Review report template not found: ${templatePath}\n`);
+  } catch (err) {
+    stderr.write(`Error: ${(err as Error).message}\n`);
     return 1;
   }
-
-  // Resolve target directory
-  let targetDir: string | null = null;
-
-  if (positionalArgs.length > 0) {
-    targetDir = resolveTargetDir(path.resolve(positionalArgs[0]), stderr);
-  } else {
-    targetDir = autoDetectTargetDir(stderr);
-  }
-
-  if (!targetDir) {
-    return 1;
-  }
-
-  // Copy template
-  const outputPath = path.join(targetDir, OUTPUT_FILENAME);
-  if (fs.existsSync(outputPath) && !force) {
-    stderr.write(`Error: ${outputPath} already exists. Use --force to overwrite.\n`);
-    return 1;
-  }
-
-  fs.copyFileSync(templatePath, outputPath);
-  stdout.write(`${outputPath}\n`);
-  return 0;
 }
 
 export const tool: ToolDefinition = {

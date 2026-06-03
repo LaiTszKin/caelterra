@@ -1,6 +1,8 @@
+import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError } from '@laitszkin/tool-utils';
 
 function getCodexHome(): string {
   return process.env.CODEX_HOME || path.join(process.env.HOME || '', '.codex');
@@ -53,19 +55,29 @@ function filterSessionsByHours(sessions: Session[], hours: number): Session[] {
 }
 
 export async function extractConversationsHandler(
-  args: string[],
+  argv: string[],
   context: ToolContext,
 ): Promise<number> {
-  try {
-    let hours = 24;
-    let format: 'json' | 'text' = 'text';
+  const stdout = context.stdout ?? process.stdout;
 
-    for (let i = 0; i < args.length; i++) {
-      if (args[i] === '--hours' && i + 1 < args.length) hours = parseInt(args[++i], 10) || 24;
-      else if (args[i] === '--format' && i + 1 < args.length) {
-        const val = args[++i];
-        if (val === 'json' || val === 'text') format = val;
-      }
+  try {
+    const { values } = parseArgs({
+      args: argv,
+      options: {
+        hours: { type: 'string', default: '24' },
+        format: { type: 'string', default: 'text' },
+      },
+      allowPositionals: true,
+    });
+
+    const hours = parseInt(values.hours as string, 10);
+    if (isNaN(hours) || hours <= 0) {
+      throw new UserInputError('--hours must be a positive number');
+    }
+
+    const format = values.format as string;
+    if (format !== 'json' && format !== 'text') {
+      throw new UserInputError('--format must be "json" or "text"');
     }
 
     const codexHome = getCodexHome();
@@ -95,22 +107,26 @@ export async function extractConversationsHandler(
           sessionPath: path.join(sessionsDir, s.id),
         })),
       };
-      context.stdout!.write(JSON.stringify(output, null, 2));
-      context.stdout!.write('\n');
+      stdout.write(JSON.stringify(output, null, 2));
+      stdout.write('\n');
     } else {
-      context.stdout!.write(`Recent Codex sessions (last ${hours}h):\n`);
-      context.stdout!.write(`Found ${sessions.length} sessions\n\n`);
+      stdout.write(`Recent Codex sessions (last ${hours}h):\n`);
+      stdout.write(`Found ${sessions.length} sessions\n\n`);
       for (const session of sessions) {
-        context.stdout!.write(`  [${session.id}] ${session.title}\n`);
-        context.stdout!.write(`    Started: ${session.startedAt}\n`);
-        context.stdout!.write(`    Updated: ${session.updatedAt}\n`);
-        context.stdout!.write(`    Messages: ${session.messageCount}\n\n`);
+        stdout.write(`  [${session.id}] ${session.title}\n`);
+        stdout.write(`    Started: ${session.startedAt}\n`);
+        stdout.write(`    Updated: ${session.updatedAt}\n`);
+        stdout.write(`    Messages: ${session.messageCount}\n\n`);
       }
     }
 
     return 0;
   } catch (err) {
-    const stderr = context.stderr || process.stderr;
+    const stderr = context.stderr ?? process.stderr;
+    if (err instanceof UserInputError) {
+      stderr.write(`${err.message}\n`);
+      return err.statusCode;
+    }
     stderr.write(`Error: ${(err as Error).message}\n`);
     return 1;
   }

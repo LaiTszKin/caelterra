@@ -1,96 +1,36 @@
+import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 import {
   extractTimestamp,
   inWindow,
   iterInputLines,
   parseCliTimestamp,
   buildTimezone,
-  validateTimeWindow,
 } from '@laitszkin/tool-utils';
-
-interface SearchLogsArgs {
-  paths: string[];
-  keyword: string[];
-  regex: string[];
-  mode: 'any' | 'all';
-  ignoreCase: boolean;
-  start: string | null;
-  end: string | null;
-  assumeTimezone: string;
-  beforeContext: number;
-  afterContext: number;
-  countOnly: boolean;
-}
-
-function parseArgs(argv: string[]): SearchLogsArgs {
-  const args: SearchLogsArgs = {
-    paths: [],
-    keyword: [],
-    regex: [],
-    mode: 'any',
-    ignoreCase: false,
-    start: null,
-    end: null,
-    assumeTimezone: 'UTC',
-    beforeContext: 0,
-    afterContext: 0,
-    countOnly: false,
-  };
-
-  let i = 0;
-  while (i < argv.length) {
-    const arg = argv[i];
-    if (arg === '--keyword' && i + 1 < argv.length) {
-      args.keyword.push(argv[++i]);
-    } else if (arg === '--regex' && i + 1 < argv.length) {
-      args.regex.push(argv[++i]);
-    } else if (arg === '--mode' && i + 1 < argv.length) {
-      const val = argv[++i];
-      if (val === 'any' || val === 'all') {
-        args.mode = val;
-      }
-    } else if (arg === '--ignore-case') {
-      args.ignoreCase = true;
-    } else if (arg === '--start' && i + 1 < argv.length) {
-      args.start = argv[++i];
-    } else if (arg === '--end' && i + 1 < argv.length) {
-      args.end = argv[++i];
-    } else if (arg === '--assume-timezone' && i + 1 < argv.length) {
-      args.assumeTimezone = argv[++i];
-    } else if (arg === '--before-context' && i + 1 < argv.length) {
-      args.beforeContext = parseInt(argv[++i], 10) || 0;
-    } else if (arg === '--after-context' && i + 1 < argv.length) {
-      args.afterContext = parseInt(argv[++i], 10) || 0;
-    } else if (arg === '--count-only') {
-      args.countOnly = true;
-    } else if (arg.startsWith('-')) {
-      // skip unknown flags
-    } else {
-      args.paths.push(arg);
-    }
-    i++;
-  }
-
-  return args;
-}
 
 interface Matcher {
   (line: string): boolean;
 }
 
-function buildMatchers(args: SearchLogsArgs): Matcher[] {
+function buildMatchers(
+  keywords: string[],
+  regexPatterns: string[],
+  ignoreCase: boolean,
+  mode: 'any' | 'all',
+): Matcher[] {
   const matchers: Matcher[] = [];
 
-  for (const keyword of args.keyword) {
-    const needle = args.ignoreCase ? keyword.toLowerCase() : keyword;
+  for (const keyword of keywords) {
+    const needle = ignoreCase ? keyword.toLowerCase() : keyword;
     matchers.push((line: string) => {
-      const haystack = args.ignoreCase ? line.toLowerCase() : line;
+      const haystack = ignoreCase ? line.toLowerCase() : line;
       return haystack.includes(needle);
     });
   }
 
-  for (const pattern of args.regex) {
-    const flags = args.ignoreCase ? 'i' : '';
+  for (const pattern of regexPatterns) {
+    const flags = ignoreCase ? 'i' : '';
     const compiled = new RegExp(pattern, flags);
     matchers.push((line: string) => compiled.test(line));
   }
@@ -115,88 +55,123 @@ async function searchLogsHandler(
   context: ToolContext,
 ): Promise<number> {
   const stdout = context.stdout ?? process.stdout;
-  const stderr = context.stderr ?? process.stderr;
-  const args = parseArgs(argv);
 
   try {
-    buildTimezone(args.assumeTimezone);
-  } catch (err) {
-    stderr.write(`Error: invalid timezone: ${args.assumeTimezone}\n`);
-    return 1;
-  }
+    const { values, positionals } = parseArgs({
+      args: argv,
+      options: {
+        keyword: { type: 'string', multiple: true },
+        regex: { type: 'string', multiple: true },
+        mode: { type: 'string', default: 'any' },
+        'ignore-case': { type: 'boolean', default: false },
+        start: { type: 'string' },
+        end: { type: 'string' },
+        'assume-timezone': { type: 'string', default: 'UTC' },
+        'before-context': { type: 'string', default: '0' },
+        'after-context': { type: 'string', default: '0' },
+        'count-only': { type: 'boolean', default: false },
+      },
+      allowPositionals: true,
+    });
 
-  let start: Date | null = null;
-  let end: Date | null = null;
-
-  try {
-    if (args.start) {
-      start = parseCliTimestamp(args.start, args.assumeTimezone);
+    const mode = values.mode as string;
+    if (mode !== 'any' && mode !== 'all') {
+      throw new UserInputError('--mode must be "any" or "all"');
     }
-    if (args.end) {
-      end = parseCliTimestamp(args.end, args.assumeTimezone);
+
+    const keywords = (values.keyword as string[]) || [];
+    const regexPatterns = (values.regex as string[]) || [];
+    const ignoreCase = values['ignore-case'] as boolean;
+    const assumeTimezone = values['assume-timezone'] as string;
+    const beforeContext = parseInt(values['before-context'] as string, 10) || 0;
+    const afterContext = parseInt(values['after-context'] as string, 10) || 0;
+    const countOnly = values['count-only'] as boolean;
+
+    try {
+      buildTimezone(assumeTimezone);
+    } catch {
+      throw new UserInputError(`invalid timezone: ${assumeTimezone}`);
     }
-  } catch (err) {
-    stderr.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
 
-  if (!validateTimeWindow(start, end, stderr)) {
-    return 1;
-  }
+    let start: Date | null = null;
+    let end: Date | null = null;
 
-  const matchers = buildMatchers(args);
-  let matches = 0;
-  const beforeBuffer: string[] = [];
-  let afterRemaining = 0;
-
-  try {
-    for await (const line of iterInputLines(args.paths)) {
-      const timestamp = extractTimestamp(line, args.assumeTimezone);
-
-      // When time filter is active, skip lines outside the window
-      if (args.start || args.end) {
-        if (!inWindow(timestamp, start, end)) {
-          beforeBuffer.push(line);
-          if (beforeBuffer.length > args.beforeContext) {
-            beforeBuffer.shift();
-          }
-          continue;
-        }
+    try {
+      if (values.start) {
+        start = parseCliTimestamp(values.start as string, assumeTimezone);
       }
+      if (values.end) {
+        end = parseCliTimestamp(values.end as string, assumeTimezone);
+      }
+    } catch (err) {
+      throw new UserInputError((err as Error).message);
+    }
 
-      const isMatch = lineMatches(line, matchers, args.mode);
+    if (start && end && start > end) {
+      throw new UserInputError('--start must be earlier than or equal to --end.');
+    }
 
-      if (isMatch) {
-        matches++;
-        if (!args.countOnly) {
-          // Flush before context
-          for (const ctxLine of beforeBuffer) {
-            stdout.write(ctxLine + '\n');
+    const matchers = buildMatchers(keywords, regexPatterns, ignoreCase, mode as 'any' | 'all');
+    let matches = 0;
+    const beforeBuffer: string[] = [];
+    let afterRemaining = 0;
+
+    try {
+      for await (const line of iterInputLines(positionals)) {
+        const timestamp = extractTimestamp(line, assumeTimezone);
+
+        // When time filter is active, skip lines outside the window
+        if (values.start || values.end) {
+          if (!inWindow(timestamp, start, end)) {
+            beforeBuffer.push(line);
+            if (beforeBuffer.length > beforeContext) {
+              beforeBuffer.shift();
+            }
+            continue;
           }
+        }
+
+        const isMatch = lineMatches(line, matchers, mode as 'any' | 'all');
+
+        if (isMatch) {
+          matches++;
+          if (!countOnly) {
+            // Flush before context
+            for (const ctxLine of beforeBuffer) {
+              stdout.write(ctxLine + '\n');
+            }
+            stdout.write(line + '\n');
+          }
+          afterRemaining = afterContext;
+        } else if (afterRemaining > 0 && !countOnly) {
           stdout.write(line + '\n');
+          afterRemaining--;
         }
-        afterRemaining = args.afterContext;
-      } else if (afterRemaining > 0 && !args.countOnly) {
-        stdout.write(line + '\n');
-        afterRemaining--;
-      }
 
-      // Maintain before context buffer
-      beforeBuffer.push(line);
-      if (beforeBuffer.length > args.beforeContext) {
-        beforeBuffer.shift();
+        // Maintain before context buffer
+        beforeBuffer.push(line);
+        if (beforeBuffer.length > beforeContext) {
+          beforeBuffer.shift();
+        }
       }
+    } catch (err) {
+      throw new SystemError((err as Error).message);
     }
+
+    if (countOnly) {
+      stdout.write(String(matches) + '\n');
+    }
+
+    return 0;
   } catch (err) {
+    const stderr = context.stderr ?? process.stderr;
+    if (err instanceof UserInputError || err instanceof SystemError) {
+      stderr.write(`${err.message}\n`);
+      return err.statusCode;
+    }
     stderr.write(`Error: ${(err as Error).message}\n`);
     return 1;
   }
-
-  if (args.countOnly) {
-    stdout.write(String(matches) + '\n');
-  }
-
-  return 0;
 }
 
 export const tool: ToolDefinition = {
