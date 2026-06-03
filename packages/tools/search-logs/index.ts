@@ -1,7 +1,8 @@
-import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 import {
+  UserInputError,
+  SystemError,
+  createToolRunner,
   extractTimestamp,
   inWindow,
   iterInputLines,
@@ -50,29 +51,29 @@ function lineMatches(
   return matchers.every((m) => m(line));
 }
 
-async function searchLogsHandler(
-  argv: string[],
-  context: ToolContext,
-): Promise<number> {
-  const stdout = context.stdout ?? process.stdout;
-
-  try {
-    const { values, positionals } = parseArgs({
-      args: argv,
-      options: {
-        keyword: { type: 'string', multiple: true },
-        regex: { type: 'string', multiple: true },
-        mode: { type: 'string', default: 'any' },
-        'ignore-case': { type: 'boolean', default: false },
-        start: { type: 'string' },
-        end: { type: 'string' },
-        'assume-timezone': { type: 'string', default: 'UTC' },
-        'before-context': { type: 'string', default: '0' },
-        'after-context': { type: 'string', default: '0' },
-        'count-only': { type: 'boolean', default: false },
-      },
-      allowPositionals: true,
-    });
+const schema = {
+  options: {
+    keyword: { type: 'string' as const },
+    regex: { type: 'string' as const },
+    mode: { type: 'string' as const, default: 'any' },
+    'ignore-case': { type: 'boolean' as const, default: false },
+    start: { type: 'string' as const },
+    end: { type: 'string' as const },
+    'assume-timezone': { type: 'string' as const, default: 'UTC' },
+    'before-context': { type: 'string' as const, default: '0' },
+    'after-context': { type: 'string' as const, default: '0' },
+    'count-only': { type: 'boolean' as const, default: false },
+  },
+  allowPositionals: true,
+  strict: false,
+  usage: 'apltk search-logs [options] [<file>...]',
+  description: 'Search log lines by keywords or regex patterns with time filters',
+  handler: async (
+    values: Record<string, unknown>,
+    positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    const stdout = context.stdout ?? process.stdout;
 
     const mode = values.mode as string;
     if (mode !== 'any' && mode !== 'all') {
@@ -163,20 +164,12 @@ async function searchLogsHandler(
     }
 
     return 0;
-  } catch (err) {
-    const stderr = context.stderr ?? process.stderr;
-    if (err instanceof UserInputError || err instanceof SystemError) {
-      stderr.write(`${err.message}\n`);
-      return err.statusCode;
-    }
-    stderr.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-}
+  },
+};
 
 export const tool: ToolDefinition = {
   name: 'search-logs',
   category: 'Log Analysis',
   description: 'Search log lines by keywords or regex patterns with time filters',
-  handler: searchLogsHandler,
+  handler: createToolRunner(schema),
 };

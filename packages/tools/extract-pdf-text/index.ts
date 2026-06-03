@@ -1,8 +1,7 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError } from '@laitszkin/tool-utils';
+import { UserInputError, createToolRunner } from '@laitszkin/tool-utils';
 
 const SWIFT_SCRIPT = [
   'import Foundation',
@@ -23,36 +22,18 @@ const SWIFT_SCRIPT = [
   '}',
 ].join('\n');
 
-export async function extractPdfTextHandler(args: string[], context: ToolContext): Promise<number> {
-  const stdout = context.stdout || process.stdout;
-  const stderr = context.stderr || process.stderr;
-
-  try {
-    const { values, positionals } = parseArgs({
-      options: {
-        help: { type: 'boolean', short: 'h' },
-      },
-      allowPositionals: true,
-    });
-
-    if (values.help) {
-      stdout.write(`Usage: apltk extract-pdf-text-pdfkit <path>
-
-Extract per-page text from a PDF through macOS PDFKit.
-
-Arguments:
-  path  Absolute path to the source PDF file
-
-Output format:
-  PDF_PATH=<path>
-  PAGE_COUNT=<N>
-  === PAGE 1 ===
-  <page text>
-  === PAGE 2 ===
-  ...
-`);
-      return 0;
-    }
+const schema = {
+  options: {} as Record<string, never>,
+  allowPositionals: true,
+  usage: 'apltk extract-pdf-text-pdfkit <path>',
+  description: 'Extract per-page text from a PDF through macOS PDFKit.',
+  handler: async (
+    _values: Record<string, unknown>,
+    positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    const stdout = context.stdout || process.stdout;
+    const stderr = context.stderr || process.stderr;
 
     const pdfPath = (positionals[0] as string) ?? '';
     if (!pdfPath) {
@@ -81,7 +62,8 @@ Output format:
         stderrText += String(chunk);
       });
 
-      child.on('error', () => {
+      child.on('error', (err: Error) => {
+        stderr.write(`Failed to start swift: ${err.message}\n`);
         resolve(1);
       });
 
@@ -95,15 +77,12 @@ Output format:
         resolve(typeof code === 'number' ? code : 1);
       });
     });
-  } catch (err) {
-    stderr.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-}
+  },
+};
 
 export const tool: ToolDefinition = {
   name: 'extract-pdf-text-pdfkit',
   category: 'Rendering & media',
   description: 'Extract PDF text with macOS PDFKit fallback.',
-  handler: extractPdfTextHandler,
+  handler: createToolRunner(schema),
 };

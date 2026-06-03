@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, SystemError, iterSkillDirs } from '@laitszkin/tool-utils';
+import { iterSkillDirs, createToolRunner } from '@laitszkin/tool-utils';
 
 const TOP_LEVEL_ALLOWED_KEYS = new Set(['interface', 'dependencies', 'policy']);
 const INTERFACE_REQUIRED_KEYS = new Set(['display_name', 'short_description', 'default_prompt']);
@@ -180,19 +180,22 @@ function validateSkill(skillDir: string): string[] {
   return errors;
 }
 
-async function validateOpenaiAgentConfigHandler(
-  args: string[],
-  context: ToolContext,
-): Promise<number> {
-  const stdout = context.stdout ?? process.stdout;
-
-  try {
+const schema = {
+  options: {} as Record<string, never>,
+  allowPositionals: true,
+  usage: 'apltk validate-openai-agent-config',
+  description: 'Validate agents/openai.yaml configuration completeness',
+  handler: async (
+    _values: Record<string, unknown>,
+    _positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    const stdout = context.stdout ?? process.stdout;
     const root = repoRoot(context);
     const skillDirs = iterSkillDirs(root);
 
     if (!skillDirs.length) {
-      const stderr = context.stderr ?? process.stderr;
-      stderr.write('No top-level skill directories found.\n');
+      stdout.write('No top-level skill directories found.\n');
       return 1;
     }
 
@@ -202,30 +205,21 @@ async function validateOpenaiAgentConfigHandler(
     }
 
     if (allErrors.length) {
-      const stderr = context.stderr ?? process.stderr;
-      stderr.write('agents/openai.yaml validation failed:\n');
+      stdout.write('agents/openai.yaml validation failed:\n');
       for (const error of allErrors) {
-        stderr.write(`- ${error}\n`);
+        stdout.write(`- ${error}\n`);
       }
       return 1;
     }
 
     stdout.write(`agents/openai.yaml validation passed for ${skillDirs.length} skills.\n`);
     return 0;
-  } catch (err) {
-    const stderr = context.stderr ?? process.stderr;
-    if (err instanceof UserInputError || err instanceof SystemError) {
-      stderr.write(`${err.message}\n`);
-      return err.statusCode;
-    }
-    stderr.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-}
+  },
+};
 
 export const tool: ToolDefinition = {
   name: 'validate-openai-agent-config',
   category: 'Validation',
   description: 'Validate agents/openai.yaml configuration completeness',
-  handler: validateOpenaiAgentConfigHandler,
+  handler: createToolRunner(schema),
 };

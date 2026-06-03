@@ -1,9 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, SystemError } from '@laitszkin/tool-utils';
+import { UserInputError, createToolRunner } from '@laitszkin/tool-utils';
 
 const TEMPLATE_RELATIVE_PATH = 'skills/review/assets/templates/REPORT.md';
 const OUTPUT_FILENAME = 'REPORT.md';
@@ -128,42 +127,20 @@ function autoDetectTargetDir(): string {
   throw new UserInputError(`No specs found in ${datePath}.`);
 }
 
-export async function createReviewReportHandler(args: string[], context: ToolContext): Promise<number> {
-  const stdout = context.stdout || process.stdout;
-  const stderr = context.stderr || process.stderr;
-  const sourceRoot = context.sourceRoot || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
-
-  try {
-    const { values, positionals } = parseArgs({
-      options: {
-        force: { type: 'boolean', short: 'f' },
-        help: { type: 'boolean', short: 'h' },
-      },
-      allowPositionals: true,
-    });
-
-    if (values.help) {
-      stdout.write(`Usage: apltk create-review-report [options] [<spec-path>]
-
-Copy the review report template (REPORT.md)
-to the appropriate spec directory.
-
-Positional:
-  <spec-path>    Path to the spec directory, spec.md file, or batch root.
-                 If omitted, auto-detects the latest spec in docs/plans/.
-
-Options:
-  --force, -f    Overwrite existing REPORT.md if it exists
-  --help, -h     Show this help message
-
-Examples:
-  apltk create-review-report
-  apltk create-review-report docs/plans/2026-05-21/my-feature
-  apltk create-review-report docs/plans/2026-05-21/my-batch
-  apltk create-review-report --force
-`);
-      return 0;
-    }
+const schema = {
+  options: {
+    force: { type: 'boolean' as const, short: 'f' },
+  },
+  allowPositionals: true,
+  usage: 'apltk create-review-report [options] [<spec-path>]',
+  description: 'Copy the code review report template (REPORT.md) to the spec directory.',
+  handler: async (
+    values: Record<string, unknown>,
+    positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    const stdout = context.stdout || process.stdout;
+    const sourceRoot = context.sourceRoot || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 
     const force = values.force === true;
 
@@ -187,21 +164,12 @@ Examples:
     fs.copyFileSync(templatePath, outputPath);
     stdout.write(`${outputPath}\n`);
     return 0;
-  } catch (err) {
-    if (err instanceof UserInputError) {
-      stderr.write(`${err.message}\n`);
-    } else if (err instanceof SystemError) {
-      stderr.write(`${err.message}\n${err.stack}\n`);
-    } else {
-      stderr.write(`Error: ${(err as Error).message}\n`);
-    }
-    return 1;
-  }
-}
+  },
+};
 
 export const tool: ToolDefinition = {
   name: 'create-review-report',
   category: 'Planning & architecture',
   description: 'Copy the code review report template (REPORT.md) to the spec directory.',
-  handler: createReviewReportHandler,
+  handler: createToolRunner(schema),
 };

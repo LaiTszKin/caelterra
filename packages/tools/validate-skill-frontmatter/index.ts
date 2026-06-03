@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, SystemError, iterSkillDirs } from '@laitszkin/tool-utils';
+import { iterSkillDirs, createToolRunner } from '@laitszkin/tool-utils';
 
 const NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REQUIRED_KEYS = new Set(['name', 'description']);
@@ -86,19 +86,22 @@ function validateSkill(skillDir: string): string[] {
   return errors;
 }
 
-async function validateSkillFrontmatterHandler(
-  args: string[],
-  context: ToolContext,
-): Promise<number> {
-  const stdout = context.stdout ?? process.stdout;
-
-  try {
+const schema = {
+  options: {} as Record<string, never>,
+  allowPositionals: true,
+  usage: 'apltk validate-skill-frontmatter',
+  description: 'Validate SKILL.md frontmatter format and naming conventions',
+  handler: async (
+    _values: Record<string, unknown>,
+    _positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    const stdout = context.stdout ?? process.stdout;
     const root = repoRoot(context);
     const skillDirs = iterSkillDirs(root);
 
     if (!skillDirs.length) {
-      const stderr = context.stderr ?? process.stderr;
-      stderr.write('No top-level skill directories found.\n');
+      stdout.write('No top-level skill directories found.\n');
       return 1;
     }
 
@@ -108,30 +111,21 @@ async function validateSkillFrontmatterHandler(
     }
 
     if (allErrors.length) {
-      const stderr = context.stderr ?? process.stderr;
-      stderr.write('SKILL.md frontmatter validation failed:\n');
+      stdout.write('SKILL.md frontmatter validation failed:\n');
       for (const error of allErrors) {
-        stderr.write(`- ${error}\n`);
+        stdout.write(`- ${error}\n`);
       }
       return 1;
     }
 
     stdout.write(`SKILL.md frontmatter validation passed for ${skillDirs.length} skills.\n`);
     return 0;
-  } catch (err) {
-    const stderr = context.stderr ?? process.stderr;
-    if (err instanceof UserInputError || err instanceof SystemError) {
-      stderr.write(`${err.message}\n`);
-      return err.statusCode;
-    }
-    stderr.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-}
+  },
+};
 
 export const tool: ToolDefinition = {
   name: 'validate-skill-frontmatter',
   category: 'Validation',
   description: 'Validate SKILL.md frontmatter format and naming conventions',
-  handler: validateSkillFrontmatterHandler,
+  handler: createToolRunner(schema),
 };
