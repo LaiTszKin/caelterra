@@ -669,5 +669,5 @@ export const tool: ToolDefinition = {
   category: 'Planning & architecture',
   skill: 'init-project-html',
   description: 'Open the project HTML architecture atlas, or render a paginated diff (`architecture diff`).',
-  handler: createToolRunner(schema),
+  handler: architectureHandler,
 };

@@ -88,13 +88,16 @@ function classifyTools() {
 
     const source = fs.readFileSync(distPath, 'utf-8');
 
-    if (source.includes('createToolRunner')) {
-      // Converted to ToolSchema — check explicit strict setting
-      const strictMatch = source.match(/strict:\s*(true|false)/);
-      if (strictMatch && strictMatch[1] === 'false') {
-        classified.set(name, { mode: 'non-strict', type: 'createToolRunner' });
+    if (source.includes("createToolRunner")) {
+      // Converted to ToolSchema — check explicit strict setting.
+      // Only match strict:false that appears before handler: to avoid
+      // matching inner parseArgs re-parsing (e.g. _rawArgs hack for multiple).
+      const beforeHandler = source.slice(0, source.indexOf("handler:"));
+      const strictMatch = beforeHandler.match(/strict:\s*(true|false)/);
+      if (strictMatch && strictMatch[1] === "false") {
+        classified.set(name, { mode: "non-strict", type: "createToolRunner" });
       } else {
-        classified.set(name, { mode: 'strict', type: 'createToolRunner' });
+        classified.set(name, { mode: "strict", type: "createToolRunner" });
       }
     } else if (source.includes('parseArgs')) {
       // Determine if the tool passes args/argv to parseArgs

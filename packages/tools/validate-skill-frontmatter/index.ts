@@ -97,11 +97,12 @@ const schema = {
     context: ToolContext,
   ): Promise<number> => {
     const stdout = context.stdout ?? process.stdout;
+    const stderr = context.stderr ?? process.stderr;
     const root = repoRoot(context);
     const skillDirs = iterSkillDirs(root);
 
     if (!skillDirs.length) {
-      stdout.write('No top-level skill directories found.\n');
+      stderr.write('No top-level skill directories found.\n');
       return 1;
     }
 
@@ -111,9 +112,9 @@ const schema = {
     }
 
     if (allErrors.length) {
-      stdout.write('SKILL.md frontmatter validation failed:\n');
+      stderr.write('SKILL.md frontmatter validation failed:\n');
       for (const error of allErrors) {
-        stdout.write(`- ${error}\n`);
+        stderr.write(`- ${error}\n`);
       }
       return 1;
     }
