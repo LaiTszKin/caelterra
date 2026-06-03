@@ -52,7 +52,7 @@ At load time, check the project state to select the correct mode:
 
 適用模式：design（完整初始化）、record（快速記錄）
 
-### 1. 閱讀並理解代碼庫 — 先建立 System Context
+### 1. 使用 codegraph survey 取得專案結構
 
 在深入程式碼前，先建立系統的宏觀認知：
 - 系統與哪些外部 actor 互動（使用者、第三方服務、其他系統）
@@ -60,16 +60,16 @@ At load time, check the project state to select the correct mode:
 
 然後閱讀 `sample-demo/` 了解預期的輸出格式與抽象層級。
 
-按照功能模塊定義，全面檢索代碼庫。
-將其拆分為單個或多個功能模塊（對應 C4 Container 層級）。
-接著，識別功能模塊下的子模塊（對應 C4 Component 層級），並進行深度閱讀。
+接著使用 `apltk codegraph survey` 取得專案的結構化調查報告：
+- 專案目錄下的所有檔案清單與函式數量
+- Entry points（被外部檔案呼叫的公開函式）
+- 建議的 submodule 分組與跨邊界 edge
+- 支援 `--json` 輸出供 LLM 程式化消費
 
-並行調度 subagents，並為每一個功能模塊分配一個 subagent 進行深度閱讀，要求 subagents 完整列出：
-- 該功能模塊與其他功能模塊之間是否存在交互；如有，如何交互。
-- 該功能模塊內部存在哪些子模塊，這些子模塊之間如何交互並實現功能模塊的功能。
-- 該功能模塊及下屬子模塊的資料流、錯誤處理。
-
-> 每個 subagent 回報的每個宣告都應附上對應的程式碼檔案路徑與行號，作為證據追溯的基礎。
+根據 survey 報告，決定功能模塊的劃分（對應 C4 Container 層級）：
+- 將高度互相呼叫的函式群歸類為同一功能模塊的子模塊
+- 識別功能模塊之間的邊界與跨模塊呼叫關係
+- 記錄每個功能模塊對應的目錄路徑與 entry point
 
 ### 2. 使用 `apltk architecture apply` 批次寫入 atlas
 

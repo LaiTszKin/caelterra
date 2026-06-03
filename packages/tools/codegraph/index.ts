@@ -36,10 +36,14 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
   }
 
   // Parse --all flag for list-apis
-  const isAll = rest.includes('--all');
+  const allIndex = rest.indexOf('--all');
+  const isAll = allIndex >= 0;
+  if (allIndex >= 0) rest.splice(allIndex, 1);
 
   // Parse --index flag for init
   const shouldIndex = rest.includes('--index');
+  const indexIdx = rest.indexOf('--index');
+  if (indexIdx >= 0) rest.splice(indexIdx, 1);
 
   // Parse --feature <name> for survey
   const featureIndex = rest.indexOf('--feature');
@@ -113,7 +117,7 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
         return 1;
     }
   } catch (error: any) {
-    if (error.code === 'MODULE_NOT_FOUND' || error.message?.includes('Cannot find module')) {
+    if (error.code === 'MODULE_NOT_FOUND' || (error.message && error.message.includes('Cannot find module'))) {
       stderr.write('`@colbymchenry/codegraph` is not installed. Run `npm install @colbymchenry/codegraph` in your project directory.\n');
     } else {
       stderr.write(`Error running codegraph ${subcommand}: ${error.message}\n`);

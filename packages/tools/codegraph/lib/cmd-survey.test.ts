@@ -1,62 +1,63 @@
-import { describe, it, before, afterEach, mock } from 'node:test';
+import { describe, it, before, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 describe('cmd-survey', () => {
   let handleSurvey: (...args: any[]) => Promise<number>;
 
-  before(async () => {
-    // Mock CodeGraph instance:
-    // - Symbol A in src/feature/a.ts calls symbol B in src/lib/b.ts (cross-boundary)
-    // - Symbol X in src/feature/a.ts is exported but only called internally
-    const mockCg = {
-      getFiles: () => [{ path: 'src/feature/a.ts', language: 'typescript' }],
-      getNodesInFile: () => [
-        {
-          id: 'node-a',
-          name: 'A',
-          kind: 'function',
-          qualifiedName: 'A',
-          startLine: 1,
-          endLine: 10,
-          isExported: true,
-        },
-        {
-          id: 'node-x',
-          name: 'X',
-          kind: 'function',
-          qualifiedName: 'X',
-          startLine: 20,
-          endLine: 30,
-          isExported: true,
-        },
-      ],
-      getNodesByName: (name: string) => {
-        if (name === 'A') {
-          return [{ id: 'node-a', filePath: 'src/feature/a.ts', name: 'A' }];
-        }
-        if (name === 'X') {
-          return [{ id: 'node-x', filePath: 'src/feature/a.ts', name: 'X' }];
-        }
-        return [];
+  // Mock CodeGraph instance shared across tests:
+  // - Symbol A in src/feature/a.ts calls symbol B in src/lib/b.ts (cross-boundary)
+  // - Symbol X in src/feature/a.ts is exported but only called internally
+  const mockCg = {
+    getFiles: () => [{ path: 'src/feature/a.ts', language: 'typescript' }],
+    getNodesInFile: () => [
+      {
+        id: 'node-a',
+        name: 'A',
+        kind: 'function',
+        qualifiedName: 'A',
+        startLine: 1,
+        endLine: 10,
+        isExported: true,
       },
-      getCallees: (_id: string) => {
-        if (_id === 'node-a') {
-          return [{ node: { name: 'B', filePath: 'src/lib/b.ts' } }];
-        }
-        return [];
+      {
+        id: 'node-x',
+        name: 'X',
+        kind: 'function',
+        qualifiedName: 'X',
+        startLine: 20,
+        endLine: 30,
+        isExported: true,
       },
-      getCallers: (_id: string) => {
-        if (_id === 'node-x') {
-          return [{ node: { name: 'internal', filePath: 'src/feature/a.ts' } }];
-        }
-        return [];
-      },
-      close: () => {},
-    };
+    ],
+    getNodesByName: (name: string) => {
+      if (name === 'A') {
+        return [{ id: 'node-a', filePath: 'src/feature/a.ts', name: 'A' }];
+      }
+      if (name === 'X') {
+        return [{ id: 'node-x', filePath: 'src/feature/a.ts', name: 'X' }];
+      }
+      return [];
+    },
+    getCallees: (_id: string) => {
+      if (_id === 'node-a') {
+        return [{ node: { name: 'B', filePath: 'src/lib/b.ts' } }];
+      }
+      return [];
+    },
+    getCallers: (_id: string) => {
+      if (_id === 'node-x') {
+        return [{ node: { name: 'internal', filePath: 'src/feature/a.ts' } }];
+      }
+      return [];
+    },
+    close: () => {},
+  };
 
-    // Mock modules so handleSurvey doesn't need a real CodeGraph index.
-    // The specifier is relative to THIS test file and resolves to the
-    // compiled output in dist/lib/ (same paths the compiled cmd-survey.js imports).
+  before(async () => {
+    // Module-level mocks (only need to be set up once):
     mock.module('./survey/scanner.js', {
       namedExports: {
         scanDirectory: async () => ({
@@ -86,13 +87,18 @@ describe('cmd-survey', () => {
     mock.module('./cg-instance.js', {
       namedExports: { closeIndex: () => {} },
     });
-    mock.module('@colbymchenry/codegraph', {
-      defaultExport: { CodeGraph: { open: async () => mockCg } },
-    });
 
     // Import the compiled module (dist/lib/cmd-survey.js has the fixed code)
     const mod = await import('./cmd-survey.js');
     handleSurvey = mod.handleSurvey;
+  });
+
+  beforeEach(() => {
+    // Re-apply CodeGraph.open mock before each test (mock.reset() in afterEach clears it).
+    // Must use manual mock.method instead of mock.module because lazy CJS require()
+    // inside handlers bypasses mock.module interception.
+    const { CodeGraph } = require('@colbymchenry/codegraph');
+    mock.method(CodeGraph, 'open', async () => mockCg);
   });
 
   afterEach(() => {

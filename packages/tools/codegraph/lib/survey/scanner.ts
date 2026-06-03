@@ -1,6 +1,5 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { CodeGraph } = require('@colbymchenry/codegraph');
 
 export interface FileScan {
   filePath: string;
@@ -38,6 +37,7 @@ export async function scanDirectory(
   cg: any,
   dirPath: string,
 ): Promise<ScanResult> {
+  const { CodeGraph } = require('@colbymchenry/codegraph');
   const files = cg.getFiles();
   const dirPrefix = dirPath.replace(/^\/?/, '').replace(/\/?$/, '') + '/';
 

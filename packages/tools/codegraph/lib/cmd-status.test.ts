@@ -23,9 +23,10 @@ describe('REGTEST-6: handleStatus — Languages section', () => {
     };
 
     // Load the same CodeGraph module that cmd-status.js uses (shared CJS cache),
-    // then mock CodeGraph.open so handleStatus uses our fake instance.
-    const { CodeGraph } = require('@colbymchenry/codegraph') as { CodeGraph: { open: Function } };
+    // then mock CodeGraph.open + isInitialized so handleStatus uses our fake instance.
+    const { CodeGraph } = require('@colbymchenry/codegraph') as { CodeGraph: { open: Function; isInitialized: Function } };
     const openMock = mock.method(CodeGraph, 'open', async () => mockCg);
+    const initMock = mock.method(CodeGraph, 'isInitialized', () => true);
 
     // Import the module under test AFTER the mock is in place
     const { handleStatus } = await import('./cmd-status.js');
@@ -50,6 +51,36 @@ describe('REGTEST-6: handleStatus — Languages section', () => {
     } finally {
       process.stdout.write = originalWrite;
       openMock.mock.restore();
+      initMock.mock.restore();
+    }
+  });
+
+  it('REGTEST-R2-02: should return exit code 1 when CodeGraph is not initialized', async () => {
+    const { CodeGraph } = require('@colbymchenry/codegraph') as { CodeGraph: { isInitialized: Function; open: Function } };
+    const initMock = mock.method(CodeGraph, 'isInitialized', () => false);
+
+    // Import fresh (module cache returns same CodeGraph reference with mocked isInitialized)
+    const { handleStatus } = await import('./cmd-status.js');
+
+    // Capture stderr writes
+    const stderrChunks: string[] = [];
+    const originalStderrWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk: unknown) => {
+      stderrChunks.push(String(chunk));
+      return true;
+    };
+
+    try {
+      const exitCode = await handleStatus('/test/project', {});
+      assert.strictEqual(exitCode, 1);
+      const stderrOutput = stderrChunks.join('');
+      assert.ok(
+        stderrOutput.includes('CodeGraph is not initialized'),
+        'stderr should contain "CodeGraph is not initialized" message',
+      );
+    } finally {
+      process.stderr.write = originalStderrWrite;
+      initMock.mock.restore();
     }
   });
 });

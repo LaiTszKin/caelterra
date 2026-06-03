@@ -1,6 +1,5 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { CodeGraph } = require('@colbymchenry/codegraph');
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { closeIndex } from './cg-instance.js';
@@ -57,6 +56,7 @@ export async function handleSurvey(
     return 1;
   }
 
+  const { CodeGraph } = require('@colbymchenry/codegraph');
   const cg = await CodeGraph.open(projectRoot, { sync: false, readOnly: true });
 
   // Scan the directory

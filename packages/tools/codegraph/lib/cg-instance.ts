@@ -2,7 +2,14 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { CodeGraph, findNearestCodeGraphRoot } = require('@colbymchenry/codegraph');
+
+let _codeGraphModule: any = null;
+export function getCodeGraphModule(): { CodeGraph: any; findNearestCodeGraphRoot: any } {
+  if (!_codeGraphModule) {
+    _codeGraphModule = require('@colbymchenry/codegraph');
+  }
+  return _codeGraphModule;
+}
 
 /**
  * Locate the project root by walking up from the given directory.
@@ -11,7 +18,7 @@ const { CodeGraph, findNearestCodeGraphRoot } = require('@colbymchenry/codegraph
  */
 export function findProjectRoot(startPath?: string): string {
   const cwd = startPath || process.cwd();
-  const codegraphRoot = findNearestCodeGraphRoot(cwd);
+  const codegraphRoot = getCodeGraphModule().findNearestCodeGraphRoot(cwd);
   if (codegraphRoot) return codegraphRoot;
 
   // Fallback: walk up looking for package.json
@@ -39,13 +46,13 @@ export async function createOrOpenIndex(
   projectRoot: string,
   options?: { index?: boolean; onProgress?: (progress: any) => void },
 ): Promise<any> {
-  const isInit = CodeGraph.isInitialized(projectRoot);
+  const isInit = getCodeGraphModule().CodeGraph.isInitialized(projectRoot);
   if (isInit) {
     throw new Error(
       `Project is already initialized at ${projectRoot}. Use \`apltk codegraph sync\` to update the index.`,
     );
   }
-  return CodeGraph.init(projectRoot, {
+  return getCodeGraphModule().CodeGraph.init(projectRoot, {
     index: options?.index ?? false,
     onProgress: options?.onProgress,
   });

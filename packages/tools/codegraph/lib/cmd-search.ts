@@ -1,6 +1,5 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { CodeGraph } = require('@colbymchenry/codegraph');
 import { closeIndex } from './cg-instance.js';
 import { formatSearchResults, formatOutput } from './formatter.js';
 
@@ -14,6 +13,11 @@ export async function handleSearch(
   query: string,
   options: SearchOptions = {},
 ): Promise<number> {
+  const { CodeGraph } = require('@colbymchenry/codegraph');
+  if (!CodeGraph.isInitialized(projectRoot)) {
+    process.stderr.write('CodeGraph is not initialized. Run `apltk codegraph init` first.\n');
+    return 1;
+  }
   const cg = await CodeGraph.open(projectRoot, { sync: false, readOnly: true });
   const results = cg.searchNodes(query, { limit: options.limit ?? 20 });
   closeIndex(cg);

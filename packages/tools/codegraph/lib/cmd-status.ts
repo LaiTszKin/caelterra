@@ -1,7 +1,6 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { CodeGraph } = require('@colbymchenry/codegraph');
-import { closeIndex } from './cg-instance.js';
+import { closeIndex, getCodeGraphModule } from './cg-instance.js';
 import { formatSummary, formatOutput } from './formatter.js';
 
 export interface StatusOptions {
@@ -9,7 +8,11 @@ export interface StatusOptions {
 }
 
 export async function handleStatus(projectRoot: string, options: StatusOptions = {}): Promise<number> {
-  const cg = await CodeGraph.open(projectRoot, { sync: false, readOnly: true });
+  if (!getCodeGraphModule().CodeGraph.isInitialized(projectRoot)) {
+    process.stderr.write('CodeGraph is not initialized. Run `apltk codegraph init` first.\n');
+    return 1;
+  }
+  const cg = await getCodeGraphModule().CodeGraph.open(projectRoot, { sync: false, readOnly: true });
   const stats = cg.getStats();
   closeIndex(cg);
 

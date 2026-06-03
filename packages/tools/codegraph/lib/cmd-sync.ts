@@ -1,6 +1,5 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { CodeGraph } = require('@colbymchenry/codegraph');
 import { closeIndex } from './cg-instance.js';
 import { formatSummary, formatOutput } from './formatter.js';
 
@@ -9,6 +8,7 @@ export interface SyncOptions {
 }
 
 export async function handleSync(projectRoot: string, options: SyncOptions = {}): Promise<number> {
+  const { CodeGraph } = require('@colbymchenry/codegraph');
   if (!CodeGraph.isInitialized(projectRoot)) {
     process.stderr.write('CodeGraph is not initialized. Run `apltk codegraph init` first.\n');
     return 1;

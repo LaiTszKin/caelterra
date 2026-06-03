@@ -1,6 +1,5 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { CodeGraph } = require('@colbymchenry/codegraph');
 import { closeIndex } from './cg-instance.js';
 import { formatOutput } from './formatter.js';
 
@@ -14,6 +13,7 @@ export async function handleExplore(
   query: string,
   options: ExploreOptions = {},
 ): Promise<number> {
+  const { CodeGraph } = require('@colbymchenry/codegraph');
   const cg = await CodeGraph.open(projectRoot, { sync: false, readOnly: true });
 
   // Step 1: Search for the query

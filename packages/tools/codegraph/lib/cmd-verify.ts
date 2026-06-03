@@ -2,7 +2,6 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { CodeGraph } = require('@colbymchenry/codegraph');
 import { closeIndex } from './cg-instance.js';
 import { formatOutput } from './formatter.js';
 import { verifyOverlay } from './verify/checker.js';
@@ -118,6 +117,7 @@ export async function handleVerify(
     return 1;
   }
 
+  const { CodeGraph } = require('@colbymchenry/codegraph');
   const cg = await CodeGraph.open(projectRoot, { sync: false, readOnly: true });
   const report = await verifyOverlay(cg, overlay);
   closeIndex(cg);
