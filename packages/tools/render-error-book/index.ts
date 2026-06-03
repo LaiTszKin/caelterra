@@ -2,8 +2,7 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { parseArgs } from 'node:util';
-import { UserInputError, SystemError } from '@laitszkin/tool-utils';
+import { createToolRunner, UserInputError } from '@laitszkin/tool-utils';
 
 interface ErrorBookData {
   title?: string;
@@ -176,29 +175,21 @@ ${qMeta.map(([label, val]) => `<tr><td style="background:#F8FAFC;width:18%;font-
   return html;
 }
 
-export async function renderErrorBookHandler(args: string[], context: ToolContext): Promise<number> {
-  const stdout = context.stdout || process.stdout;
-  const stderr = context.stderr || process.stderr;
-
-  try {
-    const { values, positionals } = parseArgs({
-      options: {
-        'input': { type: 'string' },
-        'output': { type: 'string' },
-        'help': { type: 'boolean', default: false },
-      },
-      allowPositionals: true,
-    });
-
-    if (values['help']) {
-      stdout.write(`Usage: apltk render-error-book --input <json> --output <pdf>
-
-Options:
-  --input   Input JSON file path
-  --output  Output PDF file path
-`);
-      return 0;
-    }
+const schema = {
+  options: {
+    'input': { type: 'string' as const },
+    'output': { type: 'string' as const },
+  },
+  allowPositionals: true,
+  usage: 'apltk render-error-book --input <json> --output <pdf>',
+  description: 'Generate an error book PDF from JSON data.',
+  handler: async (
+    values: Record<string, unknown>,
+    positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    const stdout = context.stdout || process.stdout;
+    const stderr = context.stderr || process.stderr;
 
     const inputFile = (values['input'] as string | undefined) || positionals[0] || '';
     const outputFile = (values['output'] as string | undefined) || positionals[1] || '';
@@ -290,16 +281,12 @@ Options:
     stdout.write(`${htmlOutputPath}\n`);
     stderr.write('Warning: No PDF converter found (pandoc/wkhtmltopdf). HTML was written instead.\n');
     return 0;
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    stderr.write(`Error: ${msg}\n`);
-    return 1;
-  }
-}
+  },
+};
 
 export const tool: ToolDefinition = {
   name: 'render-error-book',
   category: 'media',
   description: 'Generate an error book PDF from JSON data.',
-  handler: renderErrorBookHandler,
+  handler: createToolRunner(schema),
 };

@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
 import yaml from 'js-yaml';
+import { createToolRunner } from '@laitszkin/tool-utils';
 
 // ── Apply & Template helpers (mirrors cli.js internals for the new verbs) ─────
 
@@ -591,6 +592,38 @@ async function handleTemplate(templateArgs: string[], context: ToolContext): Pro
   return 0;
 }
 
+// ── Schema ────────────────────────────────────────────────────────────────────
+
+const schema = {
+  options: {
+    // No tool-level options; all options are sub-command-specific
+  },
+  allowPositionals: true,
+  strict: false,
+  usage: 'apltk architecture [diff|merge|apply|template] [options]',
+  description: 'Open the project HTML architecture atlas, or render a paginated diff (`architecture diff`).',
+  handler: async (
+    values: Record<string, unknown>,
+    positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    // Reconstruct flat args for sub-command handlers.
+    // With strict:false, unknown flags from sub-commands end up in values
+    // instead of positionals; rebuild them here so sub-command handlers
+    // (which do their own manual flag parsing) still receive the complete args.
+    const extraArgs: string[] = [];
+    for (const [key, value] of Object.entries(values)) {
+      if (key === 'help') continue;
+      if (typeof value === 'boolean' && value) {
+        extraArgs.push(`--${key}`);
+      } else if (typeof value === 'string') {
+        extraArgs.push(`--${key}`, value);
+      }
+    }
+    return architectureHandler([...positionals, ...extraArgs], context);
+  },
+};
+
 // ── Handler entrypoint ───────────────────────────────────────────────────────
 
 export async function architectureHandler(
@@ -636,5 +669,5 @@ export const tool: ToolDefinition = {
   category: 'Planning & architecture',
   skill: 'init-project-html',
   description: 'Open the project HTML architecture atlas, or render a paginated diff (`architecture diff`).',
-  handler: architectureHandler,
+  handler: createToolRunner(schema),
 };
