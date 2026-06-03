@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { UserInputError } from '@laitszkin/tool-utils';
 import { UninstallArgsParser } from '../../packages/cli/dist/parsers/uninstall-parser.js';
 
 test('UninstallArgsParser: bare uninstall creates uninstall command with no modes', () => {
@@ -92,11 +93,15 @@ test('UninstallArgsParser: -h short flag works', () => {
   assert.equal(result.showHelp, true);
 });
 
-test('UninstallArgsParser: --home without a value throws', () => {
+test('UninstallArgsParser: --home without a value throws UserInputError', () => {
   const parser = new UninstallArgsParser();
   assert.throws(
     () => parser.parse(['uninstall', 'codex', '--home']),
-    /Missing value for --home/,
+    (err) => {
+      assert.ok(err instanceof UserInputError);
+      assert.ok(err.message.includes('Missing value for --home'));
+      return true;
+    },
   );
 });
 

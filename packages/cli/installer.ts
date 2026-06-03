@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { createPlatformAdapter } from '@laitszkin/tool-utils';
 import type { InstallMode, InstallTarget, ManifestData, SyncResult } from './types.js';
 
 export interface TargetDefinition {
@@ -357,9 +358,10 @@ async function replaceWithCopy(sourcePath: string, targetPath: string): Promise<
 }
 
 async function replaceWithSymlink(sourcePath: string, targetPath: string): Promise<void> {
+  const adapter = createPlatformAdapter();
   await fsp.rm(targetPath, { recursive: true, force: true });
   await ensureDirectory(path.dirname(targetPath));
-  await fsp.symlink(sourcePath, targetPath, process.platform === 'win32' ? 'junction' : 'dir');
+  await fsp.symlink(sourcePath, targetPath, adapter.symlinkType());
 }
 
 export async function installLinks({ toolkitHome, modes, env = process.env, previousSkillNames = [], linkMode = 'copy', includeExclusiveSkills = false }: {

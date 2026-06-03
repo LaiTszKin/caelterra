@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError } from '@laitszkin/tool-utils';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
 const LIST_QUERY = `
 query($owner: String!, $name: String!, $number: Int!, $after: String) {
@@ -527,7 +527,13 @@ export async function reviewThreadsHandler(
         );
     }
   } catch (err) {
-    stderr!.write(`Error: ${(err as Error).message}\n`);
+    if (err instanceof UserInputError) {
+      stderr!.write(`${err.message}\n`);
+    } else if (err instanceof SystemError) {
+      stderr!.write(`${err.message}\n${err.stack}\n`);
+    } else {
+      stderr!.write(`Error: ${(err as Error).message}\n`);
+    }
     return 1;
   }
 }

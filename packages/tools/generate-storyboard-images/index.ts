@@ -408,8 +408,14 @@ Either --prompts-file or at least one --prompt is required.
 
     return 0;
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    stderr.write(`Error: ${msg}\n`);
+    if (err instanceof UserInputError) {
+      stderr.write(`${err.message}\n`);
+    } else if (err instanceof SystemError) {
+      stderr.write(`${err.message}\n${err.stack}\n`);
+    } else {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      stderr.write(`Error: ${msg}\n`);
+    }
     return 1;
   }
 }

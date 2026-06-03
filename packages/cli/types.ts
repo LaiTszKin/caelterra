@@ -25,49 +25,7 @@ export interface SyncResult {
   previousSkillNames: string[];
 }
 
-// ---- New typed command objects (produced by parser classes) --------
-
-/**
- * Parsed result for the install (default) command mode.
- */
-export interface InstallCommand {
-  command: 'install';
-  modes: InstallMode[];
-  showHelp: boolean;
-  toolkitHome: string | null;
-  linkMode: 'copy' | 'symlink' | null;
-  explicitInstallCommand: boolean;
-  helpTopic: 'overview' | 'install';
-}
-
-/**
- * Parsed result for the uninstall command mode.
- */
-export interface UninstallCommand {
-  command: 'uninstall';
-  modes: InstallMode[];
-  showHelp: boolean;
-  toolkitHome: string | null;
-  assumeYes: boolean;
-  helpTopic: 'uninstall';
-}
-
-/**
- * Parsed result for a direct tool invocation.
- */
-export interface ToolCommand {
-  command: 'tool';
-  toolName: string | null;
-  toolArgs: string[];
-}
-
-/**
- * Parsed result for the tools listing help screen.
- */
-export interface ToolsHelpCommand {
-  command: 'tools-help';
-  showToolsHelp: boolean;
-}
+import type { InstallCommand, UninstallCommand, ToolCommand, ToolsHelpCommand } from './parsers/types.js';
 
 // ---- Legacy ParsedArguments (kept for backward compatibility) --------
 

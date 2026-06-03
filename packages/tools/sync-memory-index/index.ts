@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
 const START_MARKER = '<!-- codex-memory-manager:start -->';
 const END_MARKER = '<!-- codex-memory-manager:end -->';
@@ -122,7 +123,13 @@ async function syncMemoryIndexHandler(
     return 0;
   } catch (err) {
     const stderr = context.stderr ?? process.stderr;
-    stderr.write(`Error: ${(err as Error).message}\n`);
+    if (err instanceof UserInputError) {
+      stderr.write(`Error: ${err.message}\n`);
+    } else if (err instanceof SystemError) {
+      stderr.write(`Error: ${err.message}\n`);
+    } else {
+      stderr.write(`Error: ${(err as Error).message}\n`);
+    }
     return 1;
   }
 }

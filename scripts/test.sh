@@ -6,6 +6,12 @@
 
 EXIT=0
 
+# When COVERAGE=true, Group 1 runs with --experimental-test-coverage flags.
+GROUP1_FLAGS=""
+if [ "${COVERAGE:-}" = "true" ]; then
+  GROUP1_FLAGS="--experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=60 --test-coverage-functions=75 --test-coverage-exclude=packages/tools/**"
+fi
+
 run_test_group() {
   local label="$1"
   shift
@@ -21,7 +27,7 @@ run_test_group() {
 
 # Group 1: stable non-mock tests (test/)
 run_test_group "Stable tests (test/)" \
-  node --test 'test/**/*.test.js'
+  node $GROUP1_FLAGS --test 'test/**/*.test.js'
 
 # Group 2: package .test.js files that do NOT need mock.module
 EXCLUDE='(cmd-init|cmd-list-apis|cmd-survey)'

@@ -253,8 +253,14 @@ Options:
     writeOutput(wrapped, opts.outputFile, stdout);
     return 0;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    stderr.write(`Error: ${message}\n`);
+    if (err instanceof UserInputError) {
+      stderr.write(`${err.message}\n`);
+    } else if (err instanceof SystemError) {
+      stderr.write(`${err.message}\n${err.stack}\n`);
+    } else {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      stderr.write(`Error: ${message}\n`);
+    }
     return 1;
   }
 }

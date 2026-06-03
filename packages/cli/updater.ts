@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { isInteractive } from '@laitszkin/tui';
+import { createPlatformAdapter } from '@laitszkin/tool-utils';
 
 interface Version {
   parts: number[];
@@ -66,7 +67,8 @@ export function execCommand(command: string, args: string[], { env = process.env
   stderr?: NodeJS.WriteStream;
 } = {}): Promise<ExecResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const adapter = createPlatformAdapter();
+    const child = spawn(adapter.resolveCommand(command), args, {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });

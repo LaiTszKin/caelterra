@@ -24,9 +24,26 @@ async function filterLogsHandler(
         'assume-timezone': { type: 'string', default: 'UTC' },
         'keep-undated': { type: 'boolean', default: false },
         'count-only': { type: 'boolean', default: false },
+        help: { type: 'boolean', short: 'h' },
       },
       allowPositionals: true,
     });
+
+    if (values.help) {
+      stdout.write(`Usage: apltk filter-logs [options] [<file>...]
+
+Filter log lines by time window.
+
+Options:
+  --start <ISO>         Start timestamp (inclusive)
+  --end <ISO>           End timestamp (inclusive)
+  --assume-timezone <tz>  Timezone for timestamps without offset (default: UTC)
+  --keep-undated        Include lines without timestamps
+  --count-only          Print only the matching line count
+  --help, -h            Show this help
+`);
+      return 0;
+    }
 
     const assumeTimezone = values['assume-timezone'] as string;
 

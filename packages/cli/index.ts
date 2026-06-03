@@ -49,11 +49,16 @@ export {
   execCommand,
 };
 import type { CliContext, InstallMode, ParsedArguments } from './types.js';
-import { AppError, UserInputError, SystemError } from '@laitszkin/tool-utils';
+import type { CommandParser, InstallCommand, UninstallCommand } from './parsers/types.js';
+import { AppError, UserInputError, SystemError, createPlatformAdapter } from '@laitszkin/tool-utils';
 import { InstallArgsParser } from './parsers/install-parser.js';
 import { UninstallArgsParser } from './parsers/uninstall-parser.js';
 import { ToolArgsParser } from './parsers/tool-parser.js';
 import { HelpTextBuilder } from './help-text-builder.js';
+
+// ---- Module-level platform adapter ---
+
+const platformAdapter = createPlatformAdapter();
 
 // ---- Backward-compatible help text wrappers (delegate to HelpTextBuilder) ---
 
@@ -84,25 +89,51 @@ function parseArguments(argv: string[]): ParsedArguments {
     normalised[0] = 'tools';
   }
 
-  // Delegate to the appropriate parser based on the first argument.
-  if (normalised[0] === 'uninstall') {
-    const cmd = new UninstallArgsParser().parse(normalised);
+  const firstArg = normalised[0];
+
+  // Dispatch table for simple commands
+  const commandParsers = new Map<string, CommandParser<any>>([
+    ['install', new InstallArgsParser()],
+    ['uninstall', new UninstallArgsParser()],
+  ]);
+
+  const parser = commandParsers.get(firstArg);
+  if (parser) {
+    if (firstArg === 'uninstall') {
+      const cmd = parser.parse(normalised) as UninstallCommand;
+      return {
+        command: 'uninstall',
+        modes: cmd.modes,
+        showHelp: cmd.showHelp,
+        showToolsHelp: false,
+        toolkitHome: cmd.toolkitHome,
+        toolName: null,
+        toolArgs: [],
+        linkMode: null,
+        assumeYes: cmd.assumeYes,
+        explicitInstallCommand: false,
+        helpTopic: cmd.helpTopic,
+      };
+    }
+    // install
+    const cmd = parser.parse(normalised) as InstallCommand;
     return {
-      command: 'uninstall',
+      command: 'install',
       modes: cmd.modes,
       showHelp: cmd.showHelp,
       showToolsHelp: false,
       toolkitHome: cmd.toolkitHome,
       toolName: null,
       toolArgs: [],
-      linkMode: null,
-      assumeYes: cmd.assumeYes,
-      explicitInstallCommand: false,
+      linkMode: cmd.linkMode,
+      assumeYes: false,
+      explicitInstallCommand: cmd.explicitInstallCommand,
       helpTopic: cmd.helpTopic,
     };
   }
 
-  if (normalised[0] === 'tools') {
+  // tools/tool prefix (fallback)
+  if (firstArg === 'tools') {
     const cmd = new ToolArgsParser().parse(normalised);
     if (cmd.command === 'tools-help') {
       return {
@@ -134,8 +165,7 @@ function parseArguments(argv: string[]): ParsedArguments {
     };
   }
 
-  // Direct tool name (no "tools" prefix)
-  const firstArg = normalised[0];
+  // Direct tool name (no "tools" prefix) — fallback
   if (firstArg && isKnownToolName(firstArg)) {
     return {
       command: 'tool',
@@ -152,7 +182,7 @@ function parseArguments(argv: string[]): ParsedArguments {
     };
   }
 
-  // Default: install (includes explicit "install" keyword)
+  // Default: install (handles bare arguments like "codex", "--help", or empty argv)
   const cmd = new InstallArgsParser().parse(normalised);
   return {
     command: 'install',

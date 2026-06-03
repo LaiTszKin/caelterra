@@ -27,8 +27,8 @@
     "postbuild": "node scripts/rewrite-imports.mjs",
     "prepublishOnly": "npm run build",
     "watch": "tsc --build --watch",
-    "test": "scripts/test.sh",
-    "test:coverage": "find test -name '*.test.js' -not -path '*/create-specs*' | sort | tr '\\n' ' ' | xargs node --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=60 --test-coverage-functions=75 --test-coverage-exclude='packages/tools/**' --test",
+    "test": "COVERAGE=true scripts/test.sh",
+    "test:coverage": "npm test",
     "test:ts": "node --test dist/test/"
   },
   "engines": {

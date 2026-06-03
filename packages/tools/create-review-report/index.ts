@@ -3,7 +3,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError } from '@laitszkin/tool-utils';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
 const TEMPLATE_RELATIVE_PATH = 'skills/review/assets/templates/REPORT.md';
 const OUTPUT_FILENAME = 'REPORT.md';
@@ -188,7 +188,13 @@ Examples:
     stdout.write(`${outputPath}\n`);
     return 0;
   } catch (err) {
-    stderr.write(`Error: ${(err as Error).message}\n`);
+    if (err instanceof UserInputError) {
+      stderr.write(`${err.message}\n`);
+    } else if (err instanceof SystemError) {
+      stderr.write(`${err.message}\n${err.stack}\n`);
+    } else {
+      stderr.write(`Error: ${(err as Error).message}\n`);
+    }
     return 1;
   }
 }

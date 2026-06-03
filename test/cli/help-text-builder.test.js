@@ -1,3 +1,11 @@
+// Section-coverage coverage (Req 5): all four HelpTextBuilder methods are already
+// verified for their required key sections by existing tests below:
+//   - overview()   → Usage, Common goals, Bundled tools, Examples, Options   (line 9)
+//   - install()    → Usage, Supported targets, Behavior notes, Options, Examples (line 41)
+//   - uninstall()  → Usage, Supported targets, Behavior notes, Options, Examples (line 66)
+//   - toolsHelp()  → Usage, Bundled tools, Tip, Examples                    (line 88)
+// No additional section-assertion tests are needed.
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { HelpTextBuilder } from '../../packages/cli/dist/help-text-builder.js';

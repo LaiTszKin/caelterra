@@ -200,6 +200,18 @@ test('run dispatches codegraph as a known tool via context.runTool', async () =>
   assert.deepEqual(calls[0].args, ['status', '--json']);
 });
 
+test('dispatch table correctly dispatches all command types', () => {
+  // install --help routes to install parser with help flag
+  const installResult = parseArguments(['install', '--help']);
+  assert.equal(installResult.command, 'install');
+  assert.equal(installResult.showHelp, true);
+
+  // uninstall with a mode routes to uninstall parser
+  const uninstallResult = parseArguments(['uninstall', 'codex']);
+  assert.equal(uninstallResult.command, 'uninstall');
+  assert.deepEqual(uninstallResult.modes, ['codex']);
+});
+
 test('run distinguishes overview help from install help dispatch', async () => {
   // --help without install keyword → overview help
   let text1 = '';

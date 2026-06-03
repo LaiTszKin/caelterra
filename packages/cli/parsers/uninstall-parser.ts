@@ -1,7 +1,9 @@
 import { parseArgs } from 'node:util';
 import path from 'node:path';
+import { UserInputError } from '@laitszkin/tool-utils';
 import type { InstallMode } from '../types.js';
 import type { CommandParser, UninstallCommand } from './types.js';
+import { normalizeParseError } from './parser-utils.js';
 
 /**
  * Parser for the uninstall command mode.
@@ -42,12 +44,7 @@ export class UninstallArgsParser implements CommandParser<UninstallCommand> {
         }
       }
     } catch (err) {
-      const message = (err as Error).message;
-      // Normalise --home without a value to match the historical error message
-      if (message.includes('--home') && (message.includes('argument missing') || message.includes('value'))) {
-        throw new Error('Missing value for --home');
-      }
-      throw err;
+      normalizeParseError(err);
     }
 
     return {

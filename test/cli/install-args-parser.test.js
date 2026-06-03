@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { UserInputError } from '@laitszkin/tool-utils';
 import { InstallArgsParser } from '../../packages/cli/dist/parsers/install-parser.js';
 
 test('InstallArgsParser: empty args creates default install command with no modes', () => {
@@ -44,16 +45,20 @@ test('InstallArgsParser: --copy flag sets linkMode to copy', () => {
   assert.deepEqual(result.modes, []);
 });
 
-test('InstallArgsParser: --symlink with --copy --copy wins (last-checked in parser)', () => {
+test('InstallArgsParser: --symlink with --copy throws conflict error', () => {
   const parser = new InstallArgsParser();
-  const result = parser.parse(['--symlink', '--copy']);
-  assert.equal(result.linkMode, 'copy');
+  assert.throws(
+    () => parser.parse(['--symlink', '--copy']),
+    /Cannot use both --symlink and --copy/,
+  );
 });
 
-test('InstallArgsParser: --copy with --symlink keeps copy (last-checked wins in parser code)', () => {
+test('InstallArgsParser: --copy with --symlink throws conflict error', () => {
   const parser = new InstallArgsParser();
-  const result = parser.parse(['--copy', '--symlink']);
-  assert.equal(result.linkMode, 'copy');
+  assert.throws(
+    () => parser.parse(['--copy', '--symlink']),
+    /Cannot use both --symlink and --copy/,
+  );
 });
 
 test('InstallArgsParser: --home with path resolves to absolute path', () => {
@@ -118,11 +123,15 @@ test('InstallArgsParser: -h short flag works', () => {
   assert.equal(result.showHelp, true);
 });
 
-test('InstallArgsParser: --home without a value throws', () => {
+test('InstallArgsParser: --home without a value throws UserInputError', () => {
   const parser = new InstallArgsParser();
   assert.throws(
     () => parser.parse(['codex', '--home']),
-    /Missing value for --home/,
+    (err) => {
+      assert.ok(err instanceof UserInputError);
+      assert.ok(err.message.includes('Missing value for --home'));
+      return true;
+    },
   );
 });
 
