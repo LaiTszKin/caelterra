@@ -92,9 +92,9 @@ apltk
 apollo-toolkit
 ```
 
-Global install 後，`apltk` 與 `apollo-toolkit` 都會啟動同一個 Apollo Toolkit CLI。直接執行 `apltk` 會打開互動安裝頁，並在互動模式下先檢查 npm registry 是否有新版可用；若有，CLI 會先詢問，再自動執行全域更新。
+After global install, both `apltk` and `apollo-toolkit` launch the same Apollo Toolkit CLI. Running `apltk` directly opens the interactive installer page, which first checks the npm registry for newer versions; if one is available, the CLI prompts and auto-updates globally.
 
-除了安裝模式之外，`apltk` 也會把技能內常用腳本暴露成簡單 CLI 工具，例如：
+Beyond installation mode, `apltk` also exposes common skill scripts as simple CLI tools, for example:
 
 ```bash
 apltk tools
@@ -210,8 +210,6 @@ Compatibility note:
 The `apltk codegraph` subcommand system is built on [**@colbymchenry/codegraph**](https://github.com/colbymchenry/codegraph), a tree-sitter-backed code knowledge graph engine by Colt McHenry. CodeGraph parses source code into nodes (functions, classes) and edges (call relationships) in a local SQLite database, supporting FTS5 full-text search and structured queries.
 
 Special thanks to Colt McHenry for this excellent work, enabling LLM agents to discover code structure deterministically instead of relying on grep/Read.
-
-## Release publishing
 
 ## Release publishing
 
