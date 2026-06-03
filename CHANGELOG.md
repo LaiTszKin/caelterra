@@ -2,6 +2,14 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.1.2] - 2026-06-04
+
+### Changed
+
+- **review skill**: Added cross-requirement connection analysis and group review agents. Per-requirement review is now mandatory; connected requirements are grouped for dedicated interaction-level review.
+- **plan skill**: File overlap is now a hard gate for parallel workers — only tasks with zero file overlap may run in parallel.
+- **qa skill**: File overlap is now a hard gate for parallel fix workers — only fixes with zero file overlap may run in parallel.
+
 ## [v4.1.1] - 2026-06-04
 
 ### Added
