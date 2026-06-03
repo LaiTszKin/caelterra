@@ -2,6 +2,22 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.1.1] - 2026-06-04
+
+### Added
+
+- **Evidence model enhancement**: `--evidence` now auto-parses `file:line` format (`observed:src/foo.ts:42`) into structured `sourceFile`/`sourceLine` fields. Rendered as visible source location badges in the submodule HTML pages.
+- **CodeGraph help system**: Per-subcommand `--help` for all 8 codegraph subcommands (`init`, `sync`, `status`, `search`, `explore`, `survey`, `list-apis`, `verify`), plus `help` subcommand and enhanced main help with examples.
+- **YAML apply evidence propagation**: Feature, submodule, function, and edge mutations in `apltk architecture apply` now persist `evidence` fields from YAML input.
+- `scripts/test.sh`: Split test runner that isolates `mock.module`-dependent tests, resolving a Node.js 24.x IPC deserialization flaky-test issue.
+
+### Changed
+
+- **init-project-html SKILL.md → English**: Full translation, C4 Code level marked as mandatory (not optional), "must read" references changed to optional lookup, acceptance criteria condensed, self-review step added.
+- **update-project-html SKILL.md → English**: Full translation plus all the same optimizations (C4 fix, optional lookup, self-review, condensed criteria, updated evidence CLI examples).
+- Both skills' reference files (`architecture.md`, `definition.md`) translated to English; duplicate C4 tables removed from `definition.md`.
+- `.gitignore`: broadened `assets/spec/rg*-*/` pattern to cover all generated test artifacts.
+
 ## [v4.1.0] - 2026-06-03
 
 ### Added

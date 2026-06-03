@@ -69,17 +69,54 @@ function parseEvidence(value) {
   const str = String(value);
   const colon = str.indexOf(':');
   let level, source;
+
   if (colon === -1) {
-    level = 'inferred';
-    source = str;
+    if (EVIDENCE_LEVELS.includes(str)) {
+      level = str;
+      source = '';
+    } else {
+      level = 'inferred';
+      source = str;
+    }
   } else {
-    level = str.slice(0, colon);
-    source = str.slice(colon + 1);
-    if (!EVIDENCE_LEVELS.includes(level)) {
-      throw new Error(`Invalid evidence level: "${level}". Must be one of: ${EVIDENCE_LEVELS.join(', ')}`);
+    const candidateLevel = str.slice(0, colon);
+    if (EVIDENCE_LEVELS.includes(candidateLevel)) {
+      level = candidateLevel;
+      source = str.slice(colon + 1);
+    } else {
+      level = 'inferred';
+      source = str;
     }
   }
-  return { level, source };
+
+  // Extract structured sourceFile & sourceLine from the source string.
+  // Heuristic: source ends with ":<number>" and the part before the last
+  // colon resembles a file path (contains '/' or '.'), so parse it as
+  // "path/to/file.ext:lineNumber".
+  let sourceFile = null;
+  let sourceLine = null;
+  if (source) {
+    const lastColon = source.lastIndexOf(':');
+    if (lastColon !== -1) {
+      const afterColon = source.slice(lastColon + 1).trim();
+      const lineNum = parseInt(afterColon, 10);
+      const filePart = source.slice(0, lastColon);
+      if (
+        !isNaN(lineNum) && lineNum > 0 &&
+        String(lineNum) === afterColon &&
+        (/[/\\]/.test(filePart) || /\.[a-zA-Z0-9]+$/.test(filePart))
+      ) {
+        sourceFile = filePart;
+        sourceLine = lineNum;
+      } else {
+        sourceFile = source;
+      }
+    } else {
+      sourceFile = source;
+    }
+  }
+
+  return { level, source, sourceFile, sourceLine };
 }
 
 function noFix(message) {

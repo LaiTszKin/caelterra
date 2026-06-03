@@ -1,40 +1,40 @@
-# apltk architecture — 宣告式架構圖 CLI
+# apltk architecture — Declarative Architecture Diagram CLI
 
-## 用途
-透過 YAML 狀態檔案管理 `resources/project-architecture/` 下的架構圖，支援基礎架構圖與 spec 覆蓋層的差異比對與合併。
+## Purpose
+Manage architecture diagrams under `resources/project-architecture/` via YAML state files. Supports base atlas and spec overlay diff/merge comparison.
 
-## 用法
+## Usage
 ```
 apltk architecture [verb] [options]
 ```
 
-## 全局旗標
-| 旗標 | 效果 |
-|------|------|
-| `--project <root>` | 指定專案根目錄（預設從 cwd 向上搜尋） |
-| `--spec <spec_dir>` | 寫入 spec overlay 而非基礎架構圖 |
-| `--no-render` | 變更後略過自動重新渲染，可批次多條指令 |
-| `--no-open` | `open` 和 `diff` 時不開啟瀏覽器 |
-| `--dry-run` | 預覽變更為 JSON diff，不實際寫入 |
-| `--out <dir>` | `diff` 的輸出目錄 |
-| `--clean` | `merge` 成功後移除 spec overlay 目錄 |
-| `--all` | `merge` 時選取所有 pending spec overlay |
-| `--json` | `status` 時輸出 JSON |
-| `--evidence <level[:source]>` | 為組件標記 observed/inferred/assumed 品質等級 |
+## Global Flags
+| Flag | Effect |
+|------|--------|
+| `--project <root>` | Specify project root (defaults to upward search from cwd) |
+| `--spec <spec_dir>` | Write to spec overlay instead of base atlas |
+| `--no-render` | Skip auto-render after mutations for batch operations |
+| `--no-open` | Skip browser launch for `open` and `diff` |
+| `--dry-run` | Preview changes as JSON diff without writing |
+| `--out <dir>` | Output directory for `diff` |
+| `--clean` | Remove spec overlay directory after successful `merge` |
+| `--all` | Select all pending spec overlays for `merge` |
+| `--json` | JSON output for `status` |
+| `--evidence <level[:source]>` | Mark component quality tier (observed/inferred/assumed); source supports auto-parsed `file:line` (e.g. `observed:src/foo.ts:42`) |
 
-## 頂層動詞
-- **`open`** — 開啟基礎架構圖 HTML，若未渲染則先 bootstrap
-- **`diff`** — 收集 `docs/plans/` 下所有 overlay，產生 before/after 檢視器
-- **`render`** — 從當前 YAML 狀態重新產生 HTML
-- **`validate`** — 驗證架構圖結構完整性（schema + referential integrity）
-- **`status`** — 顯示摘要（feature/submodule/edge/actor 數量、時間戳、驗證狀態）
-- **`scan --src <dir>`** — 掃描目錄結構，輸出 JSON 候選 feature 列表
-- **`undo [--steps <n>]`** — 還原最近一次 mutation
-- **`merge --spec <dir> | --all`** — 將 spec overlay 合併回基礎架構圖
+## Top-Level Verbs
+- **`open`** — Open base atlas HTML in browser; bootstrap if not rendered
+- **`diff`** — Collect all overlays under `docs/plans/`, generate before/after viewer
+- **`render`** — Regenerate HTML from current YAML state
+- **`validate`** — Validate atlas structural integrity (schema + referential integrity)
+- **`status`** — Show summary (feature/submodule/edge/actor counts, timestamp, validation status)
+- **`scan --src <dir>`** — Scan directory structure, output JSON candidate feature list
+- **`undo [--steps <n>]`** — Revert the most recent mutation(s)
+- **`merge --spec <dir> | --all`** — Merge spec overlay(s) into base atlas
 
-## Mutation 系列
+## Mutation Series
 
-所有 mutation 共用 `--project`、`--spec`、`--no-render`、`--dry-run`、`--evidence` 旗標。
+All mutations share `--project`, `--spec`, `--no-render`, `--dry-run`, `--evidence` flags.
 
 ### feature
 ```
@@ -92,7 +92,7 @@ apltk architecture actor add --id <actor-id> [--label "..."]
 apltk architecture actor remove --id <actor-id>
 ```
 
-## 注意事項
-- 執行 mutation 後自動重新渲染（除非 `--no-render`）
-- 每個 mutation 建立 undo snapshot，可行 `undo` 還原
-- 驗證通過後才算架構圖工作完成
+## Notes
+- Auto-render after every mutation (unless `--no-render`)
+- Each mutation creates an undo snapshot — revert with `undo`
+- Atlas work is not complete until validation passes

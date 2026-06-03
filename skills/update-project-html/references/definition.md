@@ -1,25 +1,20 @@
-## 功能模塊
+## Feature
 
-功能模塊是直接面向用戶的功能，如：
-- 登陸功能
-- 註冊功能
-- 邀請碼功能
+A feature is a user-facing capability, such as:
+- Login
+- Registration
+- Invite code management
 
-功能模塊由子模塊的合作、交互實現
+Features are realized through collaboration and interaction of their submodules.
 
-功能模塊對應 C4 model 的 **Container** 層級：高階功能邊界，可獨立部署或辨識的系統能力單元。
+A feature maps to the C4 model's **Container** level: a high-level functional boundary, deployable or identifiable as a distinct system capability unit.
 
-## 子模塊
+## Submodule
 
-子模塊是功能模塊的關鍵組成部分。具體定義依照代碼的實作邊界得出。
+A submodule is a key building block of a feature. Its exact definition follows the implementation boundaries in the code.
 
-子模塊對應 C4 model 的 **Component** 層級：功能內部的實作單元（如 controller、service、repository）。
+A submodule maps to the C4 model's **Component** level: an implementation unit inside a feature (e.g., controller, service, repository).
 
-## C4 模型層級對照
+## C4 Level Mapping
 
-| C4 層級 | 對應概念 | 用途 |
-|---------|---------|------|
-| System Context | 整體系統 + 外部 actor | 定義系統邊界與外部依賴 |
-| Container | 功能模塊（feature） | 高階功能邊界 |
-| Component | 子模塊（submodule） | 功能內部的實作單元 |
-| Code | function 行 | 函式層級細節（選擇性） |
+Refer to the C4 mapping table in `SKILL.md` — it is not duplicated here.

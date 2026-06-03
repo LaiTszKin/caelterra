@@ -24,4 +24,4 @@ results/
 # installs resolve the same tree as published versions (e.g. elkjs, js-yaml for
 # `apltk architecture`).
 node_modules/
-assets/spec/rg04-*/
+assets/spec/rg*-*/

@@ -1,31 +1,30 @@
 ---
 name: init-project-html
-description: 為項目初始化架構圖。透過 apltk CLI 將功能模塊與子模塊的關係轉化為可渲染的 HTML 架構圖，採用 C4 模型層級（Context → Container → Component → Code）。
+description: Initialize the project architecture atlas. Use the apltk CLI to map feature and submodule relationships into a renderable HTML architecture diagram following the C4 model (Context → Container → Component → Code).
 ---
 
-## 技能目標
+## Goal
 
-透過 `apltk` CLI 製作項目架構圖。
-幫助用戶理解專案的軟體架構。
+Produce a project architecture diagram via the `apltk` CLI.
+Help users understand the project's software architecture.
 
-## 驗收條件
+## Acceptance Criteria
 
-- 所有子模塊之間的 edge 被完整定義
-- 所有子模塊內部的 edge 被完整定義
-- 架構圖完整展示整個系統之中子模塊之間的關係以及功能模塊之間的關係
-- 每個宣告的 component 皆附有來源程式碼證據；無法確定的標記為 inferred
-- 架構圖層級對應 C4 model：功能模塊（Container 層級）→ 子模塊（Component 層級）
+- The diagram covers all four C4 levels: System Context → Container (feature) → Component (submodule) → Code (function row)
+- All cross-module and intra-module edges are fully defined
+- Every declared component is backed by source code evidence (`evidence.sourceFile:sourceLine`); unresolved ones are tagged `inferred`
+- Every submodule must declare its `functions` and `variables` arrays (mandatory, may not be left empty)
 
-## C4 模型對照
+## C4 Mapping
 
-本技能的「功能模塊」與「子模塊」對應到 C4 model 的以下層級：
+This skill's "feature" and "submodule" map to the C4 model as follows:
 
-| C4 層級 | 本技能對應 | 說明 | 使用時機 |
-|---------|-----------|------|---------|
-| System Context | 整體系統 | 系統與外部 actor、外部系統的關係 | 步驟 1 建立基線認知 |
-| Container | 功能模塊 | 高階功能邊界（如登入功能、支付功能） | 主要抽象層級 |
-| Component | 子模塊 | 功能內部的實作單元（如 controller、service、repository） | 主要詳細層級 |
-| Code | function 行 | 函式層級細節 | 只在特定關鍵路徑需要 |
+| C4 Level | Skill Equivalent | Description | When to Use |
+|----------|-----------------|-------------|-------------|
+| System Context | Whole system | System boundaries, external actors, and external systems | Step 1 — establish baseline awareness |
+| Container | Feature | High-level functional boundary (e.g. Login, Payment) | Primary abstraction level |
+| Component | Submodule | Implementation unit inside a feature (controller, service, repository) | Primary detail level |
+| Code | Function row | Function-level detail with source file and line evidence | Mandatory — every submodule must declare its functions with `evidence.sourceFile:sourceLine` |
 
 ## Mode Detection
 
@@ -48,59 +47,69 @@ At load time, check the project state to select the correct mode:
   directory already exists and is non-empty, pause and ask the user whether to:
   (a) overwrite the existing atlas, (b) switch to update mode, or (c) abort.
 
-## 工作流程
+## Workflow
 
-適用模式：design（完整初始化）、record（快速記錄）
+Applicable modes: design (full initialization), record (quick recording)
 
-### 1. 使用 codegraph survey 取得專案結構
+### 1. Survey the project with `apltk codegraph survey`
 
-在深入程式碼前，先建立系統的宏觀認知：
-- 系統與哪些外部 actor 互動（使用者、第三方服務、其他系統）
-- 系統提供哪些高階能力
+Before diving into the code, establish a high-level understanding:
+- Which external actors interact with the system (users, third-party services, other systems)
+- What high-level capabilities the system provides
 
-然後閱讀 `sample-demo/` 了解預期的輸出格式與抽象層級。
+Then read `sample-demo/` to understand the expected output format and abstraction level.
 
-接著使用 `apltk codegraph survey` 取得專案的結構化調查報告：
-- 專案目錄下的所有檔案清單與函式數量
-- Entry points（被外部檔案呼叫的公開函式）
-- 建議的 submodule 分組與跨邊界 edge
-- 支援 `--json` 輸出供 LLM 程式化消費
+Next, run `apltk codegraph survey` to get a structured survey report:
+- List of all files in the project directory with function counts
+- Entry points (public functions called from external files)
+- Suggested submodule groupings and cross-boundary edges
+- Supports `--json` output for programmatic consumption by the LLM
 
-根據 survey 報告，決定功能模塊的劃分（對應 C4 Container 層級）：
-- 將高度互相呼叫的函式群歸類為同一功能模塊的子模塊
-- 識別功能模塊之間的邊界與跨模塊呼叫關係
-- 記錄每個功能模塊對應的目錄路徑與 entry point
+Based on the survey report, decide how to partition features (C4 Container level):
+- Group closely interconnected function clusters into the same feature's submodules
+- Identify feature boundaries and cross-feature call relationships
+- Record the directory path and entry points for each feature
 
-### 2. 使用 `apltk architecture apply` 批次寫入 atlas
+### 2. Write the atlas with `apltk architecture apply`
 
-依照 C4 層級逐步產生：
-在操作 CLI 前先閱讀 `references/architecture.md` 了解所有參數與 mutation 系列的使用方式。
+Generate the atlas incrementally by C4 level:
+Consult `references/architecture.md` for CLI flag details when needed (parameter reference, mutation series).
 
-1. **System Context**：定義外部 actor、系統邊界、跨系統 edge
-2. **Container 層級**：定義功能模塊（feature）及其之間的 edge
-3. **Component 層級**：定義子模塊（submodule）及其內部元素（function、variable、dataflow、error）
-4. **Code 層級**（選擇性）：對關鍵路徑補充函式層級細節
+1. **System Context**: Define external actors, system boundaries, and cross-system edges
+2. **Container level**: Define features and their inter-feature edges
+3. **Component level**: Define submodules with their internal elements (function, variable, dataflow, error)
+4. **Code level**: Declare `functions` and `variables` for every submodule, attaching `evidence` (source file and line number via `--evidence observed:path/file.ts:42`)
 
-使用 `apltk architecture apply <proposal.yaml>` 進行批次 atlas 寫入（取代逐一手動 mutation）。
-將前一步獲取的代碼庫知識透過 CLI 工具轉化為清晰的架構圖。
-完成後驗證架構圖格式正確且可渲染。
+Use `apltk architecture apply <proposal.yaml>` for batch atlas writes (replaces manual per-mutation CLI calls).
+Transform the codebase knowledge gathered in the previous step into a clear architecture diagram.
+After completion, verify the atlas format is valid and renders correctly.
 
-## 證據追溯
+### 3. Self-review
 
-每個透過 CLI 宣告的 component 應附上對應的來源證據：
+Confirm the following before finishing:
 
-- 功能模塊（feature）→ 對應的目錄路徑或 entry point 檔案
-- 子模塊（submodule）→ 實作該模組的檔案列表
-- function 行 → 函式定義的檔案與行號
-- edge → 觸發該呼叫關係的程式碼位置
+- [ ] All four C4 levels are populated (Context → Container → Component → Code)
+- [ ] Every submodule has at least one function declared with source evidence
+- [ ] All cross-feature and intra-feature edges are defined
+- [ ] Evidence level is correctly set (`observed` for source-confirmed, `inferred` otherwise)
+- [ ] Atlas passes `apltk architecture validate`
 
-若因時間或上下文限制無法完整追溯，在 `meta.summary` 中記錄已掃描範圍與已知遺漏。
+## Evidence Traceability
 
-## 參考資料
+Every component declared via the CLI must carry source evidence:
 
-- `references/architecture.md` — apltk architecture 工具的完整參數說明。在步驟 2 產生架構圖前閱讀。
-- `references/TEMPLATE_SPEC.md`：atlas 欄位、列舉和 CLI 寫入形狀速查表。
-- `references/definition.md`: 功能模塊和子模塊的詳細定義。
-- `assets/architecture-page.template.html`: 模板 html。
-- `references/architecture.css`: 風格模板。
-- `sample-demo/`：完整示例輸出，用於理解基礎 atlas 的最終形態與 C4 層級對應。
+- Feature → corresponding directory path or entry point file
+- Submodule → list of files implementing the module
+- Function row → source file and line number (`evidence.sourceFile` + `evidence.sourceLine`)
+- Edge → code location triggering the call relationship
+
+If time or context constraints prevent full traceability, record the scanned scope and known gaps in `meta.summary`.
+
+## References
+
+- `references/architecture.md` — Full parameter reference for the apltk architecture tool (consult when CLI flag details are needed).
+- `references/TEMPLATE_SPEC.md` — Atlas field reference, enum values, and CLI shape cheat sheet.
+- `references/definition.md` — Detailed definitions of feature and submodule.
+- `assets/architecture-page.template.html` — HTML template.
+- `references/architecture.css` — Style template.
+- `sample-demo/` — Complete example output for understanding the final atlas shape and C4 level mapping.

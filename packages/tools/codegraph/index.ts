@@ -19,13 +19,21 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
   const isJson = jsonIndex >= 0;
   if (jsonIndex >= 0) args.splice(jsonIndex, 1);
 
-  if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
+  // Main help: no args, --help, -h, or "help" subcommand
+  if (args.length === 0 || args[0] === '--help' || args[0] === '-h' || args[0] === 'help') {
     printHelp(stdout);
     return 0;
   }
 
   const subcommand = args[0];
+
+  // Per-subcommand help: e.g., "apltk codegraph search --help"
+  // Check for --help/-h at position 1 (after the subcommand name)
   const rest = args.slice(1);
+  if (rest.includes('--help') || rest.includes('-h')) {
+    printSubcommandHelp(subcommand, stdout, stderr);
+    return 0;
+  }
 
   // Parse --spec <dir> for verify
   const specIndex = rest.indexOf('--spec');
@@ -129,40 +137,221 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
 function printHelp(stream: NodeJS.WriteStream): void {
   stream.write(`Usage: apltk codegraph <subcommand> [options]
 
+CodeGraph code intelligence — parse source code into a knowledge graph
+of symbols (functions, classes) and relationships (call edges), backed by
+a local SQLite database with FTS5 full-text search.
+
+Powered by @colbymchenry/codegraph (tree-sitter-backed code knowledge graph).
+
 Subcommands:
 
   lifecycle:
     init               Initialize CodeGraph for the project
-                       --index    Run initial indexing after init
-
-    sync               Sync the index with current file state
-
-    status             Show index statistics (files, nodes, edges)
-
-  discovery:
-    search <query>     Search the code graph for symbols
-                       --limit N  Max results (default: 20)
-
-    explore <query>    Deep-dive on a symbol (callers, callees, source)
+                       --index    Run initial indexing immediately after init
                        --json     JSON output
 
-    survey [dir]       Scan a directory and suggest submodule groupings
-                       --feature <name>  Feature context
+    sync               Sync the index with current file state
+                       --json     JSON output
+
+    status             Show index statistics (files, nodes, edges, languages)
+                       --json     JSON output
+
+  discovery:
+    search <query>     Search the code graph for symbols via FTS5
+                       --limit N  Max results (default: 20, max: 100)
+                       --json     JSON output
+
+    explore <query>    Deep-dive on a symbol — show callers, callees, and source
+                       --feature <name>  Only show results within this feature
                        --json            JSON output
 
-    list-apis [path]   List public APIs in the project or a sub-path
-                       --all      Include non-exported symbols
+    survey [dir]       Scan a directory, suggest submodule groupings and
+                       cross-boundary edges for atlas modelling
+                       --feature <name>  Feature context for grouping
+                       --json            JSON output
+
+    list-apis [path]   List public APIs in the project or within a sub-path
+                       --all      Include non-exported (internal) symbols
                        --json     JSON output
 
   validation:
-    verify             Verify a spec overlay against the actual code
-                       --spec <dir>  Spec directory (required)
-                       --json        JSON output
+    verify --spec <dir>
+                       Verify a spec overlay against actual code —
+                       checks that every declared feature, submodule,
+                       function, and edge exists in the code graph
+                       --json     JSON output
 
 Global options:
     --json             Output as JSON instead of human-readable format
-    --help             Show this help message
+    --help, -h         Show this help message
+
+Use "apltk codegraph <subcommand> --help" for per-subcommand details.
+
+Examples:
+  apltk codegraph init
+  apltk codegraph init --index
+  apltk codegraph status --json
+  apltk codegraph search getUser
+  apltk codegraph search getUser --limit 5 --json
+  apltk codegraph explore handleLogin
+  apltk codegraph survey src/
+  apltk codegraph survey src/ --feature auth --json
+  apltk codegraph list-apis --all
+  apltk codegraph verify --spec docs/plans/2026-05-11/add-2fa
 `);
+}
+
+function printSubcommandHelp(subcommand: string, stream: NodeJS.WriteStream, errStream: NodeJS.WriteStream): void {
+  const PAD = '  ';
+
+  const helps: Record<string, string> = {
+    init: `Usage: apltk codegraph init [--index] [--json]
+
+Initialize the CodeGraph knowledge graph for the project.
+Creates the .codegraph/ directory and SQLite database.
+
+Flags:
+  --index    Run initial indexing immediately after init, so the
+             knowledge graph is ready for queries right away.
+             Without this flag, you need to run "apltk codegraph sync"
+             separately before searching or exploring.
+  --json     Output confirmation as JSON.
+
+Examples:
+  apltk codegraph init
+  apltk codegraph init --index
+`,
+    sync: `Usage: apltk codegraph sync [--json]
+
+Sync the code graph index with the current state of files on disk.
+Parses changed files and updates the SQLite database.
+
+This is needed after you modify source files if you want queries
+to reflect the latest code. Runs incrementally — only reprocesses
+files whose mtime has changed.
+
+Flags:
+  --json     Output sync results (files added/removed/updated) as JSON.
+
+Examples:
+  apltk codegraph sync
+  apltk codegraph sync --json
+`,
+    status: `Usage: apltk codegraph status [--json]
+
+Show index statistics: file count, symbol (node) count, edge count,
+languages detected, and last-sync timestamp.
+
+Flags:
+  --json     Output full statistics as a JSON object.
+
+Examples:
+  apltk codegraph status
+  apltk codegraph status --json
+`,
+    search: `Usage: apltk codegraph search <query> [--limit N] [--json]
+
+Full-text search the code graph for symbols (functions, classes, variables).
+Uses FTS5 (SQLite full-text search) under the hood.
+
+Arguments:
+  query      Search term (required). Matches against symbol names and
+             source code content.
+
+Flags:
+  --limit N  Max results to return (default: 20, max: 100).
+  --json     Output results as a JSON array.
+
+Examples:
+  apltk codegraph search getUser
+  apltk codegraph search handleLogin --limit 5
+  apltk codegraph search "class.*Handler" --limit 10 --json
+`,
+    explore: `Usage: apltk codegraph explore <query> [--feature <name>] [--json]
+
+Deep-dive on a symbol — shows who calls it, what it calls, and its
+full source code. Useful for understanding how a function or class
+fits into the broader codebase.
+
+Arguments:
+  query      Symbol name to explore (required).
+
+Flags:
+  --feature <name>
+             Scope results to only show callers/callees within a
+             specific feature directory (e.g. "auth", "billing").
+  --json     Output full exploration data as JSON (callers, callees,
+             source code, file path, line numbers).
+
+Examples:
+  apltk codegraph explore handleLogin
+  apltk codegraph explore authenticate --feature auth
+  apltk codegraph explore sendEmail --json
+`,
+    survey: `Usage: apltk codegraph survey [dir] [--feature <name>] [--json]
+
+Scan a directory and produce a structured survey report with suggested
+submodule groupings, cross-boundary edges, and entry points.
+
+This is the primary input for the "init-project-html" skill's Step 1 —
+it tells the LLM how to model features and submodules for the atlas.
+
+Arguments:
+  dir        Directory to scan (default: current directory ".").
+
+Flags:
+  --feature <name>
+             Feature context: scope the survey to only one feature's
+             boundary. Helps the grouper cluster symbols more accurately.
+  --json     Output survey results as JSON — best for LLM consumption.
+
+Examples:
+  apltk codegraph survey
+  apltk codegraph survey src/
+  apltk codegraph survey src/auth --feature auth --json
+`,
+    'list-apis': `Usage: apltk codegraph list-apis [path] [--all] [--json]
+
+List public (exported) symbols in the project or a specific sub-path.
+Useful for understanding the public surface area of a module.
+
+Arguments:
+  path       Sub-path to scan (e.g. "src/auth"). When omitted, scans
+             the entire project.
+
+Flags:
+  --all      Include non-exported (internal) symbols in the listing.
+  --json     Output API list as JSON.
+
+Examples:
+  apltk codegraph list-apis
+  apltk codegraph list-apis src/auth
+  apltk codegraph list-apis --all --json
+`,
+    verify: `Usage: apltk codegraph verify --spec <spec-dir> [--json]
+
+Verify a spec overlay's architecture proposals against actual code.
+Checks that every feature, submodule, function, and edge referenced
+in the overlay's atlas state actually exists in the code graph.
+
+Flags:
+  --spec <spec-dir>
+             Path to the spec directory containing an architecture_diff/
+             overlay (required). For example, "docs/plans/2026-05-11/add-2fa".
+  --json     Output verification results as JSON (passed/failed checks).
+
+Examples:
+  apltk codegraph verify --spec docs/plans/2026-05-11/add-2fa
+  apltk codegraph verify --spec docs/plans/2026-05-11/add-2fa --json
+`,
+  };
+
+  const text = helps[subcommand];
+  if (text) {
+    stream.write(text);
+  } else {
+    errStream.write(`Unknown subcommand: "${subcommand}". Use "apltk codegraph --help" for the list of available subcommands.\n`);
+  }
 }
 
 export const tool: ToolDefinition = {

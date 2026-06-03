@@ -129,6 +129,26 @@ CLI: `apltk architecture error add --feature X --submodule Y --name ErrCode --wh
 
 CLI: `apltk architecture edge add --from <feature>[/sub] --to <feature>[/sub] --kind call --label "..."`
 
+### `evidence` (shared, optional on every entity above)
+
+| Field      | Type | Required | Notes |
+| ---------- | ---- | -------- | ----- |
+| level      | enum `observed` `inferred` `assumed` | yes | Quality tier — drives badge colour (green/amber/red). |
+| source     | string | no | Free-text evidence description. |
+| sourceFile | string | no | Extracted file path (e.g. `src/auth/controller.ts`). Auto-parsed from `--evidence observed:path/file.ts:42`. |
+| sourceLine | number | no | Extracted line number. Auto-parsed from `--evidence observed:path/file.ts:42`. |
+
+CLI: `--evidence observed:path/to/file.ts:42` (line number parsed automatically when source ends with `:N` and the preceding segment resembles a file path).
+
+In YAML:
+```yaml
+evidence:
+  level: observed
+  sourceFile: src/auth/controller.ts
+  sourceLine: 42
+  source: src/auth/controller.ts:42
+```
+
 ## Class hooks on rendered HTML
 
 These are emitted automatically by `lib/atlas/render.js`. Agents do **not** write them by hand — they are listed here only so reviewers know which selectors are stable.

@@ -309,7 +309,17 @@ function renderEvidenceBadge(ev) {
   const label = EVI_LABEL[ev.level] || ev.level;
   const title = ev.source ? htmlEscape(ev.source) : '';
   const titleAttr = title ? ` title="${title}"` : '';
-  return `<span class="evi evi--${ev.level}"${titleAttr}>${label}</span>`;
+
+  // Append source location when structured file:line data is available
+  let locHtml = '';
+  if (ev.sourceFile && ev.sourceFile !== ev.source && /[/\\]|\.[a-zA-Z0-9]+$/.test(ev.sourceFile)) {
+    const loc = ev.sourceLine
+      ? `${htmlEscape(ev.sourceFile)}:${ev.sourceLine}`
+      : htmlEscape(ev.sourceFile);
+    locHtml = ` <code class="evi__source">${loc}</code>`;
+  }
+
+  return `<span class="evi evi--${ev.level}"${titleAttr}>${label}${locHtml}</span>`;
 }
 
 function renderSubmoduleTable(headers, rows, evidences) {

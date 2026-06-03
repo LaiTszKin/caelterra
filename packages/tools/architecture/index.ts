@@ -253,6 +253,7 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
           if (feat.story !== undefined) init.story = String(feat.story);
           if (feat.dependsOn !== undefined)
             init.dependsOn = Array.isArray(feat.dependsOn) ? feat.dependsOn : [feat.dependsOn];
+          if (feat.evidence !== undefined) init.evidence = feat.evidence;
           ensureFeature(merged, slug, init);
           break;
         }
@@ -263,6 +264,7 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
           if (feat.story !== undefined) existing.story = String(feat.story);
           if (feat.dependsOn !== undefined)
             existing.dependsOn = Array.isArray(feat.dependsOn) ? feat.dependsOn : [feat.dependsOn];
+          if (feat.evidence !== undefined) existing.evidence = feat.evidence;
           break;
         }
         case 'remove':
@@ -284,6 +286,7 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
             const init: Record<string, unknown> = {};
             if (sub.kind !== undefined) init.kind = String(sub.kind);
             if (sub.role !== undefined) init.role = String(sub.role);
+            if (sub.evidence !== undefined) init.evidence = sub.evidence;
             ensureSubmodule(parent, sub.slug, init);
             break;
           }
@@ -319,6 +322,7 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
               if (fn.out !== undefined) newFn.out = String(fn.out);
               if (fn.side !== undefined) newFn.side = String(fn.side);
               if (fn.purpose !== undefined) newFn.purpose = String(fn.purpose);
+              if (fn.evidence !== undefined) newFn.evidence = fn.evidence;
               subMod.functions.push(newFn);
               break;
             }
@@ -382,6 +386,7 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
           const eid = edge.id || `e-${Math.random().toString(36).slice(2, 8)}`;
           const kind = edge.kind || 'call';
           const label = edge.label !== undefined ? String(edge.label) : '';
+          const edgeEvidence = edge.evidence !== undefined ? { evidence: edge.evidence } : {};
 
           if (isIntraFeatureEdge(from, to)) {
             const feature = findFeature(merged, from.feature);
@@ -392,10 +397,11 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
               to: to.submodule,
               kind,
               label,
+              ...edgeEvidence,
             });
           } else {
             merged.edges = (merged.edges || []).filter((ex: any) => ex.id !== eid);
-            merged.edges.push({ id: eid, from, to, kind, label });
+            merged.edges.push({ id: eid, from, to, kind, label, ...edgeEvidence });
           }
           break;
         }

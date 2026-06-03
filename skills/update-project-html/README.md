@@ -1,42 +1,31 @@
 # update-project-html
 
-`update-project-html` refreshes the project HTML architecture atlas (`resources/project-architecture/`) so it reflects the latest code changes.
-
-## What this skill does
-
-1. Reads the current atlas (`atlas.index.yaml` + per-feature YAML) — only affected features (context economy).
-2. Measures architecture drift: compares atlas entries against actual codebase structure.
-3. Resolves the diff scope (`git diff --stat` + `git diff --cached --stat` by default, or `git diff --stat <base>..HEAD` when the user names a ref).
-4. Filters out non-architecture changes (formatting, config-only, test-only, comments).
-5. Maps filtered diff hunks to existing or new features.
-6. Dispatches one write-capable subagent per affected feature to deep-read only its own changed files and apply every intra-feature mutation through `apltk architecture` (no `--spec`).
-7. Waits until every subagent finishes, then declares cross-feature edges, runs `apltk architecture render`, and validates.
-8. Re-measures drift to confirm it is within acceptable range.
+Refreshes the project HTML architecture atlas (`resources/project-architecture/`) to reflect the latest code changes.
 
 ## When to use
 
-Use this skill when the task asks you to:
+- The existing atlas is out of sync with the current branch or working tree
+- Code has changed (new routes, modules, service logic) and the atlas needs updating before a release
+- You need to bring `resources/project-architecture/` back in sync after a PR or batch of commits
 
-- update or refresh the existing project architecture diagram after code changes,
-- bring `resources/project-architecture/` back in sync with the current branch or a specific commit range,
-- reflect a recent PR or batch of commits in the canonical atlas before merging or releasing.
-
-If no atlas exists yet, use `init-project-html` to bootstrap one. For planned but unshipped work scoped to a `docs/plans/...` spec, use `spec-to-project-html` to write under `<spec_dir>/architecture_diff/` instead of the base atlas.
+If no atlas exists yet, use [`init-project-html`](../init-project-html/SKILL.md) to bootstrap one first.
 
 ## Core principles
 
-- The CLI owns atlas state and renderer output; agents never hand-edit `resources/project-architecture/**/*.html`.
-- Every mutation traces to a specific file + diff hunk; absent code never produces atlas entries.
-- Subagent fan-out is the only safe read pattern: one feature per subagent, no shared source loading.
-- Cross-feature wiring happens **after** every subagent finishes — never from partial summaries.
-- Measure drift before and after: confirm the atlas stays within an acceptable drift threshold.
-- Filter diff noise: formatting, config-only, test-only, and comment-only changes never drive atlas mutations.
+- The CLI owns atlas state and rendered output; never hand-edit `resources/project-architecture/**/*.html`
+- Every mutation traces to a specific file + diff hunk; absent code never produces atlas entries
+- Measure drift **before and after**: confirm the atlas stays within acceptable thresholds
+- Filter diff noise: formatting, config-only, test-only, and comment-only changes never drive atlas mutations
+
+## Workflow
+
+See [`SKILL.md`](./SKILL.md) for the full 6-step workflow.
 
 ## References
 
-- [`SKILL.md`](./SKILL.md) — full workflow and execution rules.
-- [`../init-project-html/SKILL.md`](../init-project-html/SKILL.md) — semantic rulebook.
-- [`../spec-to-project-html/SKILL.md`](../spec-to-project-html/SKILL.md) — spec overlay flow.
+- [`SKILL.md`](./SKILL.md) — Full workflow and execution rules
+- [`../init-project-html/SKILL.md`](../init-project-html/SKILL.md) — C4 semantic rulebook
+- [`../init-project-html/references/TEMPLATE_SPEC.md`](../init-project-html/references/TEMPLATE_SPEC.md) — Atlas field reference and schema
 
 ## License
 
