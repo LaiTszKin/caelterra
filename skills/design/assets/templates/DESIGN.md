@@ -139,3 +139,15 @@ If none, write **None** and note the scope (e.g., stdlib only / in-process calls
 | Decision | Rejected Alternatives | Lock-in Effect on Implementation |
 |---|---|---|
 | […] | […] | […] |
+
+---
+
+## 8. Design-Time Refactoring
+
+Code health findings identified during architecture survey, classified by module boundary scope.
+
+| Finding | Affected Module | Tier (T1/T2/T3) | Disposition (Refactored / Scheduled / Deferred) | Test Evidence |
+|---|---|---|---|---|
+| […] | […] | […] | […] | […] |
+
+If none, write **None**.
