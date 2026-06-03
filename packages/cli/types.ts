@@ -1,3 +1,5 @@
+import type { StdioWriter } from '@laitszkin/tui';
+
 export type InstallMode = 'codex' | 'openclaw' | 'trae' | 'agents' | 'claude-code';
 
 export interface InstallTarget {
@@ -53,4 +55,5 @@ export interface CliContext {
   confirmUpdate?: Function;
   runTool?: Function;
   spawnCommand?: Function;
+  stdioWriter?: StdioWriter;
 }

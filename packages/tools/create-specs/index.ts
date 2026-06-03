@@ -40,6 +40,7 @@ export async function createSpecsHandler(args: string[], context: ToolContext): 
 
   try {
     const { values, positionals } = parseArgs({
+      args,
       options: {
         'batch-name': { type: 'string' },
         'change-name': { type: 'string' },

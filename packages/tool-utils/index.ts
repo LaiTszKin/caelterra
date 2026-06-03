@@ -21,3 +21,5 @@ export {
   PosixAdapter,
 } from './platform-adapter.js';
 export type { PlatformAdapter } from './platform-adapter.js';
+export type { ToolSchema, SchemaOption } from './schema.js';
+export { createToolRunner } from './schema.js';

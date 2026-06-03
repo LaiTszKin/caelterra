@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { color, supportsColor, supportsAnimation, buildBanner, buildWordmark, buildWelcomeScreen, buildSupportedTargetLines, renderSelectionScreen, animateWelcomeScreen, promptYesNo, promptForModes, isInteractive } from '@laitszkin/tui';
-import type { TargetDefinition } from '@laitszkin/tui';
+import { color, supportsColor, supportsAnimation, buildBanner, buildWordmark, buildWelcomeScreen, buildSupportedTargetLines, renderSelectionScreen, animateWelcomeScreen, promptYesNo, promptForModes, isInteractive, createStdioWriter } from '@laitszkin/tui';
+import type { TargetDefinition, StdioWriter } from '@laitszkin/tui';
 import { formatToolList, buildToolDiscoveryHelp, runTool, getTool as getToolCommand } from '@laitszkin/tool-registry';
 import { formatExamples } from '@laitszkin/tool-registry';
 import {
@@ -325,6 +325,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
   const stderr = context.stderr || process.stderr;
   const stdin = context.stdin || process.stdin;
   const env = context.env || process.env;
+  const stdioWriter: StdioWriter = createStdioWriter({ stdout, stderr, env });
   let packageJson = readPackageJson(sourceRoot);
 
   try {
@@ -351,7 +352,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
     if (parsed.command === 'tool') {
       await registerAllTools();
       return (context.runTool || runTool)(parsed.toolName!, parsed.toolArgs, {
-        sourceRoot, stdout, stderr, env, spawnCommand: context.spawnCommand,
+        sourceRoot, stdout, stderr, env, spawnCommand: context.spawnCommand, stdioWriter,
       });
     }
 

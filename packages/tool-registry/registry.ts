@@ -1,4 +1,5 @@
 import type { ToolDefinition, ToolContext, ToolExample } from './types.js';
+import { ToolNotFoundError } from '@laitszkin/tool-utils';
 
 const TOOLS_BY_NAME = new Map<string, ToolDefinition>();
 
@@ -29,8 +30,7 @@ export async function runTool(
   const tool = getTool(toolName);
 
   if (!tool) {
-    stderr.write(`Unknown tool: ${toolName}\n\nAvailable tools:\n${formatToolList()}\n`);
-    return 1;
+    throw new ToolNotFoundError(`Unknown tool: ${toolName}`);
   }
 
   if (tool.handler) {

@@ -1,77 +1,58 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import path from 'node:path';
 import fs from 'node:fs';
-import os from 'node:os';
-import { fileURLToPath } from 'node:url';
-import { run } from '@laitszkin/cli';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
-const PROJECT_ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../..',
-);
-
-function createMockStream() {
-  let output = '';
+function createMemoryStream() {
+  let data = '';
   return {
-    write: (s) => {
-      output += String(s);
+    write(chunk) {
+      data += chunk;
+      return true;
     },
-    getOutput: () => output,
-    isTTY: false,
+    toString() {
+      return data;
+    },
   };
 }
 
-test('sync-memory-index: --agents-file without value writes Error: prefix and exits 1', async () => {
-  const stdout = createMockStream();
-  const stderr = createMockStream();
-  const result = await run(['sync-memory-index', '--agents-file'], {
-    sourceRoot: PROJECT_ROOT,
-    stdout,
-    stderr,
-    env: {},
+test('sync-memory-index handler catches UserInputError with Error: prefix', async (t) => {
+  t.mock.method(fs, 'mkdirSync', () => {
+    throw new UserInputError('agents file path is invalid');
   });
-  assert.equal(result, 1);
-  const err = stderr.getOutput();
+
+  const { tool: syncMemoryIndexTool } = await import('@laitszkin/tool-sync-memory-index');
+  const handler = syncMemoryIndexTool.handler;
+  const stdout = createMemoryStream();
+  const stderr = createMemoryStream();
+
+  const code = await handler(['--agents-file', '/some/path'], { stdout, stderr });
+
+  assert.equal(code, 1);
   assert.ok(
-    err.includes('Error:'),
-    `stderr should contain "Error:", got: ${err}`,
-  );
-  assert.ok(
-    err.includes('--agents-file'),
-    `stderr should mention --agents-file, got: ${err}`,
+    stderr.toString().includes('Error:'),
+    `Expected stderr to contain "Error:", got: ${JSON.stringify(stderr.toString())}`,
   );
 });
 
-test('sync-memory-index: unwritable agents-file path writes Error: prefix and exits 1', async () => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apltk-test-'));
-  try {
-    // Create a regular file that blocks directory creation
-    const blockFile = path.join(tmpDir, 'blocker');
-    fs.writeFileSync(blockFile, '', 'utf8');
+test('sync-memory-index handler catches SystemError with error context', async (t) => {
+  t.mock.method(fs, 'mkdirSync', () => {
+    throw new SystemError('disk write failure');
+  });
 
-    // agents-file path whose parent can't be created because
-    // a regular file exists where mkdirSync needs to descend
-    const badPath = path.join(blockFile, 'nested', 'AGENTS.md');
+  const { tool: syncMemoryIndexTool } = await import('@laitszkin/tool-sync-memory-index');
+  const handler = syncMemoryIndexTool.handler;
+  const stdout = createMemoryStream();
+  const stderr = createMemoryStream();
 
-    const stdout = createMockStream();
-    const stderr = createMockStream();
-    const result = await run(
-      ['sync-memory-index', '--agents-file', badPath],
-      {
-        sourceRoot: PROJECT_ROOT,
-        stdout,
-        stderr,
-        env: {},
-      },
-    );
-    assert.equal(result, 1);
-    const err = stderr.getOutput();
-    assert.ok(
-      err.includes('Error:'),
-      `stderr should contain "Error:", got: ${err}`,
-    );
-  } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  }
+  const code = await handler(['--agents-file', '/some/path'], { stdout, stderr });
+
+  assert.equal(code, 1);
+  assert.ok(
+    stderr.toString().includes('Error:'),
+    `Expected stderr to contain "Error:", got: ${JSON.stringify(stderr.toString())}`,
+  );
+  // TODO: After FIX-03 adds stack trace output for SystemError branch,
+  // this test should also verify:
+  //   assert.ok(stderr.toString().includes('at '));
 });

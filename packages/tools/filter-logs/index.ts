@@ -1,51 +1,35 @@
-import { parseArgs } from 'node:util';
-import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, SystemError } from '@laitszkin/tool-utils';
+import type { ToolContext } from '@laitszkin/tool-registry';
+import type { ToolDefinition } from '@laitszkin/tool-registry';
 import {
   extractTimestamp,
   inWindow,
   iterInputLines,
   parseCliTimestamp,
   buildTimezone,
+  createToolRunner,
 } from '@laitszkin/tool-utils';
+import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
-async function filterLogsHandler(
-  argv: string[],
-  context: ToolContext,
-): Promise<number> {
-  const stdout = context.stdout ?? process.stdout;
-
-  try {
-    const { values, positionals } = parseArgs({
-      args: argv,
-      options: {
-        start: { type: 'string' },
-        end: { type: 'string' },
-        'assume-timezone': { type: 'string', default: 'UTC' },
-        'keep-undated': { type: 'boolean', default: false },
-        'count-only': { type: 'boolean', default: false },
-        help: { type: 'boolean', short: 'h' },
-      },
-      allowPositionals: true,
-    });
-
-    if (values.help) {
-      stdout.write(`Usage: apltk filter-logs [options] [<file>...]
-
-Filter log lines by time window.
-
-Options:
-  --start <ISO>         Start timestamp (inclusive)
-  --end <ISO>           End timestamp (inclusive)
-  --assume-timezone <tz>  Timezone for timestamps without offset (default: UTC)
-  --keep-undated        Include lines without timestamps
-  --count-only          Print only the matching line count
-  --help, -h            Show this help
-`);
-      return 0;
-    }
-
-    const assumeTimezone = values['assume-timezone'] as string;
+const schema = {
+  options: {
+    start: { type: 'string' as const, short: 's' },
+    end: { type: 'string' as const, short: 'e' },
+    'assume-timezone': { type: 'string' as const },
+    'keep-undated': { type: 'boolean' as const },
+    'count-only': { type: 'boolean' as const },
+  },
+  allowPositionals: true,
+  strict: false,
+  usage: 'apltk filter-logs [options] [<file>...]',
+  description: 'Filter log lines by time window',
+  handler: async (
+    values: Record<string, unknown>,
+    positionals: string[],
+    context: ToolContext,
+  ): Promise<number> => {
+    const stdout = context.stdout ?? process.stdout;
+    const stderr = context.stderr ?? process.stderr;
+    const assumeTimezone = (values['assume-timezone'] as string) ?? 'UTC';
 
     try {
       buildTimezone(assumeTimezone);
@@ -99,20 +83,12 @@ Options:
     }
 
     return 0;
-  } catch (err) {
-    const stderr = context.stderr ?? process.stderr;
-    if (err instanceof UserInputError || err instanceof SystemError) {
-      stderr.write(`${err.message}\n`);
-      return err.statusCode;
-    }
-    stderr.write(`Error: ${(err as Error).message}\n`);
-    return 1;
-  }
-}
+  },
+};
 
 export const tool: ToolDefinition = {
   name: 'filter-logs',
   category: 'Log Analysis',
   description: 'Filter log lines by time window',
-  handler: filterLogsHandler,
+  handler: createToolRunner(schema),
 };

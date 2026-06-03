@@ -61,13 +61,18 @@ test('getTool returns null for unknown tool', () => {
   assert.equal(getTool('nonexistent-tool'), null);
 });
 
-test('runTool returns 1 for unknown tool', async () => {
+test('runTool throws ToolNotFoundError for unknown tool', async () => {
   let stderrText = '';
-  const exitCode = await runTool('nonexistent-tool', [], {
-    stderr: { write(chunk) { stderrText += chunk; return true; } },
-  });
-  assert.equal(exitCode, 1);
-  assert.match(stderrText, /Unknown tool/);
+  await assert.rejects(
+    () => runTool('nonexistent-tool', [], {
+      stderr: { write(chunk) { stderrText += chunk; return true; } },
+    }),
+    (err) => {
+      assert.match(err.message, /Unknown tool/);
+      assert.equal(err.code, 'TOOL_NOT_FOUND');
+      return true;
+    },
+  );
 });
 
 test('run dispatches tool commands without installer flow', async () => {

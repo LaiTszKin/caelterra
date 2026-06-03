@@ -126,7 +126,7 @@ async function syncMemoryIndexHandler(
     if (err instanceof UserInputError) {
       stderr.write(`Error: ${err.message}\n`);
     } else if (err instanceof SystemError) {
-      stderr.write(`Error: ${err.message}\n`);
+      stderr.write(`${err.message}\n${err.stack}\n`);
     } else {
       stderr.write(`Error: ${(err as Error).message}\n`);
     }
