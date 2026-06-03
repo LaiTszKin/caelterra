@@ -3,23 +3,25 @@
 ## Common Development Commands
 
 - `npm test` - 執行 Node 測試套件（`node --test`）。
-- `node dist/bin/apollo-toolkit.js [mode...]` - 直接從倉庫啟動 CLI，將技能安裝至指定目標（codex/openclaw/trae/agents/claude-code/all）。
-- `node dist/bin/apollo-toolkit.js uninstall [mode...]` - 從指定目標移除已安裝的 Apollo Toolkit 技能。
+- `npm run build` - 完整構建所有套件。
+- `node dist/bin/apollo-toolkit.js [mode...]` - 啟動 CLI，安裝技能至目標（codex/openclaw/trae/agents/claude-code/all）。
+- `node dist/bin/apollo-toolkit.js uninstall [mode...]` - 從目標移除 Apollo Toolkit 技能。
 - `node dist/bin/apollo-toolkit.js tools` - 列出所有內建 CLI 工具及其分類。
-- `node dist/bin/apollo-toolkit.js <tool> [args...]` - 執行內建工具（如 `filter-logs`、`search-logs`、`architecture`、`create-specs` 等）。
-- `node dist/bin/apollo-toolkit.js architecture [diff|merge]` - 開啟專案 HTML 架構圖、搭配 `diff` 產生分頁式 before/after 檢視器，或使用 `merge --spec <dir>` 將 spec 的架構變更合併至基礎架構圖。
-- `node dist/bin/apollo-toolkit.js eval <skill>` - 對指定技能執行自動化評測（LLM-as-Judge），產出結構化報告和優化 diff。
-- `apltk validate-skill-frontmatter` - 驗證 `skills/` 下所有技能 `SKILL.md` 的 frontmatter 格式與命名規範。
-- `apltk validate-openai-agent-config` - 驗證所有技能 `agents/openai.yaml` 的設定完整性。
-- `./scripts/install_skills.sh [mode...]` - 透過本地 shell 腳本安裝技能（非 npm 安裝方式）。
+- `node dist/bin/apollo-toolkit.js <tool> [args...]` - 執行內建工具（如 `codegraph`、`architecture`、`filter-logs`）。
+- `apltk codegraph <subcommand> [options]` - CodeGraph 程式碼智慧工具（init/sync/status/search/explore/survey/list-apis/verify）。
+- `apltk architecture [diff|merge|apply|template]` - 架構圖管理與 spec overlay 操作。
+- `apltk eval <skill>` - LLM-as-Judge 技能評測。
+- `apltk validate-skill-frontmatter` - 驗證技能 SKILL.md frontmatter 格式。
+- `apltk validate-openai-agent-config` - 驗證技能 agents/openai.yaml 設定。
+- `./scripts/install_skills.sh [mode...]` - 本機 shell 腳本安裝技能。
 
 ## Project Business Goals
 
 - Provide a curated set of reusable agent skills installable into Codex, OpenClaw, Trae, Agents, and Claude Code skill directories.
-- Enable spec-first software delivery: feature planning, implementation (including parallel subagents and worktree isolation), code review, systematic debugging, and release management.
-- Support evidence-based research (deep research, financial analysis, API fingerprinting), media generation (video, audio, storyboard), and educational content (PDF exams, error books, KaTeX rendering).
+- Enable spec-first software delivery with deterministic tooling: feature planning, tree-sitter-backed code discovery, architecture diff with verification, code review, systematic debugging, release management.
+- Support evidence-based research, media generation, and educational content workflows.
 - Automate platform workflows: GitHub issue/PR operations and blockchain development (Solana, Jupiter).
-- Keep skills focused, composable, and easy to reuse; split shared capabilities into dedicated skills when multiple workflows can depend on them.
+- Keep skills focused and composable; split shared capabilities into dedicated skills when multiple workflows depend on them.
 
 ## Project Documentation Index
 
@@ -37,3 +39,11 @@
 - `README.md` - 公開安裝指南與技能目錄
 - `CHANGELOG.md` - 版本發佈歷史
 - `LICENSE` - MIT 授權條款
+
+## Prohibitions
+
+- 禁止直接安裝未提交的技能改動
+- 禁止建立自動 database migrations
+- 禁止未經 code review 直接合併 spec 實作分支
+- 禁止手動編輯 `.codegraph/codegraph.db`（由 CodeGraph 內部管理）
+- `in:`、`out:` 等包含冒號的 YAML 值必須使用引號（`'projectRoot: string'`）

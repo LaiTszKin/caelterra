@@ -4,3 +4,5 @@
 {"ts":"2026-05-29T13:27:26.796Z","action":"submodule remove","args":{"feature":"eval-isolation","slug":"context-factory"},"mode":"base"}
 {"ts":"2026-05-29T13:27:29.784Z","action":"submodule set","args":{"feature":"eval-executor","slug":"trace-recorder","role":"多輪tool-use loop軌跡記錄：tool_call/tool_result事件序列、JSONL行號標記、.done完成標記"},"mode":"base"}
 {"ts":"2026-05-29T13:27:30.597Z","action":"submodule set","args":{"feature":"eval-scorer","slug":"judge-prompt-builder","role":"評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示"},"mode":"base"}
+{"ts":"2026-06-03T12:34:41.876Z","action":"merge","args":{"specs":["docs/plans/2026-06-03/codegraph-integration"]},"mode":"base"}
+{"ts":"2026-06-03T12:35:20.204Z","action":"merge","args":{"specs":["docs/plans/2026-06-03/codegraph-integration"]},"mode":"base"}

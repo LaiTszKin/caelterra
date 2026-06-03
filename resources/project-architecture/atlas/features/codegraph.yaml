@@ -1,8 +1,8 @@
 slug: codegraph
 title: CodeGraph Integration
 story: >
-  Provide LLM agents with deterministic code structure data through apltk CLI.
-  Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.
+  Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual
+  grep/Read discovery with tree-sitter parsed knowledge graph queries.
 dependsOn:
   - eval-cli
 submodules:
@@ -11,82 +11,85 @@ submodules:
     role: Manage CodeGraph index lifecycle — init, sync, status, search
     functions:
       - name: init
-        in: projectRoot: string
+        in: 'projectRoot: string'
         out: CodeGraph instance
         side: io
         purpose: Initialize .codegraph/ directory and optionally run full index
       - name: sync
-        in: projectRoot: string
+        in: 'projectRoot: string'
         out: SyncResult
         side: io
         purpose: Incremental update of existing index
       - name: status
-        in: projectRoot: string
+        in: 'projectRoot: string'
         out: GraphStats
         side: pure
         purpose: Query index statistics
       - name: search
-        in: query: string
+        in: 'query: string'
         out: SearchResult[]
         side: pure
         purpose: Full-text symbol search via FTS5
+    variables: []
+    dataflow: []
+    errors: []
   - slug: cg-discovery
     kind: service
     role: Explore and survey code structure — explore, survey, list-apis
     functions:
       - name: explore
-        in: query: string
+        in: 'query: string'
         out: Context (source grouped by file + relationship map)
         side: pure
         purpose: Get full context for symbols matching a query
       - name: survey
-        in: dirPath: string
+        in: 'dirPath: string'
         out: SurveyReport (submodule suggestions + edge suggestions)
         side: pure
         purpose: Survey a directory and produce atlas-compatible structure report
       - name: listApis
-        in: featureSlug: string
+        in: 'featureSlug: string'
         out: APIDirectory (public functions + params + callers)
         side: pure
         purpose: List public API surface of a feature area
+    variables: []
+    dataflow: []
+    errors: []
   - slug: cg-validation
     kind: service
     role: Verify architecture proposals and batch-apply atlas mutations
     functions:
       - name: verify
-        in: specOverlayPath: string
+        in: 'specOverlayPath: string'
         out: VerifyReport (passed/failed items)
         side: pure
         purpose: Validate that spec overlay references match actual code
       - name: applyBatch
-        in: proposalYaml: string
+        in: 'proposalYaml: string'
         out: ApplyResult
         side: io
         purpose: Execute multiple atlas mutations from a single YAML file
       - name: generateTemplate
-        in: specMdPath: string
+        in: 'specMdPath: string'
         out: proposalYaml path
         side: io
         purpose: Generate empty proposal skeleton from SPEC.md
+    variables: []
+    dataflow: []
+    errors: []
 edges:
   - id: cg-fe-001
-    from:
-      submodule: cg-lifecycle
-    to:
-      submodule: cg-discovery
+    from: cg-lifecycle
+    to: cg-discovery
     kind: data-row
     label: survey/list-apis 依賴已索引的資料庫
   - id: cg-fe-002
-    from:
-      submodule: cg-discovery
-    to:
-      submodule: cg-validation
+    from: cg-discovery
+    to: cg-validation
     kind: data-row
     label: verify 使用 discovery 的搜尋能力
   - id: cg-fe-003
-    from:
-      submodule: cg-validation
-    to:
-      submodule: cg-lifecycle
+    from: cg-validation
+    to: cg-lifecycle
     kind: data-row
     label: apply 非索引操作，不需 lifecycle — 但 template 可搭配 list-apis

@@ -1,7 +1,9 @@
 meta:
-  title: Project architecture
-  summary: ''
-  updatedAt: '2026-05-29T13:27:30.595Z'
+  title: Project architecture  (+ codegraph integration overlay)
+  summary: >
+    Baseline: eval 系統 (8 features). Overlay: 新增 codegraph 功能模組，包含 lifecycle 命令、discovery
+    命令、validation/apply 命令。 新增外部 actor: @colbymchenry/codegraph (npm 套件)。
+  updatedAt: '2026-06-03T12:35:20.201Z'
 actors:
   - id: judge-model-api
     label: Judge Model API
@@ -12,6 +14,7 @@ actors:
   - id: skill-files
     label: Skill Files (SKILL.md, scripts/, references/, assets/)
 features:
+  - codegraph
   - eval-optimizer
   - eval-cli
   - eval-ci-gate
@@ -21,24 +24,29 @@ features:
   - eval-scorer
   - eval-reporter
 edges:
-  - id: e-101
+  - id: cg-e-001
     from:
-      feature: eval-cli
+      feature: codegraph
+      submodule: cg-lifecycle
     to:
-      feature: eval-optimizer
-    kind: call
-    label: trigger optimization after scoring
-  - id: e-102
+      feature: codegraph
+      submodule: cg-discovery
+    kind: data-row
+    label: survey/list-apis 依賴已索引的資料庫
+  - id: cg-e-002
     from:
-      feature: eval-cli
+      feature: codegraph
+      submodule: cg-discovery
     to:
-      feature: eval-isolation
-    kind: call
-    label: setup tool mock + context isolation
-  - id: e-103
+      feature: codegraph
+      submodule: cg-validation
+    kind: data-row
+    label: verify 使用 discovery 的搜尋能力
+  - id: cg-e-003
     from:
-      feature: eval-ci-gate
+      feature: codegraph
+      submodule: cg-lifecycle
     to:
       feature: eval-cli
     kind: call
-    label: invoke apltk eval --mode standard
+    label: codegraph init --index 與 eval-cli 共用 CLI 工具基礎架構
