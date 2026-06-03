@@ -2,6 +2,13 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v4.1.3] - 2026-06-04
+
+### Fixed
+
+- **Windows TTY detection**: Added `isInteractive()` helper with environment variable fallback for MSYS2/MINGW (Git Bash), Windows Terminal, and ConEmu. Fixes update prompts, interactive install prompts, color output, and animation on Windows platforms where `stdin.isTTY` is unreliable.
+- **All `isTTY` checks centralized**: `shouldSkipUpdateCheck`, `supportsColor`, `supportsAnimation`, `promptForModes`, `promptYesNo`, `confirmInstall`, and uninstall flow now all use the shared `isInteractive()` function from `@laitszkin/tui`.
+
 ## [v4.1.2] - 2026-06-04
 
 ### Changed
