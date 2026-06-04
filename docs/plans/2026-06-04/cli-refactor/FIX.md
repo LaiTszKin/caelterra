@@ -1,10 +1,10 @@
-# Fix Coordinator Prompt: CLI 工具全面重構 — Round 10
+# Fix Coordinator Prompt: CLI 工具全面重構 — Round 11
 
 - **Date**: 2026-06-05
-- **Source REPORT**: `docs/plans/2026-06-04/cli-refactor/REPORT.md` (Round 10)
+- **Source REPORT**: `docs/plans/2026-06-04/cli-refactor/REPORT.md` (Round 11)
 - **Source Spec**: `docs/plans/2026-06-04/cli-refactor/`
-- **Total Issues**: P1: 2, P2: 6, P3: 8
-- **Total Regression Tests**: 5
+- **Total Issues**: P1: 3, P2: 12, P3: 10
+- **Total Regression Tests**: 6
 
 ---
 
@@ -37,40 +37,40 @@
 
 ## 2. Mission
 
-修復 CLI refactoring Round 10 審查中發現的 16 項問題（2 P1 + 6 P2 + 8 P3）。核心目標依優先級：
+修復 CLI refactoring Round 11 審查中發現的 25 項問題（3 P1 + 12 P2 + 10 P3）。核心目標依優先級：
 
-1. **P1 涵蓋率門檻低於 SPEC** — `scripts/test.sh` 的 line coverage threshold 設為 65% 而非 SPEC 要求的 80%，且低於 FIX.md 建議的 75%。需調整至 75% 並補足工具測試讓 CI 通過
-2. **P1 generate-storyboard-images 8 個泛型 Error** — `parsePromptEntries` 及 `parsePromptsFile` 中的輸入驗證應拋出 `UserInputError` 而非 `new Error(...)`
-3. **P2 architecture 工具繞過 createToolRunner** — 手動實作引數解析、錯誤處理、說明文字
-4. **P2 多項工具仍有泛型 Error** — open-github-issue、validate-skill-frontmatter、validate-openai-agent-config、review-threads 的輔助函式仍拋出 `new Error(...)`
-5. **P2 REGTEST-05 死碼** — `.ts` 測試檔未被編譯或執行
-6. **P2 CLI 派發架構瑕疵** — 直接工具名稱降階路徑繞過 ToolArgsParser；if-else 鏈重複派發表邏輯
-7. **P3 各項** — 死碼移除、adapter 改用、文件同步
+1. **P1 涵蓋率門檻低於 SPEC** — `scripts/test.sh` 的 line coverage threshold 設為 69% 而非 SPEC 要求的 80%，functions threshold 為 67% 而非 CHECKLIST 的 75%
+2. **P1 open-github-issue 內部 try/catch 使用 "Error:" 前綴** — L759-762 inner catch 攔截 UserInputError 後加上 "Error:" 前綴，繞過 createToolRunner 的正確格式化
+3. **P1 review-threads 6 個內部 try/catch 使用 "Error:" 前綴** — cmdList 及 cmdResolve 的 6 個 catch block 都使用 "Error:" 前綴而非讓錯誤傳播至 createToolRunner
+4. **P2 多項 GitHub 工具有 stderr.write+return1 繞過模式** — read-github-issue、find-github-issues、validate-skill-frontmatter、validate-openai-agent-config
+5. **P2 架構瑕疵** — architecture 工具仍有多層 catch block；codegraph 使用手動錯誤處理；open-github-issue 空 catch 靜默吞錯誤
+6. **P2 CI 問題** — test.yml 缺少 npm run build 步驟；CL-13 測試未實作
+7. **P3 各項** — 死碼移除、strict:true 宣告、測試修正、label 同步
 
-共 8 個 Fix Workers（含合併的同檔案變更） + 5 個 Regression Test Workers。
+共 11 個 Fix Workers（含合併的同檔案變更） + 6 個 Regression Test Workers。
 
-**Success looks like**: All issues resolved, all regression tests pass, full test suite passes, no regressions.
+**Success looks like**: All 25 issues resolved, all regression tests pass, full test suite passes, no regressions.
 
 ---
 
 ## 3. Issue Inventory
 
-- FIX-01 (P1, 簡單, 實作遺漏): 涵蓋率門檻 65% 低於 SPEC 80% 要求 — `scripts/test.sh`
-- FIX-02 (P1, 簡單, 規格偏離): generate-storyboard-images 輸入解析 8 處 throw new Error() 應為 UserInputError — `packages/tools/generate-storyboard-images/index.ts`
-- FIX-03 (P2, 複雜, 規格偏離): architecture 工具完全繞過 createToolRunner — `packages/tools/architecture/index.ts`
-- FIX-04 (P2, 簡單, 規格偏離): open-github-issue L525/L554 泛型 Error 應為 SystemError — `packages/tools/open-github-issue/index.ts`
-- FIX-05 (P2, 簡單, 規格遺漏): validate-skill-frontmatter + validate-openai-agent-config extractFrontmatter 泛型 Error — 2 個檔案
-- FIX-06 (P2, 簡單, 架構瑕疵): REGTEST-05 (.ts) 未編譯/執行，需轉換為 .js — `test/tools/enforce-video-aspect-ratio/index.test.ts`
-- FIX-07 (P2, 簡單, 架構瑕疵): 直接工具名稱降階路徑繞過 ToolArgsParser — `packages/cli/index.ts`
-- FIX-08 (P3, 簡單, 規格偏離): review-threads L150/L321 泛型 Error 應為 UserInputError — `packages/tools/review-threads/index.ts`
-- FIX-09 (P3, 簡單, 冗餘程式碼): open-github-issue FLAG_MAP + buildArgsFromYargs 死碼 — `packages/tools/open-github-issue/index.ts`
-- FIX-10 (P3, 簡單, 規格偏離): test/installer.test.js 使用 raw process.platform 而非 adapter — `test/installer.test.js`
-- FIX-11 (P3, 簡單, 規格遺漏): extract-conversations 使用 process.env.HOME 而非 adapter.homeDir() — `packages/tools/extract-conversations/index.ts`
-- FIX-12 (P3, 簡單, 架構瑕疵): PlatformAdapter singleton 缺少 mock injection 機制 — `packages/tool-utils/platform-adapter.ts`
-- FIX-13 (P3, 簡單, 冗餘程式碼): 4 個 help-text wrapper 函式多餘間接層 — `packages/cli/index.ts`
-- FIX-14 (P3, 簡單, 冗餘程式碼): assertCommand 呼叫在型別收窄後為冗餘 — `packages/cli/index.ts`
-- FIX-15 (P3, 簡單, 規格遺漏): SPEC/PROMPT 工具數量與實際不符 (18/19 vs 21) — `SPEC.md`, `PROMPT.md`
-- FIX-16 (P3, 簡單, 架構瑕疵): if-else 鏈重複派發表路由邏輯 — `packages/cli/index.ts`
+- FIX-01 (P1, 簡單, 實作遺漏): 涵蓋率門檻 69% lines / 67% functions 低於 SPEC 80% / CHECKLIST 75% — `scripts/test.sh`
+- FIX-02 (P1, 簡單, 規格偏離): open-github-issue L759-762 inner catch 對 UserInputError 使用 "Error:" 前綴 — `packages/tools/open-github-issue/index.ts`
+- FIX-03 (P1, 簡單, 規格偏離): review-threads cmdList/cmdResolve 6 個 inner catch 使用 "Error:" 前綴 — `packages/tools/review-threads/index.ts`
+- FIX-04 (P2, 簡單, 規格偏離): read-github-issue 3 處 stderr.write+return1 應改為 typed throw — `packages/tools/read-github-issue/index.ts`
+- FIX-05 (P2, 簡單, 規格偏離): find-github-issues 2 處 stderr.write+return1 應改為 typed throw — `packages/tools/find-github-issues/index.ts`
+- FIX-06 (P2, 複雜, 架構瑕疵): architecture 工具仍有多層 catch block — `packages/tools/architecture/index.ts`
+- FIX-07 (P2+部分P3, 簡單, 規格偏離): validate tools "no directories" stderr.write+return1 — 2 個 validate 工具
+- FIX-08 (P2+部分P3, 複雜, 規格偏離): codegraph 工具手動錯誤處理 — `packages/tools/codegraph/index.ts`
+- FIX-09 (P2, 簡單, 架構缺陷): CI test.yml 缺少 npm run build 步驟 — `.github/workflows/test.yml`
+- FIX-10 (P2+部分P3, 簡單, 規格遺漏): CL-13 測試未實作 — `test/tool-registry/all-tools-known.test.js` (新檔案)
+- FIX-11 (P3, 簡單, 冗餘程式碼): 死碼清理 — `packages/cli/index.ts`、`packages/cli/types.ts`、`packages/cli/installer.ts`
+- FIX-12 (P3, 簡單, 規格遺漏): 16 個工具缺乏明確的 `strict: true` 宣告 — 16 個 tool index.ts 檔案
+- FIX-13 (P3, 簡單, 規格遺漏): open-github-issue empty catch 吞錯誤 + 測試弱斷言需修正 — `packages/tools/open-github-issue/index.ts` + `test/tools/handler-error-propagation.test.js`
+
+Note: FIX-02 (P1-2) and FIX-13 (P3-19) both modify `open-github-issue/index.ts` → merged into Worker 2.
+Note: FIX-13 (empty catch) and P3-19 (weak test assertion) are separate: the fix is source code (open-github-issue/index.ts), the test fix is test code (handler-error-propagation.test.js). Different files → separate workers.
 
 ---
 
@@ -78,373 +78,418 @@
 
 ### Dependencies
 
-- FIX-01 (coverage threshold) depends on FIX-03 (architecture coverage improvement) for CI to pass with higher threshold — **logical dependency**
-- FIX-04 (open-github-issue generic Error) and FIX-09 (open-github-issue dead code) share the same file → merged into one worker
-- FIX-07, FIX-13, FIX-14, FIX-16 all modify `packages/cli/index.ts` → merged into one worker
-- FIX-15 (documentation drift) is docs-only, no code dependency
+- FIX-01 (coverage threshold) depends on FIX-06 + FIX-08 + FIX-09 (architecture/codegraph coverage improvement + CI build) for CI to pass with higher threshold — **logical dependency**
+- FIX-02 (open-github-issue inner catch) and FIX-13 (open-github-issue empty catch) share the same file → merged into one worker
+- FIX-04 + FIX-05 (read-github-issue + find-github-issues) are independent patterns in separate files → can be parallel 
+- FIX-11 (P3 dead code cleanups) modifies 3 files in packages/cli/ — self-contained
+- FIX-12 (strict:true) modifies 16 tool files — no overlap with any other fix
+- FIX-10 (CL-13 test) creates a NEW test file — no file overlap with any fix worker
 - All REGTESTs depend on their corresponding FIX completing first
 
 ### File overlaps
 
-- FIX-04 + FIX-09: both modify `packages/tools/open-github-issue/index.ts` → merged into **Worker 3**
-- FIX-07 + FIX-13 + FIX-14 + FIX-16: all modify `packages/cli/index.ts` → merged into **Worker 5**
-- FIX-01 modifies `scripts/test.sh`; no overlap with any other fix
-- All other fixes modify unique files → can run in parallel within their batch
+Each fix worker below modifies a unique set of files. After the merged workers (FIX-02+FIX-13 combined), NO two workers share any file. This means ALL fix workers can run in PARALLEL within their batch.
+
+- Worker 1: `scripts/test.sh`
+- Worker 2: `packages/tools/open-github-issue/index.ts`
+- Worker 3: `packages/tools/review-threads/index.ts`
+- Worker 4: `packages/tools/read-github-issue/index.ts`
+- Worker 5: `packages/tools/find-github-issues/index.ts`
+- Worker 6: `packages/tools/architecture/index.ts`
+- Worker 7: `packages/tools/validate-skill-frontmatter/index.ts` + `packages/tools/validate-openai-agent-config/index.ts`
+- Worker 8: `packages/tools/codegraph/index.ts`
+- Worker 9: `.github/workflows/test.yml`
+- Worker 10: `test/tool-registry/all-tools-known.test.js` (new file)
+- Worker 11: `packages/cli/index.ts` + `packages/cli/types.ts` + `packages/cli/installer.ts`
+- Worker 12: 16 tool files (one line each)
+- Workers 13: Not used (merged into Worker 2 for same-file issues)
+
+**Zero file overlap between any workers.** Full parallel execution within each batch.
 
 ### Parallelism strategy
 
-| Batch | Workers | File overlap | Strategy |
+| Batch | Workers | File Overlap | Strategy |
 |---|---|---|---|
-| Batch 1 | FIX-01, FIX-02 | No overlap | **Parallel** |
-| Batch 2 | FIX-03, Worker-3, FIX-05, FIX-06, FIX-08, FIX-10, FIX-11, FIX-12 | No overlap | **Parallel** |
-| Batch 3 | Worker-5 (cli/index.ts) | Self-contained file | **Single worker, sequential** |
-| Batch 4 | FIX-15 (docs) | No overlap with code | **Sequential** (docs only) |
-| Batch 5 | REGTEST-01~05 | Test files may overlap | **Parallel** (no source overlap) |
+| Batch 1 — P1 + P2 Fixes | Workers 1–10 | No overlap between any worker | **Full parallel** |
+| Batch 2 — P3 Fixes | Workers 11–12 | No overlap between workers or with Batch 1 files | **Full parallel** |
+| Batch 3 — Regression Tests | REGTEST-01~06 | REGTEST-02/03/05 share `handler-error-propagation.test.js` | **Sequential in sub-batches** |
+| Batch 4 — Final Verification | Coordinator | Self-contained | **Sequential** |
 
 ---
 
 ## 5. Fix Details (with Regression Test Design)
 
-### FIX-01: Coverage threshold 65% → 75% (P1-1)
+### FIX-01: Coverage threshold 69% → 75% lines, 70% functions (P1-1, P2-13)
 
-**Root cause**: When FIX-05 (Round 9) narrowed the coverage exclude from `packages/tools/**` to `packages/tools/eval/**`, the threshold was simultaneously lowered from `80` to `65` to avoid CI failures from newly-included low-coverage tool packages. The FIX.md recommended `75` but the fix implemented `65`.
+**Root cause**: Round 10 FIX-01 raised the threshold from 65% to 69% lines / 67% functions as a compromise, but SPEC requires 80% lines and CHECKLIST documents 75% functions. Actual coverage is ~73% (Group 1) and ~69% (Group 2).
 
 **Files involved**: `scripts/test.sh` > L14
 
 **Fix approach**:
-1. Raise `--test-coverage-lines` from `65` to `75`
-2. Raise `--test-coverage-functions` from `65` to `70`
-3. This will cause CI to fail if actual coverage drops below 75% lines or 70% functions
-4. Verify architecture tool coverage increases enough from the FIX-03 changes (wrapping handler in createToolRunner exposes error paths to coverage)
+1. Raise `--test-coverage-lines` from `69` to `75`
+2. Raise `--test-coverage-functions` from `67` to `70`
+3. Keep `--test-coverage-branches=60` unchanged
 
-If the build still fails after FIX-03's coverage improvements, keep the current 65% threshold and instead update SPEC.md to document the adjusted threshold as a conscious tradeoff. This is an ASK FIRST decision.
+If CI fails with these thresholds due to low architecture/codegraph coverage:
+- Keep 75/70/60 thresholds (they represent the actual coverage boundary)
+- Document in SPEC.md that the 80% lines / 75% functions target remains aspirational, with a note explaining the gap and listing which tools need coverage improvement to close it
 
 **Complexity**: Simple — 1 file, 2 values changed
 
-**Regression test**: Manual/CI verification only
+**Regression test**: CI verification only
 - Command: `COVERAGE=true bash scripts/test.sh`
 - Expected: Exit code 0 (coverage meets thresholds)
 - No automated regression test possible for CI config changes
 
 ---
 
-### FIX-02: generate-storyboard-images input parsing 8x throw Error → UserInputError (P1-2)
+### FIX-02 + FIX-13: open-github-issue inner catch + empty catch (P1-2, P2-5)
 
-**Root cause**: `parsePromptEntries()` (L88-108) and `parsePromptsFile()` (L110-182) handle user-provided input validation (empty prompts, invalid JSON, missing scenes) but throw `new Error(...)` instead of `UserInputError`. These propagate through `createToolRunner`'s catch block which formats them with the generic "Error:" prefix.
+**Root cause (P1-2)**: L759-762 has an inner try/catch that catches errors from `hydrateArgs()` and `validateIssueContent()`, both of which throw `UserInputError`. The catch block writes `stderr.write('Error: ${err.message}')`, adding the "Error:" prefix that should NOT appear for UserInputError. This prevents createToolRunner's boundary from formatting correctly.
 
-**Files involved**: `packages/tools/generate-storyboard-images/index.ts` > L94, L100, L103, L106, L120, L144, L149, L181
+**Root cause (P2-5)**: L770-772 has an empty catch block around `resolveRepoAsync(args.repo, context)` which throws `UserInputError` for invalid repo format, failed git remote, or non-GitHub origin. The catch silently discards the error and returns exit code 1 with NO stderr output.
 
-**Fix approach**: Replace all 8 `throw new Error(...)` sites with `throw new UserInputError(...)`:
-- L94: `throw new UserInputError(\`Empty prompt at index ${i}\`);`
-- L100: `throw new UserInputError(\`Empty prompt in object at index ${i}\`);`
-- L103: `throw new UserInputError(\`Invalid item type at index ${i}: expected string or object\`);`
-- L106: `throw new UserInputError('No prompts found.');`
-- L120: `throw new UserInputError('Object mode requires a top-level "scenes" array.');`
-- L144: `throw new UserInputError(\`Invalid scene at index ${si}: expected object.\`);`
-- L149: `throw new UserInputError(\`Scene ${si}: 'description' is required.\`);`
-- L181: `throw new UserInputError('Top-level JSON must be an array or an object.');`
+**Files involved**: `packages/tools/open-github-issue/index.ts` > L759-762, L770-772
 
-The tool already imports `UserInputError` at line 5:
+**Fix approach**:
+1. **Remove L759-762 inner try/catch entirely**: Since `hydrateArgs` and `validateIssueContent` throw `UserInputError`, removing the catch lets errors propagate to createToolRunner's boundary which correctly formats UserInputError without "Error:" prefix
+2. **Remove L770-772 empty try/catch entirely**: Removing the catch lets `resolveRepoAsync`'s `UserInputError` propagate to createToolRunner's boundary. The user will see the error message (e.g., "Invalid repo format. Use owner/repo." or "Unable to resolve origin remote.") instead of silent failure.
+3. Verify the schema at L709 already positions these calls at the right scope level for createToolRunner to catch thrown errors
+
+The open-github-issue tool already imports `UserInputError` and `SystemError` (L7). No import changes needed.
+
+**Complexity**: Simple — 1 file, remove 2 try/catch blocks
+
+**Regression test**: REGTEST-02 + REGTEST-05 (see Section 6)
+
+---
+
+### FIX-03: review-threads inner 6 catches + default switch (P1-3, P2-11)
+
+**Root cause (P1-3)**: Both `cmdList` (L395-446) and `cmdResolve` (L448-476) have 3 inner try/catch blocks each — for `resolveRepo` (L402-407, L454-460), `resolvePrNumber` (L409-415, L462-468), and `fetchReviewThreads` (L417-423, L470-476). All 6 blocks format errors with `stderr.write('Error: ${err.message}')` — but these functions throw `UserInputError`, which should display WITHOUT the "Error:" prefix.
+
+**Root cause (P2-11)**: L551-552 default switch case writes "Unsupported command" to stderr and returns 1 instead of throwing `UserInputError`.
+
+**Files involved**: `packages/tools/review-threads/index.ts` > L402-423, L454-476, L551-552
+
+**Fix approach**:
+1. **Remove all 6 inner try/catch blocks**: All 6 call sites (`resolveRepo`, `resolvePrNumber`, `fetchReviewThreads`) throw typed errors (UserInputError/SystemError). Removing the catch blocks lets errors propagate to createToolRunner's boundary which formats correctly per type. The functions already return `Promise<number>` via the outer handler, so removing catches is safe — the code after each try/catch (e.g., the rest of cmdList/cmdResolve) only runs on success, and if any step throws, the error propagates upward.
+2. **L551-552**: Replace `stderr!.write(\`Unsupported command: ${args.command}\n\`); return 1;` with `throw new UserInputError(\`Unsupported command: ${args.command}\`);`
+
+The review-threads tool already imports `UserInputError` and `SystemError` (verified). No import changes needed.
+
+**Complexity**: Simple — 1 file, remove 6 try/catch blocks + 1 conversion
+
+**Regression test**: REGTEST-03 + REGTEST-06 (see Section 6)
+
+---
+
+### FIX-04: read-github-issue 3x stderr.write+return1 → typed throws (P2-6)
+
+**Root cause**: The handler has 3 error paths that write to stderr and return 1 instead of throwing typed errors:
+- L133-137: Missing issue argument — writes `'Error: issue number or URL is required.\n'`
+- L142-144: gh command failure — writes `result.stderr.trim() || 'gh issue view failed.\n'`
+- L150-152: JSON parse failure — writes `'Error: unable to parse gh output as JSON.\n'`
+
+All 3 bypass createToolRunner's error boundary (the tool IS wrapped in createToolRunner at L171).
+
+**Files involved**: `packages/tools/read-github-issue/index.ts` > L132-153
+
+**Fix approach**:
+1. L133-137: Replace `stderr.write('Error: ...'); return 1;` with `throw new UserInputError('issue number or URL is required.');`
+2. L142-144: Replace `stderr.write(...); return result.exitCode;` with `throw new SystemError(result.stderr.trim() || 'gh issue view failed');`
+3. L150-152: Replace `stderr.write('Error: ...'); return 1;` with `throw new SystemError('unable to parse gh output as JSON');`
+
+Add `UserInputError, SystemError` to the import from `@laitszkin/tool-utils` at line 3:
 ```ts
-import { UserInputError, SystemError, createToolRunner } from '@laitszkin/tool-utils';
+import { createToolRunner, UserInputError, SystemError } from '@laitszkin/tool-utils';
 ```
 
-**Complexity**: Simple — 1 file, 8 find-and-replace lines
+**Complexity**: Simple — 1 file, 3 throw conversions + import addition
 
-**Regression test**: REGTEST-01 (Unit → `test/tools/generate-storyboard-images-prompt-multiple.test.js`)
-- GIVEN an empty prompt value WHEN `parsePromptEntries` processes it THEN throws `UserInputError` (not generic Error)
-- Oracle: `assert.throws(() => ..., UserInputError)` passes after fix, fails before fix (throws Error)
+**Regression test**: REGTEST-04 (see Section 6)
 
 ---
 
-### FIX-03: architecture tool → use createToolRunner (P2-3)
+### FIX-05: find-github-issues 2x stderr.write+return1 → typed throws (P2-7)
 
-**Root cause**: `architectureHandler` is a raw async function assigned directly to `tool.handler` (L648-654). It does not use `createToolRunner`, so all argument parsing (L163-170, L498-502), error handling (L156-159, L178-187, L218-221, L433-442, L505-507, L596-605, L641-644), and help text (L157, L505) are manually implemented.
+**Root cause**: The handler has 2 error paths that write to stderr and return 1 instead of throwing typed errors:
+- L164-166: gh command failure — writes `result.stderr.trim() || 'gh issue list failed.\n'`
+- L173-175: JSON parse failure — writes `'Error: unable to parse gh output as JSON.\n'`
 
-**Files involved**: `packages/tools/architecture/index.ts` > entire file
+Both bypass createToolRunner's error boundary (the tool IS wrapped in createToolRunner at L193).
+
+**Files involved**: `packages/tools/find-github-issues/index.ts` > L164-175
+
+**Fix approach**:
+1. L164-166: Replace `stderr.write(...); return result.exitCode;` with `throw new SystemError(result.stderr.trim() || 'gh issue list failed');`
+2. L173-175: Replace `stderr.write('Error: ...'); return 1;` with `throw new SystemError('unable to parse gh output as JSON');`
+
+Add `UserInputError, SystemError` to the import from `@laitszkin/tool-utils` at line 3:
+```ts
+import { createToolRunner, UserInputError, SystemError } from '@laitszkin/tool-utils';
+```
+
+**Complexity**: Simple — 1 file, 2 throw conversions + import addition
+
+**Regression test**: No automated regression test (depends on gh CLI). Manual verification via handler.
+
+---
+
+### FIX-06: Architecture tool error boundary cleanup (P2-4, P2-8, P2-9, P3-16)
+
+**Root cause**: The architectureHandler has 3 error handling layers creating inconsistency:
+1. **P2-8**: `handleApply`'s `resolveProjectRoot` catch (L211-216) uses `stderr.write(e.message) + return 1` instead of throwing. Missed by FIX-03.
+2. **P2-9**: `handleApply`'s inner catch (L428-436) catches mutation pipeline errors and formats with non-standard "Batch aborted:" prefix for generic errors, instead of re-throwing to the outer handler.
+3. **P3-16**: `architectureHandler`'s outer catch (L623-634) duplicates the CLI boundary's error formatting. Since there's no `createToolRunner` wrapping, errors caught here are formatted manually rather than propagating to `run()`'s catch block.
+
+**Files involved**: `packages/tools/architecture/index.ts` > L211-216, L428-436, L597-634
 
 **Fix approach**:
 
-This is complex because architecture has nested subcommands (`apply`, `template`, and a fallback to the legacy JS CLI). `createToolRunner` wraps a single `schema.handler` with `parseArgs`, which doesn't support nested subcommands naturally. Approach:
+This is **complex** because of the nested subcommand dispatch and mutation pipeline rollback logic.
 
-1. **Wrap the existing `architectureHandler` inside a `createToolRunner` schema** with minimal options (just `--help`). The existing manual subcommand parsing for `apply`/`template` stays as-is within the handler:
+1. **P2-8 (L211-216)**: Convert `resolveProjectRoot` catch to throw `UserInputError`:
+   ```ts
+   try {
+     projectRoot = cli.resolveProjectRoot(flags);
+   } catch (e: any) {
+     throw new UserInputError(e.message);
+   }
    ```
-   schema = {
-     options: { help: { type: 'boolean', short: 'h' } },
-     allowPositionals: true,
-     usage: 'apltk architecture <apply|template> [options]',
-     handler: architectureHandler,
-   };
+
+2. **P2-9 (L428-436)**: After rollback/cleanup in the inner catch, re-throw the error instead of formatting + return 1:
+   ```ts
+   } catch (e: any) {
+     // Any mutation failure in a batch aborts and reverts to the
+     // pre-mutation snapshot (already done by deep-cloning at L231).
+     // Re-throw as UserInputError for user-facing error messages,
+     // or as-is if it's already an AppError subclass.
+     if (e instanceof UserInputError || e instanceof SystemError) {
+       throw e;
+     }
+     throw new UserInputError(e.message);
+   }
    ```
-2. **Remove the duplicate error boundary** from `handleTemplate`'s outer catch (L596-605) and `architectureHandler`'s catch (L640-644) — let errors propagate to `createToolRunner`'s catch block
-3. **Convert early-exit error paths** (`stderr.write + return 1`) to typed `throw`:
-   - L156-159: Missing YAML arg → `throw new UserInputError(...)` instead of `stderr.write + return 1`
-   - L178-182: YAML parse failure → `throw new UserInputError(...)` instead of `stderr.write + return 1`
-   - L184-187: YAML not object → `throw new UserInputError(...)` instead of `stderr.write + return 1`
-   - L218-221: resolveProjectRoot failure — already caught; keep as-is since it redirects to error boundary
-   - L505-507: Missing template args → `throw new UserInputError(...)` instead of `stderr.write + return 1`
-4. **Remove duplicate catch block** in `handleTemplate` (L596-605) and `architectureHandler` (L640-644) — they duplicate `createToolRunner`'s catch logic
-5. **Keep `handleApply`'s mutations catch block** (L433-442) because it's inside a transaction-like batch that needs local error handling for partial failures
+   Note: The pre-mutation deep-clone at L231 means rollback is implicit (the snapshot is never written to disk). The catch block only needs to re-throw, not format.
 
-**Complexity**: Complex — requires understanding architecture's dual dispatch (in-process apply/template + legacy JS CLI)
+3. **P3-16 (L623-634)**: Remove the outer try/catch from `architectureHandler` entirely. Errors now propagate to `run()`'s catch block (index.ts L484-496) which has IDENTICAL formatting logic. The handler becomes:
+   ```ts
+   export async function architectureHandler(
+     args: string[],
+     context: ToolContext,
+   ): Promise<number> {
+     // Intercept apply / template before passing through to the JS CLI
+     const first = args[0] || '';
+     if (first === 'apply') return await handleApply(args.slice(1), context);
+     if (first === 'template') return await handleTemplate(args.slice(1), context);
+     
+     // Delegate to the existing atlas CLI (still in JS)
+     const sourceRoot = context.sourceRoot || ...;
+     const cliPath = ...;
+     const cliModule = await import(pathToFileURL(cliPath).href);
+     const cli = cliModule.default;
+     return cli.dispatch(args, {
+       stdout: context.stdout || process.stdout,
+       stderr: context.stderr || process.stderr,
+     });
+   }
+   ```
 
-**Regression test**: REGTEST-02 (Integration → existing `test/tools/architecture-error-types.test.js`)
-- GIVEN architecture handler with invalid arguments WHEN called THEN verify it throws typed AppError (not stderr.write+return1)
-- Oracle: Test that previously asserted stderr.write behavior must be updated to assert on exit code 1 + specific error messages
+4. **handleApply's inner catch (L239-437 mutation pipeline)**: Read the mutation pipeline to understand what rollback it performs. The deep-clone at L231 already provides implicit rollback by not writing to disk until all mutations succeed. Convert the catch to re-throw.
+
+**Complexity**: Complex — requires understanding architecture's nested dispatch, mutation pipeline, and rollback semantics
+
+**Regression test**: REGTEST-06 (see Section 6)
 
 ---
 
-### FIX-04 + FIX-09: open-github-issue generic errors + dead code (P2-4 + P3-1)
+### FIX-07: validate tools "no skill directories" edge case (P2-12)
 
-**Root cause (generic errors)**: `createIssueWithGh` (L525) throws `new Error(...)` for gh CLI failures instead of `SystemError`. `createIssueWithToken` (L554) throws `new Error(...)` for API response format errors instead of `SystemError`.
-
-**Root cause (dead code)**: `FLAG_MAP` (L867-884) and `buildArgsFromYargs` (L886-897) were used pre-createToolRunner conversion. `createToolRunner` receives already-parsed `values` from `node:util.parseArgs`, so these are never called.
-
-**Files involved**: `packages/tools/open-github-issue/index.ts` > L525, L554, L867-897
-
-**Fix approach**:
-1. L525: Change `throw new Error(...)` to `throw new SystemError(...)`:
-   ```ts
-   throw new SystemError(result.stderr.trim() || 'gh issue create failed');
-   ```
-2. L554: Change `throw new Error(...)` to `throw new SystemError(...)`:
-   ```ts
-   throw new SystemError('Issue created but response did not include html_url');
-   ```
-3. Remove L867-897: Delete `FLAG_MAP` constant and `buildArgsFromYargs` function entirely
-
-The tool already imports `SystemError` at line 7 (verified). No import changes needed.
-
-**Complexity**: Simple — 1 file, 2 type replacements + remove ~30 lines dead code
-
-**Regression test**: REGTEST-03 (Unit → `test/tools/handler-error-propagation.test.js`)
-- GIVEN a mocked gh command that fails WHEN `createIssueWithGh` is called THEN verify `SystemError` is thrown
-- Oracle: `assert.throws(() => ..., SystemError)` passes after fix, fails before fix (throws Error)
-
----
-
-### FIX-05: validate tools extractFrontmatter generic Error (P2-5)
-
-**Root cause**: Both `validate-skill-frontmatter/index.ts` (L19, L26) and `validate-openai-agent-config/index.ts` (L24, L31, L36) have an `extractFrontmatter` helper function that validates YAML frontmatter structure. It throws `new Error(...)` for structural validation failures instead of `UserInputError`.
+**Root cause**: Both `validate-skill-frontmatter/index.ts` (L105-106) and `validate-openai-agent-config/index.ts` (L199-200) handle the edge case of no skill directories found by writing directly to stderr and returning 1, instead of throwing a typed error through createToolRunner.
 
 **Files involved**:
-- `packages/tools/validate-skill-frontmatter/index.ts` > L19, L26
-- `packages/tools/validate-openai-agent-config/index.ts` > L24, L31, L36
+- `packages/tools/validate-skill-frontmatter/index.ts` > L105-106
+- `packages/tools/validate-openai-agent-config/index.ts` > L199-200
 
-**Fix approach**: In BOTH files, replace generic `throw new Error(...)` with `throw new UserInputError(...)`:
+**Fix approach**:
 
-For `validate-skill-frontmatter/index.ts`:
-- L19: `throw new UserInputError("SKILL.md must start with YAML frontmatter delimiter '---'.");`
-- L26: `throw new UserInputError("SKILL.md frontmatter is missing the closing '---' delimiter.");`
-
-For `validate-openai-agent-config/index.ts`:
-- L24: `throw new UserInputError("SKILL.md must start with YAML frontmatter delimiter '---'.");`
-- L31: `throw new UserInputError('SKILL.md frontmatter must be a YAML mapping.');`
-- L36: `throw new UserInputError("SKILL.md frontmatter is missing the closing '---' delimiter.");`
-
-Both files need `UserInputError` added to their imports:
+In both files, replace:
 ```ts
-import { UserInputError, createToolRunner } from '@laitszkin/tool-utils';
+stderr.write('No top-level skill directories found.\n');
+return 1;
+```
+with:
+```ts
+throw new UserInputError('No top-level skill directories found.');
 ```
 
-**Complexity**: Simple — 2 files, 5 find-and-replace lines + import addition
+Both files already import `UserInputError` (from Round 10 FIX-05 changes). No import changes needed.
 
-**Regression test**: REGTEST-04 (Unit → existing `test/tools/validation-error-handling.test.js`)
-- GIVEN a SKILL.md without proper YAML frontmatter WHEN `extractFrontmatter` processes it THEN throws `UserInputError`
-- Oracle: `assert.throws(() => ..., UserInputError)` passes after fix, fails before fix
+**Complexity**: Simple — 2 files, 2 lines each
+
+**Regression test**: No automated regression test needed for this edge case (the error message is the only thing that changes, and it's already tested indirectly by validation tests).
 
 ---
 
-### FIX-06: REGTEST-05 .ts → .js conversion (P2-6)
+### FIX-08: codegraph error handling conversion (P2-10, P3-18)
 
-**Root cause**: `test/tools/enforce-video-aspect-ratio/index.test.ts` is a TypeScript file but the test runner glob (`test/**/*.test.js`) only matches `.js` files. No compilation step exists for `test/` directory. The 2 regression tests for FIX-08 (typed error verification) are never executed.
+**Root cause**: The `codegraphHandler` (L13-154) and lib/* subcommand files use manual `stderr.write+return1` patterns throughout instead of throwing typed errors through a framework boundary. The tool does not use `createToolRunner`.
 
-**Files involved**: `test/tools/enforce-video-aspect-ratio/index.test.ts`
+**Files involved**: `packages/tools/codegraph/index.ts` > L40-154
 
-**Fix approach**: Rename the file from `.test.ts` to `.test.js` so the test runner picks it up. The file contents are plain JavaScript (no TypeScript type annotations — verified) so the extension change is sufficient.
+**Fix approach**:
 
+This is **complex** because codegraph has 8 subcommands with manual argument parsing and error handling.
+
+The approach is a **partial but impactful fix**:
+1. **Wrap main handler in createToolRunner**: Add a minimal schema with just `--help` support. The existing manual arg parsing for subcommand-specific flags stays unchanged within the handler body.
+2. **Convert the outer catch (L144-154)**: Replace the generic error formatting with re-throwing `SystemError`:
+   ```ts
+   } catch (error: unknown) {
+     if (error instanceof SystemError) throw error;
+     throw new SystemError((error as Error).message);
+   }
+   ```
+3. **Convert the default case (L139-142)**: Replace `stderr.write + printHelp + return 1` with `throw new UserInputError('Unknown subcommand: ...')`
+4. **Convert the findProjectRoot catch (L43-53)**: Replace `stderr.write + return 1` with re-throwing the error. The special MODULE_NOT_FOUND message can be preserved by throwing a UserInputError with that text.
+5. **Convert search/explore usage checks (L103-104, L112-113)**: Replace `stderr.write + return 1` with `throw new UserInputError(...)`.
+6. **Convert verify specDir check (L133-134)**: Replace `stderr.write + return 1` with `throw new UserInputError(...)`.
+
+The tool already imports `SystemError` (L2). Add `UserInputError, createToolRunner` to imports:
+```ts
+import { SystemError, UserInputError, createToolRunner } from '@laitszkin/tool-utils';
+```
+
+Wrap the export:
+```ts
+export const tool: ToolDefinition = {
+  name: 'codegraph',
+  category: 'Code analysis',
+  description: 'CodeGraph code intelligence — ...',
+  handler: createToolRunner({
+    options: { help: { type: 'boolean', short: 'h' } },
+    allowPositionals: true,
+    usage: 'apltk codegraph <subcommand> [options]',
+    handler: codegraphHandler,
+  }),
+};
+```
+
+**Known limitation**: The lib/* subcommand files (cmd-search.ts, cmd-status.ts, etc.) still use `process.stderr.write+return1`. These are utility modules used internally by the handler. Errors from these propagate up to the main handler's try/catch (L144-154) where they're now converted to SystemError throws. This is sufficient — the lib/ files don't need individual conversion.
+
+**Complexity**: Complex — requires understanding codegraph's subcommand dispatch architecture
+
+**Regression test**: REGTEST-07 (see Section 6)
+
+---
+
+### FIX-09: CI test workflow add build step (P2-15)
+
+**Root cause**: `.github/workflows/test.yml` runs `npm ci` then directly executes `bash scripts/test.sh` without `npm run build`. All workspace packages export from `./dist/` which doesn't exist after a clean checkout. The parallel `skill-validation.yml` correctly includes the build step.
+
+**Files involved**: `.github/workflows/test.yml` > L19-21
+
+**Fix approach**:
+Add `run: npm run build` between the `npm ci` and `bash scripts/test.sh` steps:
+```yaml
+      - run: npm ci
+      - run: npm run build
+      - run: bash scripts/test.sh
+        env:
+          COVERAGE: 'true'
+```
+
+**Complexity**: Simple — 1 file, 1 line added
+
+**Regression test**: CI verification only (push to test the workflow)
+
+---
+
+### FIX-10: CL-13 backward-compat test (P2-14)
+
+**Root cause**: CHECKLIST.md defines CL-13: "All 19 existing tool names resolve via dispatch table the same as current isKnownToolName()" referencing `test/tool-registry/all-tools-known.test.js`. The file and directory don't exist.
+
+**Files involved**: `test/tool-registry/all-tools-known.test.js` (new file)
+
+**Fix approach**:
+Create the test file at `test/tool-registry/all-tools-known.test.js`. The test should:
+1. Import `isKnownToolName` from `@laitszkin/cli`
+2. Verify all 21 tool module names resolve (extract the module suffix from each)
+3. Verify all 3 aliases resolve
+4. Verify a non-existent tool name returns false
+
+Reference the tool names from SPEC.md (which says "21 tool packages") and the known aliases from `tool-registration.ts`.
+
+**Complexity**: Simple — 1 new test file
+
+**Regression test**: The file IS the regression test. Run after creation:
 ```bash
-git mv test/tools/enforce-video-aspect-ratio/index.test.ts test/tools/enforce-video-aspect-ratio/index.test.js
+node --test test/tool-registry/all-tools-known.test.js
 ```
-
-**Note**: The file already uses CommonJS patterns (`import test from 'node:test'`), which is the project standard. No content changes needed.
-
-**Complexity**: Simple — rename only
-
-**Regression test**: The file IS the regression test. After renaming, it will be picked up by the test runner and executed automatically. No additional test needed.
 
 ---
 
-### FIX-07: Direct tool name fallback bypasses ToolArgsParser (P2-7)
+### FIX-11: P3 dead code cleanups (P3-20, P3-21, P3-22, P3-23)
 
-**Root cause**: In `packages/cli/index.ts` L178-193, `parseArguments()` has a fallback path: when `firstArg` is not a dispatch-table key but `isKnownToolName(firstArg)` returns true, the code manually constructs a result object instead of routing through `ToolArgsParser`. This creates a second parallel implementation of tool dispatch logic.
+**Root cause**: Multiple unused imports and dead code:
+- P3-20: `packages/cli/installer.ts` L3 — unused `import os from 'node:os'`
+- P3-21: `packages/cli/index.ts` L6-7 — unused imports `formatToolList`, `buildToolDiscoveryHelp`, `formatExamples` (orphaned after FIX-13)
+- P3-22: `packages/cli/types.ts` L30 — unused imports of parser command types
+- P3-23: `packages/cli/index.ts` L67-75 — unused `assertCommand` function (all call sites removed by FIX-14)
 
-**Files involved**: `packages/cli/index.ts` > L178-193
-
-**Fix approach**: Route the direct tool name path through `ToolArgsParser`:
-1. Before the fallback check at L178, parse args through `toolParser` when the first arg is a known tool name:
-```ts
-if (firstArg && isKnownToolName(firstArg)) {
-  const cmd = toolParser.parse(argv);
-  assertCommand<ToolCommand>(cmd, 'tool');
-  return {
-    command: 'tool' as const,
-    modes: [],
-    toolName: cmd.toolName,
-    toolArgs: cmd.toolArgs,
-    showHelp: false,
-    showToolsHelp: false,
-    toolkitHome: undefined,
-    assumeYes: false,
-    linkMode: undefined,
-    explicitInstallCommand: undefined,
-    helpTopic: 'overview' as const,
-    installSpecificMode: undefined,
-  };
-}
-```
-2. Verify `ToolArgsParser` correctly handles the bare tool name (e.g., `['filter-logs', 'app.log']` — the parser should set `toolName: 'filter-logs'` and `toolArgs: ['app.log']`)
-
-**Complexity**: Simple — 1 function within 1 file
-
----
-
-### FIX-08: review-threads L150, L321 generic Error (P3-2)
-
-**Root cause**: After FIX-09 (Round 9), 8/10 generic `throw new Error()` sites in review-threads were converted to typed errors. Two sites remain: L150 (`resolvePrNumber` — gh CLI failure not on PR branch context) and L321 (input JSON validation — missing required fields in thread data).
-
-**Files involved**: `packages/tools/review-threads/index.ts` > L150, L321
+**Files involved**:
+- `packages/cli/installer.ts` > L3
+- `packages/cli/index.ts` > L6-7, L61-75 (including comment)
+- `packages/cli/types.ts` > L30
 
 **Fix approach**:
-1. L150: Change to `UserInputError` (unable to infer PR from branch — user context error):
-   ```ts
-   throw new UserInputError('Unable to infer PR number from current branch context');
-   ```
-2. L321: Change to `UserInputError` (input validation):
-   ```ts
-   throw new UserInputError('JSON must include thread_ids, adopted_thread_ids, or threads');
-   ```
+1. **installer.ts L3**: Remove `import os from 'node:os';`
+2. **index.ts L6-7**: Remove `formatToolList, buildToolDiscoveryHelp` from the `@laitszkin/tool-registry` import on L6, and remove `import { formatExamples } from '@laitszkin/tool-registry';` from L7 entirely
+3. **index.ts L59-75**: Remove the `assertCommand` function definition (L67-75) and its surrounding comment (L59-61)
+4. **types.ts L30**: Remove the unused type import line
 
-Both types are already imported at line 4-5:
-```ts
-import { UserInputError, SystemError, createToolRunner } from '@laitszkin/tool-utils';
-```
+Verify after removal that no build errors occur (TypeScript will catch any missing references if they were actually used).
 
-**Complexity**: Simple — 1 file, 2 lines changed
+**Complexity**: Simple — 3 files, 5 deletions
 
-**Regression test**: REGTEST-05 (Unit → existing `test/tools/handler-error-propagation.test.js`)
-- GIVEN a mocked gh command that fails (non-zero exit) WHEN `resolvePrNumber` is called THEN throws `UserInputError`
-- Oracle: `assert.throws(() => ..., UserInputError)` passes after fix, fails before fix (throws Error)
+**Regression test**: Build verification only: `npm run build` must succeed
 
 ---
 
-### FIX-10: test/installer.test.js raw process.platform → adapter (P3-3)
+### FIX-12: Add strict:true to 16 tool schemas (P3-17)
 
-**Root cause**: `test/installer.test.js` L334 uses `process.platform === 'win32' ? 'junction' : 'dir'` to determine symlink type for `fs.symlink()`. This bypasses the PlatformAdapter abstraction defined in Req 2.
+**Root cause**: Only `filter-logs` and `search-logs` explicitly set `strict: true` in their schema. The remaining 16 tools rely on the default (`schema.strict ?? true`). Behavior is correct but lacks explicit intent declaration.
 
-**Files involved**: `test/installer.test.js` > L334
+**Files involved**: 16 tool package `index.ts` files (schema definitions)
 
-**Fix approach**: Replace with `createPlatformAdapter().symlinkType()`:
+**Fix approach**: For each of the 16 tools, add `strict: true` to the schema object. The tools are:
+- create-specs, open-github-issue, validate-skill-frontmatter, extract-conversations, extract-pdf-text
+- enforce-video-aspect-ratio, render-katex, review-threads, generate-storyboard-images, create-review-report
+- find-github-issues, read-github-issue, sync-memory-index, validate-openai-agent-config, render-error-book
+- docs-to-voice
+
+For each tool, edit the schema:
 ```ts
-import { createPlatformAdapter } from '@laitszkin/tool-utils';
-// ...
-const adapter = createPlatformAdapter();
-await fs.symlink(sourceSkill, targetSkill, adapter.symlinkType());
+const schema: ToolSchema = {
+  strict: true,       // <-- add this
+  options: { ... },
+  ...
+};
 ```
 
-The import already exists (installer.ts imports from `@laitszkin/tool-utils`), but the test file may need its own import. Check existing imports.
+**Complexity**: Simple — 16 files, 1 line each (mechanical change)
 
-**Complexity**: Simple — 1 file, 1 line + import addition
+**Regression test**: Build verification only: `npm run build` must succeed; `node --test test/tools/schema-arg-validation.test.js` must pass
 
 ---
 
-### FIX-11: extract-conversations HOME → adapter.homeDir() (P3-4)
+### Fix Details for P3-19, P3-24, P3-25 (weak assertion, unused test imports, missing label)
 
-**Root cause**: `packages/tools/extract-conversations/index.ts` L7 uses `process.env.HOME || ''` for resolving the `.codex` directory path. On Windows where `HOME` may be unset, this produces a relative path (`/.codex`). The PlatformAdapter's `homeDir()` correctly falls back through `USERPROFILE` → `HOME` → `os.homedir()`.
-
-**Files involved**: `packages/tools/extract-conversations/index.ts` > L6-8
-
-**Fix approach**: Replace `getCodexHome()` with adapter-based resolution:
-```ts
-import { createPlatformAdapter } from '@laitszkin/tool-utils';
-
-function getCodexHome(): string {
-  if (process.env.CODEX_HOME) return process.env.CODEX_HOME;
-  const adapter = createPlatformAdapter();
-  return path.join(adapter.homeDir(), '.codex');
-}
-```
-
-The adapter's homeDir() handles the platform-specific env var fallback chain correctly.
-
-**Complexity**: Simple — 1 file, ~3 lines changed
-
----
-
-### FIX-12: PlatformAdapter singleton mock injection (P3-5)
-
-**Root cause**: `createPlatformAdapter()` always returns the current platform's adapter deterministically. `resetPlatformAdapter()` clears the singleton but doesn't accept an override value. Code that calls `createPlatformAdapter()` at module scope in production code always executes with the real platform adapter.
-
-**Files involved**: `packages/tool-utils/platform-adapter.ts` > L103-115
-
-**Fix approach**: Add optional override parameter to `resetPlatformAdapter()`:
-```ts
-export function resetPlatformAdapter(adapter?: PlatformAdapter): void {
-  _adapter = adapter;
-}
-```
-
-When called without arguments, it clears the cache (current behavior). When called with an adapter instance, it sets the singleton to that instance. This allows test injection:
-
-```ts
-resetPlatformAdapter(new PosixAdapter()); // Force POSIX behavior for Windows tests
-// ... run test ...
-resetPlatformAdapter(); // Clear for next test
-```
-
-**Complexity**: Simple — 1 function signature change
-
----
-
-### FIX-13 + FIX-14 + FIX-16: CLI index.ts cleanups (P3-6, P3-7, P3-8)
-
-**Root cause (FIX-13)**: Four one-liner wrapper functions (`buildHelpText`, `buildToolsHelp`, `buildInstallHelpText`, `buildUninstallHelpText` at L61-76) each instantiate `HelpTextBuilder` and call a single method. Call sites import `HelpTextBuilder` directly, making these wrappers unnecessary indirection.
-
-**Root cause (FIX-14)**: `assertCommand` calls (L110, L128, L147, L162) are made inside type-narrowed branches (e.g., `if (firstArg === 'uninstall')` then `assertCommand<UninstallCommand>(...)`), where the type is already guaranteed by the branch condition.
-
-**Root cause (FIX-16)**: After selecting the parser from the dispatch table (L106), `parseArguments` still uses `if (firstArg === 'uninstall')`, `if (firstArg === 'install')` string comparisons to determine per-command processing (L108-176). Adding a new command requires both a Map entry AND an if-else branch.
-
-**Files involved**: `packages/cli/index.ts` > L61-76, L107-176, L328-334
-
-**Fix approach (all three in one worker since same file)**:
-
-1. **FIX-13**: Remove 4 wrapper functions; update the export at L334 to export `HelpTextBuilder` directly instead:
-   - Delete L61-76 (four wrapper functions)
-   - Update L334: remove `buildHelpText, buildInstallHelpText, buildUninstallHelpText, buildToolsHelp` from exports
-   - Update call sites in `index.ts` that use these wrappers (check L352-365 in `run()`) to call `new HelpTextBuilder(...)` directly
-
-2. **FIX-14**: Remove all 4 `assertCommand` calls (L110, L128, L147, L162). The type narrowing from the if-else chain already guarantees the command type. If `assertCommand` is still used elsewhere, keep it; if only used in these 4 locations, consider removing the function too.
-
-3. **FIX-16**: Simplify the if-else chain by using a structured result builder map (optional — see Boundaries section for "clarify if approach conflicts with spec design intent"):
-   - Keep the existing structure but document that the if-else chain is intentional (each command type has different return shape)
-   - Or refactor to a dispatch handler map. This is more involved and may exceed the "simple" classification.
-
-**Complexity**: Simple for FIX-13 (remove wrappers) and FIX-14 (remove redundant assertions). FIX-16 (if-else refactor) is moderately complex but can be done as a targeted refactor.
-
----
-
-### FIX-15: Documentation drift — tool name count (P3-6)
-
-**Root cause**: SPEC.md L118 says "19 tool packages" and PROMPT.md L75 says "18 individual tool packages (eval excluded)", but tool-registration.ts has 21 entries. The scope has shifted during refactoring rounds without updating documentation counts.
-
-**Files involved**: `docs/plans/2026-06-04/cli-refactor/SPEC.md`, `docs/plans/2026-06-04/cli-refactor/PROMPT.md`
-
-**Fix approach**:
-1. SPEC.md L118: Update "19 tool packages" to "21 tool packages"
-2. PROMPT.md L75: Update "18 individual tool packages (eval excluded)" to "21 individual tool packages (eval excluded)" — or count based on what's actually in scope
-3. Check if any other references need updating
-
-**Complexity**: Simple — docs only, no code changes
+These are test-level fixes handled in the REGTEST batch:
+- P3-19: Fix weak assertion in `handler-error-propagation.test.js` — add proper stderr content validation → **REGTEST-05**
+- P3-24: Remove unused imports in `tool-runner.test.js` → **REGTEST Worker D**
+- P3-25: Add REGTEST-02 label to `architecture-error-types.test.js` → **REGTEST Worker C**
 
 ---
 
@@ -456,22 +501,24 @@ resetPlatformAdapter(); // Clear for next test
 
 ```
 ## Mission
-Raise the test coverage threshold in scripts/test.sh from 65% lines / 65% functions to 75% lines / 70% functions. This closes the gap between the SPEC requirement (80%) and the current enforcement threshold.
+Raise the test coverage threshold in scripts/test.sh from 69% lines / 67% functions to 75% lines / 70% functions. This narrows the gap between the SPEC requirement (80% lines) and the current enforcement threshold.
 
 ## Context
 - Review dimension: Spec implementation omission
 - Spec requirement: Req 4 (Coverage >= 80% + CI matrix)
-- The threshold was lowered when tools were brought into coverage scope, creating a 15-point gap from SPEC
+- The threshold was at 69% (Round 10 FIX-01 compromise) — still 11 points below SPEC
+- Actual coverage: ~73% (Group 1), ~69% (Group 2)
+- Functions threshold at 67% is 8 points below CHECKLIST's 75%
 
 ## Input
 - Read `scripts/test.sh` — the GROUP1_FLAGS line at approximately L14
 
 ## What to do
-1. Change `--test-coverage-lines=65` to `--test-coverage-lines=75`
-2. Change `--test-coverage-functions=65` to `--test-coverage-functions=70`
+1. Change `--test-coverage-lines=69` to `--test-coverage-lines=75`
+2. Change `--test-coverage-functions=67` to `--test-coverage-functions=70`
 3. Keep `--test-coverage-branches=60` unchanged
 
-If running `COVERAGE=true bash scripts/test.sh` fails with the new thresholds (architecture tool coverage may be too low), report the failure and the specific threshold that was breached rather than lowering the threshold.
+If running `COVERAGE=true bash scripts/test.sh` fails with the new thresholds, report the exact metric and value that breached the threshold. Do NOT lower the thresholds as a compromise. If CI fails, the coordinator will present options to the user.
 
 ## Scope
 - Allowed: `scripts/test.sh` only
@@ -485,592 +532,950 @@ If running `COVERAGE=true bash scripts/test.sh` fails with the new thresholds (a
 ## Verify
 - Run: `COVERAGE=true bash scripts/test.sh`
 - Expected: All test groups pass, coverage meets all three thresholds
+- If coverage fails: report exact line/functions percentages
 
 ## Boundaries
 - Do not modify any file other than scripts/test.sh
-- If CI fails, report the exact failure — do not lower thresholds
+- If CI fails, report the exact failure — do NOT lower thresholds
 ```
 
-#### Worker 2 (FIX-02): generate-storyboard-images generic Error → UserInputError
+#### Worker 2 (FIX-02 + FIX-13): open-github-issue remove inner catch blocks
 
 ```
 ## Mission
-Replace 8 generic `throw new Error(...)` calls with `throw new UserInputError(...)` in generate-storyboard-images input-parsing helper functions. These are input validation errors that deserve the UserInputError format (no "Error:" prefix, clean message).
+Remove two inner try/catch blocks in open-github-issue/index.ts that bypass createToolRunner's error boundary.
 
 ## Context
-- Review dimension: Spec implementation deviation
+- Review dimension: Spec implementation deviation + Spec implementation omission
 - Spec requirement: Req 3 (Unified error handling)
-- UserInputError is already imported at line 5
+- First catch (L759-762): Catches UserInputError from hydrateArgs/validateIssueContent and formats with "Error:" prefix — violates the spec (UserInputError should display WITHOUT prefix)
+- Second catch (L770-772): Empty catch around resolveRepoAsync silently swallows UserInputError — user sees exit code 1 with NO output
 
 ## Input
-- Read `packages/tools/generate-storyboard-images/index.ts` L88-182 (parsePromptEntries and parsePromptsFile functions)
+- Read `packages/tools/open-github-issue/index.ts` L754-775
 
 ## What to do
-Replace each `throw new Error(...)` with `throw new UserInputError(...)` at these 8 lines:
+1. **Remove L759-762 try/catch block**: Delete lines starting at L759 `} catch (err) {` through L762 `}`. The `hydrateArgs(args)` call at L752 and `validateIssueContent(args)` at L758 should now execute without a local catch. If they throw UserInputError, the error propagates to createToolRunner's boundary which correctly removes the "Error:" prefix.
+2. **Remove L770-772 try/catch block**: Delete lines starting at L768 `try {` through L772 `}`. The `repo = await resolveRepoAsync(args.repo, context)` at L769 should now execute without a local catch. If resolveRepoAsync throws UserInputError (invalid repo format, failed git remote, etc.), the error propagates to createToolRunner's boundary which correctly displays the error message.
+3. After removing both blocks, verify the surrounding code is syntactically valid — no stray braces, no orphaned code.
 
-1. L94: `throw new UserInputError(\`Empty prompt at index ${i}\`);`
-2. L100: `throw new UserInputError(\`Empty prompt in object at index ${i}\`);`
-3. L103: `throw new UserInputError(\`Invalid item type at index ${i}: expected string or object\`);`
-4. L106: `throw new UserInputError('No prompts found.');`
-5. L120: `throw new UserInputError('Object mode requires a top-level "scenes" array.');`
-6. L144: `throw new UserInputError(\`Invalid scene at index ${si}: expected object.\`);`
-7. L149: `throw new UserInputError(\`Scene ${si}: 'description' is required.\`);`
-8. L181: `throw new UserInputError('Top-level JSON must be an array or an object.');`
-
-The UserInputError import already exists at line 5.
-
-## Scope
-- Allowed: `packages/tools/generate-storyboard-images/index.ts` only
-- Forbidden: Any other file
-
-## Output
-- Which lines were changed
-- Verification that `UserInputError` is still properly imported
-- Test results
-
-## Verify
-- Build: `npm run build` must succeed
-- Tests: `node --test test/tools/generate-storyboard-images-prompt-multiple.test.js` must pass
-
-## Boundaries
-- Change ONLY the Error type — preserve all error messages and logic
-- Do not modify any other function or behavior in the file
-```
-
-#### Worker 3 (FIX-04 + FIX-09): open-github-issue generic errors + dead code removal
-
-```
-## Mission
-Two fixes in one file: (1) Replace 2 generic `throw new Error(...)` calls with `throw new SystemError(...)` in open-github-issue for gh/API failures; (2) Remove ~30 lines of dead code (FLAG_MAP constant and buildArgsFromYargs function).
-
-## Context
-- Review dimension: Spec implementation deviation + Redundant code
-- Spec requirement: Req 3 (Unified error handling) + Req 1 (Tool boilerplate)
-- SystemError and UserInputError are already imported at line 7
-
-## Input
-- Read `packages/tools/open-github-issue/index.ts` L520-557 (createIssueWithGh and createIssueWithToken functions)
-- Read L865-897 (FLAG_MAP and buildArgsFromYargs)
-
-## What to do
-1. L525: Change `throw new Error(result.stderr.trim() || 'gh issue create failed');` to `throw new SystemError(result.stderr.trim() || 'gh issue create failed');`
-2. L554: Change `throw new Error('Issue created but response did not include html_url');` to `throw new SystemError('Issue created but response did not include html_url');`
-3. Delete L867-897 entirely — remove FLAG_MAP constant and buildArgsFromYargs function
-4. Verify there are no other references to FLAG_MAP or buildArgsFromYargs in the file (there should be none, but check)
+The tool already imports `UserInputError` and `SystemError` (L7). No import changes needed.
 
 ## Scope
 - Allowed: `packages/tools/open-github-issue/index.ts` only
 - Forbidden: Any other file
 
 ## Output
-- Which lines were changed
-- Confirmation that SystemError is properly imported
-- Confirmation that FLAG_MAP/buildArgsFromYargs have no remaining references
+- Confirmation both try/catch blocks are removed
+- The before/after diff for the affected lines
+- Build and test results
 
 ## Verify
 - Build: `npm run build` must succeed
 - Tests: `node --test test/tools/handler-error-propagation.test.js` must pass
 
 ## Boundaries
-- Change ONLY the Error type and remove dead code — preserve all other logic
-- Do not introduce any functional changes
+- Remove ONLY the try/catch wrapper — do not modify any other logic
+- Do not change error messages, function calls, or control flow beyond removing the catch blocks
 ```
 
-#### Worker 4 (FIX-05): validate tools extractFrontmatter generic Error → UserInputError
-
-```
-## Mission
-Replace 5 generic `throw new Error(...)` calls with `throw new UserInputError(...)` across two validate tools' extractFrontmatter helper functions. Both tools have the same helper function pattern.
-
-## Context
-- Review dimension: Spec implementation omission
-- Spec requirement: Req 3 (Unified error handling)
-- Both tools need UserInputError added to their imports
-
-## Input
-- Read `packages/tools/validate-skill-frontmatter/index.ts` L1-30 (imports and extractFrontmatter function)
-- Read `packages/tools/validate-openai-agent-config/index.ts` L1-40 (imports and extractFrontmatter function)
-
-## What to do
-For `packages/tools/validate-skill-frontmatter/index.ts`:
-1. Add `UserInputError` to the import from `@laitszkin/tool-utils` at line 3-4
-2. L19: Replace `throw new Error(...)` with `throw new UserInputError(...)`
-3. L26: Replace `throw new Error(...)` with `throw new UserInputError(...)`
-
-For `packages/tools/validate-openai-agent-config/index.ts`:
-1. Add `UserInputError` to the import from `@laitszkin/tool-utils` at line 3-4
-2. L24: Replace `throw new Error(...)` with `throw new UserInputError(...)`
-3. L31: Replace `throw new Error(...)` with `throw new UserInputError(...)`
-4. L36: Replace `throw new Error(...)` with `throw new UserInputError(...)`
-
-## Scope
-- Allowed: Both validate tool files
-- Forbidden: Any other file
-
-## Output
-- Which lines were changed in each file
-- Verification that UserInputError is properly imported
-
-## Verify
-- Build: `npm run build` must succeed
-- Tests: `node --test test/tools/validation-error-handling.test.js` must pass
-
-## Boundaries
-- Change ONLY the Error type and add imports — preserve all error messages and logic
-- Do not modify the tools' handlers (already throw UserInputError from Round 9 FIX-02)
-```
-
-#### Worker 5 (FIX-07 + FIX-13 + FIX-14 + FIX-16): CLI index.ts dispatch + cleanup
+#### Worker 3 (FIX-03): review-threads remove inner 6 catches + default switch
 
 ```
 ## Mission
-Four fixes in packages/cli/index.ts: (1) Route direct tool name fallback through ToolArgsParser; (2) Remove redundant help-text wrapper functions; (3) Remove redundant assertCommand calls; (4) Simplify if-else chain coupling.
-
-## Context
-- Review dimension: Architecture defect + Redundant code
-- Spec requirement: Req 5 (Dispatch isolation) + Req 1 (Tool boilerplate)
-
-## Input
-- Read `packages/cli/index.ts` L61-210 (help wrappers, assertCommand, parseArguments function)
-- Read L328-334 (exports)
-
-## What to do
-### FIX-07: Route direct tool name fallback through ToolArgsParser
-In parseArguments(), replace the direct tool name path at L178-193:
-
-Change from manual construction to using toolParser:
-```ts
-// L178-193 — replace with:
-if (firstArg && isKnownToolName(firstArg)) {
-  const cmd = toolParser.parse(argv);
-  assertCommand<ToolCommand>(cmd, 'tool');
-  return {
-    command: 'tool' as const,
-    modes: [],
-    toolName: cmd.toolName,
-    toolArgs: cmd.toolArgs,
-    showHelp: false,
-    showToolsHelp: false,
-    toolkitHome: undefined,
-    assumeYes: false,
-    linkMode: undefined,
-    explicitInstallCommand: undefined,
-    helpTopic: 'overview' as const,
-    installSpecificMode: undefined,
-  };
-}
-```
-
-### FIX-13: Remove 4 help-text wrapper functions
-Remove L61-76 (four wrapper functions: buildHelpText, buildToolsHelp, buildInstallHelpText, buildUninstallHelpText). Check L352-365 in run() to see if any call these wrappers — if so, replace with direct HelpTextBuilder usage at the call site.
-
-Update the export at L334 to remove the deleted function names. HelpTextBuilder class is already exported separately.
-
-### FIX-14: Remove redundant assertCommand calls
-Remove all 4 assertCommand calls at L110, L128, L147, L162. The if-else chain guarantees the command type before each call. Keep the assertCommand function definition at L85-89 for future use.
-
-### FIX-16: Simplify if-else chain 
-The if-else chain at L107-176 is a structural coupling issue. The cleanest approach for now: each branch already returns early, so the coupling is moderate. Document with comments that each branch exists because different command types have different ParsedArguments shapes. Do NOT attempt a full refactor to a handler map — it would change too much surface area for a P3 issue.
-
-## Scope
-- Allowed: `packages/cli/index.ts` only
-- Forbidden: Any other file
-
-## Output
-- Brief summary of each change
-- Verification of build and tests
-
-## Verify
-- Build: `npm run build` must succeed
-- Tests: `node --test 'test/cli/**/*.test.js' 'test/tool-runner.test.js'` must pass
-
-## Boundaries
-- Do not change the runtime behavior of parseArguments()
-- Do not change the shape of ParsedArguments returns
-- Preserve all existing export signatures for backward compatibility
-```
-
-#### Worker 6 (FIX-06): REGTEST-05 .ts → .js rename
-
-```
-## Mission
-Rename `test/tools/enforce-video-aspect-ratio/index.test.ts` to `.test.js` so the test runner glob (`test/**/*.test.js`) picks it up. The file content is plain JavaScript with no TypeScript annotations.
-
-## Context
-- Review dimension: Architecture defect
-- Spec requirement: Req 4 (Coverage + CI matrix)
-- The file was accidentally created as `.ts` during Round 9 but never compiled
-
-## Input
-- Read `test/tools/enforce-video-aspect-ratio/index.test.ts` to confirm no TypeScript-only syntax
-
-## What to do
-1. Verify the file has no TypeScript type annotations, interfaces, or type imports (it's plain JS with node:test)
-2. Rename using git: `git mv test/tools/enforce-video-aspect-ratio/index.test.ts test/tools/enforce-video-aspect-ratio/index.test.js`
-3. Run the test to confirm it executes
-
-## Scope
-- Allowed: Only this test file
-- Forbidden: Any source code
-
-## Output
-- Confirmation the file was renamed
-- Test execution result
-
-## Verify
-- Run: `node --test test/tools/enforce-video-aspect-ratio/index.test.js`
-- Expected: Test passes (no actual test assertions should fail; they test typed error behavior that was verified working in FIX-08)
-
-## Boundaries
-- Do not modify file content — rename only
-```
-
-#### Worker 7 (FIX-08): review-threads generic Error → UserInputError
-
-```
-## Mission
-Replace 2 remaining generic `throw new Error(...)` calls with `throw new UserInputError(...)` in review-threads/index.ts. These were missed by Round 9 FIX-09.
+Remove 6 inner try/catch blocks from cmdList and cmdResolve in review-threads/index.ts, and convert the default switch case to throw UserInputError instead of stderr.write+return1.
 
 ## Context
 - Review dimension: Spec implementation deviation
 - Spec requirement: Req 3 (Unified error handling)
-- UserInputError and SystemError are already imported
+- cmdList (L395-446): 3 try/catch blocks at L402-407, L409-415, L417-423
+- cmdResolve (L448-476): 3 try/catch blocks at L454-460, L462-468, L470-476
+- All 6 blocks format errors with stderr.write('Error: ...') — but the caught errors are UserInputError which should display WITHOUT "Error:" prefix
+- Default switch (L551-552): stderr.write('Unsupported command') + return 1
 
 ## Input
-- Read `packages/tools/review-threads/index.ts` L136-155 (resolvePrNumber function) and L310-327 (thread ID parsing)
+- Read `packages/tools/review-threads/index.ts` L395-446 (cmdList)
+- Read L448-476 (cmdResolve)
+- Read L545-553 (switch/default)
 
 ## What to do
-1. L150: Change `throw new Error(...)` to `throw new UserInputError(...)`:
+1. **cmdList (L395-446)**: Remove the 3 try/catch blocks. Keep the function flow:
+   - After removing L402-407, `repo = await resolveRepo(args.repo)` at L403 becomes a direct call that throws up to createToolRunner on failure
+   - After removing L409-415, `prNumber = await resolvePrNumber(repo, args.pr)` at L411 becomes direct
+   - After removing L417-423, `threads = await fetchReviewThreads(repo, prNumber)` at L419 becomes direct
+   - All subsequent code (L425-445) only runs if all three succeed — no change needed
+
+2. **cmdResolve (L448-476)**: Remove the 3 try/catch blocks with the same approach:
+   - L456-460 → L456 becomes direct
+   - L464-468 → L463 becomes direct  
+   - L472-476 → L471 becomes direct
+
+3. **Default switch (L551-552)**: Replace:
    ```ts
-   throw new UserInputError('Unable to infer PR number from current branch context');
+   default:
+     stderr!.write(`Unsupported command: ${args.command}\n`);
+     return 1;
+   ```
+   with:
+   ```ts
+   default:
+     throw new UserInputError(`Unsupported command: ${args.command}`);
    ```
 
-2. L321: Change `throw new Error(...)` to `throw new UserInputError(...)`:
-   ```ts
-   throw new UserInputError('JSON must include thread_ids, adopted_thread_ids, or threads');
-   ```
+The tool already imports `UserInputError`. No import changes needed.
 
 ## Scope
 - Allowed: `packages/tools/review-threads/index.ts` only
 - Forbidden: Any other file
 
 ## Output
-- Which lines were changed
-- Verification that typed errors are properly imported
+- Confirmation all 6 try/catch blocks are removed
+- Confirmation the default switch now throws UserInputError
+- Build and test results
 
 ## Verify
 - Build: `npm run build` must succeed
-- Tests: Run tests to confirm no regression
+- Run: `node --test test/tools/handler-error-propagation.test.js`
 
 ## Boundaries
-- Change ONLY the Error type — preserve all error messages and logic
+- Remove ONLY the try/catch wrappers — do not modify function logic
+- Do not change any function signatures or return paths
 ```
 
-#### Worker 8 (FIX-10 + FIX-11 + FIX-12 + FIX-15): Cross-platform + docs fixes
+#### Worker 4 (FIX-04): read-github-issue typed throws
 
 ```
 ## Mission
-Four independent fixes: (1) Replace raw process.platform in installer test; (2) Adapt extract-conversations to use adapter.homeDir(); (3) Add mock injection to PlatformAdapter singleton; (4) Update tool name counts in docs.
+Convert 3 stderr.write+return1 error paths in read-github-issue/index.ts to typed throws that propagate to createToolRunner's error boundary.
 
 ## Context
-- Review dimension: Spec implementation deviation, Spec implementation omission, Architecture defect
-- Spec requirement: Req 2 (Cross-platform), Req 4 (Coverage)
+- Review dimension: Spec implementation deviation
+- Spec requirement: Req 3 (Unified error handling)
+- The tool IS wrapped in createToolRunner (L171) but 3 error paths bypass it
+- Missing issue arg → should be UserInputError
+- gh command failure → should be SystemError
+- JSON parse failure → should be SystemError
 
 ## Input
-- Read `test/installer.test.js` L330-340
-- Read `packages/tools/extract-conversations/index.ts` L1-10 (getCodexHome function)
-- Read `packages/tool-utils/platform-adapter.ts` L103-115 (singleton factory)
-- Read `docs/plans/2026-06-04/cli-refactor/SPEC.md` L118
-- Read `docs/plans/2026-06-04/cli-refactor/PROMPT.md` L75
+- Read `packages/tools/read-github-issue/index.ts` L1-4 (imports)
+- Read L132-153 (handler body — error paths)
 
 ## What to do
-### FIX-10: installer test process.platform → adapter.symlinkType()
-In `test/installer.test.js` L334, replace:
-```ts
-await fs.symlink(sourceSkill, targetSkill, process.platform === 'win32' ? 'junction' : 'dir');
-```
-with:
-```ts
-const { createPlatformAdapter } = await import('@laitszkin/tool-utils');
-const adapter = createPlatformAdapter();
-await fs.symlink(sourceSkill, targetSkill, adapter.symlinkType());
-```
-Add the import at the top of the file (or use dynamic import as shown).
+1. **Add imports (L3)**: Change:
+   ```ts
+   import { createToolRunner } from '@laitszkin/tool-utils';
+   ```
+   to:
+   ```ts
+   import { createToolRunner, UserInputError, SystemError } from '@laitszkin/tool-utils';
+   ```
 
-### FIX-11: extract-conversations HOME → adapter.homeDir()
-In `packages/tools/extract-conversations/index.ts`, modify getCodexHome():
-```ts
-import { createPlatformAdapter } from '@laitszkin/tool-utils';
+2. **L133-137 (missing issue)**: Replace:
+   ```ts
+   if (!args.issue) {
+     stderr!.write(
+       'Error: issue number or URL is required.\n',
+     );
+     return 1;
+   }
+   ```
+   with:
+   ```ts
+   if (!args.issue) {
+     throw new UserInputError('Issue number or URL is required.');
+   }
+   ```
 
-function getCodexHome(): string {
-  if (process.env.CODEX_HOME) return process.env.CODEX_HOME;
-  const adapter = createPlatformAdapter();
-  return path.join(adapter.homeDir(), '.codex');
-}
-```
+3. **L142-144 (gh failure)**: Replace:
+   ```ts
+   if (result.exitCode !== 0) {
+     stderr!.write(result.stderr.trim() || 'gh issue view failed.\n');
+     return result.exitCode;
+   }
+   ```
+   with:
+   ```ts
+   if (result.exitCode !== 0) {
+     throw new SystemError(result.stderr.trim() || 'gh issue view failed');
+   }
+   ```
 
-### FIX-12: PlatformAdapter mock injection
-In `packages/tool-utils/platform-adapter.ts`, change resetPlatformAdapter():
-```ts
-export function resetPlatformAdapter(adapter?: PlatformAdapter): void {
-  _adapter = adapter;
-}
-```
-When called with an adapter instance, it sets the singleton for injection. When called with undefined (no arg), it clears the cache (preserving existing behavior).
-
-### FIX-15: Documentation drift
-In `SPEC.md` L118: Update "19 tool packages" to "21 tool packages"
-In `PROMPT.md` L75: Update "18 individual tool packages (eval excluded)" to "21 individual tool packages (eval excluded)"
-Check for any other count references that need updating.
+4. **L150-152 (JSON parse)**: Replace:
+   ```ts
+   } catch {
+     stderr!.write('Error: unable to parse gh output as JSON.\n');
+     return 1;
+   }
+   ```
+   with:
+   ```ts
+   } catch {
+     throw new SystemError('Unable to parse gh output as JSON');
+   }
+   ```
 
 ## Scope
-- Allowed: All files listed above
-- Forbidden: Any other source or test files
+- Allowed: `packages/tools/read-github-issue/index.ts` only
+- Forbidden: Any other file
 
 ## Output
-- Summary of each change made
-- Verification results
+- Confirmation of 3 conversions + import change
+- Build and test results
 
 ## Verify
 - Build: `npm run build` must succeed
-- Tests for FIX-10: `node --test test/installer.test.js` passes
-- Tests for FIX-11: verify extract-conversations tool still resolves correctly
-- Tests for FIX-12: `node --test test/utils/platform-adapter.test.js` passes
-- No test changes needed for FIX-15 (docs only)
+- Run: `node --test 'test/tools/handler-error-propagation.test.js'`
 
 ## Boundaries
-- FIX-12 preserves existing resetPlatformAdapter() behavior when called without args
-- FIX-11 does not change the CODEC_HOME env var priority (still checked first)
-- Do not modify any files not in the allowed list
+- Preserve the exact error message content (remove only the "Error: " prefix and trailing newline)
+- Do not change any other logic in the file
+```
+
+#### Worker 5 (FIX-05): find-github-issues typed throws
+
+```
+## Mission
+Convert 2 stderr.write+return1 error paths in find-github-issues/index.ts to typed SystemError throws that propagate to createToolRunner's error boundary.
+
+## Context
+- Review dimension: Spec implementation deviation
+- Spec requirement: Req 3 (Unified error handling)
+- The tool IS wrapped in createToolRunner (L193) but 2 error paths bypass it
+- gh command failure → should be SystemError
+- JSON parse failure → should be SystemError
+
+## Input
+- Read `packages/tools/find-github-issues/index.ts` L1-4 (imports)
+- Read L164-175 (handler body — error paths)
+
+## What to do
+1. **Add imports (L3)**: Change:
+   ```ts
+   import { createToolRunner } from '@laitszkin/tool-utils';
+   ```
+   to:
+   ```ts
+   import { createToolRunner, UserInputError, SystemError } from '@laitszkin/tool-utils';
+   ```
+
+2. **L164-166 (gh failure)**: Replace:
+   ```ts
+   if (result.exitCode !== 0) {
+     stderr!.write(result.stderr.trim() || 'gh issue list failed.\n');
+     return result.exitCode;
+   }
+   ```
+   with:
+   ```ts
+   if (result.exitCode !== 0) {
+     throw new SystemError(result.stderr.trim() || 'gh issue list failed');
+   }
+   ```
+
+3. **L173-175 (JSON parse)**: Replace:
+   ```ts
+   } catch {
+     stderr!.write('Error: unable to parse gh output as JSON.\n');
+     return 1;
+   }
+   ```
+   with:
+   ```ts
+   } catch {
+     throw new SystemError('Unable to parse gh output as JSON');
+   }
+   ```
+
+## Scope
+- Allowed: `packages/tools/find-github-issues/index.ts` only
+- Forbidden: Any other file
+
+## Output
+- Confirmation of 2 conversions + import change
+- Build and test results
+
+## Verify
+- Build: `npm run build` must succeed
+- Run: `node --test 'test/tools/handler-error-propagation.test.js'`
+
+## Boundaries
+- Preserve the exact error message content (remove only the "Error: " prefix and trailing newline)
+- Do not change any other logic in the file
+```
+
+#### Worker 6 (FIX-06): Architecture tool error boundary cleanup
+
+```
+## Mission
+Clean up the architecture tool's triple-layer error handling. Remove the outer architectureHandler catch, convert the resolveProjectRoot catch to typed throws, and re-throw from the handleApply inner catch instead of formatting.
+
+## Context
+- Review dimension: Architecture defect + Spec implementation omission
+- Spec requirement: Req 3 (Unified error handling)
+- Architecture has 3 error handling layers: handleApply inner catch (L428-436), architectureHandler outer catch (L623-634), and CLI boundary (run() L484-496)
+- FIX-03 (Round 10) converted 4 error paths to UserInputError throws but missed: resolveProjectRoot catch, handleApply inner catch, architectureHandler outer catch
+- The pre-mutation deep-clone at L231 provides implicit rollback — no explicit cleanup needed in the catch
+
+## Input
+- Read `packages/tools/architecture/index.ts` L209-216 (resolveProjectRoot catch)
+- Read L239-437 (mutation pipeline with inner catch at L428-436) — read the full mutation processing block
+- Read L593-634 (architectureHandler with outer catch at L623-634)
+
+## What to do
+Perform systematic debugging first — read and understand the full mutation pipeline before making changes.
+
+### 1. P2-8: resolveProjectRoot catch (L211-216)
+Replace:
+```ts
+try {
+  projectRoot = cli.resolveProjectRoot(flags);
+} catch (e: any) {
+  stderr.write(`${e.message}\n`);
+  return 1;
+}
+```
+with:
+```ts
+try {
+  projectRoot = cli.resolveProjectRoot(flags);
+} catch (e: any) {
+  throw new UserInputError(e.message);
+}
+```
+
+### 2. P2-9: handleApply inner catch (L428-436)
+Read the mutation pipeline carefully (L239-437). The pre-mutation state is deep-cloned at L231. If a mutation throws, the in-memory merged copy is discarded (the original data on disk is untouched). Replace the catch:
+```ts
+} catch (e: any) {
+  if (e instanceof UserInputError || e instanceof SystemError) {
+    throw e;
+  }
+  throw new UserInputError(e.message);
+}
+```
+Remove the `stderr.write` and `return 1`. Preserve any cleanup/rollback code that existed before error formatting. If the only "rollback" is the deep-clone (meaning no mutations have been written to disk yet), then no cleanup code is needed beyond re-throwing.
+
+### 3. P3-16: architectureHandler outer catch (L623-634)
+Remove the try/catch wrapper entirely. The handler should look like:
+```ts
+export async function architectureHandler(
+  args: string[],
+  context: ToolContext,
+): Promise<number> {
+  const first = args[0] || '';
+  if (first === 'apply') return await handleApply(args.slice(1), context);
+  if (first === 'template') return await handleTemplate(args.slice(1), context);
+  // ...
+  const cliModule = await import(pathToFileURL(cliPath).href);
+  const cli = cliModule.default;
+  return cli.dispatch(args, {
+    stdout: context.stdout || process.stdout,
+    stderr: context.stderr || process.stderr,
+  });
+}
+```
+Keep the function's `export` keyword and signature unchanged. Remove the wrapping `try { ... } catch (e: unknown) { ... return 1; }`.
+
+The tool already imports `UserInputError` and `SystemError` (L7). No import changes needed.
+
+## Scope
+- Allowed: `packages/tools/architecture/index.ts` only
+- Forbidden: Any other file
+
+## Output
+- Summary of each change (resolveProjectRoot, inner catch, outer catch)
+- Explanation of why each change is safe (based on reading the mutation pipeline)
+- Build and test results
+
+## Verify
+- Build: `npm run build` must succeed
+- Run: `node --test test/tools/architecture-error-types.test.js`
+- Run: `node --test test/tools/filter-logs.test.js` (to verify no breakage in tool dispatch)
+
+## Boundaries
+- Do not change the function signature or behavior of handleApply/handleTemplate beyond error handling
+- Preserve all mutation pipeline rollback logic
+- Do NOT add createToolRunner wrapping (that would be a much larger change)
+```
+
+#### Worker 7 (FIX-07): validate tools "no directories" edge case
+
+```
+## Mission
+Convert the "no skill directories found" edge case in both validate-skill-frontmatter and validate-openai-agent-config from stderr.write+return1 to throw UserInputError.
+
+## Context
+- Review dimension: Spec implementation deviation
+- Spec requirement: Req 3 (Unified error handling)
+- Both tools correctly throw UserInputError for actual validation errors (Round 10 FIX-05)
+- Only the edge case of empty skillDirs array uses the old pattern
+
+## Input
+- Read `packages/tools/validate-skill-frontmatter/index.ts` L103-107
+- Read `packages/tools/validate-openai-agent-config/index.ts` L198-201
+
+## What to do
+In BOTH files, replace:
+```ts
+if (!skillDirs.length) {
+  stderr.write('No top-level skill directories found.\n');
+  return 1;
+}
+```
+with:
+```ts
+if (!skillDirs.length) {
+  throw new UserInputError('No top-level skill directories found.');
+}
+```
+
+Both files already import `UserInputError` (added in Round 10 FIX-05). No import changes needed.
+
+## Scope
+- Allowed: Both validate tool files only
+- Forbidden: Any other file
+
+## Output
+- Confirmation both edge cases updated
+- Build and test results
+
+## Verify
+- Build: `npm run build` must succeed
+- Run: `node --test test/tools/validation-error-handling.test.js`
+
+## Boundaries
+- Change ONLY the error handling — preserve all function logic
+- Error message stays the same (remove trailing newline)
+```
+
+#### Worker 8 (FIX-08): codegraph error handling conversion
+
+```
+## Mission
+Wrap codegraphHandler in createToolRunner and convert its manual error paths to typed throws. This is a partial fix — the lib/* subcommand files are left untouched (errors from them propagate to the main handler's catch which now re-throws typed errors).
+
+## Context
+- Review dimension: Spec implementation deviation
+- Spec requirement: Req 3 (Unified error handling) + Req 1 (Tool boilerplate)
+- The codegraphHandler is exported raw (L377-382), completely bypassing createToolRunner
+- 5 error paths use stderr.write+return1 instead of typed throws
+
+## Input
+- Read `packages/tools/codegraph/index.ts` L1-12 (imports)
+- Read L40-53 (findProjectRoot catch)
+- Read L89-154 (main try/catch with subcommand dispatch)
+- Read L377-382 (tool export)
+
+## What to do
+1. **Update imports (L2)**: Add `UserInputError, createToolRunner`:
+   ```ts
+   import { SystemError, UserInputError, createToolRunner } from '@laitszkin/tool-utils';
+   ```
+
+2. **findProjectRoot catch (L43-53)**: Replace:
+   ```ts
+   } catch (error: unknown) {
+     const sysError = error instanceof Error
+       ? new SystemError(error.message, { code: (error as any).code })
+       : new SystemError('Unknown error finding project root');
+     if ((sysError.details?.code as string) === 'MODULE_NOT_FOUND' || ...) {
+       stderr.write('`@colbymchenry/codegraph` is not installed. Run `npm install @colbymchenry/codegraph` in your project directory.\n');
+     } else {
+       stderr.write(`Error finding project root: ${sysError.message}\n`);
+     }
+     return 1;
+   }
+   ```
+   with:
+   ```ts
+   } catch (error: unknown) {
+     const message = error instanceof Error ? error.message : 'Unknown error finding project root';
+     if ((error as any)?.code === 'MODULE_NOT_FOUND' || message.includes('Cannot find module')) {
+       throw new UserInputError('`@colbymchenry/codegraph` is not installed. Run `npm install @colbymchenry/codegraph` in your project directory.');
+     }
+     throw new SystemError(`Error finding project root: ${message}`);
+   }
+   ```
+
+3. **search/explore usage checks (L103-104, L112-113)**: Replace stderr.write+return1 with throw:
+   - L103-104: `throw new UserInputError('Usage: apltk codegraph search <query> [--limit N] [--json]');`
+   - L112-113: `throw new UserInputError('Usage: apltk codegraph explore <query> [--json]');`
+
+4. **verify specDir check (L133-134)**: Replace:
+   ```ts
+   if (!specDir) {
+     stderr.write('Usage: apltk codegraph verify --spec <spec-dir> [--json]\n');
+     return 1;
+   }
+   ```
+   with:
+   ```ts
+   if (!specDir) {
+     throw new UserInputError('Usage: apltk codegraph verify --spec <spec-dir> [--json]');
+   }
+   ```
+
+5. **Default case (L139-142)**: Replace:
+   ```ts
+   default:
+     stderr.write(`Unknown subcommand: ${subcommand}\n\n`);
+     printHelp(stderr);
+     return 1;
+   ```
+   with:
+   ```ts
+   default:
+     throw new SystemError(`Unknown codegraph subcommand: ${subcommand}`);
+   ```
+
+6. **Main catch (L144-154)**: Replace the generic error formatting with re-throwing as SystemError:
+   ```ts
+   } catch (error: unknown) {
+     if (error instanceof SystemError || error instanceof UserInputError) throw error;
+     throw new SystemError(error instanceof Error ? error.message : 'Unknown error in codegraph');
+   }
+   ```
+
+7. **Tool export (L377-382)**: Wrap in createToolRunner:
+   ```ts
+   export const tool: ToolDefinition = {
+     name: 'codegraph',
+     category: 'Code analysis',
+     description: 'CodeGraph code intelligence — init, sync, status, search, explore, survey, list-apis, verify',
+     handler: createToolRunner({
+       options: { help: { type: 'boolean', short: 'h' } },
+       allowPositionals: true,
+       usage: 'apltk codegraph <subcommand> [options]',
+       handler: codegraphHandler,
+     }),
+   };
+   ```
+
+Note: The lib/* subcommand files (cmd-search.ts, cmd-status.ts, cmd-sync.ts, cmd-survey.ts, cmd-verify.ts, cmd-init.ts, cmd-explore.ts, cmd-list-apis.ts) still use stderr.write+return1 internally. Errors from these files propagate to the main handler's try/catch at L144-154, which now re-throws typed errors. This is sufficient — the lib/ files don't need individual conversion.
+
+## Scope
+- Allowed: `packages/tools/codegraph/index.ts` only
+- Forbidden: Any lib/*.ts files, any other tool files
+
+## Output
+- Summary of each conversion point (7 changes total)
+- Build and test results
+
+## Verify
+- Build: `npm run build` must succeed
+- Run: `node --test test/tools/codegraph-error-detection.test.js`
+
+## Boundaries
+- Do NOT modify lib/*.ts files (known carryover / out of scope)
+- Preserve all help text and subcommand dispatch logic
+- The printHelp and printSubcommandHelp functions remain unchanged
+```
+
+#### Worker 9 (FIX-09): CI workflow add build step
+
+```
+## Mission
+Add `npm run build` to `.github/workflows/test.yml` between `npm ci` and `bash scripts/test.sh`.
+
+## Context
+- Review dimension: Architecture defect
+- Spec requirement: Req 4 (Coverage + CI matrix)
+- All workspace packages export from `./dist/` which is gitignored
+- Without a build step, `dist/` doesn't exist after clean `npm ci`
+- Tests import from workspace package names that resolve to non-existent `dist/` directories
+- The parallel skill-validation.yml workflow correctly includes `npm run build`
+
+## Input
+- Read `.github/workflows/test.yml`
+
+## What to do
+Add a build step between the install and test steps:
+```yaml
+      - run: npm ci
+      - run: npm run build
+      - run: bash scripts/test.sh
+        env:
+          COVERAGE: 'true'
+```
+
+## Scope
+- Allowed: `.github/workflows/test.yml` only
+- Forbidden: Any other file
+
+## Output
+- Confirmation the build step was added
+- The before/after diff
+
+## Verify
+- The file parses as valid YAML (no syntax errors)
+- The build step appears before the test step and after npm ci
+
+## Boundaries
+- Do not change any existing step configuration
+- Keep COVERAGE=true on the test step
+```
+
+#### Worker 10 (FIX-10): CL-13 backward compat test
+
+```
+## Mission
+Create a new test file `test/tool-registry/all-tools-known.test.js` implementing CHECKLIST.md CL-13: verify all 21 tool names + 3 aliases resolve via isKnownToolName().
+
+## Context
+- Review dimension: Spec implementation omission
+- Spec requirement: Req 4 (Coverage) + Req 5 (Backward compatibility)
+- CHECKLIST.md CL-13: "All 19 existing tool names resolve via dispatch table the same as current isKnownToolName()"
+- SPEC.md says "21 tool packages"
+- tool-registration.ts has 21 entries in TOOL_MODULE_NAMES + 3 aliases
+
+## Input
+- Read `packages/cli/tool-registration.ts` (TOOL_MODULE_NAMES list and TOOL_NAMES set)
+- Read `packages/cli/index.ts` (isKnownToolName is exported from here)
+- Read existing test as format reference: `test/tool-runner.test.js`
+
+## What to do
+Create `test/tool-registry/all-tools-known.test.js` with these tests:
+
+1. Import `isKnownToolName` from `@laitszkin/cli` (it's re-exported via packages/cli/index.ts)
+2. Import the TOOL_MODULE_NAMES list — or hardcode the tool names derived from the module names (remove `@laitszkin/tool-` prefix)
+
+Test 1: All 21 tool names are recognized:
+- Extract the 21 tool names from the module names
+- For each, assert `isKnownToolName(name) === true`
+
+Test 2: All 3 aliases are recognized:
+- Hardcode: 'extract-pdf-text-pdfkit', 'extract-codex-conversations', 'extract-skill-conversations'
+- For each, assert `isKnownToolName(name) === true`
+
+Test 3: Unknown tool name returns false:
+- assert `isKnownToolName('nonexistent-tool') === false`
+- assert `isKnownToolName('') === false`
+
+Test 4: Count consistency:
+- Use `import { TOOL_MODULE_NAMES }` or hardcode the names list
+- Assert count is at least 21 (the SPEC requires 21)
+
+Reference the actual TOOL_MODULE_NAMES from the source. If direct import is not possible from the test, hardcode the 21 names based on tool-registration.ts lines 4-24:
+```
+filter-logs, search-logs, validate-skill-frontmatter, validate-openai-agent-config,
+sync-memory-index, open-github-issue, find-github-issues, read-github-issue,
+review-threads, extract-conversations, docs-to-voice, render-katex,
+render-error-book, generate-storyboard-images, enforce-video-aspect-ratio,
+architecture, codegraph, eval, create-specs, create-review-report,
+extract-pdf-text
+```
+
+Note: The eval tool is in the TOOL_MODULE_NAMES list but is explicitly excluded from coverage scope. Its name should still resolve via isKnownToolName() for backward compatibility.
+
+## Scope
+- Allowed: `test/tool-registry/all-tools-known.test.js` (new file)
+- Forbidden: Any source code or existing test files
+
+## Output
+- The full test file content
+- Test execution result (must pass)
+
+## Verify
+- Run: `node --test test/tool-registry/all-tools-known.test.js`
+- Expected: All tests pass (name resolution tests, alias tests, unknown name tests)
+
+## Boundaries
+- Do not modify any source code or existing test files
+- Follow existing test file conventions (node:test + assert.strict)
+```
+
+#### Worker 11 (FIX-11): P3 dead code cleanups
+
+```
+## Mission
+Remove 5 unused imports and 1 unused function across 3 files in packages/cli/.
+
+## Context
+- Review dimension: Redundant code
+- Spec requirement: Req 1 + Req 5 (general code quality)
+- FIX-13 (Round 10) created Orchestrator wrappers that orphaned imports
+- FIX-14 (Round 10) removed assertCommand call sites but kept the function
+
+## Input
+- Read `packages/cli/installer.ts` L1-4 (imports)
+- Read `packages/cli/index.ts` L1-8 (imports) and L59-75 (assertCommand)
+- Read `packages/cli/types.ts` L28-32 (type imports)
+
+## What to do
+1. **installer.ts L3**: Remove line `import os from 'node:os';`
+
+2. **index.ts L6**: Change:
+   ```ts
+   import { formatToolList, buildToolDiscoveryHelp, runTool, getTool as getToolCommand } from '@laitszkin/tool-registry';
+   ```
+   to:
+   ```ts
+   import { runTool, getTool as getToolCommand } from '@laitszkin/tool-registry';
+   ```
+
+3. **index.ts L7**: Remove line `import { formatExamples } from '@laitszkin/tool-registry';`
+
+4. **index.ts L59-75**: Remove the entire comment block (L59-61) and the assertCommand function definition (L67-75). After removal, ensure the surrounding code flows correctly — no disconnected comments or whitespace issues.
+
+5. **types.ts L30**: Remove the import line for parser command types. Looking at the actual content, identify the exact line and remove it. Example (adjust to match actual file):
+   ```ts
+   import { InstallCommand, UninstallCommand, ToolCommand, ToolsHelpCommand } from './parsers/types.js';
+   ```
+
+After each removal, verify the module compiles (TypeScript will error if a removed reference was actually used).
+
+## Scope
+- Allowed: `packages/cli/installer.ts`, `packages/cli/index.ts`, `packages/cli/types.ts`
+- Forbidden: Any other file
+
+## Output
+- List of all removals made
+- Build result
+
+## Verify
+- Build: `npm run build` must succeed
+- Run: `node --test test/cli/dispatch-table.test.js test/cli/install-args-parser.test.js test/cli/uninstall-args-parser.test.js test/cli/tool-args-parser.test.js` to verify no regressions
+
+## Boundaries
+- Remove ONLY unused imports and dead code — do not modify any runtime logic
+- If removing an import causes a compilation error (TypeScript), re-add it and report which symbol is still in use
+```
+
+#### Worker 12 (FIX-12): Add strict:true to 16 tool schemas
+
+```
+## Mission
+Add `strict: true` to the ToolSchema declaration in 16 tool packages that currently rely on the default value. This is a mechanical documentation fix — behavior is unchanged because strict defaults to true.
+
+## Context
+- Review dimension: Spec implementation omission
+- Spec requirement: Req 1 (Tool boilerplate — schema standardisation)
+- Only filter-logs and search-logs explicitly declare `strict: true`
+- 16 tools rely on `schema.strict ?? true` fallback
+
+## Input
+No reading needed. The tools to update are all packages/tools/*/index.ts that have a `ToolSchema` object.
+
+## What to do
+For each of the following 16 tools, find the schema object definition and add `strict: true` as the first property:
+
+```
+packages/tools/create-specs/index.ts
+packages/tools/open-github-issue/index.ts
+packages/tools/validate-skill-frontmatter/index.ts
+packages/tools/extract-conversations/index.ts
+packages/tools/extract-pdf-text/index.ts
+packages/tools/enforce-video-aspect-ratio/index.ts
+packages/tools/render-katex/index.ts
+packages/tools/review-threads/index.ts
+packages/tools/generate-storyboard-images/index.ts
+packages/tools/create-review-report/index.ts
+packages/tools/find-github-issues/index.ts
+packages/tools/read-github-issue/index.ts
+packages/tools/sync-memory-index/index.ts
+packages/tools/validate-openai-agent-config/index.ts
+packages/tools/render-error-book/index.ts
+packages/tools/docs-to-voice/index.ts
+```
+
+In each schema declaration, add `strict: true`:
+```ts
+const schema: ToolSchema = {
+  strict: true,
+  options: { ... },
+  ...
+};
+```
+
+To find the schema object quickly, grep for `const schema: ToolSchema = {` or `const schema = {` in each file.
+
+## Scope
+- Allowed: Only the 16 tool files listed above
+- Forbidden: Any other file (do NOT modify filter-logs, search-logs, architecture, codegraph, eval)
+
+## Output
+- List of all 16 files modified
+- Build result
+
+## Verify
+- Build: `npm run build` must succeed
+- Run: `node --test test/tools/schema-arg-validation.test.js`
+- Run: `node --test test/tools/schema-conversion-smoke.test.js`
+
+## Boundaries
+- Change ONLY the schema — add exactly `strict: true` and nothing else
+- Do not change any other property or behavior
+- skip filter-logs, search-logs (already have strict:true), architecture (no schema), codegraph (no schema yet), eval (out of scope)
 ```
 
 ### Regression Test Worker Prompts
 
-#### REGTEST-01: generate-storyboard-images parse errors (FIX-02)
+#### REGTEST-01: Coverage threshold (CI verification)
+
+Manual/CI verification only. No automated regression test needed.
+
+---
+
+#### REGTEST-02: open-github-issue UserInputError formatting (FIX-02 P1-2)
 
 ```
 ## Mission
-Create a regression test for FIX-02 (generate-storyboard-images input parsing throws UserInputError instead of generic Error). This test ensures the 8 input validation paths have proper typed error handling.
+Add a regression test verifying that open-github-issue's handler properly formats UserInputError without the "Error:" prefix after removing the inner catch block. This test validates FIX-02: the inner try/catch at L759-762 was removed, so errors from hydrateArgs/validateIssueContent now propagate to createToolRunner's boundary.
 
 ## Context
-- Fix summary: 8 generic `throw new Error(...)` replaced with `throw new UserInputError(...)` in parsePromptEntries and parsePromptsFile
-- Root cause: Input validation in helper functions used generic Error instead of UserInputError
-- Fix files involved: `packages/tools/generate-storyboard-images/index.ts`
+- Fix summary: Removed inner try/catch (L759-762) that formatted UserInputError with "Error:" prefix
+- Root cause: Inner catch intercepted UserInputError and added "Error:" prefix
+- Fix files involved: `packages/tools/open-github-issue/index.ts` L759-762 removed
 
 ## Input
-- Read fix-related file: `packages/tools/generate-storyboard-images/index.ts` L88-108, L110-182
-- Read existing test as format reference: `test/tools/generate-storyboard-images-prompt-multiple.test.js`
+- Read `test/tools/handler-error-propagation.test.js` — existing test format reference
+- Read `packages/tools/open-github-issue/index.ts` to understand the handler's argument flow
 
 ## What to do
-Add tests to `test/tools/generate-storyboard-images-prompt-multiple.test.js`:
+Add a test to `test/tools/handler-error-propagation.test.js`:
 
-Test 1 — empty prompt throws UserInputError:
-- Call handler (or create mock schema handler) with `--prompt ''`
-- Verify it throws `UserInputError` (not `Error`)
+Test: open-github-issue handler with invalid title validates that UserInputError from the handler path has no "Error:" prefix
 
-Test 2 — no prompts provided:
-- Call with no `--prompt` and no `--prompts-file`
-- Verify it throws `UserInputError` with message containing "required"
+```javascript
+it('open-github-issue: UserInputError from handler is formatted without "Error:" prefix', async () => {
+  const mod = await import('../../packages/tools/open-github-issue/dist/index.js');
+  const stderr = { data: '', write(c) { this.data += c; } };
+  // Trigger hydrateArgs which validates required args — missing --title causes UserInputError
+  const code = await mod.tool.handler(
+    ['create', '--issue-type', 'feature', '--repo', 'valid/repo'],
+    { stdout: { write() {} }, stderr, env: {} },
+  );
+  assert.strictEqual(code, 1);
+  assert.ok(stderr.data.length > 0, 'stderr should have error content');
+  // UserInputError must NOT have "Error:" prefix (REGTEST for P1-2)
+  assert.ok(!stderr.data.includes('Error:'), 'UserInputError should not have "Error:" prefix');
+});
+```
 
-Oracle for both: `assert.throws(() => ..., UserInputError)` passes after fix, fails before fix (throws generic Error)
+Oracle: Before the fix (with inner catch), stderr contains 'Error: ...'. After the fix (catch removed), stderr contains '...' without the prefix.
 
 ## Scope
-- Allowed: `test/tools/generate-storyboard-images-prompt-multiple.test.js`
+- Allowed: `test/tools/handler-error-propagation.test.js` only
 - Forbidden: Any source code files
 
 ## Output
-- Test file path and test function names
-- Test execution result (must pass)
+- Test function name and assertion logic
+- Test execution result
 
 ## Verify
-- Run: `node --test test/tools/generate-storyboard-images-prompt-multiple.test.js`
-- Expected: REGTEST-01 tests pass
+- Run: `node --test test/tools/handler-error-propagation.test.js`
+- Expected: All tests pass, particularly the new REGTEST-02 test
 
 ## Boundaries
 - Do not modify any source code files
-- The test must be independently executable
 - Follow existing test file's formatting conventions (node:test + assert.strict)
 ```
 
-#### REGTEST-02: architecture typed error boundary (FIX-03)
+#### REGTEST-03: review-threads UserInputError formatting (FIX-03 P1-3)
 
 ```
 ## Mission
-Create regression tests for FIX-03 (architecture tool wrapped in createToolRunner). Verify that error paths in the architecture handler produce typed AppError behavior.
+Add a regression test verifying that review-threads' handler properly formats UserInputError without the "Error:" prefix after removing the 6 inner try/catch blocks. This test validates FIX-03: the inner catches were removed, so errors from resolveRepo now propagate to createToolRunner's boundary.
 
 ## Context
-- Fix summary: architectureHandler wrapped in createToolRunner; error paths converted from stderr.write+return1 to typed throws
-- Root cause: Architecture tool completely bypassed createToolRunner
-- Fix files involved: `packages/tools/architecture/index.ts`
-
-## Input
-- Read fix-related file: `packages/tools/architecture/index.ts` (handler, apply, template sections)
-- Read existing test as format reference: `test/tools/architecture-error-types.test.js`
-
-## What to do
-Add tests to `test/tools/architecture-error-types.test.js`:
-
-Test 1 — missing YAML arg returns exit code 1:
-- Call architecture handler with `['apply']` (no YAML file)
-- Verify exit code is 1
-
-Test 2 — invalid YAML returns exit code 1:
-- Call architecture handler with `['apply', '/nonexistent/file.yaml']`
-- Verify exit code is 1
-
-Test 3 — unknown flag behavior:
-- Call architecture handler with `['--unknown-flag']`
-- Verify consistent error behavior (exit code 1 via createToolRunner's strict:true mode)
-
-Note: These tests verify the error boundary works, not specific error messages. The exact behavior depends on how the handler was wrapped.
-
-## Scope
-- Allowed: `test/tools/architecture-error-types.test.js`
-- Forbidden: Any source code files
-
-## Output
-- Test file path and test function names
-- Test execution result (must pass)
-
-## Verify
-- Run: `node --test test/tools/architecture-error-types.test.js`
-- Expected: All regression tests pass
-
-## Boundaries
-- Do not modify any source code files
-- Do not test internal implementation details — test observable behavior (exit codes, error output)
-```
-
-#### REGTEST-03: open-github-issue SystemError throw (FIX-04)
-
-```
-## Mission
-Create a regression test for FIX-04 (open-github-issue gh/API failures throw SystemError instead of generic Error).
-
-## Context
-- Fix summary: createIssueWithGh and createIssueWithToken now throw SystemError instead of new Error()
-- Root cause: External command and API failures used generic Error, losing typed error formatting
-- Fix files involved: `packages/tools/open-github-issue/index.ts`
-
-## Input
-- Read fix-related file: `packages/tools/open-github-issue/index.ts` L520-557
-- Read existing test as format reference: `test/tools/handler-error-propagation.test.js`
-
-## What to do
-Add a test to `test/tools/handler-error-propagation.test.js`:
-
-Test — handler catches SystemError with proper exit code:
-- Call the handler (or create a test harness invoking createIssueWithGh or createIssueWithToken) with a broken API URL or gh command
-- Verify exit code is 1 (createToolRunner catches SystemError and returns 1)
-- Verify stderr contains the error message
-
-Since these functions require network/gh CLI, a unit test may mock the underlying call:
-- Use dynamic import to test directly: import the module and invoke createIssueWithToken with a bad token
-- Or verify via handler: call handler with --dry-run and invalid --repo
-
-Oracle: Error is caught by SystemError path (stderr without "Error:" prefix + stack trace in non-prod)
-
-## Scope
-- Allowed: `test/tools/handler-error-propagation.test.js`
-- Forbidden: Any source code files
-
-## Output
-- Test file path and test function names
-- Test execution result (must pass)
-
-## Verify
-- Run: `node --test test/tools/handler-error-propagation.test.js`
-- Expected: All tests pass
-
-## Boundaries
-- Do not modify any source code files
-- Avoid network/gh calls in tests — use mockable approaches
-```
-
-#### REGTEST-04: validate tools extractFrontmatter UserInputError (FIX-05)
-
-```
-## Mission
-Create a regression test for FIX-05 (validate-skill-frontmatter and validate-openai-agent-config extractFrontmatter throws UserInputError instead of generic Error).
-
-## Context
-- Fix summary: 5 generic throw new Error() calls replaced with throw new UserInputError() in extractFrontmatter across both tools
-- Root cause: Helper function for YAML frontmatter validation used generic Error instead of UserInputError
-- Fix files involved: Both validate tools
-
-## Input
-- Read fix-related files: Both validate tools (importer sections only)
-- Read existing test as format reference: `test/tools/validation-error-handling.test.js`
-
-## What to do
-Add tests to `test/tools/validation-error-handling.test.js`:
-
-Test 1 — frontmatter missing opening delimiter:
-- Create a test SKILL.md without YAML frontmatter (or test extractFrontmatter directly)
-- Import extractFrontmatter or invoke the tool's handler
-- Verify UserInputError is thrown with message containing "delimiter"
-
-Test 2 — frontmatter missing closing delimiter:
-- Create a test SKILL.md with only opening `---` but no closing `---`
-- Invoke the relevant function
-- Verify UserInputError is thrown with message containing "closing"
-
-Oracle: `assert.throws(() => ..., UserInputError)` passes after fix, fails before fix
-
-## Scope
-- Allowed: `test/tools/validation-error-handling.test.js`
-- Forbidden: Any source code files
-
-## Output
-- Test file path and test function names
-- Test execution result (must pass)
-
-## Verify
-- Run: `node --test test/tools/validation-error-handling.test.js`
-- Expected: All tests pass
-
-## Boundaries
-- Do not modify any source code files
-- Tests should test the handler level (end-to-end), not internal functions
-```
-
-#### REGTEST-05: review-threads resolvePrNumber UserInputError (FIX-08)
-
-```
-## Mission
-Create a regression test for FIX-08 (review-threads resolvePrNumber throws UserInputError instead of generic Error on gh CLI failure).
-
-## Context
-- Fix summary: 2 remaining generic Error throws in review-threads converted to UserInputError
-- Root cause: L150 resolvePrNumber and L321 JSON validation were missed by Round 9 FIX-09
+- Fix summary: Removed 6 inner try/catch blocks from cmdList and cmdResolve
+- Root cause: All 6 blocks formatted errors with "Error:" prefix regardless of error type
 - Fix files involved: `packages/tools/review-threads/index.ts`
 
 ## Input
-- Read fix-related file: `packages/tools/review-threads/index.ts` L136-155
-- Read existing test as format reference: `test/tools/handler-error-propagation.test.js`
+- Read `test/tools/handler-error-propagation.test.js` — existing tests for review-threads at L104-117
 
 ## What to do
 Add a test to `test/tools/handler-error-propagation.test.js`:
 
-Test — handler catches valid repo with GH error:
-- Call handler with a valid `--repo` but with a gh command that would fail
-- Or test via the tool's handler with `--pr` targeting a nonexistent PR
-- Verify exit code is 1
-- Verify UserInputError is thrown (caught by createToolRunner)
+Test: review-threads handler with invalid repo format verifies UserInputError has no "Error:" prefix
 
-If direct gh invocation is impractical, test indirectly:
-- The handler wrapper in createToolRunner catches all typed errors
-- Focus on asserting that the handler returns exit code 1 for invalid input
+```javascript
+it('review-threads: UserInputError from resolveRepo is formatted without "Error:" prefix', async () => {
+  const mod = await import('../../packages/tools/review-threads/dist/index.js');
+  const stderr = { data: '', write(c) { this.data += c; } };
+  // Invalid repo format triggers resolveRepo → resolvePrNumber's UserInputError
+  const code = await mod.tool.handler(
+    ['list', '--repo', 'invalid-format'],
+    { stdout: { write() {} }, stderr, env: {} },
+  );
+  assert.strictEqual(code, 1);
+  assert.ok(stderr.data.length > 0, 'stderr should have error content');
+  // UserInputError must NOT have "Error:" prefix (REGTEST for P1-3)
+  assert.ok(!stderr.data.includes('Error:'), 'UserInputError should not have "Error:" prefix');
+  // The actual error message should be included
+  assert.ok(stderr.data.includes('owner/name') || stderr.data.includes('repo'), 'should mention repo format');
+});
+```
 
-Oracle: Exit code is 1, stderr contains the error message (no "Error:" prefix for UserInputError)
+Oracle: Before the fix (with inner catches), stderr contains 'Error: ...'. After the fix (catches removed), stderr contains '...' without the prefix.
+
+Also update the existing test at L104-117 to add the no-"Error:" assertion.
 
 ## Scope
-- Allowed: `test/tools/handler-error-propagation.test.js`
+- Allowed: `test/tools/handler-error-propagation.test.js` only
 - Forbidden: Any source code files
 
 ## Output
-- Test file path and test function names
-- Test execution result (must pass)
+- Test function name and assertion logic
+- Test execution result
+
+## Verify
+- Run: `node --test test/tools/handler-error-propagation.test.js`
+- Expected: All tests pass, including the new REGTEST-03 test
+
+## Boundaries
+- Do not modify any source code files
+- Follow existing conventions (node:test + assert.strict)
+```
+
+#### REGTEST-04: read-github-issue UserInputError (FIX-04 P2-6)
+
+```
+## Mission
+Add a regression test verifying that read-github-issue's handler throws UserInputError (not stderr.write+return1) for missing issue arguments. This validates FIX-04: the stderr.write+return1 pattern at L133-137 was converted to throw UserInputError.
+
+## Context
+- Fix summary: 3 stderr.write+return1 paths converted to typed throws (UserInputError + SystemError)
+- Root cause: Missing issue arg, gh failure, and JSON parse error all bypassed createToolRunner
+- Fix files involved: `packages/tools/read-github-issue/index.ts`
+
+## Input
+- Read `test/tools/handler-error-propagation.test.js` — existing test format reference
+- Read `packages/tools/read-github-issue/index.ts` handler
+
+## What to do
+Add a test to `test/tools/handler-error-propagation.test.js`:
+
+Test: read-github-issue handler with no args returns exit code 1 with UserInputError format
+
+```javascript
+it('read-github-issue: missing issue argument throws UserInputError without "Error:" prefix', async () => {
+  const mod = await import('../../packages/tools/read-github-issue/dist/index.js');
+  const stderr = { data: '', write(c) { this.data += c; } };
+  // No args — missing issue should trigger UserInputError
+  const code = await mod.tool.handler(
+    [],
+    { stdout: { write() {} }, stderr, env: {} },
+  );
+  assert.strictEqual(code, 1);
+  assert.ok(stderr.data.length > 0, 'stderr should have error content');
+  // UserInputError must NOT have "Error:" prefix
+  assert.ok(!stderr.data.includes('Error:'), 'UserInputError should not have "Error:" prefix');
+  // Should mention issue number
+  assert.ok(stderr.data.includes('issue'), 'should mention issue');
+});
+```
+
+Oracle: Before the fix, stderr contains 'Error: issue number or URL is required.\n'. After the fix, UserInputError is thrown without the "Error:" prefix.
+
+## Scope
+- Allowed: `test/tools/handler-error-propagation.test.js` only
+- Forbidden: Any source code files
+
+## Output
+- Test function name and assertion logic
+- Test execution result
 
 ## Verify
 - Run: `node --test test/tools/handler-error-propagation.test.js`
@@ -1078,107 +1483,236 @@ Oracle: Exit code is 1, stderr contains the error message (no "Error:" prefix fo
 
 ## Boundaries
 - Do not modify any source code files
-- Avoid network/gh calls in tests
+- Follow existing conventions (node:test + assert.strict)
+```
+
+#### REGTEST-05: Fix weak assertion + add open-github-issue stderr content test (P3-19 + P2-5)
+
+```
+## Mission
+Fix the weak assertion in the existing test at handler-error-propagation.test.js L89-102. The current test asserts `!stderr.data.includes('Error:')` but NOT `stderr.data.length > 0` — it passes for the wrong reason (the empty catch block swallows errors, leaving stderr empty). After FIX-02 removes the empty catch, stderr will have content, and the test should verify it.
+
+## Context
+- Weak test (P3-19): test at L89-102 asserts no "Error:" but doesn't verify any error content exists
+- Empty catch (P2-5): After fix, resolveRepoAsync's UserInputError propagates to createToolRunner
+- Fix files involved: `packages/tools/open-github-issue/index.ts` (empty catch removed in Worker 2)
+
+## Input
+- Read `test/tools/handler-error-propagation.test.js` L89-102 (existing open-github-issue test)
+
+## What to do
+Update the existing test at L89-102:
+
+Replace:
+```javascript
+assert.strictEqual(code, 1);
+// UserInputError path: no "Error:" prefix on stderr (FIX-01 regression guard)
+assert.ok(!stderr.data.includes('Error:'));
+```
+
+with:
+```javascript
+assert.strictEqual(code, 1);
+assert.ok(stderr.data.length > 0, 'stderr should have error content (REGTEST for P2-5)');
+// UserInputError from validateRepo: no "Error:" prefix (REGTEST for P1-2)
+assert.ok(!stderr.data.includes('Error:'), 'UserInputError should not have "Error:" prefix');
+// Should contain the actual error message
+assert.ok(stderr.data.includes('Invalid repo format') || stderr.data.includes('owner/repo'));
+```
+
+## Scope
+- Allowed: `test/tools/handler-error-propagation.test.js` only
+- Forbidden: Any source code files
+
+## Output
+- The before/after diff of the test
+- Test execution result
+
+## Verify
+- Run: `node --test test/tools/handler-error-propagation.test.js`
+- Expected: The updated test passes (stderr has content + no "Error:" prefix + valid error message)
+
+## Boundaries
+- Do NOT remove or rename the existing test — only strengthen its assertions
+- Do not modify any source code files
+```
+
+#### REGTEST-06: Architecture error propagation + REGTEST-02 label + tool-runner cleanup (FIX-06 P2-4/P2-8/P2-9/P3-16 + P3-25 + P3-24)
+
+```
+## Mission
+Three independent tasks in this worker: (1) Add regression test for architecture error propagation through the CLI boundary, (2) Add REGTEST-02 label to architecture-error-types.test.js, (3) Remove unused imports from tool-runner.test.js.
+
+All three are in different test files, so they can be done in sequence within one worker.
+
+## Context
+- FIX-06 architecture cleanup removed outer catch and converted error paths to typed throws
+- P3-25: REGTEST-02 in architecture-error-types.test.js is missing its label comment
+- P3-24: tool-runner.test.js has unused imports (path, __dirname)
+
+## Input
+- Read `test/tools/architecture-error-types.test.js`
+- Read `test/tool-runner.test.js`
+
+## What to do
+
+### Task 1: Test architecture error propagation
+Add a test to `test/tools/architecture-error-types.test.js`:
+
+Test: Architecture handler returns exit code 1 for missing apply YAML argument (error propagates to createToolRunner/CLI boundary)
+
+```javascript
+it('architectureHandler returns 1 for apply with missing YAML arg (error boundary)', async () => {
+  const mod = await import('../../packages/tools/architecture/dist/index.js');
+  const stderr = { data: '', write(c) { this.data += c; } };
+  const code = await mod.tool.handler(
+    ['apply'],
+    { stdout: { write() {} }, stderr, env: {} },
+  );
+  assert.strictEqual(code, 1);
+  assert.ok(stderr.data.length > 0, 'stderr should have error content');
+  // UserInputError from missing YAML arg
+  assert.ok(!stderr.data.includes('Error:'), 'UserInputError should not have "Error:" prefix (after fix)');
+  assert.ok(stderr.data.includes('Missing architecture specification'));
+});
+```
+
+### Task 2: Add REGTEST-02 label
+In `test/tools/architecture-error-types.test.js`, find the test at approximately L38 (the first test with the architecture handler). Add a comment prefix:
+```javascript
+// REGTEST-02: FIX-03 — architecture tool converts stderr.write+return1 to typed throws
+it('architectureHandler returns 1 for apply with missing slug (UserInputError)', async () => {
+```
+
+### Task 3: Remove unused imports from tool-runner.test.js
+In `test/tool-runner.test.js`, remove:
+```js
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+```
+And the corresponding `__dirname` computation:
+```js
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+```
+
+## Scope
+- Allowed: `test/tools/architecture-error-types.test.js`, `test/tool-runner.test.js`
+- Forbidden: Any source code files
+
+## Output
+- Summary of each change
+- Test execution results
+
+## Verify
+- Run: `node --test test/tools/architecture-error-types.test.js test/tool-runner.test.js`
+- Expected: All tests pass
+
+## Boundaries
+- Do not modify any source code files
+- Follow existing test conventions (node:test + assert.strict)
+- Verify no functional changes to tests (assertions should be equivalent or stronger)
 ```
 
 ---
 
 ## 7. Fix Batch Schedule
 
-### Batch 1 — P1 Fixes (Parallel)
+### Batch 1 — P1 + P2 Fixes (Full Parallel)
 
-- **Issues**: FIX-01, FIX-02
-- **Workers**: Worker 1 (coverage threshold), Worker 2 (generate-storyboard-images)
-- **Strategy**: Parallel — no file overlap
+- **Issues**: FIX-01 through FIX-10 (P1: 3, P2: 10)
+- **Workers**: Worker 1 through Worker 10
+- **Strategy**: Full parallel — **zero file overlap** between any worker
 - **Depends on**: Nothing
 - **Gate**:
-  - [ ] Worker 1 reports success
-  - [ ] Worker 2 reports success
-  - [ ] Run verification: `npm run build && node --test test/tools/generate-storyboard-images-prompt-multiple.test.js`
-
----
-
-### Batch 2 — P2/P3 Tool Fixes (Parallel)
-
-- **Issues**: FIX-03, FIX-04+FIX-09, FIX-05, FIX-06, FIX-08, FIX-10+FIX-11+FIX-12+FIX-15
-- **Workers**: Worker 3, Worker 4, Worker 6, Worker 7, Worker 8
-- **Strategy**: Parallel — no file overlap between any workers
-- **Depends on**: Batch 1
-- **Gate**:
-  - [ ] Worker 3 (architecture) reports success
-  - [ ] Worker 4 (open-github-issue) reports success
-  - [ ] Worker 6 (validate tools) reports success
-  - [ ] Worker 7 (REGTEST-05 rename) reports success
-  - [ ] Worker 8 (review-threads) reports success
-  - [ ] Worker 9 (cross-platform + docs) reports success
+  - [ ] Worker 1 (coverage thresholds) reports success
+  - [ ] Worker 2 (open-github-issue catches) reports success
+  - [ ] Worker 3 (review-threads catches) reports success
+  - [ ] Worker 4 (read-github-issue throws) reports success
+  - [ ] Worker 5 (find-github-issues throws) reports success
+  - [ ] Worker 6 (architecture boundary) reports success
+  - [ ] Worker 7 (validate tools edge case) reports success
+  - [ ] Worker 8 (codegraph wraps + throws) reports success
+  - [ ] Worker 9 (CI build step) reports success
+  - [ ] Worker 10 (CL-13 test) reports success
   - [ ] Run verification: `npm run build`
 
----
+### Batch 2 — P3 Fixes (Full Parallel)
 
-### Batch 3 — CLI Dispatch Fix (Sequential — Single Worker)
-
-- **Issues**: FIX-07, FIX-13, FIX-14, FIX-16
-- **Worker**: Worker 5 (all changes to `packages/cli/index.ts`)
-- **Strategy**: Sequential — single file, single worker handles all 4 changes
-- **Depends on**: Batch 2
+- **Issues**: FIX-11, FIX-12 (P3: dead code, strict:true)
+- **Workers**: Worker 11, Worker 12
+- **Strategy**: Full parallel — no file overlap between workers or with Batch 1 files
+- **Depends on**: Nothing (P3 fixes are independent of P1/P2)
 - **Gate**:
-  - [ ] Worker 5 reports success
-  - [ ] Run verification: `npm run build && node --test 'test/cli/**/*.test.js' 'test/tool-runner.test.js'`
+  - [ ] Worker 11 (P3 dead code cleanups) reports success
+  - [ ] Worker 12 (strict:true for 16 tools) reports success
+  - [ ] Run verification: `npm run build`
 
----
+### Batch 3 — Regression Tests (Sequential Sub-batches)
 
-### Batch 4 — Regression Test Implementation (Parallel)
+- **Tasks**: REGTEST-01 through REGTEST-06
+- **Strategy**: REGTEST-02/03/05 share `handler-error-propagation.test.js` → sequential sub-batches for this file. Other tests are in different files → parallel.
 
-- **Tasks**: REGTEST-01, REGTEST-02, REGTEST-03, REGTEST-04, REGTEST-05
-- **Strategy**: Parallel — test files are independent
-- **Depends on**: All fix batches completed
+**Sub-batch 3a — Parallel (different files)**:
+- REGTEST-04 (read-github-issue UserInputError) — separate test file
+- REGTEST-06 (architecture + label + tool-runner) — separate test files
+
+**Sub-batch 3b — Sequential (handler-error-propagation.test.js)**:
+- REGTEST-02 (open-github-issue UserInputError format)
+- REGTEST-03 (review-threads UserInputError format) — depends on REGTEST-02 being merged first
+- REGTEST-05 (fix weak assertion) — depends on REGTEST-03 being merged first
+
+**Sub-batch 3c — Manual verification**:
+- REGTEST-01 (coverage threshold) — CI verification only
+
+- **Depends on**: All fix batches (Batch 1 + Batch 2) completed
 - **Gate**:
-  - [ ] REGTEST-01 worker reports success
-  - [ ] REGTEST-02 worker reports success
-  - [ ] REGTEST-03 worker reports success
-  - [ ] REGTEST-04 worker reports success
-  - [ ] REGTEST-05 worker reports success
+  - [ ] All REGTEST workers report success
   - [ ] All new regression tests pass
   - [ ] Existing test suite passes (confirm no regression)
 
----
+### Batch 4 — Final Verification (Sequential)
 
-### Batch 5 — Final Verification (Sequential)
-
-- **Tasks**: Full test suite, coverage check
+- **Tasks**: Full test suite, coverage check, cross-check REPORT.md
 - **Strategy**: Sequential (coordinator handles directly or dispatches a single worker)
 - **Depends on**: All preceding batches
 - **Gate**:
   - [ ] Full test suite passes: `COVERAGE=true bash scripts/test.sh`
   - [ ] Every issue in REPORT.md confirmed resolved (cross-check findings list)
+  - [ ] Lint/format check passes (if applicable)
 
 ---
 
 ## 8. Regression Test Inventory
 
-- REGTEST-01 → FIX-02: [Unit] `test/tools/generate-storyboard-images-prompt-multiple.test.js` — GIVEN empty prompt WHEN parsePromptEntries processes it THEN throws UserInputError
-- REGTEST-02 → FIX-03: [Integration] `test/tools/architecture-error-types.test.js` — GIVEN invalid args WHEN architecture handler called THEN exit code 1 via typed error boundary
-- REGTEST-03 → FIX-04: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN gh failure WHEN createIssueWithGh called THEN throws SystemError
-- REGTEST-04 → FIX-05: [Unit] `test/tools/validation-error-handling.test.js` — GIVEN broken frontmatter WHEN extractFrontmatter processes THEN throws UserInputError
-- REGTEST-05 → FIX-08: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN gh failure WHEN resolvePrNumber called THEN throws UserInputError
+- REGTEST-01 → FIX-01: [Manual/CI] Coverage threshold verification — `COVERAGE=true bash scripts/test.sh`
+- REGTEST-02 → FIX-02: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN open-github-issue handler with missing title WHEN called THEN UserInputError has no "Error:" prefix
+- REGTEST-03 → FIX-03: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN review-threads handler with invalid repo WHEN called THEN UserInputError has no "Error:" prefix
+- REGTEST-04 → FIX-04: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN read-github-issue handler with no args WHEN called THEN UserInputError is thrown without "Error:" prefix
+- REGTEST-05 → P3-19 + P2-5: [Unit] `test/tools/handler-error-propagation.test.js` — Fix weak assertion: verify stderr has content after open-github-issue handler with invalid repo
+- REGTEST-06 → FIX-06 + P3-25 + P3-24: [Integration+Unit] `test/tools/architecture-error-types.test.js` — architecture error propagation; also label cleanup + unused import removal
 
 ---
 
 ## 9. Verification Checkpoints
 
-### Checkpoint 1 — After fix batches complete (before regression tests)
+### Checkpoint 1 — After Batch 1 (all P1+P2 fixes)
 - Run: `npm run build`
-- Expected: All existing tests pass, all fixes confirmed
+- Expected: All 10 workers report success, build compiles without errors
 - Logical check: Each fix worker's verify step must pass
 
-### Checkpoint 2 — After regression tests are implemented
-- Run: `node --test test/tools/generate-storyboard-images-prompt-multiple.test.js test/tools/handler-error-propagation.test.js test/tools/validation-error-handling.test.js test/tools/architecture-error-types.test.js`
+### Checkpoint 2 — After Batch 2 (all P3 fixes)
+- Run: `npm run build`
+- Expected: Workers 11-12 report success, build compiles without errors
+- Logical check: Dead code removals don't break compilation
+
+### Checkpoint 3 — After Batch 3 (regression tests implemented)
+- Run: `node --test test/tools/handler-error-propagation.test.js test/tools/architecture-error-types.test.js test/tool-runner.test.js test/tool-registry/all-tools-known.test.js`
 - Expected: All new regression tests pass, confirming each fix is effective
 - Logical check: Each REGTEST oracle verifies "fails on unfixed code, passes after fix"
 
-### Checkpoint 3 — Final verification
+### Checkpoint 4 — Final verification
 - Run full test suite: `COVERAGE=true bash scripts/test.sh`
-- Confirm lint passes (if applicable)
+- Confirm lint/build passes
 - Cross-check REPORT.md: every issue resolved
 
 ---
@@ -1191,20 +1725,26 @@ Oracle: Exit code is 1, stderr contains the error message (no "Error:" prefix fo
 - **If a regression test passes on the unfixed code**: The test design is invalid — redesign the oracle and dispatch a new worker.
 - **If merge conflicts occur**: The coordinator resolves the conflict, then re-runs the batch gate verification.
 - **If a fix or regression test breaks existing tests**: Pause. Report which test failed and which worker's change caused it.
+- **For FIX-08 (codegraph)**: The worker performs systematic code reading before applying the fix. If the lib/*.ts error propagation is unclear, the worker must read those files too before deciding the fix.
+- **For FIX-06 (architecture)**: The worker performs systematic debugging of the mutation pipeline and catch blocks before applying changes. Do not let the worker guess the fix.
 
 ---
 
 ## 11. Fix History
 
+### Round 11 — 2026-06-05
+- **Issues fixed**: FIX-01 through FIX-13 (P1:3, P2:10, P3:5)
+- **Outcome**: TBD
+- **Key notes**: FIX-01 (coverage threshold) may fail CI if architecture/codegraph coverage hasn't improved enough. If CI fails, present options: (a) keep 75/70 and update SPEC, (b) add more architecture/codegraph tests, (c) lower to compromise. FIX-08 (codegraph) is a partial conversion — lib/*.ts files are left as known carryover.
+
 ### Round 10 — 2026-06-05
 - **Issues fixed**: FIX-01 through FIX-16 (P1:2, P2:6, P3:8)
-- **Outcome**: TBD
-- **Key notes**: FIX-01 (coverage threshold) may fail CI if architecture tool coverage hasn't improved enough from FIX-03. If CI fails, ASK FIRST about accepting the tradeoff vs adding more architecture tests.
+- **Outcome**: All resolved in commit `ddb9863`
+- **Key notes**: Coverage threshold compromise at 69% (creating Round 11 FIX-01). Architecture partially fixed (creating Round 11 FIX-06).
 
 ### Round 9 — 2026-06-04
 - **Issues fixed**: FIX-01 through FIX-13 (P2:5, P3:8)
 - **Outcome**: All resolved in commit `17f7e49`
-- **Key notes**: Coverage exclude narrowed from `packages/tools/**` to `packages/tools/eval/**`, thresholds adjusted from 80→65 (creating Round 10 FIX-01)
 
 ### Round 8 — 2026-06-04
 - **Issues fixed**: FIX-01 through FIX-21 (P2:8, P3:13)
@@ -1234,7 +1774,7 @@ Oracle: Exit code is 1, stderr contains the error message (no "Error:" prefix fo
 - Fixes must not conflict with the original spec requirements
 - Regression tests must not start before all fix batches pass
 - Resolve merge conflicts yourself — the coordinator handles them. This is coordination, not implementation.
-- **For FIX-03 (architecture)**: ensure the worker performs systematic debugging (reading related code, tracing execution paths) before applying the fix. Do not let the worker guess the fix.
+- **For FIX-06 (architecture) and FIX-08 (codegraph)**: ensure the worker performs systematic debugging (reading related code, tracing execution paths) before applying the fix. Do not let the worker guess the fix.
 
 ### ASK FIRST — pause and confirm with the user
 
@@ -1242,7 +1782,8 @@ Oracle: Exit code is 1, stderr contains the error message (no "Error:" prefix fo
 - Need to add a new external dependency
 - Worker has failed twice
 - Test regression cannot be quickly diagnosed
-- **FIX-01 coverage threshold causes CI failure** — raising to 75% may fail if architecture coverage hasn't improved enough. If so, present options: (a) keep 65% and update SPEC, (b) add architecture tests and raise to 75%, (c) raise to compromise value (70%)
+- **FIX-01 coverage threshold causes CI failure** — raising to 75% lines / 70% functions may fail if architecture/codegraph coverage hasn't improved enough. If so, present options: (a) keep 75/70 and update SPEC, (b) add architecture/codegraph tests to reach the threshold, (c) lower to compromise
+- **FIX-06 (architecture) inner catch conversion**: If the mutation pipeline at L239-437 has meaningful rollback logic beyond the deep-clone snapshot, the worker must preserve that logic before re-throwing. Report the before/after to the coordinator.
 
 ### NEVER
 
@@ -1251,4 +1792,4 @@ Oracle: Exit code is 1, stderr contains the error message (no "Error:" prefix fo
 - Skip verification and proceed to the next batch
 - Modify spec documents (unless the fix reveals a spec error — report it instead)
 - Start regression tests before all fixes are verified
-- **Defer any REPORT.md issue to a future round** — every issue has a complete fix plan in this FIX.md
+- Defer any REPORT.md issue to a future round — every issue has a complete fix plan in this FIX.md
