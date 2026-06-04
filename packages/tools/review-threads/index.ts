@@ -554,15 +554,11 @@ const schema = {
   },
 };
 
-const _runner = createToolRunner(schema);
-
 // ---- Tool definition ----
 
 export const tool: ToolDefinition = {
   name: 'review-threads',
   category: 'GitHub workflows',
   description: 'List or resolve GitHub PR review threads.',
-  handler: async (args, context) => {
-    return _runner(args, context);
-  },
+  handler: createToolRunner(schema),
 };

@@ -53,8 +53,8 @@ function lineMatches(
 
 const schema = {
   options: {
-    keyword: { type: 'string' as const },
-    regex: { type: 'string' as const },
+    keyword: { type: 'string' as const, multiple: true },
+    regex: { type: 'string' as const, multiple: true },
     mode: { type: 'string' as const, default: 'any' },
     'ignore-case': { type: 'boolean' as const, default: false },
     start: { type: 'string' as const },

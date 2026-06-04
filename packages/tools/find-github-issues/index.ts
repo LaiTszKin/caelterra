@@ -184,15 +184,11 @@ const schema = {
   },
 };
 
-const _runner = createToolRunner(schema);
-
 // ---- Tool definition ----
 
 export const tool: ToolDefinition = {
   name: 'find-github-issues',
   category: 'GitHub workflows',
   description: 'List GitHub issues through gh.',
-  handler: async (args, context) => {
-    return _runner(args, context);
-  },
+  handler: createToolRunner(schema),
 };
