@@ -679,10 +679,7 @@ async function resolveRepoAsync(
   // Try to resolve from git remote
   const result = await runCommand('git', ['remote', 'get-url', 'origin']);
   if (result.exitCode !== 0) {
-    context.stderr!.write(
-      'Unable to resolve origin remote. Pass --repo owner/repo.\n',
-    );
-    throw new Error('--repo resolution failed');
+    throw new UserInputError('Unable to resolve origin remote. Pass --repo owner/repo.');
   }
 
   const remote = result.stdout.trim();
@@ -690,10 +687,7 @@ async function resolveRepoAsync(
     /github\.com[:/](?<owner>[A-Za-z0-9_.-]+)\/(?<repo>[A-Za-z0-9_.-]+?)(?:\.git)?$/,
   );
   if (!match?.groups) {
-    context.stderr!.write(
-      'Origin remote is not a GitHub repository. Pass --repo owner/repo.\n',
-    );
-    throw new Error('--repo resolution failed');
+    throw new UserInputError('Origin remote is not a GitHub repository. Pass --repo owner/repo.');
   }
 
   return `${match.groups.owner}/${match.groups.repo}`;

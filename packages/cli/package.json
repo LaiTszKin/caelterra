@@ -19,6 +19,7 @@
   "dependencies": {
     "@laitszkin/tui": "*",
     "@laitszkin/tool-registry": "*",
+    "@laitszkin/tool-utils": "*",
     "@laitszkin/tool-filter-logs": "*",
     "@laitszkin/tool-search-logs": "*",
     "@laitszkin/tool-validate-skill-frontmatter": "*",

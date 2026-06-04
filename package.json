@@ -28,7 +28,7 @@
     "prepublishOnly": "npm run build",
     "watch": "tsc --build --watch",
     "test": "scripts/test.sh",
-    "test:coverage": "npm test",
+    "test:coverage": "COVERAGE=true npm test",
     "test:ts": "node --test dist/test/"
   },
   "engines": {

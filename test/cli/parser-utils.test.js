@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeParseError } from '../../packages/cli/dist/parsers/parser-utils.js';
+import { normalizeParseError } from '@laitszkin/cli';
 import { UserInputError } from '@laitszkin/tool-utils';
 
 describe('normalizeParseError', () => {

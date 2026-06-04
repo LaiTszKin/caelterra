@@ -19,7 +19,7 @@ const schema = {
     'count-only': { type: 'boolean' as const },
   },
   allowPositionals: true,
-  strict: false,
+  strict: true,
   usage: 'apltk filter-logs [options] [<file>...]',
   description: 'Filter log lines by time window',
   handler: async (

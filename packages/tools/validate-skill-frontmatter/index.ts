@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { iterSkillDirs, createToolRunner } from '@laitszkin/tool-utils';
+import { UserInputError, iterSkillDirs, createToolRunner } from '@laitszkin/tool-utils';
 
 const NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REQUIRED_KEYS = new Set(['name', 'description']);
@@ -112,11 +112,10 @@ const schema = {
     }
 
     if (allErrors.length) {
-      stderr.write('SKILL.md frontmatter validation failed:\n');
-      for (const error of allErrors) {
-        stderr.write(`- ${error}\n`);
-      }
-      return 1;
+      throw new UserInputError(
+        'SKILL.md frontmatter validation failed:\n' +
+        allErrors.map(e => `- ${e}`).join('\n')
+      );
     }
 
     stdout.write(`SKILL.md frontmatter validation passed for ${skillDirs.length} skills.\n`);

@@ -67,6 +67,36 @@ test('schema-conversion-smoke: all tools export a handler', async (t) => {
   }
 });
 
+test('buildHelpText shows description when provided', async () => {
+  const { createToolRunner } = await import('../../packages/tool-utils/dist/index.js');
+
+  const schema = {
+    options: {
+      name: { type: 'string', description: 'The name to use' },
+      verbose: { type: 'boolean', short: 'v', description: 'Enable verbose output' },
+      tags: { type: 'string', multiple: true, description: 'Tags to apply' },
+    },
+    usage: 'apltk test [options]',
+    description: 'Test tool',
+    handler: async () => 0,
+  };
+
+  const runner = createToolRunner(schema);
+  const stdout = { data: '', write(c) { this.data += c; } };
+  const code = await runner(['--help'], { stdout, stderr: { write() {} } });
+
+  assert.strictEqual(code, 0);
+  // String option should show <value>
+  assert.ok(stdout.data.includes('--name <value>'));
+  // Boolean option should NOT show <value>
+  assert.ok(stdout.data.includes('--verbose, -v') && !stdout.data.includes('--verbose, -v <value>'));
+  // Multiple option should show [...]
+  assert.ok(stdout.data.includes('--tags <value> [...]'));
+  // Description text should appear
+  assert.ok(stdout.data.includes('The name to use'));
+  assert.ok(stdout.data.includes('Enable verbose output'));
+});
+
 test('schema-conversion-smoke: --help produces valid output', async (t) => {
   for (const toolName of TOOL_NAMES) {
     await t.test(toolName, async () => {

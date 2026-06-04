@@ -131,3 +131,67 @@ test('validate-openai-agent-config: validation errors to stderr when agents/open
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+// ---- regression: validate tools throw UserInputError (no "Error:" prefix) ----
+
+test('validate-skill-frontmatter validation errors are UserInputError', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apltk-vsf-uie-'));
+  try {
+    // Create a skill dir with invalid frontmatter to trigger UserInputError
+    const skillDir = path.join(tmpDir, 'skills', 'test-skill');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      '---\nfoo: bar\n---\n',
+      'utf8',
+    );
+
+    const mod = await import('../../packages/tools/validate-skill-frontmatter/dist/index.js');
+    const stderr = { data: '', write(c) { this.data += c; } };
+    const code = await mod.tool.handler([], {
+      sourceRoot: tmpDir,
+      stdout: { write() {} },
+      stderr,
+      env: {},
+    });
+
+    assert.strictEqual(code, 1);
+    // Should NOT have "Error:" prefix for UserInputError
+    assert.ok(!stderr.data.includes('Error:'));
+    // Should contain validation error messages
+    assert.ok(stderr.data.length > 0);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('validate-openai-agent-config validation errors are UserInputError', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apltk-voac-uie-'));
+  try {
+    // Create a skill dir with valid SKILL.md but missing agents/openai.yaml
+    const skillDir = path.join(tmpDir, 'skills', 'test-skill');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      '---\nname: test-skill\ndescription: A test skill\n---\n',
+      'utf8',
+    );
+
+    const mod = await import('../../packages/tools/validate-openai-agent-config/dist/index.js');
+    const stderr = { data: '', write(c) { this.data += c; } };
+    const code = await mod.tool.handler([], {
+      sourceRoot: tmpDir,
+      stdout: { write() {} },
+      stderr,
+      env: {},
+    });
+
+    assert.strictEqual(code, 1);
+    // Should NOT have "Error:" prefix for UserInputError
+    assert.ok(!stderr.data.includes('Error:'));
+    // Should contain validation error messages
+    assert.ok(stderr.data.length > 0);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

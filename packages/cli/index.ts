@@ -329,6 +329,7 @@ export { InstallArgsParser } from './parsers/install-parser.js';
 export { UninstallArgsParser } from './parsers/uninstall-parser.js';
 export { ToolArgsParser } from './parsers/tool-parser.js';
 export { HelpTextBuilder } from './help-text-builder.js';
+export { normalizeParseError } from './parsers/parser-utils.js';
 
 export { parseArguments, buildHelpText, buildInstallHelpText, buildUninstallHelpText, buildToolsHelp, buildBanner, buildWelcomeScreen, registerAllTools };
 

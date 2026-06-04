@@ -65,7 +65,7 @@ const schema = {
     'count-only': { type: 'boolean' as const, default: false },
   },
   allowPositionals: true,
-  strict: false,
+  strict: true,
   usage: 'apltk search-logs [options] [<file>...]',
   description: 'Search log lines by keywords or regex patterns with time filters',
   handler: async (

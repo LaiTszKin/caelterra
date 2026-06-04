@@ -293,6 +293,7 @@ const schema = {
     fs.mkdirSync(outputDir, { recursive: true });
 
     const records: Array<Record<string, unknown>> = [];
+    let failures = 0;
 
     for (let i = 0; i < promptItems.length; i++) {
       const item = promptItems[i];
@@ -313,6 +314,7 @@ const schema = {
       const data = response.data;
       if (!Array.isArray(data) || data.length === 0) {
         stderr.write(`Error: No image data returned for prompt ${i + 1}.\n`);
+        failures++;
         continue;
       }
 
@@ -325,6 +327,7 @@ const schema = {
         imageBytes = await fetchBinary(first.url);
       } else {
         stderr.write(`Error: Image payload missing b64_json/url for prompt ${i + 1}.\n`);
+        failures++;
         continue;
       }
 
@@ -358,6 +361,9 @@ const schema = {
     fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2), 'utf-8');
     stdout.write(`[OK] Wrote plan to ${summaryPath}\n`);
 
+    if (failures > 0) {
+      stderr.write(`Warning: ${failures} out of ${promptItems.length} prompts failed to generate images.\n`);
+    }
     return 0;
   },
 };

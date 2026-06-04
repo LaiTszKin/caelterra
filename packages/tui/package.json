@@ -17,7 +17,8 @@
     "test": "node --test dist/"
   },
   "dependencies": {
-    "chalk": "^5.0.0",
-    "@inquirer/prompts": "^8.0.0"
+    "@inquirer/prompts": "^8.0.0",
+    "@laitszkin/tool-utils": "*",
+    "chalk": "^5.0.0"
   }
 }

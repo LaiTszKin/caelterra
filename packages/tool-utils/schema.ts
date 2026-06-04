@@ -5,8 +5,8 @@ import { AppError, UserInputError, SystemError } from './app-error.js';
 
 /** Option definition for parseArgs schema. */
 export type SchemaOption =
-  | { type: 'string'; default?: string; short?: string; multiple?: boolean }
-  | { type: 'boolean'; default?: boolean; short?: string; multiple?: boolean };
+  | { type: 'string'; default?: string; short?: string; multiple?: boolean; description?: string }
+  | { type: 'boolean'; default?: boolean; short?: string; multiple?: boolean; description?: string };
 
 /**
  * Complete tool schema — single source of truth for args, help, and validation.
@@ -52,8 +52,11 @@ function buildHelpText(schema: ToolSchema): string {
   for (const [key, opt] of Object.entries(schema.options)) {
     if (key === 'help') continue;
     const short = opt.short ? `, -${opt.short}` : '';
+    const typeLabel = opt.type === 'string' ? ' <value>' : '';
+    const multiLabel = opt.multiple ? ' [...]' : '';
     const def = opt.default !== undefined ? ` (default: ${opt.default})` : '';
-    lines.push(`  --${key}${short}${def}`);
+    const desc = opt.description ? `  ${opt.description}` : '';
+    lines.push(`  --${key}${short}${typeLabel}${multiLabel}${def}${desc}`);
   }
   lines.push('  --help, -h            Show this help');
   return lines.join('\n');

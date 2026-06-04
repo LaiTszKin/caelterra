@@ -6,19 +6,19 @@ import { UserInputError, SystemError, createToolRunner } from '@laitszkin/tool-u
 
 function parseSize(value: string): { width: number; height: number } {
   const match = value.trim().toLowerCase().match(/^(\d{2,5})x(\d{2,5})$/);
-  if (!match) throw new Error('Invalid size format. Use WIDTHxHEIGHT, for example 1080x1920.');
+  if (!match) throw new UserInputError('Invalid size format. Use WIDTHxHEIGHT, for example 1080x1920.');
   const width = parseInt(match[1], 10);
   const height = parseInt(match[2], 10);
-  if (width <= 0 || height <= 0) throw new Error('Width and height must be positive integers.');
+  if (width <= 0 || height <= 0) throw new UserInputError('Width and height must be positive integers.');
   return { width, height };
 }
 
 function parseRatio(value: string): { width: number; height: number } {
   const match = value.trim().match(/^(\d+):(\d+)$/);
-  if (!match) throw new Error('Invalid aspect ratio format. Use WIDTH:HEIGHT, for example 16:9.');
+  if (!match) throw new UserInputError('Invalid aspect ratio format. Use WIDTH:HEIGHT, for example 16:9.');
   const width = parseInt(match[1], 10);
   const height = parseInt(match[2], 10);
-  if (width <= 0 || height <= 0) throw new Error('Aspect ratio values must be positive integers.');
+  if (width <= 0 || height <= 0) throw new UserInputError('Aspect ratio values must be positive integers.');
   return { width, height };
 }
 
@@ -31,14 +31,14 @@ function probeVideoSize(videoPath: string, ffprobeBin: string): { width: number;
   const payload = JSON.parse(result);
   const streams = payload.streams;
   if (!Array.isArray(streams) || streams.length === 0) {
-    throw new Error(`No video stream found in ${videoPath}.`);
+    throw new SystemError(`No video stream found in ${videoPath}.`);
   }
 
   const first = streams[0];
   const width = first.width;
   const height = first.height;
   if (typeof width !== 'number' || typeof height !== 'number' || width <= 0 || height <= 0) {
-    throw new Error(`Invalid video dimensions from ffprobe for ${videoPath}.`);
+    throw new SystemError(`Invalid video dimensions from ffprobe for ${videoPath}.`);
   }
   return { width, height };
 }
@@ -91,7 +91,7 @@ function resolveTargetSize(
   targetHeight: number | null,
 ): { width: number; height: number } {
   if (targetSize && (targetWidth !== null || targetHeight !== null)) {
-    throw new Error('Use either --target-size or --target-width/--target-height, not both.');
+    throw new UserInputError('Use either --target-size or --target-width/--target-height, not both.');
   }
 
   if (targetSize) return parseSize(targetSize);
@@ -99,7 +99,7 @@ function resolveTargetSize(
   const width = targetWidth || parseInt(process.env.TEXT_TO_SHORT_VIDEO_WIDTH || '1080', 10);
   const height = targetHeight || parseInt(process.env.TEXT_TO_SHORT_VIDEO_HEIGHT || '1920', 10);
 
-  if (width <= 0 || height <= 0) throw new Error('Target width and height must be positive integers.');
+  if (width <= 0 || height <= 0) throw new UserInputError('Target width and height must be positive integers.');
   return { width, height };
 }
 

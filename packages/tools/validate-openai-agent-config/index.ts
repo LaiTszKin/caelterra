@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { iterSkillDirs, createToolRunner } from '@laitszkin/tool-utils';
+import { UserInputError, iterSkillDirs, createToolRunner } from '@laitszkin/tool-utils';
 
 const TOP_LEVEL_ALLOWED_KEYS = new Set(['interface', 'dependencies', 'policy']);
 const INTERFACE_REQUIRED_KEYS = new Set(['display_name', 'short_description', 'default_prompt']);
@@ -206,11 +206,10 @@ const schema = {
     }
 
     if (allErrors.length) {
-      stderr.write('agents/openai.yaml validation failed:\n');
-      for (const error of allErrors) {
-        stderr.write(`- ${error}\n`);
-      }
-      return 1;
+      throw new UserInputError(
+        'agents/openai.yaml validation failed:\n' +
+        allErrors.map(e => `- ${e}`).join('\n')
+      );
     }
 
     stdout.write(`agents/openai.yaml validation passed for ${skillDirs.length} skills.\n`);

@@ -71,3 +71,16 @@ test('generate-storyboard-images tool structure is valid', async () => {
   assert.strictEqual(tool.name, 'generate-storyboard-images');
   assert.strictEqual(typeof tool.handler, 'function');
 });
+
+test('handler returns exit code 1 when all prompts fail', async () => {
+  const mod = await import('../../packages/tools/generate-storyboard-images/dist/index.js');
+  const stderr = { data: '', write(c) { this.data += c; } };
+
+  // Call with bad API URL — all prompts should fail
+  const code = await mod.tool.handler(
+    ['--api-url', 'http://localhost:99999', '--prompt', 'test'],
+    { stdout: { write() {} }, stderr, env: {} }
+  );
+
+  assert.strictEqual(code, 1);
+});
