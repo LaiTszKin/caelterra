@@ -1,6 +1,5 @@
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { parseArgs } from 'node:util';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
 import { createToolRunner } from '@laitszkin/tool-utils';
 
@@ -63,10 +62,6 @@ interface ReviewThreadsArgs {
   allUnresolved: boolean;
   dryRun: boolean;
 }
-
-// Holds the raw argv for re-parsing the --thread-id option with multiple:true,
-// since SchemaOption does not support the `multiple` property.
-let _rawArgs: string[] = [];
 
 // ---- Utilities ----
 
@@ -513,7 +508,7 @@ const schema = {
     pr: { type: 'string' as const },
     state: { type: 'string' as const },
     output: { type: 'string' as const },
-    'thread-id': { type: 'string' as const },
+    'thread-id': { type: 'string' as const, multiple: true },
     'thread-id-file': { type: 'string' as const },
     'all-unresolved': { type: 'boolean' as const },
     'dry-run': { type: 'boolean' as const },
@@ -528,14 +523,7 @@ const schema = {
   ): Promise<number> => {
     const { stderr } = context;
 
-    // Re-parse --thread-id with multiple:true from raw args
-    const { values: parsed } = parseArgs({
-      args: _rawArgs,
-      options: { 'thread-id': { type: 'string', multiple: true } },
-      strict: false,
-      allowPositionals: true,
-    });
-    const threadId = (parsed['thread-id'] as string[]) ?? [];
+    const threadId = (values['thread-id'] as string[]) ?? [];
 
     const command = positionals[0] ?? '';
     const state = (values.state as string | undefined) ?? 'unresolved';
@@ -575,7 +563,6 @@ export const tool: ToolDefinition = {
   category: 'GitHub workflows',
   description: 'List or resolve GitHub PR review threads.',
   handler: async (args, context) => {
-    _rawArgs = args;
     return _runner(args, context);
   },
 };

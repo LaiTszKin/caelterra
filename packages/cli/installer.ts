@@ -25,7 +25,7 @@ const SKILLS_DIRNAME = 'skills';
 export const MANIFEST_FILENAME = '.apollo-toolkit-manifest.json';
 
 export function resolveHomeDirectory(env: NodeJS.ProcessEnv = process.env): string {
-  return env.HOME || env.USERPROFILE || os.homedir();
+  return createPlatformAdapter().homeDir(env);
 }
 
 export function expandUserPath(inputPath: string, env: NodeJS.ProcessEnv = process.env): string {

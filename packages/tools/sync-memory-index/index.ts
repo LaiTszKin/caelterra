@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { homedir } from 'node:os';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
 import { UserInputError, SystemError, createToolRunner } from '@laitszkin/tool-utils';
 
@@ -103,7 +104,7 @@ const schema = {
     const stdout = context.stdout ?? process.stdout;
     const stderr = context.stderr ?? process.stderr;
 
-      const homeDir = process.env.HOME || '';
+      const homeDir = homedir() || '';
       const agentsFile = (values['agents-file'] as string) || path.join(homeDir, '.codex', 'AGENTS.md');
       const memoryDir = (values['memory-dir'] as string) || path.join(homeDir, '.codex', 'memory');
       const sectionTitle = values['section-title'] as string;

@@ -8,7 +8,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HelpTextBuilder } from '../../packages/cli/dist/help-text-builder.js';
+import { HelpTextBuilder } from '@laitszkin/cli';
 
 function stripAnsi(str) {
   return str.replace(/\[\d+(;\d+)*m/g, '');

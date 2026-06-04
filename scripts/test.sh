@@ -33,7 +33,7 @@ run_test_group "Stable tests (test/)" \
 EXCLUDE='(cmd-init|cmd-list-apis|cmd-survey)'
 PACKAGE_TEST_FILES=$(find packages -name '*.test.js' -not -path '*/node_modules/*' | grep -v -E "$EXCLUDE" | sort | tr '\n' ' ')
 run_test_group "Package tests (no mock.module)" \
-  node --test $PACKAGE_TEST_FILES
+  node $GROUP1_FLAGS --test $PACKAGE_TEST_FILES
 
 # Group 3: mock-dependent tests — isolated with --experimental-test-module-mocks
 run_test_group "Package tests (mock.module)" \

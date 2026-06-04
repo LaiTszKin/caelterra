@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { UserInputError } from '@laitszkin/tool-utils';
-import { UninstallArgsParser } from '../../packages/cli/dist/parsers/uninstall-parser.js';
+import { UninstallArgsParser } from '@laitszkin/cli';
 
 test('UninstallArgsParser: bare uninstall creates uninstall command with no modes', () => {
   const parser = new UninstallArgsParser();

@@ -42,7 +42,7 @@ export interface ParsedArguments {
   linkMode: 'copy' | 'symlink' | null;
   assumeYes: boolean;
   explicitInstallCommand: boolean;
-  helpTopic: string;
+  helpTopic: 'overview' | 'install' | 'uninstall';
 }
 
 export interface CliContext {

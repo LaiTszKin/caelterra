@@ -15,8 +15,8 @@ export interface PlatformAdapter {
   /** Returns 'junction' on Windows, 'dir' on POSIX (for fs.symlink). */
   symlinkType(): 'junction' | 'dir';
 
-  /** Returns the user's home directory. */
-  homeDir(): string;
+  /** Returns the user's home directory. Accepts optional env for test injection. */
+  homeDir(env?: Record<string, string | undefined>): string;
 
   /** Appends '.cmd' on Windows for npm/node commands. */
   resolveCommand(command: string): string;
@@ -39,9 +39,9 @@ export class WindowsAdapter implements PlatformAdapter {
     return 'junction';
   }
 
-  homeDir(): string {
-    return process.env.USERPROFILE
-      ?? process.env.HOME
+  homeDir(env: Record<string, string | undefined> = process.env): string {
+    return env.USERPROFILE
+      ?? env.HOME
       ?? os.homedir();
   }
 
@@ -73,9 +73,9 @@ export class PosixAdapter implements PlatformAdapter {
     return 'dir';
   }
 
-  homeDir(): string {
-    return process.env.HOME
-      ?? process.env.USERPROFILE
+  homeDir(env: Record<string, string | undefined> = process.env): string {
+    return env.HOME
+      ?? env.USERPROFILE
       ?? os.homedir();
   }
 

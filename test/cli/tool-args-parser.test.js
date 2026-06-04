@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ToolArgsParser } from '../../packages/cli/dist/parsers/tool-parser.js';
+import { ToolArgsParser } from '@laitszkin/cli';
 
 test('ToolArgsParser: direct tool name with args', () => {
   const parser = new ToolArgsParser();

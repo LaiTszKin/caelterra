@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { UserInputError } from '@laitszkin/tool-utils';
-import { InstallArgsParser } from '../../packages/cli/dist/parsers/install-parser.js';
+import { InstallArgsParser } from '@laitszkin/cli';
 
 test('InstallArgsParser: empty args creates default install command with no modes', () => {
   const parser = new InstallArgsParser();

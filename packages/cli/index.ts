@@ -310,6 +310,11 @@ function printUninstallSummary({ stdout, uninstallResult, env }: {
   }
 }
 
+export { InstallArgsParser } from './parsers/install-parser.js';
+export { UninstallArgsParser } from './parsers/uninstall-parser.js';
+export { ToolArgsParser } from './parsers/tool-parser.js';
+export { HelpTextBuilder } from './help-text-builder.js';
+
 export { parseArguments, buildHelpText, buildInstallHelpText, buildUninstallHelpText, buildToolsHelp, buildBanner, buildWelcomeScreen, registerAllTools };
 
 export async function run(argv: string[], context: CliContext = {}): Promise<number> {
