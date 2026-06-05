@@ -162,4 +162,48 @@ describe('Handler error propagation via createToolRunner', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  // REGTEST-01: FIX-01 — open-github-issue resolveRepoAsync produces single error line (no duplicate)
+  it('open-github-issue: resolveRepoAsync produces single error line (no duplicate)', async () => {
+    const mod = await import('../../packages/tools/open-github-issue/dist/index.js');
+    const stderr = { data: '', write(c) { this.data += c; } };
+    try {
+      const code = await mod.tool.handler(
+        ['--repo', 'invalid'],
+        { stdout: { write() {} }, stderr, env: {} },
+      );
+      assert.strictEqual(code, 1);
+    } catch (err) {
+      // handler may throw if not wrapped in createToolRunner
+      assert.ok(err instanceof Error);
+    }
+    const lines = stderr.data.trim().split('\n').filter(Boolean);
+    assert.ok(lines.length <= 1, `should have 0 or 1 error line(s), got ${lines.length}: ${JSON.stringify(stderr.data)}`);
+  });
+
+  // REGTEST-02: FIX-01 — open-github-issue UserInputError from validateRepo has no "Error:" prefix
+  it('open-github-issue: UserInputError from validateRepo has no "Error:" prefix', async () => {
+    const mod = await import('../../packages/tools/open-github-issue/dist/index.js');
+    const stderr = { data: '', write(c) { this.data += c; } };
+    let caught;
+    try {
+      const code = await mod.tool.handler(
+        ['create', '--issue-type', 'feature', '--title', 'Test', '--reason', 'Because', '--suggested-architecture', 'Arch', '--repo', 'invalid-format'],
+        { stdout: { write() {} }, stderr, env: {} },
+      );
+      assert.strictEqual(code, 1);
+    } catch (err) {
+      caught = err;
+      assert.ok(err instanceof Error);
+    }
+    // After FIX-01: no stderr.write before UserInputError throw
+    assert.ok(caught, 'handler should have thrown an error');
+    assert.ok(caught instanceof UserInputError, 'error should be UserInputError');
+    assert.ok(caught.message.includes('owner/repo'), `message should mention expected format: ${caught.message}`);
+    // stderr must not contain "Error:" prefix (UserInputError must not be prefixed)
+    assert.ok(!stderr.data.includes('Error:'), `UserInputError should not have "Error:" prefix: ${JSON.stringify(stderr.data)}`);
+    // stderr must not contain duplicate lines (stderr.write was removed)
+    const lines = stderr.data.trim().split('\n').filter(Boolean);
+    assert.ok(lines.length <= 1, `should have 0 or 1 error line(s), got ${lines.length}: ${JSON.stringify(stderr.data)}`);
+  });
 });
