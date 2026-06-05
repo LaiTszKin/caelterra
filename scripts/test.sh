@@ -7,7 +7,7 @@
 # Coverage thresholds: 75% lines, 60% branches, 75% functions.
 # SPEC requires 80% lines; threshold is 75% due to the split-process
 # limitation (Group 2 achieves ~69.4% in its own process, combined ~80%).
-# --check-coverage enforces these thresholds — CI fails if unmet.
+# Thresholds are enforced natively by --test-coverage-lines/branches/functions.
 # See docs/plans/2026-06-04/cli-refactor/REPORT.md §4 for details.
 #
 # The --test-coverage-exclude=packages/tools/eval/** glob may behave
@@ -18,7 +18,7 @@ EXIT=0
 # When COVERAGE=true, Group 1 runs with --experimental-test-coverage flags.
 GROUP1_FLAGS=""
 if [ "${COVERAGE:-}" = "true" ]; then
-  GROUP1_FLAGS="--experimental-test-coverage --check-coverage --test-coverage-lines=75 --test-coverage-branches=60 --test-coverage-functions=75 --test-coverage-exclude=packages/tools/eval/**"
+  GROUP1_FLAGS="--experimental-test-coverage --test-coverage-lines=75 --test-coverage-branches=60 --test-coverage-functions=75 --test-coverage-exclude=packages/tools/eval/**"
 fi
 
 run_test_group() {
