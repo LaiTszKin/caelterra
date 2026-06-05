@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, iterSkillDirs } from '@laitszkin/tool-utils';
+import { UserInputError, iterSkillDirs, createToolRunner } from '@laitszkin/tool-utils';
 
 const NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REQUIRED_KEYS = new Set(['name', 'description']);

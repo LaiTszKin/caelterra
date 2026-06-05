@@ -139,7 +139,7 @@ async function loadHandler(toolName) {
 const tools = classifyTools();
 
 // Tools that mention createToolRunner in comments but don't actually use it
-const COMMENT_ONLY_TOOLS = new Set(['architecture', 'open-github-issue']);
+const COMMENT_ONLY_TOOLS = new Set(['architecture', 'open-github-issue', 'find-github-issues', 'review-threads']);
 
 const strictTools = [];
 const nonStrictTools = [];

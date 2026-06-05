@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, iterSkillDirs } from '@laitszkin/tool-utils';
+import { UserInputError, iterSkillDirs, createToolRunner } from '@laitszkin/tool-utils';
 
 const TOP_LEVEL_ALLOWED_KEYS = new Set(['interface', 'dependencies', 'policy']);
 const INTERFACE_REQUIRED_KEYS = new Set(['display_name', 'short_description', 'default_prompt']);
