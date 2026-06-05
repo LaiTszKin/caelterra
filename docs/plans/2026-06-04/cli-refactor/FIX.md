@@ -1,10 +1,10 @@
-# Fix Coordinator Prompt: CLI 工具全面重構 — Round 13
+# Fix Coordinator Prompt: CLI 工具全面重構 — Round 14
 
-- **Date**: 2026-06-05
-- **Source REPORT**: `docs/plans/2026-06-04/cli-refactor/REPORT.md` (Round 13)
+- **Date**: 2026-06-06
+- **Source REPORT**: `docs/plans/2026-06-04/cli-refactor/REPORT.md` (Round 14)
 - **Source Spec**: `docs/plans/2026-06-04/cli-refactor/`
-- **Total Issues**: P1: 4, P2: 9, P3: 8
-- **Total Regression Tests**: 4
+- **Total Issues**: P1: 3, P2: 5, P3: 4
+- **Total Regression Tests**: 5
 
 ---
 
@@ -15,10 +15,10 @@
 ### What you do
 
 - Read and understand the issue inventory, dependency analysis, and fix details below
-- **Create an isolated branch for each worker before dispatching** (e.g., `fix/worker-1-open-github-issue`, `fix/worker-2-sync-memory-index`)
+- **Create an isolated branch for each worker before dispatching** (e.g., `fix/worker-1-read-github-issue`, `fix/worker-2-coverage-ci`). Every worker gets its own branch — never dispatch two workers to the same branch.
 - Spawn workers to execute individual fixes, giving each a self-contained prompt (provided in Section 6) — **each worker commits their changes on their isolated branch**
 - After all fixes pass verification, spawn workers to implement regression tests
-- **After each batch completes**: merge every worker's isolated branch back to main (handle conflicts), **confirm all changes from all subagents have been implemented**, then **clean up all agent branches**
+- **After each batch completes**: merge every worker's isolated branch back to main (handle conflicts), **confirm all changes from all subagents have been implemented in the merged result**, then **clean up all agent branches** — do not leave any `fix/worker-*` or `fix/regtest-*` branches behind
 - Wait for all workers in a batch to complete, then digest their results
 - Run verification commands at each checkpoint
 - Decide whether to proceed to the next batch, retry a failed worker, or halt
@@ -41,31 +41,30 @@
 
 ## 2. Mission
 
-修復 CLI refactoring Round 13 審查中發現的 21 項問題（4 P1 + 9 P2 + 8 P3）。核心目標依優先級：
+修復 CLI refactoring Round 14 審查中發現的 12 項問題（3 P1 + 5 P2 + 4 P3）。核心目標依優先級：
 
-1. **P1 open-github-issue resolveRepoAsync 重複輸出** — `context.stderr!.write()` 在 `UserInputError` 拋出前寫入相同訊息，造成使用者看到兩行重複錯誤
-2. **P1 sync-memory-index createToolRunner 被移除的迴歸** — Round 12 修復意外移除了 `createToolRunner` 包裝，改用 `Error:` 前綴的手動 catch，違反 Req 1 與 Req 3
-3. **P1 8 個測試失敗** — schema-arg-validation 將 architecture 誤歸類為 createToolRunner 工具、architecture 測試未處理拋出型別錯誤的 handler、sync-memory-index 錯誤傳播測試因 handler 格式不正確而失敗
-4. **P1 涵蓋率門檻 69% vs SPEC 80%** — 維持不變的第 4 輪
-5. **P2/P3 清理** — 已知 carryover 文件化、PlatformAdapter EOL 文件化、涵蓋率註解、dispatch table 限制記錄
+1. **P1 read-github-issue createToolRunner 遷移不完整** — schema 只有 `help`，`--repo`、`--json`、`--comments` 三個旗標被 `strict: true` 的 `parseArgs` 攔截，handler 內部的 `parseArgs()` 永遠收不到這些旗標。這是 Round 12 修復 (52a42a6) 引入的迴歸
+2. **P1 涵蓋率門檻 65% vs SPEC 80%** — 持續存在的差距，已在多個 round 中標記。需增加合併涵蓋率估算與更明確的說明文件
+3. **P2/P3 清理** — sync-memory-index 多餘的巢狀 catch、review-threads cmdResolve 使用 stderr.write+return1 而非擲出 UserInputError、EOL 未消費、分派表格文件化、CI 腳本強化
 
-共 8 個 Fix Workers + 4 個 Regression Test Workers。分散在 4 個批次中。
+共 **5 個 Fix Workers** + **5 個 Regression Test Workers**。分散在 **4 個批次**中。
 
-**Success looks like**: All 21 issues in REPORT.md resolved, all 8 test failures fixed, all regression tests pass, full test suite passes, no regressions.
+**Success looks like**: All 12 issues in REPORT.md resolved, read-github-issue --repo/--json/--comments work correctly, all regression tests pass, full test suite passes, no regressions.
 
 ---
 
 ## 3. Issue Inventory
 
-- FIX-01 (P1, 簡單, 規格偏離): open-github-issue resolveRepoAsync 移除 stderr.write 重複輸出 — `packages/tools/open-github-issue/index.ts`
-- FIX-02 (P1, 中等, 規格偏離+迴歸): sync-memory-index 恢復 createToolRunner + formatAppError — `packages/tools/sync-memory-index/index.ts`
-- FIX-03 (P1, 簡單, 測試錯誤): schema-arg-validation 排除 architecture 錯誤分類 — `test/tools/schema-arg-validation.test.js`
-- FIX-04 (P1, 簡單, 測試錯誤): architecture dist 測試改為處理拋出型別錯誤 — `packages/tools/architecture/dist/index.test.js`
-- FIX-05 (P1, 簡單, 規格遺漏): 涵蓋率門檻提高 + 添加 --check-coverage — `scripts/test.sh`, `.github/workflows/test.yml`
-- FIX-06 (P2, 簡單, 規格遺漏): createToolRunner carryover 文件化 (architecture, open-github-issue, review-threads, find-github-issues) — `packages/tools/architecture/index.ts`, `packages/tools/open-github-issue/index.ts`, `packages/tools/review-threads/index.ts`, `packages/tools/find-github-issues/index.ts`
-- FIX-07 (P2, 簡單, 規格遺漏): PlatformAdapter EOL 文件化 (定義但從未被使用) — `packages/tool-utils/src/platform-adapter.ts`
-- FIX-08 (P2+P3, 簡單, 規格遺漏+文件): 涵蓋率 + CI 結構限制文件化 — `scripts/test.sh`, `.github/workflows/test.yml`
-- FIX-09 (P3, 簡單, 多項清理): escapeRegex 死碼、publish failure 回傳 0、validate tools 內部 Error、dispatch table 限制 — `packages/tools/sync-memory-index/index.ts`, `packages/tools/open-github-issue/index.ts`, `packages/tools/validate-skill-frontmatter/index.ts`, `packages/tools/validate-openai-agent-config/index.ts`, `packages/cli/index.ts`
+- FIX-01 (P1, 中等, 規格偏離): read-github-issue 恢復完整 createToolRunner schema + 移除內部 parseArgs — `packages/tools/read-github-issue/index.ts`
+- FIX-02 (P1, 簡單, 規格遺漏): 涵蓋率門檻差距 65% vs 80% SPEC — 增加合併涵蓋率估算、新增 Windows 相容性防護、強化 grep 格式相依 — `scripts/test.sh`
+- FIX-03 (P2, 簡單, 冗餘代碼): sync-memory-index 移除多餘巢狀 catch + 使用 adapter.EOL — `packages/tools/sync-memory-index/index.ts`, `packages/tool-utils/platform-adapter.ts`
+- FIX-04 (P2, 簡單, 規格偏離): review-threads cmdResolve 轉換 stderr.write+return1 為擲出 UserInputError — `packages/tools/review-threads/index.ts`
+- FIX-05 (P2, 簡單, 文件): 分派表格 Map + if-else chain 限制文件化 + FIX-16 註解更新 — `packages/cli/index.ts`
+- REGTEST-01 → FIX-01: 驗證 --repo 旗標可正常傳遞
+- REGTEST-02 → FIX-01: 驗證 --json 旗標可正常傳遞
+- REGTEST-03 → FIX-01: 驗證 --comments 旗標可正常傳遞
+- REGTEST-04 → FIX-03: 驗證 sync-memory-index 錯誤傳播（移除巢狀 catch 後格式仍正確）
+- REGTEST-05 → FIX-04: 驗證 review-threads cmdResolve 擲出 UserInputError
 
 ---
 
@@ -73,238 +72,155 @@
 
 ### Dependencies
 
-- FIX-03 (test classifier fix) and FIX-04 (architecture dist test fix) need their respective code to be in the fixed state first. Since they're test-only changes to fix test bugs, they're independent of the source code fixes (FIX-01, FIX-02).
-- FIX-02 (sync-memory-index restore createToolRunner) will automatically fix the 4 sync-memory-index test failures (no separate test fix needed).
-- FIX-05 (coverage) depends on other fixes to potentially improve coverage, but can be attempted independently.
-- All other fixes are logically independent.
+- FIX-01 stands alone. FIX-02 stands alone. FIX-03, FIX-04, FIX-05 all stand alone.
 - All REGTESTs depend on their corresponding FIX completing first.
 
 ### File overlaps
 
 | Worker | Files Modified | Overlaps With |
 |---|---|---|
-| W1 (FIX-01) | `packages/tools/open-github-issue/index.ts` | None |
-| W2 (FIX-02) | `packages/tools/sync-memory-index/index.ts` | None |
-| W3 (FIX-03) | `test/tools/schema-arg-validation.test.js` | None |
-| W4 (FIX-04) | `packages/tools/architecture/dist/index.test.js` | None |
-| W5 (FIX-05) | `scripts/test.sh`, `.github/workflows/test.yml` | W8 (same files — comments) |
-| W6 (FIX-06) | `packages/tools/architecture/index.ts`, `packages/tools/open-github-issue/index.ts`, `packages/tools/review-threads/index.ts`, `packages/tools/find-github-issues/index.ts` | W1 (open-github-issue), W10 (architecture from Round 12 carried over) |
-| W7 (FIX-07) | `packages/tool-utils/src/platform-adapter.ts` | None |
-| W8 (FIX-08) | `scripts/test.sh`, `.github/workflows/test.yml` | W5 (same file) |
-| W9 (FIX-09) | Multi-file cleanup | Various minor overlaps |
+| W1 (FIX-01) | `packages/tools/read-github-issue/index.ts` | None (isolated) |
+| W2 (FIX-02) | `scripts/test.sh` | None (isolated) |
+| W3 (FIX-03) | `packages/tools/sync-memory-index/index.ts`, `packages/tool-utils/platform-adapter.ts` | None |
+| W4 (FIX-04) | `packages/tools/review-threads/index.ts` | None |
+| W5 (FIX-05) | `packages/cli/index.ts` | None |
 
-### File Overlap Resolution
-
-- **W1 and W6 both touch `open-github-issue/index.ts`** → **Must be sequential**. W1 removes stderr.write, W6 adds carryover comment. Since W6 is a comment-only change (P2 documentation), it can be merged into W1's worker prompt or run after W1 completes.
-  - **Decision**: Merge W6's open-github-issue documentation into W1's scope. W1 worker will both fix the stderr.write AND add the carryover comment.
-
-- **W5 and W8 both touch `scripts/test.sh`** → **Must be sequential**. Since W5 (coverage threshold raise) and W8 (documentation comments) are related, merge them into a single worker.
+**Zero file overlap between any workers** → all 5 fix workers can run in **full parallel**.
 
 ### Parallelism strategy
 
 | Batch | Workers | File Overlap | Strategy |
 |---|---|---|---|
-| **Batch 1 — P1 Fixes** | W1 (FIX-01), W2 (FIX-02), W3 (FIX-03), W4 (FIX-04) | No overlap after merging W6 into W1 | **Full parallel** on isolated branches |
-| **Batch 2 — P1 Config Fix** | W5+W8 merged (FIX-05+FIX-08) | Self-contained | **Single worker** on its own branch |
-| **Batch 3 — Documentation** | W6-merged-into-W1 + W7 (FIX-07) + W9 (FIX-09) | No remaining overlap | **Parallel** — W7, W9 on isolated branches |
-| **Batch 4 — Regression Tests** | REGTEST-01~04 | Limited overlap | **Sub-batches** |
-| **Batch 5 — Final Verification** | Coordinator | Self-contained | **Sequential** |
+| **Batch 1 — All Fixes** | W1, W2, W3, W4, W5 | No overlap | **Full parallel** — each worker on its own isolated branch |
+| **Batch 2 — Regression Tests** | REGTEST-01~05 | REGTEST-01/02/03 all modify `test/tools/handler-error-propagation.test.js` | **Sequential sub-batches** (same file) |
+| **Batch 3 — Final Verification** | Coordinator | Self-contained | **Sequential** |
 
 ---
 
 ## 5. Fix Details (with Regression Test Design)
 
-### FIX-01: open-github-issue — Remove stderr.write before throw + add carryover comment (P1-1, P2-5, P3-17, P3-15)
+### FIX-01: read-github-issue — Restore complete createToolRunner schema (P1-1, P1-3, P3-9)
 
-**Root cause**: `resolveRepoAsync` (L767-782) writes a human-readable hint to `context.stderr` THEN throws `UserInputError` with the same message. The CLI boundary's `formatAppError` catches the `UserInputError` and writes the message again. User sees duplicate output:
-```
-Unable to resolve origin remote. Pass --repo owner/repo.
-Unable to resolve origin remote. Pass --repo owner/repo.
-```
+**Root cause**: The Round 12 fix (52a42a6) changed the createToolRunner wrapping from a complete schema (with `--repo`, `--json`, `--comments` declared) to a minimal schema with only `help`. With `strict: true` (default), `node:util.parseArgs` rejects all undeclared flags. The original FIX-02b wrapping (0ca38ea) properly declared all options. The handler's internal `parseArgs()` receives only `positionals` (which is the function argument `argv`), so `--repo`/`--json`/`--comments` never reach it.
 
-**Files involved**: `packages/tools/open-github-issue/index.ts` > L768-782
+**Files involved**: `packages/tools/read-github-issue/index.ts`
 
 **Fix approach**:
-1. Remove both `context.stderr!.write(...)` calls at L768-770 and L779-781
-2. Keep the `throw new UserInputError(...)` — it will be formatted correctly by the CLI boundary's `formatAppError`
-3. The error message from `UserInputError` is shown without "Error:" prefix, so the user sees exactly one line of output
-4. Add carryover comment above `openGitHubIssueHandler` documenting that this tool uses positional subcommands (create/draft) and cannot be easily wrapped in createToolRunner
+1. Declare all 3 options in the schema: `--repo` (string), `--json` (boolean), `--comments` (boolean)
+2. Change `readGitHubIssueHandler` signature from `(argv: string[], context)` to `(args: ReadIssueArgs, context)` — no test code calls this function directly
+3. Move flag extraction from the internal `parseArgs()` into the createToolRunner handler callback, using `values.*` for flags and `positionals[0]` for the issue number
+4. Remove the internal `parseArgs()` function entirely (resolves P3-9 dead code)
+5. Add a JSDoc comment above the handler documenting the migration approach (resolves P1-3 missing docs)
 
-**Complexity**: Simple — 1 function, remove 4 lines, add 6 lines of comment
+**Complexity**: Medium — requires restructuring handler signature and schema
 
-**Regression test**: REGTEST-01 (single error line), REGTEST-02 (no "Error:" prefix for UserInputError)
+**Regression test**:
+- REGTEST-01: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN `read-github-issue` with `['--repo', 'owner/repo', '42']` WHEN handler called THEN args.repo === 'owner/repo', no ERR_PARSE_ARGS_UNKNOWN_OPTION
+- REGTEST-02: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN `read-github-issue` with `['--json', '42']` WHEN handler called THEN args.json === true
+- REGTEST-03: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN `read-github-issue` with `['--comments', '42']` WHEN handler called THEN args.comments === true
 
 ---
 
-### FIX-02: sync-memory-index — Restore createToolRunner + formatAppError (P1-2, P3-22)
+### FIX-02: Coverage + CI script hardening (P1-2, P2-7, P3-10, P3-11, P3-12)
 
-**Root cause**: Round 12 fix commit replaced `createToolRunner(schema)` with a direct handler that uses generic `Error:` prefix in its catch block (L116-119). The catch block does not use `formatAppError`, so type-aware formatting is lost. `escapeRegex` function (L68-70) is dead code.
+**Root cause**: The SPEC requires 80% line coverage but the split-process approach means each group has its own threshold. Group 1 achieves 77.48%, Group 2 achieves 69.29%. Combined coverage is estimated at ~80% but is not verified. Additionally: Group 3 tests run without coverage tracking; the `--test-coverage-exclude` Windows glob may not match; the post-hoc grep depends on Node.js internal error message format; `mktemp` requires Git Bash on Windows.
 
-**Files involved**: `packages/tools/sync-memory-index/index.ts` > L1-4, L68-70, L88-127
+**Files involved**: `scripts/test.sh`
 
 **Fix approach**:
-1. Restore `createToolRunner` wrapping for the handler:
-   - Import `createToolRunner`, `formatAppError`, `UserInputError`, `SystemError` from `@laitszkin/tool-utils`
-   - Define a schema with options: `--agents-file`, `--memory-dir`, `--section-title`, `--instruction-line` (all string type)
-   - Wrap the handler logic in `createToolRunner(schema)`
-   - Keep `createPlatformAdapter().homeDir()` for cross-platform home directory resolution
-2. Replace the catch block:
-   ```ts
-   } catch (err) {
-     formatAppError(stderr, err);
-     return 1;
-   }
-   ```
-3. Remove dead code: delete the `escapeRegex` function (L68-70), and inline the regex escape logic directly in `removeExistingSection` since `escapeRegex` is only used once.
+1. Keep current thresholds (65/60/65) — they are the maximum sustainable across both groups given current coverage levels
+2. Add a `combined-coverage` diagnostic step that estimates approximate combined coverage by running a single-process coverage scan on test/ + selected package test files (excluding Group 3 mock tests and eval exclusion)
+3. Add a grep pattern sanity check: after grep for "does not meet threshold", verify at least one match was found (or handle zero matches explicitly). If no coverage lines exist at all, output a warning
+4. Add Node.js version-compatible temp directory handling as fallback for `mktemp` (fall back to `$TMPDIR` or `/tmp`)
+5. Document Windows glob risk with a note pointing to the Node.js coverage glob documentation
+6. Add a comment noting Group 3's coverage blind spot
 
-**Complexity**: Medium — requires restructuring the handler into createToolRunner's callback pattern
+**Complexity**: Simple — config changes + documentation improvements
 
-**Regression test**: REGTEST-03 (type-aware formatting), REGTEST-04 (SystemError stack trace)
+**Regression test**: REGTEST-04 ([Integration] `COVERAGE=true bash scripts/test.sh`) — verify script exits 0, verify combined coverage estimate line appears in output
 
 ---
 
-### FIX-03: schema-arg-validation — Exclude architecture from strict tool list (P1-3a)
+### FIX-03: sync-memory-index — Remove redundant nested catch + consume adapter.EOL (P2-4, P2-5)
 
-**Root cause**: The test's `classifyTools()` function checks `source.includes("createToolRunner")` to identify strict-mode tools. Architecture's compiled dist contains the string in comments (documentation about the known carryover), so it's falsely classified as a createToolRunner tool.
+**Root cause**:
+- P2-5: The createToolRunner-wrapped handler has an inner try/catch (L107-129) that catches all errors, calls `formatAppError(stderr, err)`, and returns 1. The createToolRunner outer catch (schema.ts:101-104) also calls `formatAppError` and returns 1. The inner catch is redundant — the outer catch handles errors identically.
+- P2-4: PlatformAdapter.EOL is defined but never consumed. sync-memory-index writes files using hardcoded `\n` (L60: `lines.join('\n')`) instead of adapter.EOL.
 
-**Files involved**: `test/tools/schema-arg-validation.test.js` > L91-L101
+**Files involved**: `packages/tools/sync-memory-index/index.ts`, `packages/tool-utils/platform-adapter.ts`
 
 **Fix approach**:
-Add a skip-list for tools that mention `createToolRunner` in comments but don't actually use it:
-```js
-// Tools that mention createToolRunner in comments but don't actually use it
-const COMMENT_ONLY_TOOLS = new Set(['architecture']);
-```
-Then check this set in the classification logic:
-```js
-if (source.includes("createToolRunner") && !COMMENT_ONLY_TOOLS.has(name)) {
-```
-Add this right after the `const strictTools = []` initialization.
+1. Remove the inner try/catch (L107, L126-129) from the schema's handler function. Errors will propagate to createToolRunner's outer catch which already calls `formatAppError` and returns 1. Dedent the handler body.
+2. In `renderSection()` (L60), change `lines.join('\n')` to use adapter.EOL. Import `createPlatformAdapter` at the top of the file and call: `lines.join(createPlatformAdapter().EOL)` — but note that `renderSection` is a pure function and should remain testable. Better: make it accept an optional EOL parameter, defaulting to `'\n'`.
+3. In `syncAgentsFile()` (L85), `writeFileSync` with `'utf8'` doesn't transform line endings — `os.EOL` matters for the content written. If `sectionText` uses `\n` (from `renderSection` with default EOL), that's what gets written. For cross-platform correctness, use `adapter.EOL` when joining lines in `renderSection`.
 
-**Complexity**: Simple — 4 lines added
+**Alternative simpler approach for EOL**: Pass `createPlatformAdapter().EOL` as a parameter to `renderSection` with a `\n` default. This way the function remains testable (default behavior unchanged) but can use OS-appropriate EOL when called from the handler.
 
-**Regression test**: Run the existing test to confirm architecture is no longer classified as strict
+**Complexity**: Medium — multiple related changes
+
+**Regression test**: REGTEST-05 ([Unit] `test/tools/sync-memory-index-error.test.js`) — verify error propagation still works after removing inner try/catch: GIVEN handler throws error THEN outer catch formats it correctly AND returns 1
 
 ---
 
-### FIX-04: architecture dist tests — Handle thrown errors from handler (P1-3c)
+### FIX-04: review-threads — Convert cmdResolve stderr.write+return1 to UserInputError throw (P2-6)
 
-**Root cause**: Two tests (REGTEST-15 L87, REGTEST-17 L224) call `tool.handler()` directly and expect it to return exit code 1. But `handleApply` and `handleTemplate` throw `UserInputError` for validation errors, which propagate as rejected promises since `architectureHandler` does not catch them.
+**Root cause**: In `cmdResolve` (L505-509), the "no thread IDs selected" case uses `stderr!.write('Error: ...')` and returns 1 instead of throwing `UserInputError`. This bypasses `formatAppError` at the CLI boundary and uses a manual "Error: " prefix which is inconsistent with how `formatAppError` formats UserInputError (no prefix).
 
-**Files involved**: `packages/tools/architecture/dist/index.test.js` > L80-95, L220-228
-
-**Fix approach**:
-Wrap the handler calls in try/catch. If the handler returns a number, verify it's 1. If it throws, verify it's a `UserInputError`:
-
-```js
-it('should exit code 1 with diagnostic when SPEC.md not found', async () => {
-  mock.method(fs, 'existsSync', () => false);
-  try {
-    const io = makeIo();
-    const handler = tool.handler;
-    if (!handler) throw new Error('tool.handler is undefined');
-    try {
-      const exitCode = await handler(['template', '--spec', '/nonexistent/spec-dir', '--output', '/tmp/rg15-out'], makeContext(io));
-      assert.equal(exitCode, 1, 'Expected exit code 1 for missing spec path');
-    } catch (err) {
-      // Handler throws UserInputError when not wrapped in createToolRunner
-      assert.ok(err instanceof Error, 'error should be an Error');
-      assert.ok(err.message.includes('not found'), `error should contain "not found": ${err.message}`);
-    }
-    assert.ok(io.stderrText.includes('not found'), `stderr should contain "not found": got ${JSON.stringify(io.stderrText)}`);
-  } finally {
-    mock.restoreAll();
-  }
-});
-```
-
-Similarly for the edge test.
-
-**Complexity**: Simple — wrap each handler call in try/catch
-
-**Regression test**: Run the architecture dist tests to confirm they pass
-
----
-
-### FIX-05+FIX-08: Coverage threshold raise + CI documentation + --check-coverage (P1-4, P2-8, P2-9, P2-10, P3-18, P3-20, P3-21)
-
-**Root cause**: Coverage thresholds at 69% lines (SPEC: 80%), 68% functions (CHECKLIST: 75%). `--check-coverage` flag absent so thresholds not enforced. Split-process coverage prevents unified measurement. Various structural limitations undocumented.
-
-**Files involved**: `scripts/test.sh`, `.github/workflows/test.yml`
+**Files involved**: `packages/tools/review-threads/index.ts`
 
 **Fix approach**:
-1. Raise coverage thresholds:
-   - `--test-coverage-lines=69` → `--test-coverage-lines=75`
-   - `--test-coverage-functions=68` → `--test-coverage-functions=75`
-   - `--test-coverage-branches=60` (unchanged)
-2. Add `--check-coverage` to the GROUP1_FLAGS to enforce thresholds
-3. Add documentation comments about structural limitations (split-process, Windows glob, CI shell)
-
-**Complexity**: Simple — config changes + comments
-
-**Regression test**: REGTEST-05 (CI verification)
-
----
-
-### FIX-06: createToolRunner carryover documentation (P2-5, P3-17)
-
-**Root cause**: 6 tools still bypass createToolRunner. architecture is a known carryover (subcommand complexity). open-github-issue and review-threads use positional subcommands incompatible with createToolRunner's options schema. find-github-issues has simple args but is not wrapped.
-
-**Files involved**:
-- `packages/tools/architecture/index.ts` — already has comment (verify)
-- `packages/tools/open-github-issue/index.ts` — add carryover comment (merged into FIX-01)
-- `packages/tools/review-threads/index.ts` — add carryover comment
-- `packages/tools/find-github-issues/index.ts` — add carryover comment
-- `test/tools/schema-conversion-smoke.test.js` — update HELP_SKIP comment
-
-**Fix approach**: Add documentation comments to each non-adapter tool explaining why it bypasses createToolRunner. These are intentional design decisions, not bugs.
-
-**Complexity**: Simple — comments only
-
-**Regression test**: None (comments don't affect behavior)
-
----
-
-### FIX-07: PlatformAdapter EOL documentation (P2-7)
-
-**Root cause**: `PlatformAdapter.EOL` is defined in the interface and both adapter implementations, but no production code calls `adapter.EOL`. It's dead API surface.
-
-**Files involved**: `packages/tool-utils/src/platform-adapter.ts`
-
-**Fix approach**:
-Add documentation comment:
+Change the error handling in `cmdResolve` from:
 ```ts
-get EOL(): string {
-  // EOL is available for consumers that need OS-specific line endings.
-  // Currently no production code consumes this — see REPORT.md P2-7.
-  return os.EOL;
+if (threadIds.length === 0) {
+  stderr!.write(
+    'Error: no thread IDs selected. Use --thread-id, --thread-id-file, or --all-unresolved.\n',
+  );
+  return 1;
+}
+```
+to:
+```ts
+if (threadIds.length === 0) {
+  throw new UserInputError(
+    'no thread IDs selected. Use --thread-id, --thread-id-file, or --all-unresolved.',
+  );
 }
 ```
 
-**Complexity**: Simple — comment only
+Ensure `UserInputError` is imported at the top of the file (add to import from `@laitszkin/tool-utils`).
 
-**Regression test**: None
+**Complexity**: Simple — 4 lines replaced
+
+**Regression test**: REGTEST-06 ([Unit] `test/tools/handler-error-propagation.test.js`) — GIVEN `review-threads` `['resolve', '--dry-run', '--repo', 'test/repo']` with no thread IDs selected WHEN handler called THEN UserInputError is thrown with message containing "no thread IDs selected"
 
 ---
 
-### FIX-09: Multi-file cleanup (P3-15, P3-16, P3-22)
+### FIX-05: Dispatch table — Update FIX-16 comment with explicit 3-touch documentation (P2-8)
 
-**Root cause**: Multiple P3 issues: open-github-issue publish failure returns 0; validate tools' `extractFrontmatter` throws generic `Error` internally (caught by `validateSkill`); sync-memory-index `escapeRegex` unused.
+**Root cause**: The dispatch table uses a Map for parser selection (L70-75) plus an if-else chain (L82-146) for reshaping. Adding a new command requires: (1) create a parser class, (2) add Map.set(), (3) add if-else branch. The ordering dependency (install/uninstall before tools/tool) is implicit.
 
-**Files involved**:
-- `packages/tools/open-github-issue/index.ts` L888-901 (publish failure returns 0)
-- `packages/tools/validate-skill-frontmatter/index.ts` L19, L26 (generic Error)
-- `packages/tools/validate-openai-agent-config/index.ts` L24, L31, L36 (generic Error)
-- `packages/tools/sync-memory-index/index.ts` L68-70 (escapeRegex dead code)
+**Files involved**: `packages/cli/index.ts` (L78-81)
 
 **Fix approach**:
-1. open-github-issue: Change publish failure from `return 0` to `return 1`
-2. validate tools: Change `extractFrontmatter` generic `Error` throws to `UserInputError`
-3. sync-memory-index: Remove `escapeRegex` function, inline regex escape in `removeExistingSection`
+Update the FIX-16 comment at L78-81 to explicitly document the 3-touch requirement and ordering constraint:
+```ts
+// FIX-16: The if-else chain below is intentional — each command type
+// (uninstall, install, tools/tool) returns a different ParsedArguments
+// shape. A handler-map refactor would need a union-to-discriminated
+// mapping. Keeping explicit per-type branches is clearer for now.
+//
+// Adding a new command requires touching 3 locations:
+// 1. Create a new parser class implementing CommandParser<T>
+// 2. Add a Map.set() entry in the dispatch table above
+// 3. Add a new if-else branch below to reshape the parsed result
+//
+// Ordering constraint: install/uninstall branches must precede
+// tools/tool because the same parser reference (toolParser) serves both.
+```
 
-**Complexity**: Simple — scattered one-liner changes
+**Complexity**: Simple — comment-only change
 
-**Regression test**: Existing tests should pass. No new test needed for these minor changes.
+**Regression test**: None (comments don't affect behavior). Manual verification: grep for the updated comment text.
 
 ---
 
@@ -312,592 +228,427 @@ get EOL(): string {
 
 ### Fix Worker Prompts
 
-#### Worker 1 (FIX-01): open-github-issue — Remove stderr.write before throw + carryover documentation
+#### Worker 1 (FIX-01): read-github-issue — Restore complete createToolRunner schema
 
 ```
 ## Mission
-Remove the context.stderr!.write() calls in resolveRepoAsync that cause duplicate error output. The UserInputError throw that follows already provides the same message through the CLI boundary's formatAppError. Also add a carryover documentation comment explaining why this tool doesn't use createToolRunner.
+Fix the incomplete createToolRunner migration in read-github-issue. The schema currently only declares `help` in options, causing `--repo`, `--json`, and `--comments` to be rejected with ERR_PARSE_ARGS_UNKNOWN_OPTION. Restore the complete schema and remove the now-unnecessary internal `parseArgs` function, plus add a JSDoc comment documenting the approach.
 
 ## Context
-- Review dimension: Spec implementation deviation (P1-1), Architecture defect (P2-5)
-- Spec requirements: Req 3 (Unified error handling)
-- resolveRepoAsync (L768-782) has two failure paths:
-  1. git remote fails: writes "Unable to resolve origin remote" to stderr, THEN throws UserInputError with same message
-  2. Not a GitHub URL: writes "Origin remote is not a GitHub repository" to stderr, THEN throws UserInputError with generic message
-- Both produce duplicate output when formatAppError catches the throw
-- The specific file: packages/tools/open-github-issue/index.ts
+- Review dimension: Spec implementation deviation (P1-1), Spec implementation omission (P1-3), Redundant code (P3-9)
+- Spec requirements: Req 1 (Tool boilerplate), Req 3 (Unified error handling)
+- Current state: Schema at L181-186 only declares `options: { help: { type: 'boolean', short: 'h' } }`. Handler calls `readGitHubIssueHandler(positionals, context)`, passing only positionals. Internal `parseArgs(argv)` at L14-45 handles `--repo`, `--json`, `--comments` but these flags never reach it.
+- The original FIX-02b (0ca38ea) implemented this correctly with a full schema. The regression was introduced by Round 12 fix (52a42a6).
+- File: packages/tools/read-github-issue/index.ts
 
 ## Input
-- Read `packages/tools/open-github-issue/index.ts` L758-L786 (resolveRepoAsync)
-- Read `packages/tool-utils/dist/app-error.js` L62-L75 (formatAppError)
+- Read `packages/tools/read-github-issue/index.ts` — full file (188 lines)
+- Read `packages/tools/filter-logs/index.ts` — reference for createToolRunner schema pattern
 
 ## What to do
-1. In resolveRepoAsync (L768-771): Remove the two `context.stderr!.write(...)` calls. Keep the `throw new UserInputError(...)`:
+1. **Update the schema** (L181-186): Add `--repo` (string), `--json` (boolean), `--comments` (boolean) to options:
    ```ts
-   if (result.exitCode !== 0) {
-     throw new UserInputError('Unable to resolve origin remote. Pass --repo owner/repo.');
-   }
+   handler: createToolRunner({
+     options: {
+       repo: { type: 'string' as const },
+       json: { type: 'boolean' as const },
+       comments: { type: 'boolean' as const },
+       help: { type: 'boolean' as const, short: 'h' },
+     },
+     allowPositionals: true,
+     usage: 'apltk read-github-issue [options] <issue>',
+     description: 'Read GitHub issue details through gh.',
+     handler: async (values, positionals, context) => {
+       const args: ReadIssueArgs = {
+         issue: positionals[0] ?? null,
+         repo: (values.repo as string) ?? null,
+         comments: values.comments === true,
+         json: values.json === true,
+       };
+       return readGitHubIssueHandler(args, context);
+     },
+   }),
    ```
 
-2. In resolveRepoAsync (L779-782): Remove the `context.stderr!.write(...)` call. Keep the `throw new UserInputError(...)`:
+2. **Change `readGitHubIssueHandler` signature** (L141): Accept `ReadIssueArgs` instead of `argv: string[]`:
    ```ts
-   if (!match?.groups) {
-     throw new UserInputError('Origin remote is not a GitHub repository. Pass --repo owner/repo.');
+   export async function readGitHubIssueHandler(
+     args: ReadIssueArgs,
+     context: ToolContext,
+   ): Promise<number> {
+     const { stdout, stderr } = context;
+     // args.issue is now from positionals[0]
+     if (!args.issue) {
+       throw new UserInputError('Issue number or URL is required.');
+     }
+     ...
    }
    ```
+   Remove the `parseArgs(argv)` call on L146 — args are now pre-parsed by createToolRunner.
 
-3. Add a carryover comment above `openGitHubIssueHandler` function (around L790-791):
+3. **Remove the internal `parseArgs()` function** (L14-45 entirely). The `ReadIssueArgs` interface can stay as the type for the handler's argument.
+
+4. **Update `buildCommand` call** (L74): It currently takes `(args: ReadIssueArgs)` — this stays the same since `args` is already `ReadIssueArgs`.
+
+5. **Add a JSDoc comment** above `readGitHubIssueHandler`:
    ```ts
    /**
-    * openGitHubIssueHandler — Known carryover from createToolRunner migration.
+    * readGitHubIssueHandler — Wrapped in createToolRunner for schema-based
+    * argument parsing. The schema (see tool export) declares --repo, --json,
+    * --comments, and --help. Positional <issue> argument comes via positionals[0].
     *
-    * Reason for not using createToolRunner:
-    * - Positional subcommand architecture (create/draft) with 15+ tool-specific
-    *   flags doesn't map cleanly to createToolRunner's options schema.
-    * - Error handling follows the AppError convention (UserInputError/SystemError
-    *   throws) which is handled by the CLI boundary's formatAppError.
-    * - Argument parsing and help text are handled manually — 83-line parseArgs().
-    *
-    * See DESIGN.md §2.3 for the full architecture discussion.
+    * Error handling uses UserInputError/SystemError which propagate through
+    * createToolRunner's catch block to formatAppError.
     */
    ```
 
 ## Scope
-- Allowed: `packages/tools/open-github-issue/index.ts`
+- Allowed: `packages/tools/read-github-issue/index.ts`
 - Forbidden: Any other file
 
 ## Output
 On completion, report:
-- Confirmed: L768-770 stderr.write removed
-- Confirmed: L779-781 stderr.write removed
-- Confirmed: Carryover comment added above handler
+- Which lines were modified (schema, handler signature, removed parseArgs)
+- Confirmed: --repo, --json, --comments now pass through createToolRunner
+- Build results
+
+## Verify
+- Build: `npm run build` must succeed
+- Run: `node --test test/tools/handler-error-propagation.test.js test/tools/schema-conversion-smoke.test.js`
+- Manual: Verify the tool can be called with flags by checking the schema-compiled output
+
+## Boundaries
+- Do NOT change error handling behavior (UserInputError/SystemError throws)
+- Do NOT change any business logic in buildCommand, runGh, printSummary, joinNames
+- The handler function is exported; ensure any external callers (test code) still work
+- If test code calls `readGitHubIssueHandler(argv, context)` with argv array, it will break with the new signature. Check test/ directory for any callers first. If any exist, keep the old argv-based signature and create a wrapper.
+```
+
+---
+
+#### Worker 2 (FIX-02): Coverage + CI script hardening
+
+```
+## Mission
+Harden the test runner script against known fragility issues: add combined coverage estimation, add grep pattern validation, add mktemp fallback, document Windows glob risk and Group 3 coverage blind spot. Keep existing 65/60/65 thresholds.
+
+## Context
+- Review dimensions: Spec implementation omission (P1-2, P2-7), Architecture defect (P3-10, P3-11, P3-12)
+- Spec requirement: Req 4 (Coverage >= 80% + CI matrix)
+- Current thresholds: 65% lines, 60% branches, 65% functions — these are the maximum sustainable across both groups
+- Group 3 (mock.module) runs without --experimental-test-coverage, creating a blind spot
+- The --test-coverage-exclude glob uses forward slashes which may not match Windows backslash paths
+- The post-hoc grep for "does not meet threshold" depends on Node.js internal message format
+- mktemp is a POSIX utility not available in raw CMD/PowerShell on Windows
+- File: scripts/test.sh
+
+## Input
+- Read `scripts/test.sh` — full file
+
+## What to do
+1. **Grep pattern sanity check**: After the existing grep for "does not meet threshold" (L60), add a check that validates the grep itself. If no coverage threshold lines were found at all (unexpected Node.js format change), emit a warning but do not fail:
+   ```bash
+   # Check that grep pattern matched at least one threshold line
+   if ! grep -q "does not meet threshold" "$RUN_TEST_LOG" 2>/dev/null; then
+     # Check if coverage output exists at all
+     if grep -q "all files" "$RUN_TEST_LOG" 2>/dev/null; then
+       echo "  (all thresholds met)"
+     else
+       echo "  (warning: no coverage data found — Node version may have changed output format)"
+     fi
+   fi
+   ```
+
+2. **mktemp fallback**: Replace the unconditional `mktemp` (L24) with a cross-platform approach:
+   ```bash
+   # Use TMPDIR, TEMP, or /tmp as fallback for platforms without mktemp (e.g., Windows CMD)
+   RUN_TEST_LOG="${TMPDIR:-${TEMP:-/tmp}}/test-run-$$.log"
+   ```
+   This avoids `mktemp` entirely by using `$$` (PID) for uniqueness.
+
+3. **Combined coverage estimate after Group 2**: Add a diagnostic step after both Group 1 and Group 2 coverage runs that parses the "all files" lines and prints an estimated combined coverage:
+   ```bash
+   # Estimate combined line coverage from Group 1 and Group 2 reports
+   if [ "${COVERAGE:-}" = "true" ]; then
+     GROUP1_LINES=$(grep "all files" "$RUN_TEST_LOG" | head -1 | awk '{print $4}')
+     GROUP2_LINES=$(grep "all files" "$RUN_TEST_LOG" | tail -1 | awk '{print $4}')
+     if [ -n "$GROUP1_LINES" ] && [ -n "$GROUP2_LINES" ]; then
+       echo "  (combined coverage estimate: G1=$GROUP1_LINES G2=$GROUP2_LINES)"
+       echo "  (SPEC requires 80% — see REPORT.md for split-process limitation)"
+     fi
+   fi
+   ```
+   Note: The exact column index for the percentage depends on `grep -E "all files"` output format. Adjust the `awk` column if needed (try `{print $5}` or `{print $4}` based on actual output).
+
+4. **Update comments** (L14): Expand the header comment to document:
+   - Group 3 blind spot (mock.module tests excluded from coverage)
+   - Windows glob risk (eval exclusion glob forward-slash vs backslash on Windows)
+   - The fact that combined coverage is estimated, not directly measured
+
+5. **Keep existing thresholds** (65/60/65) — do not raise them. Current coverage (G1: 77.48%, G2: 69.29%) cannot sustain higher per-group thresholds.
+
+## Scope
+- Allowed: `scripts/test.sh`
+- Forbidden: Any other file (especially no .github/workflows/test.yml changes)
+
+## Output
+On completion, report:
+- All changes made to scripts/test.sh
+- Test execution results with COVERAGE=true
+- Combined coverage estimate values
+
+## Verify
+- Run: `COVERAGE=true bash scripts/test.sh`
+- Expected: All test groups pass, combined coverage estimate printed, exit code 0
+- Run: `bash scripts/test.sh` (without COVERAGE)
+- Expected: All test groups pass, no coverage output, exit code 0
+
+## Boundaries
+- Do NOT change coverage thresholds (keep 65/60/65)
+- Do NOT modify .github/workflows/test.yml
+- Do NOT modify test files (Group 1/2/3 separation)
+- Do NOT change the Group 1/2/3 split strategy
+```
+
+---
+
+#### Worker 3 (FIX-03): sync-memory-index — Remove redundant nested catch + consume adapter.EOL
+
+```
+## Mission
+Two improvements to sync-memory-index: (1) Remove the redundant inner try/catch that shadows createToolRunner's outer catch; (2) Make `renderSection` use PlatformAdapter.EOL for cross-platform file writes.
+
+## Context
+- Review dimensions: Redundant code (P2-5), Spec implementation omission (P2-4)
+- Spec requirements: Req 2 (Cross-platform abstraction — EOL), Req 3 (Unified error handling)
+- Current state:
+  - The handler at L107-129 has try { ... } catch (err) { formatAppError(stderr, err); return 1; }
+  - createToolRunner outer catch (schema.ts:101-104) already does the same: catch { formatAppError(stderr, err); return 1; }
+  - renderSection at L60 uses `lines.join('\n')` — hardcoded line ending
+  - syncAgentsFile at L85 writes with `'utf8'` encoding
+  - PlatformAdapter.EOL is defined but never consumed by any production code
+- File: packages/tools/sync-memory-index/index.ts, packages/tool-utils/platform-adapter.ts
+
+## Input
+- Read `packages/tools/sync-memory-index/index.ts` — full file
+- Read `packages/tool-utils/platform-adapter.ts` — EOL property definition
+
+## What to do
+1. **Remove the inner try/catch** (L107 `try {`, L126 `} catch (err) {`, L127 `formatAppError(stderr, err);`, L128 `return 1;`, L129 `}`). Dedent the handler body (L108-125) by one level. The handler should look like:
+   ```ts
+   handler: async (values, _positionals, context): Promise<number> => {
+     const stdout = context.stdout ?? process.stdout;
+     const stderr = context.stderr ?? process.stderr;
+
+     // ... handler body (previously inside try) ...
+
+     stdout.write(`SYNCED_AGENTS_FILE=${path.resolve(agentsFile)}\n`);
+     stdout.write(`MEMORY_FILES_INDEXED=${memoryFiles.length}\n`);
+     return 0;
+   },
+   ```
+
+2. **Update `renderSection` to accept optional EOL parameter** (L39):
+   ```ts
+   function renderSection(
+     memoryFiles: string[],
+     sectionTitle: string,
+     instructionLines: string[],
+     eol: string = '\n',
+   ): string {
+   ```
+   Change L60 from `return lines.join('\n');` to `return lines.join(eol);`
+
+3. **Pass adapter.EOL to renderSection** in the handler (L120 area):
+   ```ts
+   const adapter = createPlatformAdapter();
+   const sectionText = renderSection(memoryFiles, sectionTitle, instructionLines, adapter.EOL);
+   ```
+
+4. The `createPlatformAdapter()` import already exists at L4 — no new import needed.
+
+5. After removing the try/catch, the `stderr` variable is only used in the write at L123. That's fine — the variable stays.
+
+## Scope
+- Allowed: `packages/tools/sync-memory-index/index.ts`
+- Forbidden: Any other file (do NOT modify platform-adapter.ts — EOL is already defined)
+
+## Output
+On completion, report:
+- Confirmed: inner try/catch removed
+- Confirmed: renderSection accepts eol parameter
+- Confirmed: adapter.EOL passed to renderSection
+- Build and test results
+
+## Verify
+- Build: `npm run build` must succeed
+- Run: `node --test test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js test/tools/handler-error-propagation.test.js`
+- Expected: All tests pass, error propagation still correct without inner catch
+
+## Boundaries
+- Do NOT change any business logic in renderSection, syncAgentsFile, iterMemoryFiles, titleFromMemoryFile, or removeExistingSection
+- The EOL parameter default of '\n' keeps renderSection's existing test behavior unchanged
+- Do NOT modify platform-adapter.ts
+```
+
+---
+
+#### Worker 4 (FIX-04): review-threads — Convert cmdResolve stderr.write+return1 to UserInputError throw
+
+```
+## Mission
+Fix the one remaining error path in review-threads that bypasses formatAppError. The "no thread IDs selected" case in cmdResolve uses stderr.write + return 1 instead of throwing UserInputError.
+
+## Context
+- Review dimension: Spec implementation deviation (P2-6)
+- Spec requirement: Req 3 (Unified error handling — all errors should propagate via typed throws)
+- Current state: cmdResolve at L505-509 checks `threadIds.length === 0` and writes to stderr with a manual "Error: " prefix, then returns 1
+- Expected state: throw new UserInputError(...) — the CLI boundary's formatAppError formats it without "Error:" prefix
+- The tool is a documented carryover from createToolRunner migration (carryover comment at L529+)
+- File: packages/tools/review-threads/index.ts
+
+## Input
+- Read `packages/tools/review-threads/index.ts` L492-515 (cmdResolve function)
+- Check imports at top of file for UserInputError
+
+## What to do
+1. **Change the error path** in cmdResolve (L505-509) from:
+   ```ts
+   if (threadIds.length === 0) {
+     stderr!.write(
+       'Error: no thread IDs selected. Use --thread-id, --thread-id-file, or --all-unresolved.\n',
+     );
+     return 1;
+   }
+   ```
+   to:
+   ```ts
+   if (threadIds.length === 0) {
+     throw new UserInputError(
+       'no thread IDs selected. Use --thread-id, --thread-id-file, or --all-unresolved.',
+     );
+   }
+   ```
+   Note: Removed "Error: " prefix — UserInputError is formatted without "Error:" prefix by formatAppError.
+
+2. **Ensure `UserInputError` is imported** at the top of the file. If not already imported from `@laitszkin/tool-utils`, add it:
+   ```ts
+   import { UserInputError, SystemError } from '@laitszkin/tool-utils';
+   ```
+
+## Scope
+- Allowed: `packages/tools/review-threads/index.ts`
+- Forbidden: Any other file
+
+## Output
+On completion, report:
+- Confirmed: stderr.write + return 1 replaced with throw new UserInputError
+- Confirmed: UserInputError imported at top of file
 - Build and test results
 
 ## Verify
 - Build: `npm run build` must succeed
 - Run: `node --test test/tools/handler-error-propagation.test.js`
+- Expected: REGTEST-06 (the existing review-threads error propagation test) still passes
 
 ## Boundaries
-- Do NOT change the error message text
-- Do NOT change any other error handling or program flow
-- Do NOT wrap in createToolRunner — the carryover comment documents the intentional decision
+- Do NOT change any other error handling in review-threads (other paths already throw UserInputError/SystemError correctly)
+- Do NOT change error message content (only remove "Error: " prefix and change the throw mechanism)
+- Do NOT wrap in createToolRunner — this is a documented carryover tool
 ```
 
 ---
 
-#### Worker 2 (FIX-02): sync-memory-index — Restore createToolRunner wrapping + formatAppError
+#### Worker 5 (FIX-05): Dispatch table — Update FIX-16 comment
 
 ```
 ## Mission
-Restore createToolRunner wrapping for sync-memory-index handler. The Round 12 fix commit inadvertently removed the createToolRunner wrapper and replaced it with a direct handler using generic `Error:` prefix. Fix the catch block to use formatAppError for type-aware error formatting. Remove dead escapeRegex function.
+Update the FIX-16 comment in the dispatch table to explicitly document the 3-touch requirement and ordering constraint for adding new commands.
 
 ## Context
-- Review dimension: Spec implementation deviation (P1-2), Redundant code (P3-22)
-- Spec requirements: Req 1 (Tool boilerplate — schema-based arg parsing), Req 3 (Unified error handling)
-- Current state: Direct handler (syncMemoryIndexHandler) with manual for-loop arg parsing and `stderr.write(\`Error: ${err.message}\n\`)` catch block
-- Expected state: createToolRunner wrapping with schema options and formatAppError catch
-- The handler function: `syncMemoryIndexHandler(args, context)` at L88-120
-- The tool export: `handler: syncMemoryIndexHandler` at L126
-- File: packages/tools/sync-memory-index/index.ts
+- Review dimension: Architecture defect (P2-8)
+- Spec requirement: Req 5 (Dispatch isolation)
+- Current state: FIX-16 comment at L78-81 acknowledges the if-else chain tradeoff but doesn't enumerate the full 3-touch requirement
+- The dispatch table elegantly separates parser selection (Map) from result reshaping (if-else chain), but the tradeoff is that adding a new command requires modifying 3 locations
+- File: packages/cli/index.ts (L78-81)
 
 ## Input
-- Read `packages/tools/sync-memory-index/index.ts` — full file (128 lines)
-- Read `packages/tools/filter-logs/dist/index.js` — reference for createToolRunner pattern
-- Read `packages/tool-utils/dist/app-error.js` — formatAppError export
+- Read `packages/cli/index.ts` L62-150 (parseArguments function)
 
 ## What to do
-1. **Update imports** (L1-4):
-   ```ts
-   import fs from 'node:fs';
-   import path from 'node:path';
-   import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-   import { createPlatformAdapter, createToolRunner, formatAppError } from '@laitszkin/tool-utils';
-   ```
-
-2. **Remove dead `escapeRegex` function** (L68-70): Delete the function entirely. Inline the regex escape directly in `removeExistingSection` (L64) where it's used. Actually, since `escapeRegex` IS used in `removeExistingSection`, keep it but only if there's no simpler way to express the regex.
-
-   Wait — `escapeRegex` IS called at L64: `escapeRegex(START_MARKER)` and `escapeRegex(END_MARKER)`. So it IS used — not dead code. The P3-22 finding about it being dead was incorrect. Skip removal. Just add a comment acknowledging it's an internal utility.
-
-   **Correction**: Keep escapeRegex as-is (it IS used at L64). P3-22 is a false positive.
-
-3. **Restructure the handler** to use createToolRunner:
-   
-   Add a new schema-based handler:
-   ```ts
-   const syncMemoryIndexSchema = {
-     options: {
-       'agents-file': { type: 'string' },
-       'memory-dir': { type: 'string' },
-       'section-title': { type: 'string' },
-       'instruction-line': { type: 'string', multiple: true },
-     },
-     allowPositionals: true,
-     strict: false,
-     usage: 'apltk sync-memory-index [options]',
-     description: 'Sync memory file index into AGENTS.md',
-     handler: async (values: Record<string, unknown>, _positionals: string[], context: ToolContext): Promise<number> => {
-       const stdout = context.stdout ?? process.stdout;
-       const stderr = context.stderr ?? process.stderr;
-
-       try {
-         const homeDir = createPlatformAdapter().homeDir() || '';
-         const agentsFile = (values['agents-file'] as string) || path.join(homeDir, '.codex', 'AGENTS.md');
-         const memoryDir = (values['memory-dir'] as string) || path.join(homeDir, '.codex', 'memory');
-         const sectionTitle = (values['section-title'] as string) || DEFAULT_SECTION_TITLE;
-         const instructionLines = [...DEFAULT_INSTRUCTIONS];
-         const extraLines = values['instruction-line'] as string | string[] | undefined;
-         if (extraLines) {
-           if (Array.isArray(extraLines)) instructionLines.push(...extraLines);
-           else instructionLines.push(extraLines);
-         }
-
-         const memoryFiles = iterMemoryFiles(memoryDir);
-         const sectionText = renderSection(memoryFiles, sectionTitle, instructionLines);
-         syncAgentsFile(agentsFile, sectionText);
-
-         stdout.write(`SYNCED_AGENTS_FILE=${path.resolve(agentsFile)}\n`);
-         stdout.write(`MEMORY_FILES_INDEXED=${memoryFiles.length}\n`);
-         return 0;
-       } catch (err) {
-         formatAppError(stderr, err);
-         return 1;
-       }
-     },
-   };
-   ```
-
-4. **Update tool export**:
-   ```ts
-   export const tool: ToolDefinition = {
-     name: 'sync-memory-index',
-     category: 'Maintenance',
-     description: 'Sync memory file index into AGENTS.md',
-     handler: createToolRunner(syncMemoryIndexSchema),
-   };
-   ```
-
-5. **Remove the old `syncMemoryIndexHandler` function** (L88-120) — it's replaced by the schema above.
+Update the FIX-16 comment (L78-81) to:
+```ts
+  // FIX-16: The if-else chain below is intentional — each command type
+  // (uninstall, install, tools/tool) returns a different ParsedArguments
+  // shape. A handler-map refactor would need a union-to-discriminated
+  // mapping. Keeping explicit per-type branches is clearer for now.
+  //
+  // Adding a new command requires touching 3 locations:
+  // 1. Create a new parser class implementing CommandParser<T>
+  // 2. Add a Map.set() entry in the dispatch table above
+  // 3. Add a new if-else branch below to reshape the parsed result
+  //
+  // Ordering constraint: install/uninstall branches must precede
+  // tools/tool because the same parser reference (toolParser) serves both.
+```
 
 ## Scope
-- Allowed: `packages/tools/sync-memory-index/index.ts`
+- Allowed: `packages/cli/index.ts`
 - Forbidden: Any other file
 
 ## Output
 On completion, report:
-- createToolRunner wrapping confirmed
-- formatAppError used in catch block confirmed
-- Old syncMemoryIndexHandler removed (or kept if needed)
-- Build and test results (especially the 4 previously-failing sync-memory-index tests)
+- Confirmed: FIX-16 comment updated
+- The exact new comment text
 
 ## Verify
-- Build: `npm run build` must succeed
-- Run: `node --test test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js`
-- Expected: All 4 formerly-failing tests now pass
+- Build: `npm run build` must succeed (comments don't affect build)
+- Visual: Confirm the updated comment appears in the compiled dist
 
 ## Boundaries
-- Do NOT change any business logic (args parsing changes but behavior must be identical)
-- Do NOT change the renderSection, syncAgentsFile, iterMemoryFiles, titleFromMemoryFile, or removeExistingSection functions
-- Preserve the createPlatformAdapter().homeDir() call for cross-platform compatibility
-```
-
----
-
-#### Worker 3 (FIX-03): schema-arg-validation — Exclude architecture from strict tool list
-
-```
-## Mission
-Fix the test classifier so architecture is not falsely classified as a createToolRunner strict-mode tool. The architecture dist file contains "createToolRunner" only in comments (documentation), not in actual usage.
-
-## Context
-- Review dimension: Test infrastructure bug
-- Spec requirement: none (test bug)
-- The classifyTools() function at L91 checks `source.includes("createToolRunner")` to find strict tools
-- architecture's dist contains "createToolRunner" only in comments (L537, L539)
-- This causes 2 test failures: strict mode test + uniformity test
-- File: test/tools/schema-arg-validation.test.js
-
-## Input
-- Read `test/tools/schema-arg-validation.test.js` L89-L146 (classifyTools function)
-
-## What to do
-1. Add a skip set constant after line 146 (after the strictTools/nonStrictTools arrays are populated):
-   ```js
-   // Tools that mention createToolRunner in comments but don't actually use it
-   const COMMENT_ONLY_TOOLS = new Set(['architecture']);
-   ```
-
-2. After line 144 (where strictTools is populated), filter out comment-only tools:
-   ```js
-   for (const [name, info] of tools) {
-     if (COMMENT_ONLY_TOOLS.has(name)) continue; // skip false-positives
-     if (info.mode === 'strict') strictTools.push(name);
-     else if (info.mode === 'non-strict') nonStrictTools.push(name);
-   }
-   ```
-
-## Scope
-- Allowed: `test/tools/schema-arg-validation.test.js`
-- Forbidden: Any source code files
-
-## Output
-- Confirmed architecture excluded from strict tools
-- Number of strict tools before and after filtering
-- Test results
-
-## Verify
-- Run: `node --test test/tools/schema-arg-validation.test.js`
-- Expected: Both formerly-failing architecture tests are skipped/filtered, all other tools pass
-```
-
----
-
-#### Worker 4 (FIX-04): architecture dist tests — Handle thrown errors from handler
-
-```
-## Mission
-Fix two architecture dist tests that fail because the handler throws UserInputError instead of returning exit code 1. The tests need to wrap the handler call in try/catch to handle both return-value and throw patterns.
-
-## Context
-- Review dimension: Test infrastructure bug
-- Spec requirement: none (test not updated after architecture outer catch removal)
-- The architecture handler (architectureHandler) does NOT catch errors from handleApply/handleTemplate
-- handleTemplate throws UserInputError when SPEC.md not found
-- handleApply throws UserInputError when feature slug not found
-- Test REGTEST-15 (L80-95) and REGTEST-17 (L220-228) expect returned exit code 1
-- File: packages/tools/architecture/dist/index.test.js
-
-## Input
-- Read `packages/tools/architecture/dist/index.test.js` L80-L95 (REGTEST-15)
-- Read `packages/tools/architecture/dist/index.test.js` L220-L228 (REGTEST-17)
-
-## What to do
-1. **Fix REGTEST-15** (L80-L95): Change from direct assertion to try/catch:
-   ```js
-   it('should exit code 1 with diagnostic when SPEC.md not found', async () => {
-     mock.method(fs, 'existsSync', () => false);
-     try {
-       const io = makeIo();
-       const handler = tool.handler;
-       if (!handler) throw new Error('tool.handler is undefined');
-       try {
-         const exitCode = await handler(['template', '--spec', '/nonexistent/spec-dir', '--output', '/tmp/rg15-out'], makeContext(io));
-         // If handler returns (no throw), verify exit code
-         assert.equal(exitCode, 1, 'Expected exit code 1 for missing spec path');
-       } catch (err) {
-         // Architecture throws UserInputError — this is also acceptable
-         assert.ok(err instanceof Error, 'Expected an Error to be thrown');
-         assert.ok(err.message.includes('not found'), `Error message should say "not found": ${err.message}`);
-       }
-       assert.ok(io.stderrText.includes('not found'), `stderr should contain "not found": got ${JSON.stringify(io.stderrText)}`);
-     } finally {
-       mock.restoreAll();
-     }
-   });
-   ```
-
-2. **Fix REGTEST-17** (L220-L228): Same pattern:
-   ```js
-   it('should reject edge add with error referencing the missing feature slug', async () => {
-     const handler = tool.handler;
-     if (!handler) throw new Error('tool.handler is undefined');
-     try {
-       const exitCode = await handler(['apply', yamlPath, '--no-render'], makeContext(io, { sourceRoot: tmpDir }));
-       assert.equal(exitCode, 1, 'Expected exit code 1 for edge targeting missing feature');
-     } catch (err) {
-       assert.ok(err instanceof Error, 'Expected an Error to be thrown');
-       assert.ok(err.message.includes('non-existent-feature'), `Error should mention "non-existent-feature": ${err.message}`);
-     }
-     assert.ok(io.stderrText.includes('non-existent-feature'), `stderr should contain "non-existent-feature": got ${JSON.stringify(io.stderrText)}`);
-     assert.ok(io.stderrText.length > 0, `stderr should have error text: got ${JSON.stringify(io.stderrText)}`);
-   });
-   ```
-
-## Scope
-- Allowed: `packages/tools/architecture/dist/index.test.js`
-- Forbidden: Any source code files
-
-## Output
-- Confirmed both tests pass with try/catch pattern
-- Test results
-
-## Verify
-- Run: `node --test packages/tools/architecture/dist/index.test.js`
-- Expected: All tests pass (both REGTEST-15 and REGTEST-17)
-```
-
----
-
-#### Worker 5 (FIX-05+FIX-08): Coverage threshold raise + CI documentation
-
-```
-## Mission
-Raise coverage thresholds from 69% lines / 68% functions to 75% lines / 75% functions. Add --check-coverage to enforce thresholds. Add documentation comments explaining structural limitations.
-
-## Context
-- Review dimensions: Spec implementation omission (P1-4, P2-8, P2-9, P2-10)
-- Spec requirement: Req 4 (Coverage >= 80% + CI matrix)
-- Current thresholds: lines=69, branches=60, functions=68
-- SPEC requires 80% lines; CHECKLIST requires 75% functions
-- --check-coverage flag is absent — thresholds are advisory only
-- File: scripts/test.sh (L12-16), .github/workflows/test.yml
-
-## Input
-- Read `scripts/test.sh` — full file
-- Read `.github/workflows/test.yml` — full file
-
-## What to do
-1. In `scripts/test.sh`, update GROUP1_FLAGS:
-   ```
-   --experimental-test-coverage --check-coverage --test-coverage-lines=75 --test-coverage-branches=60 --test-coverage-functions=75 --test-coverage-exclude=packages/tools/eval/**
-   ```
-   Changes:
-   - Add `--check-coverage` flag
-   - `--test-coverage-lines=69` → `--test-coverage-lines=75`
-   - `--test-coverage-functions=68` → `--test-coverage-functions=75`
-
-2. In `scripts/test.sh`, update/verify the header comment:
-   ```bash
-   # Coverage thresholds: 75% lines, 60% branches, 75% functions.
-   # SPEC requires 80% lines; threshold is 75% due to the split-process
-   # limitation (Group 2 achieves ~69.4% in its own process, combined ~80%).
-   # --check-coverage enforces these thresholds — CI fails if unmet.
-   # See docs/plans/2026-06-04/cli-refactor/REPORT.md §4 for details.
-   #
-   # The --test-coverage-exclude=packages/tools/eval/** glob may behave
-   # differently on Windows with backslash paths. See REPORT.md P3-18.
-   ```
-
-3. In `.github/workflows/test.yml`, add a comment above the test step:
-   ```yaml
-       # Runs bash scripts/test.sh with COVERAGE=true for coverage reporting.
-       # Uses shell:bash for Windows compatibility (Git Bash from Git for Windows).
-       # Coverage thresholds (75/60/75) enforced via --check-coverage.
-       - name: Run tests with coverage
-         shell: bash
-         run: bash scripts/test.sh
-         env:
-           COVERAGE: 'true'
-   ```
-
-## Scope
-- Allowed: `scripts/test.sh`, `.github/workflows/test.yml`
-- Forbidden: Any other files
-
-## Output
-- Before/after threshold values confirmed
-- --check-coverage flag added confirmed
-- Comments added confirmed
-
-## Verify
-- Run: `npm run build` (ensure no build breakage from config-only changes)
-- Run: `COVERAGE=true bash scripts/test.sh`
-- Expected: CI passes with new thresholds
-- If coverage fails at 75% threshold, report exact metrics. Coordinator will decide on threshold adjustment.
-```
-
----
-
-#### Worker 6 (FIX-06): createToolRunner carryover documentation for remaining tools
-
-```
-## Mission
-Add documentation comments to non-adapter tools explaining their known createToolRunner carryover status. These are intentional design decisions, not bugs.
-
-## Context
-- Review dimension: Architecture defect (P2-5)
-- Spec requirements: Req 1 (Tool boilerplate)
-- Three tools intentionally bypass createToolRunner due to positional subcommand architecture:
-  - review-threads (list/resolve subcommands)
-  - find-github-issues (simple flat args — could be migrated but is a documented carryover)
-- File: packages/tools/review-threads/index.ts, packages/tools/find-github-issues/index.ts
-
-## Input
-- Read `packages/tools/review-threads/index.ts` — handler export section
-- Read `packages/tools/find-github-issues/index.ts` — handler export section
-
-## What to do
-1. In `packages/tools/review-threads/index.ts`, add a comment block above `reviewThreadsHandler` (before line 129 or as a doc comment on the handler):
-   ```ts
-   /**
-    * reviewThreadsHandler — Known carryover from createToolRunner migration.
-    *
-    * Reason for not using createToolRunner:
-    * - Positional subcommand architecture (list/resolve) doesn't map cleanly
-    *   to createToolRunner's options schema.
-    * - Error handling follows the AppError convention (UserInputError/SystemError
-    *   throws) — errors propagate to the CLI boundary's formatAppError.
-    * - Argument parsing is handled manually via a 63-line parseArgs().
-    *
-    * See DESIGN.md §2.3 for the full architecture discussion.
-    */
-   ```
-
-2. In `packages/tools/find-github-issues/index.ts`, add a similar comment above the handler function (around L67):
-   ```ts
-   /**
-    * findGitHubIssuesHandler — Known carryover from createToolRunner migration.
-    *
-    * Reason for not using createToolRunner:
-    * - This tool uses a simple flat argument set. Migration would be
-    *   straightforward but is deferred — the hand-rolled parseArgs (49 lines)
-    *   is stable and well-tested.
-    * - Error handling uses SystemError (typed) which propagates correctly
-    *   to the CLI boundary's formatAppError.
-    */
-   ```
-
-3. In `test/tools/schema-conversion-smoke.test.js`, update the HELP_SKIP comment to reference the carryover status of these tools.
-
-## Scope
-- Allowed: `packages/tools/review-threads/index.ts`, `packages/tools/find-github-issues/index.ts`, `test/tools/schema-conversion-smoke.test.js`
-- Forbidden: Any other files
-
-## Output
-- Confirmed: Comments added to review-threads, find-github-issues
-- schema-conversion-smoke HELP_SKIP comment updated
-
-## Verify
-- Build: `npm run build` must succeed (comments don't affect build)
-- Run: `node --test test/tools/handler-error-propagation.test.js`
-```
-
----
-
-#### Worker 7 (FIX-07): PlatformAdapter EOL documentation
-
-```
-## Mission
-Add documentation comment to the PlatformAdapter.EOL getter acknowledging it's available but currently unused in production code.
-
-## Context
-- Review dimension: Spec implementation omission (P2-7)
-- Spec requirement: Req 2 (Cross-platform abstraction)
-- EOL is defined in the PlatformAdapter interface and both implementations
-- No production code reads adapter.EOL
-- File: packages/tool-utils/src/platform-adapter.ts
-
-## Input
-- Read `packages/tool-utils/src/platform-adapter.ts` — locate EOL getter in both adapters
-
-## What to do
-In both WindowsAdapter and PosixAdapter, add a comment to the EOL getter:
-```ts
-get EOL() {
-  // Available for consumers that need OS-specific line endings.
-  // Currently unused in production code — see docs/plans/2026-06-04/cli-refactor/REPORT.md P2-7.
-  return os.EOL;
-}
-```
-
-Also update the interface definition:
-```ts
-/**
- * OS-specific line ending.
- * Available for file writes that need \r\n (Windows) vs \n (POSIX).
- * Currently no production consumer — see REPORT.md P2-7.
- */
-readonly EOL: string;
-```
-
-## Scope
-- Allowed: `packages/tool-utils/src/platform-adapter.ts`
-- Forbidden: Any source code changes beyond comments
-
-## Verify
-- Build: `npm run build` must succeed (comments don't affect build)
-```
-
----
-
-#### Worker 8 (FIX-09): Multi-file P3 cleanup
-
-```
-## Mission
-Fix three P3 issues across multiple files: open-github-issue publish failure returns 0 instead of 1; validate tools' extractFrontmatter throws generic Error instead of UserInputError internally.
-
-## Context
-- Review dimensions: Spec implementation deviation (P3-15, P3-16)
-- Spec requirements: Req 3 (Unified error handling)
-
-## Input
-- Read:
-  - `packages/tools/open-github-issue/index.ts` L888-L901 (publish failure return)
-  - `packages/tools/validate-skill-frontmatter/index.ts` L16-L30 (extractFrontmatter throws)
-  - `packages/tools/validate-openai-agent-config/index.ts` L21-L38 (extractFrontmatter throws)
-
-## What to do
-1. **open-github-issue publish failure** (around L888-901): Find the block where issue publishing fails and return mode is 'draft-only'. Change `return 0` to `return 1`:
-   ```ts
-   if (mode === 'draft-only') {
-     if (publishError) {
-       stderr!.write(`Issue publish failed. Return draft only: ${publishError}\n`);
-       return 1;  // changed from 0 — publishing failed despite draft fallback
-     }
-     // No publish error and mode is draft-only: success path
-     return 0;
-   }
-   ```
-
-2. **validate-skill-frontmatter extractFrontmatter** (L19, L26): Change generic `Error` to `UserInputError`:
-   ```ts
-   // L19 (was: throw new Error("SKILL.md must start with..."))
-   throw new UserInputError("SKILL.md must start with YAML frontmatter delimiter '---'.");
-   // L26 (was: throw new Error("SKILL.md frontmatter is missing..."))
-   throw new UserInputError("SKILL.md frontmatter is missing the closing '---' delimiter.");
-   ```
-   Add `UserInputError` to the import from `@laitszkin/tool-utils` if not already present.
-
-3. **validate-openai-agent-config extractFrontmatter** (L24, L31, L36): Same pattern — change generic `Error` to `UserInputError`. Add import if needed.
-
-## Scope
-- Allowed:
-  - `packages/tools/open-github-issue/index.ts`
-  - `packages/tools/validate-skill-frontmatter/index.ts`
-  - `packages/tools/validate-openai-agent-config/index.ts`
-- Forbidden: Any other files
-
-## Verify
-- Build: `npm run build` must succeed
-- Run: `node --test test/tools/validation-error-handling.test.js test/tools/handler-error-propagation.test.js`
+- Do NOT change any code — comment-only change
 ```
 
 ---
 
 ### Regression Test Worker Prompts
 
-#### REGTEST-01: open-github-issue single error message line (FIX-01)
+#### REGTEST-01: read-github-issue --repo flag works (FIX-01)
 
 ```
 ## Mission
-Add a regression test verifying that open-github-issue's resolveRepoAsync no longer produces duplicate error output (stderr.write + throw).
+Add a regression test verifying that read-github-issue's `--repo` flag passes through createToolRunner without being rejected as an unknown option.
 
 ## Context
-- Fix summary: Removed stderr.write before UserInputError throw in resolveRepoAsync
-- Root cause: Both failure paths wrote to stderr then threw, producing duplicate messages
-- Fix files involved: packages/tools/open-github-issue/index.ts
+- Fix summary: Restored complete createToolRunner schema with --repo, --json, --comments options
+- Root cause: The schema only declared `help`; with strict:true, `parseArgs` rejected --repo as unknown
+- Fix files involved: packages/tools/read-github-issue/index.ts
 
 ## Input
 - Read `test/tools/handler-error-propagation.test.js` — existing test format reference
+- Read the dist output at `packages/tools/read-github-issue/dist/index.js` — to verify the handler export name
 
 ## What to do
 Add a test to `test/tools/handler-error-propagation.test.js`:
 
 ```javascript
-it('open-github-issue: resolveRepoAsync produces single error line (no duplicate)', async () => {
-  const mod = await import('../../packages/tools/open-github-issue/dist/index.js');
+// REGTEST-01: FIX-01 — read-github-issue --repo passes through createToolRunner
+it('read-github-issue: --repo flag passes through createToolRunner without unknown-option error', async () => {
+  const mod = await import('../../packages/tools/read-github-issue/dist/index.js');
   const stderr = { data: '', write(c) { this.data += c; } };
-  try {
-    const code = await mod.tool.handler(
-      ['--repo', 'invalid'],
-      { stdout: { write() {} }, stderr, env: {} },
-    );
-    assert.strictEqual(code, 1);
-  } catch (err) {
-    // handler may throw if not wrapped in createToolRunner
-    assert.ok(err instanceof Error);
-  }
-  const lines = stderr.data.trim().split('\n').filter(Boolean);
-  assert.ok(lines.length <= 1, `should have 0 or 1 error line(s), got ${lines.length}: ${JSON.stringify(stderr.data)}`);
+  // Pass --repo and a positional issue number — should NOT throw unknown option error
+  const code = await mod.tool.handler(
+    ['--repo', 'owner/repo', '42'],
+    { stdout: { write() {} }, stderr, env: {} },
+  );
+  // Handler should execute (will likely fail trying to call gh, but NOT with parseArgs error)
+  assert.ok(typeof code === 'number', `Handler should return a number, got ${typeof code}: ${code}`);
+  // stderr must NOT contain "Unknown option" (from node:util parseArgs)
+  assert.ok(!stderr.data.includes('Unknown option'),
+    `Should not have parseArgs unknown-option error: ${JSON.stringify(stderr.data)}`);
+  // stderr must NOT contain "ERR_PARSE_ARGS" 
+  assert.ok(!stderr.data.includes('ERR_PARSE_ARGS'),
+    `Should not have ERR_PARSE_ARGS error: ${JSON.stringify(stderr.data)}`);
 });
 ```
 
@@ -907,19 +658,21 @@ it('open-github-issue: resolveRepoAsync produces single error line (no duplicate
 
 ## Verify
 - Run: `node --test test/tools/handler-error-propagation.test.js`
-- Expected: New test passes (single error line)
+- Expected: REGTEST-01 passes (no unknown-option error for --repo)
 ```
 
-#### REGTEST-02: open-github-issue UserInputError no "Error:" prefix (FIX-01)
+---
+
+#### REGTEST-02: read-github-issue --json flag works (FIX-01)
 
 ```
 ## Mission
-Add a regression test verifying that open-github-issue's UserInputError displays correctly without the "Error:" prefix.
+Add a regression test verifying that read-github-issue's `--json` flag passes through createToolRunner without being rejected.
 
 ## Context
-- Fix summary: stderr.write removed from resolveRepoAsync; UserInputError now displays cleanly
-- Root cause: stderr.write produced "Error:" prefix on stderr before formatted throw
-- Fix files involved: packages/tools/open-github-issue/index.ts
+- Fix summary: Restored complete createToolRunner schema with all options
+- Root cause: Schema only declared `help`; strict:true rejected --json
+- Fix files involved: packages/tools/read-github-issue/index.ts
 
 ## Input
 - Read `test/tools/handler-error-propagation.test.js` — existing test format reference
@@ -928,21 +681,20 @@ Add a regression test verifying that open-github-issue's UserInputError displays
 Add a test to `test/tools/handler-error-propagation.test.js`:
 
 ```javascript
-it('open-github-issue: UserInputError from validateRepo has no "Error:" prefix', async () => {
-  const mod = await import('../../packages/tools/open-github-issue/dist/index.js');
+// REGTEST-02: FIX-01 — read-github-issue --json passes through createToolRunner
+it('read-github-issue: --json flag passes through createToolRunner without unknown-option error', async () => {
+  const mod = await import('../../packages/tools/read-github-issue/dist/index.js');
   const stderr = { data: '', write(c) { this.data += c; } };
-  try {
-    const code = await mod.tool.handler(
-      ['--repo', 'invalid-format'],
-      { stdout: { write() {} }, stderr, env: {} },
-    );
-    assert.strictEqual(code, 1);
-  } catch (err) {
-    assert.ok(err instanceof Error);
-  }
-  // The error message should NOT have "Error:" prefix (UserInputError)
-  assert.ok(!stderr.data.includes('Error:'), `UserInputError should not have "Error:" prefix: ${JSON.stringify(stderr.data)}`);
-  assert.ok(stderr.data.includes('owner/repo'), `should mention expected format: ${JSON.stringify(stderr.data)}`);
+  // Pass --json and a positional issue number
+  const code = await mod.tool.handler(
+    ['--json', '42'],
+    { stdout: { write() {} }, stderr, env: {} },
+  );
+  assert.ok(typeof code === 'number', `Handler should return a number, got ${typeof code}`);
+  assert.ok(!stderr.data.includes('Unknown option'),
+    `Should not have parseArgs unknown-option error: ${JSON.stringify(stderr.data)}`);
+  assert.ok(!stderr.data.includes('ERR_PARSE_ARGS'),
+    `Should not have ERR_PARSE_ARGS error: ${JSON.stringify(stderr.data)}`);
 });
 ```
 
@@ -952,183 +704,258 @@ it('open-github-issue: UserInputError from validateRepo has no "Error:" prefix',
 
 ## Verify
 - Run: `node --test test/tools/handler-error-propagation.test.js`
-- Expected: New test passes
+- Expected: REGTEST-02 passes
 ```
 
-#### REGTEST-03: sync-memory-index type-aware error formatting (FIX-02)
+---
+
+#### REGTEST-03: read-github-issue --comments flag works (FIX-01)
 
 ```
 ## Mission
-Add regression tests verifying sync-memory-index respects type-aware error formatting after createToolRunner restoration.
-
-Note: The 4 existing sync-memory-index error tests (sync-memory-index-error.test.js and sync-memory-index-system-error.test.js) should automatically pass after FIX-02. If they pass, no additional tests are needed. If they still fail, create new tests here.
+Add a regression test verifying that read-github-issue's `--comments` flag passes through createToolRunner without being rejected.
 
 ## Context
-- Fix summary: Restored createToolRunner wrapping with formatAppError catch
-- Root cause: The old handler used `stderr.write(\`Error: ${err.message}\n\`)` for ALL error types
+- Fix summary: Restored complete createToolRunner schema with all options
+- Root cause: Schema only declared `help`; strict:true rejected --comments
+- Fix files involved: packages/tools/read-github-issue/index.ts
+
+## Input
+- Read `test/tools/handler-error-propagation.test.js` — existing test format reference
+
+## What to do
+Add a test to `test/tools/handler-error-propagation.test.js`:
+
+```javascript
+// REGTEST-03: FIX-01 — read-github-issue --comments passes through createToolRunner
+it('read-github-issue: --comments flag passes through createToolRunner without unknown-option error', async () => {
+  const mod = await import('../../packages/tools/read-github-issue/dist/index.js');
+  const stderr = { data: '', write(c) { this.data += c; } };
+  // Pass --comments and a positional issue number
+  const code = await mod.tool.handler(
+    ['--comments', '42'],
+    { stdout: { write() {} }, stderr, env: {} },
+  );
+  assert.ok(typeof code === 'number', `Handler should return a number, got ${typeof code}`);
+  assert.ok(!stderr.data.includes('Unknown option'),
+    `Should not have parseArgs unknown-option error: ${JSON.stringify(stderr.data)}`);
+  assert.ok(!stderr.data.includes('ERR_PARSE_ARGS'),
+    `Should not have ERR_PARSE_ARGS error: ${JSON.stringify(stderr.data)}`);
+});
+```
+
+## Scope
+- Allowed: `test/tools/handler-error-propagation.test.js`
+- Forbidden: Any source code files
+
+## Verify
+- Run: `node --test test/tools/handler-error-propagation.test.js`
+- Expected: REGTEST-03 passes
+```
+
+---
+
+#### REGTEST-04: sync-memory-index error propagation after removing inner catch (FIX-03)
+
+```
+## Mission
+Add a regression test verifying that removing sync-memory-index's inner try/catch does not break error propagation.
+
+## Context
+- Fix summary: Removed redundant inner try/catch from createToolRunner-wrapped handler
+- Root cause: Inner catch shadowed outer catch; error behavior is identical but structure is cleaner
 - Fix files involved: packages/tools/sync-memory-index/index.ts
 
 ## Input
-- Read `test/tools/sync-memory-index-error.test.js` — existing test format
-- Read `test/tools/sync-memory-index-system-error.test.js` — existing test format
+- Read `test/tools/sync-memory-index-error.test.js` — existing sync-memory-index error tests
+- Read `test/tools/handler-error-propagation.test.js` — existing handler error format tests
 
 ## What to do
-Run the existing tests first:
-- `node --test test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js`
+First, run the existing sync-memory-index error tests to confirm they still pass:
+```bash
+node --test test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js
+```
 
-If they pass (expected after FIX-02): Report that no new test needed — existing tests now pass.
+If they pass, the existing tests already cover error propagation. Add one additional test to `test/tools/sync-memory-index-error.test.js` or `test/tools/handler-error-propagation.test.js` that verifies the outer createToolRunner catch correctly handles errors from the handler:
 
-If they still fail: Review the handler changes and add a new test verifying that:
-1. UserInputError is displayed without "Error:" prefix
-2. SystemError includes stack trace
+```javascript
+// REGTEST-04: FIX-03 — sync-memory-index error propagation via createToolRunner outer catch
+it('sync-memory-index: errors propagate correctly through createToolRunner after inner catch removal', async () => {
+  const mod = await import('../../packages/tools/sync-memory-index/dist/index.js');
+  const stderr = { data: '', write(c) { this.data += c; } };
+  // Pass a non-existent agents-file path to trigger handler error
+  const code = await mod.tool.handler(
+    ['--agents-file', '/nonexistent/path/AGENTS.md'],
+    { stdout: { write() {} }, stderr, env: {} },
+  );
+  assert.strictEqual(code, 1, 'Handler should return exit code 1 on error');
+  assert.ok(stderr.data.length > 0, 'stderr should contain error information');
+});
+```
 
 ## Scope
-- Allowed: (test files only — don't create new files unless existing tests fail)
+- Allowed: `test/tools/sync-memory-index-error.test.js`, `test/tools/handler-error-propagation.test.js`
 - Forbidden: Any source code files
 
 ## Verify
-- Run: the two test files and confirm pass
+- Run: `node --test test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js test/tools/handler-error-propagation.test.js`
+- Expected: All existing and new tests pass
 ```
 
-#### REGTEST-04: Coverage threshold CI verification (FIX-05)
+---
 
-Manual CI verification. Run:
-```bash
-COVERAGE=true bash scripts/test.sh
+#### REGTEST-05: review-threads cmdResolve throws UserInputError (FIX-04)
+
 ```
-Expected: All test groups pass, coverage meets 75/60/75 thresholds with --check-coverage enforcement.
+## Mission
+Add a regression test verifying that review-threads cmdResolve throws UserInputError when no thread IDs are selected (instead of stderr.write + return 1).
+
+## Context
+- Fix summary: Changed "no thread IDs selected" error from stderr.write + return 1 to throw new UserInputError
+- Root cause: The path used stderr.write with manual "Error:" prefix, bypassing formatAppError
+- Fix files involved: packages/tools/review-threads/index.ts
+
+## Input
+- Read `test/tools/handler-error-propagation.test.js` — existing test format
+- Read `packages/tools/review-threads/dist/index.js` — to verify handler export name
+
+## What to do
+Add a test to `test/tools/handler-error-propagation.test.js`:
+
+```javascript
+// REGTEST-05: FIX-04 — review-threads cmdResolve throws UserInputError for no thread IDs
+it('review-threads: cmdResolve throws UserInputError when no thread IDs selected', async () => {
+  const mod = await import('../../packages/tools/review-threads/dist/index.js');
+  const { UserInputError } = await import('@laitszkin/tool-utils');
+  // review-threads is not wrapped in createToolRunner, so errors propagate as rejected promises
+  await assert.rejects(
+    () => mod.tool.handler(
+      ['resolve', '--dry-run', '--repo', 'test/repo'],
+      { stdout: { write() {} }, stderr: { write() {} }, env: {} },
+    ),
+    (err) => {
+      assert.ok(err instanceof UserInputError, 'Should throw UserInputError');
+      assert.ok(err.message.includes('no thread IDs selected'),
+        `Message should mention "no thread IDs selected": ${err.message}`);
+      return true;
+    },
+  );
+});
+```
+
+## Scope
+- Allowed: `test/tools/handler-error-propagation.test.js`
+- Forbidden: Any source code files
+
+## Verify
+- Run: `node --test test/tools/handler-error-propagation.test.js`
+- Expected: REGTEST-05 passes (UserInputError thrown with correct message)
+```
 
 ---
 
 ## 7. Fix Batch Schedule
 
-### Batch 1 — P1 Fixes (Full Parallel — Isolated Branches)
+### Batch 1 — All Fixes (Full Parallel — Isolated Branches)
 
-- **Issues**: FIX-01, FIX-02, FIX-03, FIX-04
-- **Workers**: Worker 1, Worker 2, Worker 3, Worker 4
-- **Strategy**: Full parallel — **zero file overlap** between these workers. Each worker runs on its own isolated branch:
-  - Worker 1 → `fix/worker-1-open-github-issue`
-  - Worker 2 → `fix/worker-2-sync-memory-index`
-  - Worker 3 → `fix/worker-3-test-classifier`
-  - Worker 4 → `fix/worker-4-arch-tests`
+- **Issues**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
+- **Workers**: Worker 1, Worker 2, Worker 3, Worker 4, Worker 5
+- **Strategy**: Full parallel — **zero file overlap** between all 5 workers. Each worker on its own isolated branch:
+  - Worker 1 → `fix/worker-1-read-github-issue`
+  - Worker 2 → `fix/worker-2-coverage-ci`
+  - Worker 3 → `fix/worker-3-sync-memory-index`
+  - Worker 4 → `fix/worker-4-review-threads`
+  - Worker 5 → `fix/worker-5-dispatch-comment`
 - **Depends on**: Nothing
 - **Gate**:
-  - [ ] Worker 1 (open-github-issue stderr removal) reports success on its branch
-  - [ ] Worker 2 (sync-memory-index createToolRunner) reports success on its branch
-  - [ ] Worker 3 (schema-arg-validation exclusion) reports success on its branch
-  - [ ] Worker 4 (architecture dist tests) reports success on its branch
-  - [ ] **Merge**: Merge all 4 branches back to main — resolve any conflicts
-  - [ ] **Verify merge**: Confirm changes from ALL 4 workers are present in the merged result (check each modified file)
-  - [ ] **Clean up**: Delete all 4 agent branches (`fix/worker-1-open-github-issue`, `fix/worker-2-sync-memory-index`, `fix/worker-3-test-classifier`, `fix/worker-4-arch-tests`)
+  - [ ] Worker 1 reports success on its branch
+  - [ ] Worker 2 reports success on its branch
+  - [ ] Worker 3 reports success on its branch
+  - [ ] Worker 4 reports success on its branch
+  - [ ] Worker 5 reports success on its branch
+  - [ ] **Merge**: Merge ALL 5 branches back to main — resolve any conflicts
+  - [ ] **Verify merge**: Confirm changes from ALL 5 workers are present in the merged result (check each modified file: read-github-issue/index.ts, scripts/test.sh, sync-memory-index/index.ts, review-threads/index.ts, cli/index.ts)
+  - [ ] **Clean up**: Delete all 5 agent branches (`fix/worker-1-read-github-issue`, `fix/worker-2-coverage-ci`, `fix/worker-3-sync-memory-index`, `fix/worker-4-review-threads`, `fix/worker-5-dispatch-comment`)
   - [ ] Run verification: `npm run build`
+  - [ ] Run: `node --test test/tools/handler-error-propagation.test.js test/tools/schema-conversion-smoke.test.js test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js`
 
-### Batch 2 — P1 Config Fix + P3 Cleanup (Sequential — file overlap)
+### Batch 2 — Regression Tests (Sequential Sub-batches — file overlap)
 
-- **Issues**: FIX-05+FIX-08 (merged), FIX-09
-- **Workers**: Worker 5 (coverage config + docs), Worker 8 (P3 cleanup)
-- **Strategy**: Slight file overlap risk (none of these touch the same files as Batch 1, and FIX-09 touches open-github-issue which was also touched by Worker 1 in Batch 1). **Run sequentially** to avoid merge conflicts:
-  
-  **Sub-batch 2a**: Worker 5 → `fix/worker-5-coverage-ci`
-  - Gate: merge → clean up branch → verify
-  
-  **Sub-batch 2b**: Worker 8 → `fix/worker-8-p3-cleanup`
-  - Gate: merge → clean up branch → verify
+- **Tasks**: REGTEST-01, REGTEST-02, REGTEST-03, REGTEST-04, REGTEST-05
+- **Strategy**: REGTEST-01, REGTEST-02, REGTEST-03, REGTEST-05 all modify `test/tools/handler-error-propagation.test.js` → **must be sequential**. REGTEST-04 modifies `test/tools/sync-memory-index-error.test.js` or `test/tools/handler-error-propagation.test.js` → sequentialize accordingly.
 
-- **Depends on**: Batch 1
+  **Sub-batch 2a**: REGTEST-01 → `fix/regtest-01`
+  - Gate: merge → verify → clean up branch
+  **Sub-batch 2b**: REGTEST-02 → `fix/regtest-02`
+  - Gate: merge → verify → clean up branch
+  **Sub-batch 2c**: REGTEST-03 → `fix/regtest-03`
+  - Gate: merge → verify → clean up branch
+  **Sub-batch 2d**: REGTEST-04 → `fix/regtest-04`
+  - Gate: merge → verify → clean up branch
+  **Sub-batch 2e**: REGTEST-05 → `fix/regtest-05`
+  - Gate: merge → verify → clean up branch
+
+  Alternatively, since all REGTESTs modify the SAME file, they can all be combined into a SINGLE worker that writes all 5 tests at once. **Recommended**: Combine all REGTEST-01 through REGTEST-05 into one worker on one branch `fix/regtest-all`. This avoids 5 sequential merge cycles.
+
+- **Depends on**: Batch 1 completed
 - **Gate**:
-  - [ ] Worker 5 (coverage + CI docs) reports success on its branch
-  - [ ] Worker 8 (P3 cleanup) reports success on its branch
-  - [ ] **Merge**: Merge each branch after completion
-  - [ ] **Clean up**: Delete all agent branches
-  - [ ] Run verification: `npm run build`
-  - [ ] Run: `COVERAGE=true bash scripts/test.sh` (check coverage thresholds)
+  - [ ] **Option A (faster)**: Single REGTEST worker writes all 5 tests → merge → verify → clean up
+  - [ ] **Option B (safer)**: 5 sequential sub-batches, each with merge → verify → clean up
+  - [ ] Run verification: `node --test test/tools/handler-error-propagation.test.js test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js`
 
-### Batch 3 — Documentation (Full Parallel — Isolated Branches)
-
-- **Issues**: FIX-06 (remaining docs), FIX-07 (EOL docs)
-- **Workers**: Worker 6, Worker 7
-- **Strategy**: Full parallel — no file overlap. Each worker on its own branch:
-  - Worker 6 → `fix/worker-6-carryover-docs`
-  - Worker 7 → `fix/worker-7-eol-docs`
-- **Depends on**: Batch 2 (Worker 6 touches open-github-issue index.ts, which was also touched by Worker 1 in Batch 1 and Worker 8 in Batch 2). **This is safe** because Worker 6 adds only comments, not logic changes. But to be safe, run after Batch 2 is merged.
-- **Gate**:
-  - [ ] Worker 6 reports success on its branch
-  - [ ] Worker 7 reports success on its branch
-  - [ ] **Merge**: Merge both branches back
-  - [ ] **Verify merge**: Confirm all comments present
-  - [ ] **Clean up**: Delete all agent branches
-  - [ ] Run verification: `npm run build`
-
-### Batch 4 — Regression Tests
-
-- **Tasks**: REGTEST-01, REGTEST-02, REGTEST-03, REGTEST-04
-- **Strategy**: Sub-batches on isolated branches:
-  - REGTEST-01 (open-github-issue single line) → `fix/regtest-01`
-  - REGTEST-02 (open-github-issue no Error: prefix) → `fix/regtest-02`
-  - REGTEST-03 (sync-memory-index format) — check if existing tests pass first
-  - REGTEST-04 (coverage CI) — manual verification
-
-  REGTEST-01 and REGTEST-02 both modify `test/tools/handler-error-propagation.test.js` → **sequential sub-batch**. REGTEST-03 has no file to create (depends on existing tests passing). REGTEST-04 is manual.
-
-  **Sub-batch 4a**: REGTEST-01 → merge → verify → REGTEST-02 → merge → verify
-  **Sub-batch 4b**: REGTEST-03 (run existing tests, confirm pass)
-  **Sub-batch 4c**: REGTEST-04 (manual CI verification)
-
-- **Depends on**: All fix batches (1, 2, 3) completed
-- **Gate**:
-  - [ ] All REGTEST workers report success on their branches
-  - [ ] **Merge**: Merge each REGTEST branch, verify changes
-  - [ ] **Clean up**: Delete all REGTEST branches
-  - [ ] All new regression tests pass
-  - [ ] Existing test suite passes
-
-### Batch 5 — Final Verification (Sequential)
+### Batch 3 — Final Verification (Sequential)
 
 - **Tasks**: Full test suite, coverage check, cross-check REPORT.md
 - **Strategy**: Sequential (coordinator handles directly)
 - **Depends on**: All preceding batches
 - **Gate**:
+  - [ ] `npm run build` — builds without errors
   - [ ] Full test suite passes: `COVERAGE=true bash scripts/test.sh`
-  - [ ] Every issue in REPORT.md confirmed resolved
-  - [ ] Commit all changes in a single commit
+  - [ ] Every issue in REPORT.md confirmed resolved (cross-check all 12 issues)
+  - [ ] `COVERAGE=true bash scripts/test.sh` — combined coverage estimate printed
+  - [ ] Commit all changes in a single commit with message: `fix: resolve 12 Round 14 review issues (3 P1 + 5 P2 + 4 P3)`
 
 ---
 
 ## 8. Regression Test Inventory
 
-- REGTEST-01 → FIX-01: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN open-github-issue with invalid --repo WHEN called THEN stderr has single error line
-- REGTEST-02 → FIX-01: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN open-github-issue with invalid --repo WHEN called THEN no "Error:" prefix (UserInputError)
-- REGTEST-03 → FIX-02: [Unit] `test/tools/sync-memory-index-error.test.js` + `test/tools/sync-memory-index-system-error.test.js` — GIVEN existing sync-memory-index error tests WHEN createToolRunner restored THEN tests pass
-- REGTEST-04 → FIX-05: [Manual/CI] Coverage threshold verification — `COVERAGE=true bash scripts/test.sh`
+- REGTEST-01 → FIX-01: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN read-github-issue with `['--repo', 'owner/repo', '42']` WHEN handler called THEN no unknown-option error
+- REGTEST-02 → FIX-01: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN read-github-issue with `['--json', '42']` WHEN handler called THEN no unknown-option error
+- REGTEST-03 → FIX-01: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN read-github-issue with `['--comments', '42']` WHEN handler called THEN no unknown-option error
+- REGTEST-04 → FIX-03: [Unit] `test/tools/handler-error-propagation.test.js` or `test/tools/sync-memory-index-error.test.js` — GIVEN sync-memory-index with invalid agents-file path WHEN handler called THEN returns exit code 1 with stderr (error propagation intact after inner catch removal)
+- REGTEST-05 → FIX-04: [Unit] `test/tools/handler-error-propagation.test.js` — GIVEN review-threads resolve with --dry-run WHEN no thread IDs selected THEN UserInputError thrown with "no thread IDs selected" message
 
 ---
 
 ## 9. Verification Checkpoints
 
-### Checkpoint 1 — After Batch 1 (P1 source fixes)
+### Checkpoint 1 — After Batch 1 (All fixes)
 - Run: `npm run build`
-- Expected: Workers 1-4 report success, build compiles without errors
-- Run: `node --test test/tools/handler-error-propagation.test.js test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js test/tools/schema-arg-validation.test.js packages/tools/architecture/dist/index.test.js`
-- Expected: All formerly-failing tests now pass (8 failures → 0)
+- Expected: Workers 1-5 report success, build compiles without errors
+- Run: `node --test test/tools/handler-error-propagation.test.js test/tools/schema-conversion-smoke.test.js test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js`
+- Expected: All existing tests pass (read-github-issue flag tests need not exist yet — they'll be added in Batch 2)
 
-### Checkpoint 2 — After Batch 2 (Config + P3 cleanup)
-- Run: `npm run build`
-- Expected: Workers 5 and 8 report success
-- Run: `COVERAGE=true bash scripts/test.sh`
-- Expected: All groups pass with new 75/60/75 thresholds
-
-### Checkpoint 3 — After Batch 3 (Documentation)
-- Run: `npm run build`
-- Expected: Workers 6 and 7 report success
-
-### Checkpoint 4 — After Batch 4 (Regression Tests)
+### Checkpoint 2 — After Batch 2 (Regression tests)
 - Run: `node --test test/tools/handler-error-propagation.test.js test/tools/sync-memory-index-error.test.js test/tools/sync-memory-index-system-error.test.js`
-- Expected: All new and existing regression tests pass
+- Expected: All 5 new regression tests pass alongside existing tests
+- Logical check: Each REGTEST must fail on unfixed code. For REGTEST-01/02/03 (read-github-issue flags), verify they would fail with the old schema by temporarily reverting the schema change
 
-### Checkpoint 5 — Final verification
+### Checkpoint 3 — Final verification
 - Run: `COVERAGE=true bash scripts/test.sh`
-- Cross-check REPORT.md: every issue resolved
-- Commit all changes in a single commit
+- Expected: All groups pass, combined coverage estimate line appears in output
+- Run: Cross-check REPORT.md — every issue from the 12 identified is confirmed resolved:
+  - [ ] P1-1 (read-github-issue --repo/--json/--comments fixed) — REGTEST-01/02/03 pass
+  - [ ] P1-2 (coverage gap documented) — scripts/test.sh improved, combined estimate present
+  - [ ] P1-3 (read-github-issue JSDoc added) — comment verified in code
+  - [ ] P2-4 (EOL consumed) — sync-memory-index uses adapter.EOL
+  - [ ] P2-5 (redundant catch removed) — inner try/catch removed
+  - [ ] P2-6 (review-threads throw) — REGTEST-05 passes
+  - [ ] P2-7 (Group 3 coverage blind spot) — documented in scripts/test.sh
+  - [ ] P2-8 (dispatch table docs) — FIX-16 comment updated
+  - [ ] P3-9 (dead code removed) — internal parseArgs removed from read-github-issue
+  - [ ] P3-10 (Windows glob) — documented in scripts/test.sh
+  - [ ] P3-11 (grep format) — grep pattern validation added
+  - [ ] P3-12 (mktemp) — replaced with cross-platform TMPDIR fallback
 
 ---
 
@@ -1140,46 +967,43 @@ Expected: All test groups pass, coverage meets 75/60/75 thresholds with --check-
 - **If a regression test passes on the unfixed code**: The test design is invalid — redesign the oracle and dispatch a new worker.
 - **If merge conflicts occur**: The coordinator resolves the conflict, then re-runs the batch gate verification.
 - **If a fix or regression test breaks existing tests**: Pause. Report which test failed and which worker's change caused it.
-- **For FIX-02 (sync-memory-index)**: The createToolRunner schema options must correctly handle the `--instruction-line` multi-value flag. Verify that repeated `--instruction-line` flags produce the same merged array as the original for-loop.
-- **For FIX-05 (coverage thresholds)**: If `COVERAGE=true bash scripts/test.sh` fails with 75/60/75 thresholds, report the exact metric that failed. Do NOT lower thresholds without coordinator approval. Consider whether Group 2 package tests can be individually improved to reach thresholds.
+- **For FIX-01 (read-github-issue)**: If `readGitHubIssueHandler` signature change breaks test callers, keep the old signature and create a compatibility wrapper. Check `grep -rn "readGitHubIssueHandler" test/` first.
+- **For FIX-02 (coverage)**: If the combined coverage estimation awk column doesn't parse the right value, adjust the column index based on actual `grep "all files"` output format (try `{print $4}` or `{print $5}`).
+- **For FIX-03 (sync-memory-index)**: If removing the inner try/catch causes a test failure, the error propagation path may have changed. Verify `createToolRunner`'s outer catch still catches errors from the handler.
 
 ---
 
 ## 11. Fix History
 
+### Round 14 — 2026-06-06
+- **Issues fixed**: FIX-01 through FIX-05 (P1: 3, P2: 5, P3: 4)
+- **Outcome**: TBD
+- **Key notes**: FIX-01 (read-github-issue) is the most impactful fix — it restores the complete createToolRunner schema lost in Round 12, restoring --repo/--json/--comments functionality. FIX-02 addresses the persistent coverage gap documentation. FIX-03/FIX-04 are P2 cleanups for sync-memory-index and review-threads. FIX-05 documents the dispatch table's 3-touch requirement.
+
 ### Round 13 — 2026-06-05
 - **Issues fixed**: FIX-01 through FIX-09 (P1: 4, P2: 5, P3: 6)
-- **Outcome**: TBD
-- **Key notes**: FIX-02 (sync-memory-index) is the most impactful fix — it restores createToolRunner wrapping lost in Round 12 and automatically resolves 4 test failures. FIX-05 (coverage) raises thresholds from 69→75 and adds --check-coverage enforcement for the first time. FIX-03 and FIX-04 fix test infrastructure bugs causing 4 of the 8 failures.
+- **Outcome**: 21/21 issues resolved. Applied in commits `178d91f` (open-github-issue stderr removal), `001ce3d` (sync-memory-index restore), `a85107f` (test classifier fix), `64dbf49` (arch tests), and subsequent commits.
+- **Key notes**: The Round 13 fix successfully resolved all 4 P1 issues but inadvertently left read-github-issue with a broken schema (introduced in Round 12). This went unnoticed by Round 13 review. The open-github-issue stderr.write fix was successful. Coverage threshold gap persisted (reappears as Round 14 FIX-02).
 
 ### Round 12 — 2026-06-05
 - **Issues fixed**: FIX-01 through FIX-10 (P1: 7, P2: 16, P3: 11) — applied in commit `52a42a6`
 - **Outcome**: 30/34 issues resolved. Remaining: open-github-issue stderr.write (not actually removed despite commit claim), coverage threshold at 69% (re-appears as Round 13 FIX-05), sync-memory-index createToolRunner regression (new issue — Round 13 FIX-02), test fix regressions (new issues — Round 13 FIX-03, FIX-04)
-- **Key notes**: The Round 12 fix commit accidentally removed sync-memory-index's createToolRunner wrapper while fixing the homeDir cross-platform issue. This created 4 new test failures and the P1-2 regression.
+- **Key notes**: The Round 12 fix commit accidentally broke read-github-issue's schema while introducing the positionals-passthrough pattern. This created the P1-1 regression now addressed in Round 14 FIX-01.
 
 ### Round 11 — 2026-06-05
-- **Issues fixed**: FIX-01 through FIX-13 (P1:3, P2:10, P3:5)
-- **Outcome**: All resolved in commit `8f2d6a1`
+- **Issues fixed**: FIX-01 through FIX-13 (P1:3, P2:10, P3:5) — applied in commit `8f2d6a1`
 
 ### Round 10 — 2026-06-05
-- **Issues fixed**: FIX-01 through FIX-16 (P1:2, P2:6, P3:8)
-- **Outcome**: All resolved in commit `ddb9863`
+- **Issues fixed**: FIX-01 through FIX-16 (P1:2, P2:6, P3:8) — applied in commit `ddb9863`
 
 ### Round 9 — 2026-06-04
-- **Issues fixed**: FIX-01 through FIX-13 (P2:5, P3:8)
-- **Outcome**: All resolved in commit `17f7e49`
+- **Issues fixed**: FIX-01 through FIX-13 (P2:5, P3:8) — applied in commit `17f7e49`
 
 ### Round 8 — 2026-06-04
-- **Issues fixed**: FIX-01 through FIX-21 (P2:8, P3:13)
-- **Outcome**: All resolved in commit `a2e8877`
+- **Issues fixed**: FIX-01 through FIX-21 (P2:8, P3:13) — applied in commit `a2e8877`
 
-### Round 7 — 2026-06-04
-- **Issues fixed**: FIX-01 through FIX-23 (P1:1, P2:12, P3:10)
-- **Outcome**: All resolved in commit `d8ecb99`
-
-### Rounds 1-6 — 2026-06-04
-- **Issues fixed**: All Round 1-6 issues resolved
-- **Outcome**: Progressive resolution across rounds
+### Rounds 1-7 — 2026-06-04
+- **Issues fixed**: All Round 1-7 issues resolved progressively.
 
 ---
 
@@ -1188,16 +1012,16 @@ Expected: All test groups pass, coverage meets 75/60/75 thresholds with --check-
 ### ALWAYS
 
 - Run gate verification immediately after every batch
+- **Create an isolated branch for each worker before dispatching** (e.g., `fix/worker-1-read-github-issue`). Every worker gets its own branch — never dispatch two workers to the same branch.
+- **Each worker commits their changes on their isolated branch.** Never allow workers to commit directly to main.
+- **After each batch completes**: merge every worker's isolated branch back to main (handle conflicts), **confirm all changes from all subagents have been implemented in the merged result**, then **clean up all agent branches** — do not leave any `fix/worker-*` or `fix/regtest-*` branches behind. A clean repo is required before starting the next batch.
 - Extract worker prompts verbatim from Section 6 — do not rewrite them
 - After a worker reports, digest the results before deciding next steps
 - Fixes must not conflict with the original spec requirements
 - Regression tests must not start before all fix batches pass
 - Resolve merge conflicts yourself — the coordinator handles them. This is coordination, not implementation.
-- **Branch isolation**: Every worker must run on its own isolated branch (named `fix/worker-*` or `fix/regtest-*`). Workers commit their changes to their isolated branch. Never dispatch two workers to the same branch.
-- **Merge after each batch**: After every batch completes, merge ALL workers' branches back to the main branch and **verify that all changes from all subagents have been implemented** in the merged result. Do not proceed until every committed change is confirmed present.
-- **Clean up agent branches**: After merging a batch, delete all agent branches that were created for that batch's workers. Do not leave any `fix/worker-*` or `fix/regtest-*` branches behind. A clean repo is required before starting the next batch.
-- **For FIX-02 (sync-memory-index)**: ensure the worker reads the full file before making changes. The createToolRunner schema must handle the same args as the old for-loop.
-- **For FIX-05 (coverage)**: Adding `--check-coverage` will cause CI to fail if thresholds aren't met. If this fails, report the exact metric. Do not silently remove `--check-coverage`.
+- **For FIX-01 (read-github-issue)**: If test code calls `readGitHubIssueHandler` with argv directly, do NOT change the public signature. Create a wrapper inside the tool definition instead.
+- **For FIX-03 (sync-memory-index)**: After removing the inner try/catch, run the existing sync-memory-index error tests to verify error propagation is intact.
 
 ### ASK FIRST — pause and confirm with the user
 
@@ -1205,8 +1029,8 @@ Expected: All test groups pass, coverage meets 75/60/75 thresholds with --check-
 - Need to add a new external dependency
 - Worker has failed twice
 - Test regression cannot be quickly diagnosed
-- **FIX-05 coverage threshold causes CI failure** — if raising to 75/75 fails CI, present options: (a) keep 75/75 and improve coverage for the failing tools, (b) adjust to a compromise threshold
-- **FIX-02 (sync-memory-index)**: If createToolRunner's option handling can't support the `--instruction-line` multi-value flag, present alternatives (keep manual for-loop but use formatAppError catch)
+- **FIX-01 (read-github-issue)**: If the handler signature change breaks external callers, present the compatibility-wrapper option
+- **FIX-02 (coverage)**: If `COVERAGE=true bash scripts/test.sh` fails, present the exact failure
 
 ### NEVER
 
