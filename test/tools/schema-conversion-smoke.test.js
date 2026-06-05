@@ -33,6 +33,7 @@ const TOOL_NAMES = [
 /**
  * Tools without createToolRunner wrapping or with complex subcommand dispatch.
  * We skip help-text assertions and only verify they don't crash.
+ * These are known carryover tools from the createToolRunner migration.
  * When any tool gains createToolRunner wrapping, remove from this set.
  * Maintained manually — no staleness detection.
  */

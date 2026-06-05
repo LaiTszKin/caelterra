@@ -526,6 +526,18 @@ async function cmdResolve(
 
 // ---- Main handler ----
 
+/**
+ * reviewThreadsHandler — Known carryover from createToolRunner migration.
+ *
+ * Reason for not using createToolRunner:
+ * - Positional subcommand architecture (list/resolve) doesn't map cleanly
+ *   to createToolRunner's options schema.
+ * - Error handling follows the AppError convention (UserInputError/SystemError
+ *   throws) — errors propagate to the CLI boundary's formatAppError.
+ * - Argument parsing is handled manually via a 63-line parseArgs().
+ *
+ * See DESIGN.md §2.3 for the full architecture discussion.
+ */
 export async function reviewThreadsHandler(
   argv: string[],
   context: ToolContext,

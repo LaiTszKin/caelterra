@@ -178,6 +178,16 @@ function printTable(
   }
 }
 
+/**
+ * findGitHubIssuesHandler — Known carryover from createToolRunner migration.
+ *
+ * Reason for not using createToolRunner:
+ * - This tool uses a simple flat argument set. Migration would be
+ *   straightforward but is deferred — the hand-rolled parseArgs (49 lines)
+ *   is stable and well-tested.
+ * - Error handling uses SystemError (typed) which propagates correctly
+ *   to the CLI boundary's formatAppError.
+ */
 export async function findGitHubIssuesHandler(
   argv: string[],
   context: ToolContext,
