@@ -1,5 +1,12 @@
 import type { ToolDefinition, ToolContext, ToolExample } from './types.js';
 
+export class SystemError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SystemError';
+  }
+}
+
 const TOOLS_BY_NAME = new Map<string, ToolDefinition>();
 
 export function registerTool(tool: ToolDefinition): void {
@@ -37,8 +44,7 @@ export async function runTool(
     return tool.handler(toolArgs, context);
   }
 
-  stderr.write(`Tool not fully configured: ${toolName}\n`);
-  return 1;
+  throw new SystemError(`Tool not fully configured: ${toolName}`);
 }
 
 export function formatExamples(examples: ToolExample[] = []): string {
