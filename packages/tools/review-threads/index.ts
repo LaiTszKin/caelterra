@@ -181,7 +181,7 @@ function runGhJson(cmdArgs: string[]): Promise<Record<string, unknown>> {
     try {
       return JSON.parse(result.stdout);
     } catch (exc) {
-      throw new SystemError('Failed to parse gh JSON output');
+      throw new SystemError('Failed to parse gh JSON output', undefined, { cause: exc });
     }
   });
 }

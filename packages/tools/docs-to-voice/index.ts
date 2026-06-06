@@ -4,7 +4,7 @@ import path from 'node:path';
 import https from 'node:https';
 import http from 'node:http';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, SystemError, createToolRunner } from '@laitszkin/tool-utils';
+import { SystemError, UserInputError, createToolRunner } from '@laitszkin/tool-utils';
 
 const DEFAULT_API_ENDPOINT =
   'https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
@@ -234,6 +234,8 @@ function applySpeechRateToAudio(outputPath: string, speechRate: number): void {
     if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
     throw new SystemError(
       `ffmpeg failed while applying --speech-rate: ${err instanceof Error ? err.message : 'unknown error'}`,
+      undefined,
+      { cause: err },
     );
   }
 }
@@ -304,6 +306,8 @@ function concatAudioFiles(partPaths: string[], outputPath: string): void {
   } catch (err: unknown) {
     throw new SystemError(
       `ffmpeg concat failed: ${err instanceof Error ? err.message : 'unknown error'}`,
+      undefined,
+      { cause: err },
     );
   } finally {
     try { fs.unlinkSync(listFile); fs.rmdirSync(path.dirname(listFile)); } catch { /* ignore */ }
@@ -459,11 +463,21 @@ const schema = {
       const outName = outputName || `voice-${timestamp}`;
       const hasExtension = outName.includes('.');
 
-      if (mode === 'say') {
-        // macOS say mode
-        const textChunks = splitTextForTts(sourceText, maxChars ? parseInt(maxChars, 10) || null : null);
-        if (textChunks.length === 0) {
-          throw new UserInputError('No text content found for conversion.');
+        const tmpFile = path.join(fs.mkdtempSync('docs-to-voice-'), 'input.txt');
+        fs.mkdirSync(path.dirname(tmpFile), { recursive: true });
+        fs.writeFileSync(tmpFile, chunks[0], 'utf-8');
+        sayArgs.push('-f', tmpFile);
+
+        try {
+          execSync(`say ${sayArgs.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`, {
+            stdio: 'ignore',
+            timeout: 300000,
+          });
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : 'unknown error';
+          throw new SystemError(`say mode failed: ${msg}`, undefined, { cause: err });
+        } finally {
+          try { fs.unlinkSync(tmpFile); fs.rmdirSync(path.dirname(tmpFile)); } catch { /* ignore */ }
         }
 
         // Check if `say` is available

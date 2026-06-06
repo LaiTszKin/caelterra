@@ -257,7 +257,7 @@ function readPayloadFile(rawPath: string): PayloadEntry {
   try {
     payload = JSON.parse(rawContent);
   } catch (exc) {
-    throw new UserInputError(`Invalid JSON payload in ${context}: ${(exc as Error).message}`);
+    throw new UserInputError(`Invalid JSON payload in ${context}: ${(exc as Error).message}`, undefined, { cause: exc });
   }
 
   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
@@ -288,6 +288,8 @@ function readAtFileValue(fieldName: string, value: string | null): string | null
     } catch (exc) {
       throw new UserInputError(
         `Unable to read @${fieldName} file ${filePath}: ${(exc as Error).message}`,
+        undefined,
+        { cause: exc },
       );
     }
   }

@@ -122,7 +122,7 @@ export const tool: ToolDefinition = {
   category: 'Validation',
   description: 'Validate SKILL.md frontmatter format and naming conventions',
   handler: createToolRunner({
-    options: { help: { type: 'boolean', short: 'h' } },
+    options: {},
     allowPositionals: true,
     usage: 'apltk validate-skill-frontmatter',
     handler: (_values, positionals, context) => validateSkillFrontmatterHandler(positionals, context),

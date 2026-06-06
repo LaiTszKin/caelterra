@@ -16,12 +16,5 @@ export {
   formatAppError,
 } from './app-error.js';
 export type { ErrorDetails } from './app-error.js';
-export {
-  createPlatformAdapter,
-  resetPlatformAdapter,
-  WindowsAdapter,
-  PosixAdapter,
-} from './platform-adapter.js';
-export type { PlatformAdapter } from './platform-adapter.js';
-export type { ToolSchema, SchemaOption } from './schema.js';
-export { createToolRunner } from './schema.js';
+export { createPlatformAdapter } from './platform-adapter.js';
+

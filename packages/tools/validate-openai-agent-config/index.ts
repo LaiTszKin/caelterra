@@ -216,7 +216,7 @@ export const tool: ToolDefinition = {
   category: 'Validation',
   description: 'Validate agents/openai.yaml configuration completeness',
   handler: createToolRunner({
-    options: { help: { type: 'boolean', short: 'h' } },
+    options: {},
     allowPositionals: true,
     usage: 'apltk validate-openai-agent-config',
     handler: (_values, positionals, context) => validateOpenaiAgentConfigHandler(positionals, context),

@@ -84,17 +84,9 @@ describe('REGTEST-15: Wrong spec path error', () => {
             const handler = tool.handler;
             if (!handler)
                 throw new Error('tool.handler is undefined');
-            try {
-                const exitCode = await handler(['template', '--spec', '/nonexistent/spec-dir', '--output', '/tmp/rg15-out'], makeContext(io));
-                // If handler returns (no throw), verify exit code
-                assert.equal(exitCode, 1, 'Expected exit code 1 for missing spec path');
-                assert.ok(io.stderrText.includes('not found'), `stderr should contain "not found": got ${JSON.stringify(io.stderrText)}`);
-            }
-            catch (err) {
-                // Architecture throws UserInputError — this is also acceptable
-                assert.ok(err instanceof Error, 'Expected an Error to be thrown');
-                assert.ok(err.message.includes('not found'), `Error message should say "not found": ${err.message}`);
-            }
+            const exitCode = await handler(['template', '--spec', '/nonexistent/spec-dir', '--output', '/tmp/rg15-out'], makeContext(io));
+            assert.equal(exitCode, 1, 'Expected exit code 1 for missing spec path');
+            assert.ok(io.stderrText.includes('not found'), `stderr should contain "not found": got ${JSON.stringify(io.stderrText)}`);
         }
         finally {
             mock.restoreAll();
@@ -229,15 +221,9 @@ describe('REGTEST-17: Edge referential integrity', () => {
         const handler = tool.handler;
         if (!handler)
             throw new Error('tool.handler is undefined');
-        try {
-            const exitCode = await handler(['apply', yamlPath, '--no-render'], makeContext(io, { sourceRoot: tmpDir }));
-            assert.equal(exitCode, 1, 'Expected exit code 1 for edge targeting missing feature');
-            assert.ok(io.stderrText.includes('non-existent-feature'), `stderr should contain "non-existent-feature": got ${JSON.stringify(io.stderrText)}`);
-            assert.ok(io.stderrText.length > 0, `stderr should have error text: got ${JSON.stringify(io.stderrText)}`);
-        }
-        catch (err) {
-            assert.ok(err instanceof Error, 'Expected an Error to be thrown');
-            assert.ok(err.message.includes('non-existent-feature'), `Error should mention "non-existent-feature": ${err.message}`);
-        }
+        const exitCode = await handler(['apply', yamlPath, '--no-render'], makeContext(io, { sourceRoot: tmpDir }));
+        assert.equal(exitCode, 1, 'Expected exit code 1 for edge targeting missing feature');
+        assert.ok(io.stderrText.includes('non-existent-feature'), `stderr should contain "non-existent-feature": got ${JSON.stringify(io.stderrText)}`);
+        assert.ok(io.stderrText.length > 0, `stderr should have error text: got ${JSON.stringify(io.stderrText)}`);
     });
 });

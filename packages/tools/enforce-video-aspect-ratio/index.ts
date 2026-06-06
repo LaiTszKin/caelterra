@@ -2,7 +2,97 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, SystemError, createToolRunner } from '@laitszkin/tool-utils';
+import { SystemError } from '@laitszkin/tool-utils';
+
+interface AspectArgs {
+  inputVideo: string | null;
+  outputVideo: string | null;
+  inPlace: boolean;
+  targetSize: string | null;
+  targetWidth: number | null;
+  targetHeight: number | null;
+  aspect: string | null;
+  force: boolean;
+  ffmpegBin: string;
+  ffprobeBin: string;
+  help: boolean;
+}
+
+function parseArgs(args: string[]): AspectArgs {
+  const parsed: AspectArgs = {
+    inputVideo: null,
+    outputVideo: null,
+    inPlace: false,
+    targetSize: null,
+    targetWidth: null,
+    targetHeight: null,
+    aspect: null,
+    force: false,
+    ffmpegBin: 'ffmpeg',
+    ffprobeBin: 'ffprobe',
+    help: false,
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--help' || arg === '-h') {
+      parsed.help = true;
+      continue;
+    }
+    if (arg.startsWith('--')) {
+      const eqIndex = arg.indexOf('=');
+      let key: string;
+      let value: string;
+
+      if (eqIndex !== -1) {
+        key = arg.slice(2, eqIndex);
+        value = arg.slice(eqIndex + 1);
+      } else {
+        key = arg.slice(2);
+        value = args[++i] || '';
+      }
+
+      switch (key) {
+        case 'input':
+        case 'input-video':
+          parsed.inputVideo = value;
+          break;
+        case 'output':
+        case 'output-video':
+          parsed.outputVideo = value;
+          break;
+        case 'in-place':
+          parsed.inPlace = true;
+          break;
+        case 'aspect':
+          parsed.aspect = value;
+          break;
+        case 'target-size':
+          parsed.targetSize = value;
+          break;
+        case 'target-width':
+          parsed.targetWidth = parseInt(value, 10) || null;
+          break;
+        case 'target-height':
+          parsed.targetHeight = parseInt(value, 10) || null;
+          break;
+        case 'force':
+          parsed.force = true;
+          break;
+        case 'ffmpeg-bin':
+          parsed.ffmpegBin = value;
+          break;
+        case 'ffprobe-bin':
+          parsed.ffprobeBin = value;
+          break;
+      }
+    } else if (!parsed.inputVideo && !arg.startsWith('-')) {
+      parsed.inputVideo = arg;
+    }
+  }
+
+  return parsed;
+}
 
 function parseSize(value: string): { width: number; height: number } {
   const match = value.trim().toLowerCase().match(/^(\d{2,5})x(\d{2,5})$/);
@@ -261,7 +351,7 @@ const schema = {
     } catch (err: unknown) {
       if (replaceInPlace && fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
       const msg = err instanceof Error ? err.message : 'unknown error';
-      throw new SystemError(`ffmpeg failed: ${msg}`);
+      throw new SystemError(`ffmpeg failed: ${msg}`, undefined, { cause: err });
     }
 
     if (replaceInPlace) {

@@ -343,7 +343,7 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
         from = parseEndpoint(edge.from);
         to = parseEndpoint(edge.to);
       } catch (er: any) {
-        throw new UserInputError(`edge: ${er.message}`);
+        throw new UserInputError(`edge: ${er.message}`, undefined, { cause: er });
       }
 
       switch (edge.action) {

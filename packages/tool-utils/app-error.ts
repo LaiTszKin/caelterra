@@ -7,6 +7,7 @@
  * - SystemError: unexpected system failures (exit code 1, includes stack)
  */
 
+
 import { EOL } from 'node:os';
 
 export type ErrorDetails = Record<string, unknown>;
@@ -26,8 +27,9 @@ export class AppError extends Error {
     statusCode = 1,
     isOperational = true,
     details?: ErrorDetails,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = this.constructor.name;
     this.code = code;
     this.statusCode = statusCode;
@@ -45,8 +47,8 @@ export class AppError extends Error {
  * Error for invalid user input.
  */
 export class UserInputError extends AppError {
-  constructor(message: string, details?: ErrorDetails) {
-    super(message, 'USER_INPUT_ERROR', 1, true, details);
+  constructor(message: string, details?: ErrorDetails, options?: ErrorOptions) {
+    super(message, 'USER_INPUT_ERROR', 1, true, details, options);
   }
 }
 
@@ -55,8 +57,8 @@ export class UserInputError extends AppError {
  * Thrown by runTool() in @laitszkin/tool-registry when getTool() returns null.
  */
 export class ToolNotFoundError extends AppError {
-  constructor(message: string, details?: ErrorDetails) {
-    super(message, 'TOOL_NOT_FOUND', 1, true, details);
+  constructor(message: string, details?: ErrorDetails, options?: ErrorOptions) {
+    super(message, 'TOOL_NOT_FOUND', 1, true, details, options);
   }
 }
 
@@ -64,8 +66,8 @@ export class ToolNotFoundError extends AppError {
  * Error for unexpected system failures.
  */
 export class SystemError extends AppError {
-  constructor(message: string, details?: ErrorDetails) {
-    super(message, 'SYSTEM_ERROR', 1, false, details);
+  constructor(message: string, details?: ErrorDetails, options?: ErrorOptions) {
+    super(message, 'SYSTEM_ERROR', 1, false, details, options);
   }
 }
 
@@ -73,7 +75,7 @@ export class SystemError extends AppError {
  * Format an error to a stderr stream using AppError type-based formatting.
  * UserInputError -- message only (no prefix)
  * SystemError -- message + stack trace
- * ToolNotFoundError -- message only (no prefix)
+
  * AppError -- "Error: " prefix
  * Other -- "Error: " prefix
  */

@@ -157,7 +157,6 @@ export const tool: ToolDefinition = {
       repo: { type: 'string' as const },
       json: { type: 'boolean' as const },
       comments: { type: 'boolean' as const },
-      help: { type: 'boolean' as const, short: 'h' },
     },
     allowPositionals: true,
     usage: 'apltk read-github-issue [options] <issue>',
