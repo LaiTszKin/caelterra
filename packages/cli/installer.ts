@@ -4,6 +4,8 @@ import path from 'node:path';
 import { createPlatformAdapter } from '@laitszkin/tool-utils';
 import type { InstallMode, InstallTarget, ManifestData, SyncResult } from './types.js';
 
+const platformAdapter = createPlatformAdapter();
+
 export interface TargetDefinition {
   id: InstallMode;
   label: string;
@@ -148,7 +150,7 @@ export async function writeManifest(
   await fsp.mkdir(targetRoot, { recursive: true });
   await fsp.writeFile(
     path.join(targetRoot, MANIFEST_FILENAME),
-    `${JSON.stringify(manifest, null, 2)}\n`,
+    `${JSON.stringify(manifest, null, 2)}${platformAdapter.EOL}`,
     'utf8',
   );
 }
@@ -229,7 +231,7 @@ async function stageToolkitContents({ sourceRoot, destinationRoot, version, mode
   const metadata = { version, installedAt: new Date().toISOString(), source: 'npm-package' };
   await fsp.writeFile(
     path.join(destinationRoot, '.apollo-toolkit-install.json'),
-    `${JSON.stringify(metadata, null, 2)}\n`,
+    `${JSON.stringify(metadata, null, 2)}${platformAdapter.EOL}`,
     'utf8',
   );
   return copiedEntries.sort();
@@ -360,7 +362,16 @@ async function replaceWithSymlink(sourcePath: string, targetPath: string): Promi
   const adapter = createPlatformAdapter();
   await fsp.rm(targetPath, { recursive: true, force: true });
   await ensureDirectory(path.dirname(targetPath));
-  await fsp.symlink(sourcePath, targetPath, adapter.symlinkType());
+  try {
+    await fsp.symlink(sourcePath, targetPath, adapter.symlinkType());
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code === 'EPERM') {
+      process.stderr.write('Warning: Symlink not supported (EPERM). Falling back to copy mode.\n');
+      await replaceWithCopy(sourcePath, targetPath);
+    } else {
+      throw err;
+    }
+  }
 }
 
 export async function installLinks({ toolkitHome, modes, env = process.env, previousSkillNames = [], linkMode = 'copy', includeExclusiveSkills = false }: {
