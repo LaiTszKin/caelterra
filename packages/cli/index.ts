@@ -346,6 +346,12 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       return 0;
     }
 
+    // Tool dispatch error patterns (FIX-10):
+    // Pattern A (createToolRunner tools): handler throws -> caught internally ->
+    //   formatAppError + return 1
+    // Pattern B (carryover tools): handler throws -> propagates through runTool ->
+    //   CLI boundary catch -> formatAppError + return 1
+    // Both patterns converge on the same formatting at the boundary.
     if (parsed.command === 'tool') {
       await registerAllTools();
       return await (context.runTool || runTool)(parsed.toolName!, parsed.toolArgs, {
