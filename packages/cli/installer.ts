@@ -2,10 +2,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createPlatformAdapter } from '@laitszkin/tool-utils';
 import type { InstallMode, InstallTarget, ManifestData, SyncResult } from './types.js';
-
-const platformAdapter = createPlatformAdapter();
 
 export interface TargetDefinition {
   id: InstallMode;
@@ -151,7 +148,7 @@ export async function writeManifest(
   await fsp.mkdir(targetRoot, { recursive: true });
   await fsp.writeFile(
     path.join(targetRoot, MANIFEST_FILENAME),
-    `${JSON.stringify(manifest, null, 2)}${platformAdapter.EOL}`,
+    `${JSON.stringify(manifest, null, 2)}\n`,
     'utf8',
   );
 }
@@ -232,7 +229,7 @@ async function stageToolkitContents({ sourceRoot, destinationRoot, version, mode
   const metadata = { version, installedAt: new Date().toISOString(), source: 'npm-package' };
   await fsp.writeFile(
     path.join(destinationRoot, '.apollo-toolkit-install.json'),
-    `${JSON.stringify(metadata, null, 2)}${platformAdapter.EOL}`,
+    `${JSON.stringify(metadata, null, 2)}\n`,
     'utf8',
   );
   return copiedEntries.sort();
@@ -362,16 +359,7 @@ async function replaceWithCopy(sourcePath: string, targetPath: string): Promise<
 async function replaceWithSymlink(sourcePath: string, targetPath: string): Promise<void> {
   await fsp.rm(targetPath, { recursive: true, force: true });
   await ensureDirectory(path.dirname(targetPath));
-  try {
-    await fsp.symlink(sourcePath, targetPath, process.platform === 'win32' ? 'junction' : 'dir');
-  } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code === 'EPERM') {
-      process.stderr.write('Warning: Symlink not supported (EPERM). Falling back to copy mode.\n');
-      await replaceWithCopy(sourcePath, targetPath);
-    } else {
-      throw err;
-    }
-  }
+  await fsp.symlink(sourcePath, targetPath, process.platform === 'win32' ? 'junction' : 'dir');
 }
 
 export async function installLinks({ toolkitHome, modes, env = process.env, previousSkillNames = [], linkMode = 'copy', includeExclusiveSkills = false }: {
