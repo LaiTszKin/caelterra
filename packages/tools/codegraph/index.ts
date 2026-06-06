@@ -35,8 +35,9 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
     return 0;
   }
 
-  // findProjectRoot requires @colbymchenry/codegraph — only called after
-  // help checks so that --help works without the optional dependency installed.
+  // findProjectRoot uses git root as boundary, falls back to package.json
+  // search. Only called after help checks so that --help works without
+  // @colbymchenry/codegraph installed.
   let projectRoot: string;
   try {
     projectRoot = findProjectRoot(context.cwd || process.cwd());
