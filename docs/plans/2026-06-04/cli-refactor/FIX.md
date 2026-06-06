@@ -1295,7 +1295,7 @@ is impractical in unit tests. The smoke test verifies the tool is correctly expo
 
 ### Round 15 — 2026-06-06
 - **Issues fixed**: FIX-01 through FIX-11 (P0: 1, P1: 2, P2: 5, P3: 9)
-- **Outcome**: TBD
+- **Outcome**: All 17 issues resolved. FIX-01 (P0) added `return await` to carryover tool dispatch and `.catch()` to entry point. FIX-02/07/08/15 (P1/P2/P3) documented coverage limitations, Group 3 blind spot, Windows glob risk in scripts/test.sh. FIX-03/17 (P1/P3) updated CHECKLIST.md thresholds and filled verification checkboxes. FIX-04 (P2) replaced hardcoded `\n` with PlatformAdapter.EOL in architecture tool. FIX-05 (P2) converted extract-pdf-text child process error to SystemError throw. FIX-06 (P2) converted open-github-issue draft-only publish error to SystemError throw. FIX-09 (P3) updated stale EOL comments in PlatformAdapter. FIX-10/11/12 (P3) added cross-platform comments to sync-memory-index. FIX-13 (P3) removed "Error:" prefix from storyboard warnings. FIX-14 (P3) added validation business-outcome comments to validate tools. FIX-16 (P3) removed stale assertCommand comment from dispatch-table test. FIX-15 (Windows glob) documented in scripts/test.sh.
 - **Key notes**: FIX-01 is the critical P0 fix — adding `return await` to the CLI dispatch and a `.catch()` to the entry point resolves the unhandled rejection crash for all 5 carryover tools. FIX-02 (coverage) and FIX-03 (CHECKLIST) address P1 documentation gaps. The remaining P2/P3 fixes are small, isolated improvements. The W6 (open-github-issue) fix depends on FIX-01, so Batch 1 is mandatory before Batch 2.
 
 ### Round 14 — 2026-06-06
