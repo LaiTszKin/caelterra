@@ -108,6 +108,8 @@ async function validateSkillFrontmatterHandler(
     for (const error of allErrors) {
       stdout.write(`- ${error}\n`);
     }
+    // Validation failure: return 1 (not throw) — this is an expected business
+    // outcome (validation found issues), not an exceptional error.
     return 1;
   }
 
