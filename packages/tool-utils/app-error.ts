@@ -7,6 +7,8 @@
  * - SystemError: unexpected system failures (exit code 1, includes stack)
  */
 
+import { EOL } from 'node:os';
+
 export type ErrorDetails = Record<string, unknown>;
 
 /**
@@ -71,6 +73,7 @@ export class SystemError extends AppError {
  * Format an error to a stderr stream using AppError type-based formatting.
  * UserInputError -- message only (no prefix)
  * SystemError -- message + stack trace
+ * ToolNotFoundError -- message only (no prefix)
  * AppError -- "Error: " prefix
  * Other -- "Error: " prefix
  */
@@ -79,12 +82,14 @@ export function formatAppError(
   err: unknown,
 ): void {
   if (err instanceof UserInputError) {
-    stderr.write(`${err.message}\n`);
+    stderr.write(`${err.message}${EOL}`);
   } else if (err instanceof SystemError) {
-    stderr.write(`${err.message}\n${err.stack}\n`);
+    stderr.write(`${err.message}${EOL}${err.stack}${EOL}`);
+  } else if (err instanceof ToolNotFoundError) {
+    stderr.write(`${err.message}${EOL}`);
   } else if (err instanceof AppError) {
-    stderr.write(`Error: ${err.message}\n`);
+    stderr.write(`Error: ${err.message}${EOL}`);
   } else {
-    stderr.write(`Error: ${(err as Error).message}\n`);
+    stderr.write(`Error: ${(err as Error).message}${EOL}`);
   }
 }
