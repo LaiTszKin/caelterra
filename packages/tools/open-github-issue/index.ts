@@ -821,6 +821,7 @@ interface IssueResult {
   publish_error: string;
 }
 
+/**
  * openGitHubIssueHandler — Known carryover from createToolRunner migration.
  *
  * Reason for not using createToolRunner:

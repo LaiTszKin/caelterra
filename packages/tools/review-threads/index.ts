@@ -576,6 +576,7 @@ export async function reviewThreadsHandler(
   argv: string[],
   context: ToolContext,
 ): Promise<number> {
+  const { stdout } = context;
   const args = parseArgs(argv);
 
   if (args.help) {
