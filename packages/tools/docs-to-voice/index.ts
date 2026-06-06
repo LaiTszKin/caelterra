@@ -4,6 +4,7 @@ import path from 'node:path';
 import https from 'node:https';
 import http from 'node:http';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { SystemError } from '@laitszkin/tool-utils';
 
 const DEFAULT_API_ENDPOINT =
   'https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
@@ -349,8 +350,10 @@ function applySpeechRateToAudio(outputPath: string, speechRate: number): void {
     }
   } catch (err: unknown) {
     if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
-    throw new Error(
+    throw new SystemError(
       `ffmpeg failed while applying --speech-rate: ${err instanceof Error ? err.message : 'unknown error'}`,
+      undefined,
+      { cause: err },
     );
   }
 }
@@ -419,8 +422,10 @@ function concatAudioFiles(partPaths: string[], outputPath: string): void {
       { stdio: 'ignore', timeout: 120000 },
     );
   } catch (err: unknown) {
-    throw new Error(
+    throw new SystemError(
       `ffmpeg concat failed: ${err instanceof Error ? err.message : 'unknown error'}`,
+      undefined,
+      { cause: err },
     );
   } finally {
     try { fs.unlinkSync(listFile); fs.rmdirSync(path.dirname(listFile)); } catch { /* ignore */ }
@@ -607,7 +612,7 @@ Options:
           });
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : 'unknown error';
-          throw new Error(`say mode failed: ${msg}`);
+          throw new SystemError(`say mode failed: ${msg}`, undefined, { cause: err });
         } finally {
           try { fs.unlinkSync(tmpFile); fs.rmdirSync(path.dirname(tmpFile)); } catch { /* ignore */ }
         }

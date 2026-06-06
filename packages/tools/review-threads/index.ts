@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { SystemError } from '@laitszkin/tool-utils';
 
 const LIST_QUERY = `
 query($owner: String!, $name: String!, $number: Int!, $after: String) {
@@ -163,7 +164,7 @@ function runGhJson(cmdArgs: string[]): Promise<Record<string, unknown>> {
     try {
       return JSON.parse(result.stdout);
     } catch (exc) {
-      throw new Error('Failed to parse gh JSON output');
+      throw new SystemError('Failed to parse gh JSON output', undefined, { cause: exc });
     }
   });
 }

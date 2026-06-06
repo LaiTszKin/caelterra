@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join as joinPath } from 'node:path';
 import { cwd } from 'node:process';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError } from '@laitszkin/tool-utils';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 const README_ACCEPT = 'application/vnd.github.raw+json';
@@ -227,7 +228,7 @@ function readPayloadFile(rawPath: string): PayloadEntry {
   try {
     payload = JSON.parse(rawContent);
   } catch (exc) {
-    throw new Error(`Invalid JSON payload in ${context}: ${(exc as Error).message}`);
+    throw new UserInputError(`Invalid JSON payload in ${context}: ${(exc as Error).message}`, undefined, { cause: exc });
   }
 
   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
@@ -256,8 +257,10 @@ function readAtFileValue(fieldName: string, value: string | null): string | null
     try {
       return readFileSync(filePath, 'utf-8');
     } catch (exc) {
-      throw new Error(
+      throw new UserInputError(
         `Unable to read @${fieldName} file ${filePath}: ${(exc as Error).message}`,
+        undefined,
+        { cause: exc },
       );
     }
   }

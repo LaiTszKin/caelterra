@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { UserInputError } from '@laitszkin/tool-utils';
 import yaml from 'js-yaml';
 
 // ── Apply & Template helpers (mirrors cli.js internals for the new verbs) ─────
@@ -348,7 +349,7 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
         from = parseEndpoint(edge.from);
         to = parseEndpoint(edge.to);
       } catch (er: any) {
-        throw new Error(`edge: ${er.message}`);
+        throw new UserInputError(`edge: ${er.message}`, undefined, { cause: er });
       }
 
       switch (edge.action) {

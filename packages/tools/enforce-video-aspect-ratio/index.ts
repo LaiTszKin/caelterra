@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
+import { SystemError } from '@laitszkin/tool-utils';
 
 interface AspectArgs {
   inputVideo: string | null;
@@ -342,7 +343,7 @@ Options:
     } catch (err: unknown) {
       if (replaceInPlace && fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
       const msg = err instanceof Error ? err.message : 'unknown error';
-      throw new Error(`ffmpeg failed: ${msg}`);
+      throw new SystemError(`ffmpeg failed: ${msg}`, undefined, { cause: err });
     }
 
     if (replaceInPlace) {

@@ -8,3 +8,11 @@ export {
   iterInputLines,
 } from './log-utils.js';
 export { iterSkillDirs } from './skill-discovery.js';
+export {
+  AppError,
+  UserInputError,
+  ToolNotFoundError,
+  SystemError,
+  formatAppError,
+} from './app-error.js';
+export type { ErrorDetails } from './app-error.js';
