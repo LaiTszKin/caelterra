@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { parseArguments, buildHelpText, registerAllTools } from '@laitszkin/cli';
+import { parseArguments, HelpTextBuilder, registerAllTools } from '@laitszkin/cli';
 import { listTools, getTool } from '@laitszkin/tool-registry';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -76,9 +76,9 @@ test('parseArguments routes architecture invocation through tool dispatch', () =
   assert.deepEqual(parsed.toolArgs, ['diff', '--no-open']);
 });
 
-test('buildHelpText surfaces architecture examples', async () => {
+test('HelpTextBuilder.overview surfaces architecture examples', async () => {
   await registerAllTools();
-  const text = buildHelpText({ version: '0.0.0', colorEnabled: false });
+  const text = new HelpTextBuilder({ version: '0.0.0', colorEnabled: false }).overview();
   assert.match(text, /apltk architecture/);
   assert.match(text, /Result:/);
 });
