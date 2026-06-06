@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
 import yaml from 'js-yaml';
-import { UserInputError, SystemError } from '@laitszkin/tool-utils';
+import { UserInputError, SystemError, createPlatformAdapter } from '@laitszkin/tool-utils';
 
 // ── Apply & Template helpers (mirrors cli.js internals for the new verbs) ─────
 
@@ -480,6 +480,7 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
 async function handleTemplate(templateArgs: string[], context: ToolContext): Promise<number> {
     const stdout = context.stdout || process.stdout;
     const stderr = context.stderr || process.stderr;
+    const adapter = createPlatformAdapter();
 
     // Parse --spec <dir> --output <dir>
     let specDir: string | undefined;
@@ -547,7 +548,7 @@ async function handleTemplate(templateArgs: string[], context: ToolContext): Pro
 
   try {
     fs.mkdirSync(outputDirPath, { recursive: true });
-    fs.writeFileSync(outputPath, lines.join('\n'), 'utf8');
+    fs.writeFileSync(outputPath, lines.join(adapter.EOL), 'utf8');
     stdout.write(`${outputPath}\n`);
   } catch (e: any) {
     throw new SystemError(`Error writing proposal.yaml: ${e.message}`);
@@ -573,7 +574,7 @@ async function handleTemplate(templateArgs: string[], context: ToolContext): Pro
       }
       apiLines.push('#');
       const existing = fs.readFileSync(outputPath, 'utf8');
-      fs.writeFileSync(outputPath, apiLines.join('\n') + '\n' + existing);
+      fs.writeFileSync(outputPath, apiLines.join(adapter.EOL) + adapter.EOL + existing);
       cg.close();
     }
   } catch {
