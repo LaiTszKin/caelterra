@@ -2,6 +2,17 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v5.0.3] - 2026-06-06
+
+### Added
+
+- **codegraph integration across skills**: `init-project-html`, `update-project-html`, and `design` now run `apltk codegraph survey` as a prerequisite before architecture work. `commit` and `version-release` run `apltk codegraph sync` to keep the code graph index in sync after code changes.
+- **References section in deliverable templates**: All planner deliverables (SPEC.md, DESIGN.md, CHECKLIST.md, PROMPT.md, REPORT.md, FIX.md) now include a References section populated with important project context files, reducing LLM search overhead.
+- **Branch-aware version release**: `version-release` now detects non-default branches and follows a merge workflow (commit → merge to default → release → sync back).
+- **maintain-project-constraints**: Generated CLAUDE.md/AGENTS.md now include `apltk codegraph` CLI commands and require codegraph investigation before starting work.
+- **Worker prompt specificity**: `plan` and `qa` skill worker prompts now require exact file paths, function/line ranges, and specific change descriptions to reduce worker drift.
+- **Worktree cleanup rule**: `plan` and `qa` PROMPT.md/FIX.md templates include an ALWAYS rule to clean up temporary worktrees after each batch.
+
 ## [v5.0.2] - 2026-06-06
 
 ### Fixed
