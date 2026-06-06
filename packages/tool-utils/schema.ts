@@ -1,8 +1,23 @@
 import { EOL } from 'node:os';
 import { parseArgs } from 'node:util';
 import type { ParseArgsOptionsConfig } from 'node:util';
-import type { ToolContext } from '@laitszkin/tool-registry';
 import { formatAppError } from './app-error.js';
+
+/**
+ * Minimal tool execution context.
+ * Defined locally to avoid a circular build dependency:
+ * tool-utils → tool-registry → tui → tool-utils.
+ */
+export interface ToolContext {
+  sourceRoot?: string;
+  stdout?: NodeJS.WriteStream;
+  stderr?: NodeJS.WriteStream;
+  env?: NodeJS.ProcessEnv;
+  spawnCommand?: Function;
+  cwd?: string;
+  /** Structured output adapter — created by createStdioWriter(@laitszkin/tui). */
+  stdioWriter?: { info?(msg: string): void; warn?(msg: string): void; error?(msg: string): void };
+}
 
 /** Option definition for parseArgs schema. */
 export type SchemaOption =

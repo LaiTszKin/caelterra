@@ -1,4 +1,5 @@
 import type { StdioWriter } from '@laitszkin/tui';
+import type { ToolContext } from '@laitszkin/tool-utils';
 
 export interface ToolHelp {
   purpose: string;
@@ -27,13 +28,4 @@ export interface ToolDefinition {
   canonicalName?: string;
 }
 
-export interface ToolContext {
-  sourceRoot?: string;
-  stdout?: NodeJS.WriteStream;
-  stderr?: NodeJS.WriteStream;
-  env?: NodeJS.ProcessEnv;
-  spawnCommand?: Function;
-  cwd?: string;
-  stdio?: any;
-  stdioWriter?: StdioWriter;
-}
+export type { ToolContext };
