@@ -4,32 +4,55 @@
 # tests flaky when --experimental-test-module-mocks is active globally.
 # See: https://github.com/nodejs/node/issues (test_runner IPC clone)
 #
-# Coverage thresholds: 65% lines, 60% branches, 65% functions.
-# SPEC originally required 80% lines; threshold is 65% due to the split-process
-# limitation (Group 2 achieves ~69.4% in its own process, combined ~80%).
-# Thresholds are enforced via post-hoc grep since --check-coverage is not
-# available in Node.js 25+. See docs/plans/2026-06-04/cli-refactor/REPORT.md §4.
+# Coverage enforcement (COVERAGE=true):
+#   Per-group line/branch/function thresholds are checked immediately after
+#   each group.  Combined weighted coverage (Groups 1 + 2) is enforced after
+#   all groups finish.  Group 3 is excluded because --experimental-test-module-mocks
+#   produces unreliable coverage metrics.
 #
-# Combined coverage is estimated from Group 1 + Group 2 "all files" lines,
-# not directly measured — the Node test runner only reports per-process coverage.
-#
-# Blind spots and limitations:
-# - Group 3 (mock.module tests) is excluded from coverage entirely since
-#   --experimental-test-module-mocks and --experimental-test-coverage are not
-#   compatible in the same process.
-# - The --test-coverage-exclude=packages/tools/eval/** glob may behave
-#   differently on Windows with backslash paths. See REPORT.md P3-18.
+# Limitations:
+#   - Split-process: Each group runs in a separate node process, so there is
+#     no single coverage report.  The combined estimate is a file-weighted
+#     average of per-group results.
+#   - Group 3 (mock.module): Excluded from coverage enforcement due to
+#     --experimental-test-module-mocks incompatibility with v8 coverage.
+#   - Windows glob: The test/**/*.test.js glob uses forward slashes and
+#     will not expand correctly on Windows.  Use PowerShell-based invocation
+#     or backslash globs on that platform.
 
 EXIT=0
 
-# When COVERAGE=true, Group 1 runs with --experimental-test-coverage flags.
-GROUP1_FLAGS=""
-if [ "${COVERAGE:-}" = "true" ]; then
-  GROUP1_FLAGS="--experimental-test-coverage --test-coverage-lines=65 --test-coverage-branches=60 --test-coverage-functions=65 --test-coverage-exclude=packages/tools/eval/**"
-fi
+# Coverage tracking globals (populated when COVERAGE=true)
+G1_PCT=0
+G1_FILES=0
+G2_PCT=0
+G2_FILES=0
 
-# Use TMPDIR, TEMP, or /tmp as fallback for platforms without mktemp (e.g., Windows CMD)
+# Use TMPDIR, TEMP, or /tmp as fallback for platforms without mktemp
 RUN_TEST_LOG="${TMPDIR:-${TEMP:-/tmp}}/test-run-$$.log"
+
+# Extract a pipe-delimited column from the "all files" coverage summary line,
+# stripping whitespace and trailing '%'.
+# Columns: (1) file | (2) line % | (3) branch % | (4) funcs % | (5) uncovered lines
+_cov_col() {
+  local col="$1" text="$2"
+  echo "$text" | grep "all files" | awk -F'|' -v c="$col" '{
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", $c)
+    gsub(/%/, "", $c)
+    print $c
+  }'
+}
+
+# Count the number of individual file entries in a coverage table
+# (lines with numeric coverage data before "all files", excluding the header).
+_cov_file_count() {
+  echo "$1" | awk -F'|' '
+    /^ℹ all files/{exit}
+    /^ℹ file .* line %/{next}
+    $2 ~ /[0-9]/{c++}
+    END{print c}
+  '
+}
 
 run_test_group() {
   local label="$1"
@@ -46,50 +69,106 @@ run_test_group() {
   fi
 }
 
-# Group 1: stable non-mock tests (test/)
-run_test_group "Stable tests (test/)" \
-  node $GROUP1_FLAGS --test 'test/**/*.test.js'
+# Like run_test_group but executes via "node --experimental-test-coverage"
+# and enforces per-group threshold checks.  Stores line percentage and file
+# count in the named global variables for later combined-weight computation.
+# Usage: run_coverage_group label line_thr branch_thr func_thr pct_var files_var node_args...
+# Note: do NOT include "node" in node_args; it is prepended automatically.
+run_coverage_group() {
+  local label="$1" line_thr="$2" branch_thr="$3" func_thr="$4" pct_var="$5" files_var="$6"
+  shift 6
 
-# Group 2: package .test.js files that do NOT need mock.module
+  echo ""
+  echo "==> $label"
+
+  local out
+  out=$(node --experimental-test-coverage "$@" 2>&1)
+  local exit_code=$?
+  echo "$out"
+
+  if [ $exit_code -ne 0 ]; then
+    echo "    FAIL (tests failed)"
+    EXIT=1
+    return 1
+  fi
+
+  local line_pct branch_pct func_pct file_count
+  line_pct=$(_cov_col 2 "$out")
+  branch_pct=$(_cov_col 3 "$out")
+  func_pct=$(_cov_col 4 "$out")
+  file_count=$(_cov_file_count "$out")
+
+  if [ -z "$line_pct" ]; then
+    echo "    FAIL (no coverage data)"
+    EXIT=1
+    return 1
+  fi
+
+  # Store for combined-weight computation (even when thresholds fail)
+  eval "$pct_var=\$line_pct"
+  eval "$files_var=\$file_count"
+
+  local fail=0
+  [ "$(echo "$line_pct < $line_thr" | bc -l 2>/dev/null)" = "1" ] && fail=1
+  [ "$(echo "$branch_pct < $branch_thr" | bc -l 2>/dev/null)" = "1" ] && fail=1
+  [ "$(echo "$func_pct < $func_thr" | bc -l 2>/dev/null)" = "1" ] && fail=1
+
+  if [ "$fail" = "1" ]; then
+    echo "    FAIL (lines=${line_pct}% branches=${branch_pct}% funcs=${func_pct}%)"
+    EXIT=1
+    return 1
+  fi
+
+  echo "    PASS (lines=${line_pct}% branches=${branch_pct}% funcs=${func_pct}%)"
+}
+
+
+# Group 2 test file list (shared between coverage and non-coverage paths)
 EXCLUDE='(cmd-init|cmd-list-apis|cmd-survey)'
 PACKAGE_TEST_FILES=$(find packages -name '*.test.js' -not -path '*/node_modules/*' | grep -v -E "$EXCLUDE" | sort | tr '\n' ' ')
-run_test_group "Package tests (no mock.module)" \
-  node $GROUP1_FLAGS --test $PACKAGE_TEST_FILES
+
+if [ "$COVERAGE" = "true" ]; then
+  # Group 1: stable non-mock tests (test/) — coverage with thresholds
+  run_coverage_group "Stable tests (test/)" 75 60 65 G1_PCT G1_FILES \
+    --test 'test/**/*.test.js'
+
+  # Group 2: package tests (no mock.module) — coverage with thresholds
+  run_coverage_group "Package tests (no mock.module)" 65 60 65 G2_PCT G2_FILES \
+    --test $PACKAGE_TEST_FILES
+else
+  # Group 1: stable non-mock tests (test/)
+  run_test_group "Stable tests (test/)" \
+    node --test 'test/**/*.test.js'
+
+  # Group 2: package .test.js files that do NOT need mock.module
+  run_test_group "Package tests (no mock.module)" \
+    node --test $PACKAGE_TEST_FILES
+fi
 
 # Group 3: mock-dependent tests — isolated with --experimental-test-module-mocks
+# Always runs the same way (excluded from coverage enforcement).
 run_test_group "Package tests (mock.module)" \
   node --experimental-test-module-mocks --test \
     'packages/tools/codegraph/dist/lib/cmd-init.test.js' \
     'packages/tools/codegraph/dist/lib/cmd-list-apis.test.js' \
     'packages/tools/codegraph/dist/lib/cmd-survey.test.js'
 
-# Enforce coverage thresholds (--check-coverage not available in Node 25+)
-if [ "${COVERAGE:-}" = "true" ] && [ -s "$RUN_TEST_LOG" ]; then
-  if grep -q "does not meet threshold" "$RUN_TEST_LOG" 2>/dev/null; then
+# Combined weighted coverage enforcement (Groups 1 + 2 only)
+if [ "$COVERAGE" = "true" ]; then
+  total_files=$((G1_FILES + G2_FILES))
+  if [ "$total_files" -gt 0 ]; then
+    combined_pct=$(echo "scale=2; ($G1_PCT * $G1_FILES + $G2_PCT * $G2_FILES) / $total_files" | bc -l)
     echo ""
-    echo "COVERAGE THRESHOLD VIOLATIONS:"
-    grep "does not meet threshold" "$RUN_TEST_LOG"
-    EXIT=1
-  fi
-
-  # Check that grep pattern matched at least one threshold line
-  if ! grep -q "does not meet threshold" "$RUN_TEST_LOG" 2>/dev/null; then
-    # Check if coverage output exists at all
-    if grep -q "all files" "$RUN_TEST_LOG" 2>/dev/null; then
-      echo "  (all thresholds met)"
+    echo "==> Combined coverage (file-weighted): ${combined_pct}%"
+    if [ "$(echo "$combined_pct < 80" | bc -l)" = "1" ]; then
+      echo "    FAIL (combined coverage ${combined_pct}% < 80%)"
+      EXIT=1
     else
-      echo "  (warning: no coverage data found — Node version may have changed output format)"
+      echo "    PASS (combined coverage ${combined_pct}% >= 80%)"
     fi
   fi
-
-  # Estimate combined line coverage from Group 1 and Group 2 reports
-  GROUP1_LINES=$(grep "all files" "$RUN_TEST_LOG" | head -1 | awk '{print $5}')
-  GROUP2_LINES=$(grep "all files" "$RUN_TEST_LOG" | tail -1 | awk '{print $5}')
-  if [ -n "$GROUP1_LINES" ] && [ -n "$GROUP2_LINES" ]; then
-    echo "  (combined coverage estimate: G1=$GROUP1_LINES G2=$GROUP2_LINES)"
-    echo "  (SPEC requires 80% — see REPORT.md for split-process limitation)"
-  fi
 fi
+
 rm -f "$RUN_TEST_LOG"
 
 exit $EXIT
