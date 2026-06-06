@@ -3,6 +3,22 @@
 # a Node.js 24.x test runner IPC deserialization issue that can make
 # tests flaky when --experimental-test-module-mocks is active globally.
 # See: https://github.com/nodejs/node/issues (test_runner IPC clone)
+#
+# Coverage thresholds: 65% lines, 60% branches, 65% functions.
+# SPEC originally required 80% lines; threshold is 65% due to the split-process
+# limitation (Group 2 achieves ~69.4% in its own process, combined ~80%).
+# Thresholds are enforced via post-hoc grep since --check-coverage is not
+# available in Node.js 25+. See docs/plans/2026-06-04/cli-refactor/REPORT.md §4.
+#
+# Combined coverage is estimated from Group 1 + Group 2 "all files" lines,
+# not directly measured — the Node test runner only reports per-process coverage.
+#
+# Blind spots and limitations:
+# - Group 3 (mock.module tests) is excluded from coverage entirely since
+#   --experimental-test-module-mocks and --experimental-test-coverage are not
+#   compatible in the same process.
+# - The --test-coverage-exclude=packages/tools/eval/** glob may behave
+#   differently on Windows with backslash paths. See REPORT.md P3-18.
 
 EXIT=0
 
