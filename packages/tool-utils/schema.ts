@@ -1,3 +1,4 @@
+import { EOL } from 'node:os';
 import { parseArgs } from 'node:util';
 import type { ParseArgsOptionsConfig } from 'node:util';
 import type { ToolContext } from '@laitszkin/tool-registry';
@@ -59,7 +60,7 @@ function buildHelpText(schema: ToolSchema): string {
     lines.push(`  --${key}${short}${typeLabel}${multiLabel}${def}${desc}`);
   }
   lines.push('  --help, -h            Show this help');
-  return lines.join('\n');
+  return lines.join(EOL);
 }
 
 /**
