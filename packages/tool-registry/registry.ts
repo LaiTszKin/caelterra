@@ -1,12 +1,5 @@
 import type { ToolDefinition, ToolContext, ToolExample } from './types.js';
-import { ToolNotFoundError } from '@laitszkin/tool-utils';
-
-export class SystemError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'SystemError';
-  }
-}
+import { ToolNotFoundError, SystemError } from '@laitszkin/tool-utils';
 
 const TOOLS_BY_NAME = new Map<string, ToolDefinition>();
 
