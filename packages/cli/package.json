@@ -36,8 +36,10 @@
     "@laitszkin/tool-generate-storyboard-images": "*",
     "@laitszkin/tool-enforce-video-aspect-ratio": "*",
     "@laitszkin/tool-architecture": "*",
+    "@laitszkin/tool-codegraph": "*",
     "@laitszkin/tool-create-specs": "*",
     "@laitszkin/tool-create-review-report": "*",
+    "@laitszkin/tool-eval": "*",
     "@laitszkin/tool-extract-pdf-text": "*"
   }
 }

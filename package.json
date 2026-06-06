@@ -47,6 +47,7 @@
   ],
   "dependencies": {
     "@inquirer/prompts": "^8.0.0",
+    "@laitszkin/cli": "^4.0.8",
     "chalk": "^5.0.0",
     "elkjs": "^0.11.1",
     "js-yaml": "^4.1.1"
