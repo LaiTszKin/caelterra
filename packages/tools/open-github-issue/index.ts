@@ -894,16 +894,13 @@ export async function openGitHubIssueHandler(
 
   if (mode === 'draft-only') {
     if (publishError) {
+      throw new SystemError(`Issue publish failed. Return draft only: ${publishError}`);
+    } else {
       stderr!.write(
-        `Issue publish failed. Return draft only: ${publishError}\n`,
+        'No authenticated gh CLI session and no GitHub token found. ' +
+          'Return draft issue body only.\n',
       );
-      return 1;
     }
-    stderr!.write(
-      'No authenticated gh CLI session and no GitHub token found. ' +
-        'Return draft issue body only.\n',
-    );
-    return 0;
   }
 
   return 0;
