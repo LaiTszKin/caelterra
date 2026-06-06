@@ -75,7 +75,7 @@ export class SystemError extends AppError {
  * Format an error to a stderr stream using AppError type-based formatting.
  * UserInputError -- message only (no prefix)
  * SystemError -- message + stack trace
-
+ * ToolNotFoundError -- bare message (same as UserInputError)
  * AppError -- "Error: " prefix
  * Other -- "Error: " prefix
  */

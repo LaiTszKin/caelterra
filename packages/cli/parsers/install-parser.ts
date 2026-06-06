@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import path from 'node:path';
 import { UserInputError } from '@laitszkin/tool-utils';
-import type { InstallMode } from '../types.js';
+import type { InstallMode, ParsedArguments } from '../types.js';
 import type { CommandParser, InstallCommand } from './types.js';
 import { normalizeParseError } from './parser-utils.js';
 
@@ -73,6 +73,22 @@ export class InstallArgsParser implements CommandParser<InstallCommand> {
       linkMode,
       explicitInstallCommand,
       helpTopic,
+    };
+  }
+
+  toParsedArguments(result: InstallCommand): ParsedArguments {
+    return {
+      command: 'install',
+      modes: result.modes,
+      showHelp: result.showHelp,
+      showToolsHelp: false,
+      toolkitHome: result.toolkitHome,
+      toolName: null,
+      toolArgs: [],
+      linkMode: result.linkMode,
+      assumeYes: false,
+      explicitInstallCommand: result.explicitInstallCommand,
+      helpTopic: result.helpTopic,
     };
   }
 }

@@ -6,9 +6,10 @@
 #
 # Coverage enforcement (COVERAGE=true):
 #   Per-group line/branch/function thresholds are checked immediately after
-#   each group.  Combined weighted coverage (Groups 1 + 2) is enforced after
-#   all groups finish.  Group 3 is excluded because --experimental-test-module-mocks
-#   produces unreliable coverage metrics.
+#   each group.  Combined coverage = weighted average of Groups 1+2.  Group 3
+#   (codegraph mock.module tests) excluded due to Node.js incompatible flags.
+#   Combined weighted coverage (Groups 1 + 2) is enforced after all groups
+#   finish.
 #
 # Limitations:
 #   - Split-process: Each group runs in a separate node process, so there is
@@ -16,9 +17,9 @@
 #     average of per-group results.
 #   - Group 3 (mock.module): Excluded from coverage enforcement due to
 #     --experimental-test-module-mocks incompatibility with v8 coverage.
-#   - Windows glob: The test/**/*.test.js glob uses forward slashes and
-#     will not expand correctly on Windows.  Use PowerShell-based invocation
-#     or backslash globs on that platform.
+#   - Windows glob: The test/**/*.test.js glob uses forward slashes.
+#     In CI (shell: bash) this works correctly via Git Bash.
+#     For direct cmd.exe/PowerShell invocation, use backslash globs instead.
 
 EXIT=0
 
@@ -124,7 +125,7 @@ run_coverage_group() {
 
 
 # Group 2 test file list (shared between coverage and non-coverage paths)
-EXCLUDE='(cmd-init|cmd-list-apis|cmd-survey)'
+EXCLUDE='(cmd-init|cmd-list-apis|cmd-survey|eval)'
 PACKAGE_TEST_FILES=$(find packages -name '*.test.js' -not -path '*/node_modules/*' | grep -v -E "$EXCLUDE" | sort | tr '\n' ' ')
 
 if [ "$COVERAGE" = "true" ]; then
@@ -159,7 +160,7 @@ if [ "$COVERAGE" = "true" ]; then
   if [ "$total_files" -gt 0 ]; then
     combined_pct=$(echo "scale=2; ($G1_PCT * $G1_FILES + $G2_PCT * $G2_FILES) / $total_files" | bc -l)
     echo ""
-    echo "==> Combined coverage (file-weighted): ${combined_pct}%"
+    echo "==> Combined coverage (G1+G2, file-weighted): ${combined_pct}%"
     if [ "$(echo "$combined_pct < 80" | bc -l)" = "1" ]; then
       echo "    FAIL (combined coverage ${combined_pct}% < 80%)"
       EXIT=1

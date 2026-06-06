@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import path from 'node:path';
 import { UserInputError } from '@laitszkin/tool-utils';
-import type { InstallMode } from '../types.js';
+import type { InstallMode, ParsedArguments } from '../types.js';
 import type { CommandParser, UninstallCommand } from './types.js';
 import { normalizeParseError } from './parser-utils.js';
 
@@ -54,6 +54,22 @@ export class UninstallArgsParser implements CommandParser<UninstallCommand> {
       toolkitHome,
       assumeYes,
       helpTopic: 'uninstall',
+    };
+  }
+
+  toParsedArguments(result: UninstallCommand): ParsedArguments {
+    return {
+      command: 'uninstall',
+      modes: result.modes,
+      showHelp: result.showHelp,
+      showToolsHelp: false,
+      toolkitHome: result.toolkitHome,
+      toolName: null,
+      toolArgs: [],
+      linkMode: null,
+      assumeYes: result.assumeYes,
+      explicitInstallCommand: false,
+      helpTopic: result.helpTopic,
     };
   }
 }

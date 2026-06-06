@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
 describe('coverage enforcement', () => {
   it('coverage data is produced and parseable from node --experimental-test-coverage', { timeout: 60000 }, async () => {
@@ -70,5 +71,57 @@ describe('coverage enforcement', () => {
     const failingPct = 79.99;
     assert.ok(failingPct < 80,
       `Combined coverage ${failingPct}% should fail 80% threshold`);
+  });
+
+  it('REGTEST-03: combined coverage label uses G1+G2 notation', () => {
+    const content = fs.readFileSync('scripts/test.sh', 'utf-8');
+    const combinedCoverageLine = content.split('\n').find(l => l.includes('==> Combined coverage'));
+    assert.ok(combinedCoverageLine,
+      'Should find "==> Combined coverage" line in scripts/test.sh');
+    assert.ok(
+      combinedCoverageLine.includes('G1+G2'),
+      `Combined coverage line should reference "G1+G2" notation, got: ${combinedCoverageLine}`
+    );
+  });
+
+  it('REGTEST-07: eval test files excluded from Group 2 coverage', () => {
+    const content = fs.readFileSync('scripts/test.sh', 'utf-8');
+    const lines = content.split('\n');
+    const excludeLine = lines.find(l => l.trim().startsWith('EXCLUDE='));
+    assert.ok(excludeLine, 'Should find EXCLUDE= line in scripts/test.sh');
+
+    assert.ok(
+      excludeLine.includes('eval'),
+      `EXCLUDE pattern should include 'eval' to filter out eval test files, got: ${excludeLine}`
+    );
+
+    // Extract the regex pattern between single quotes
+    const match = excludeLine.match(/EXCLUDE='([^']+)'/);
+    assert.ok(match, 'Should extract EXCLUDE regex pattern');
+    const pattern = match[1];
+
+    // Verify that paths containing "eval" are matched by the exclusion pattern
+    const evalPaths = [
+      'packages/tools/eval/test/index.test.js',
+      'packages/tools/eval/test/executor.test.js',
+    ];
+    for (const p of evalPaths) {
+      assert.ok(
+        new RegExp(pattern).test(p),
+        `Path "${p}" should match exclusion pattern /${pattern}/`
+      );
+    }
+
+    // Verify that non-eval paths are NOT matched (would pass through filter)
+    const nonEvalPaths = [
+      'packages/tools/utils/test/helper.test.js',
+      'packages/tools/skill-creator/test/creator.test.js',
+    ];
+    for (const p of nonEvalPaths) {
+      assert.ok(
+        !new RegExp(pattern).test(p),
+        `Path "${p}" should NOT match exclusion pattern /${pattern}/`
+      );
+    }
   });
 });

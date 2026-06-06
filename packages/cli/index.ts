@@ -48,7 +48,7 @@ export {
   execCommand,
 };
 import type { CliContext, InstallMode, ParsedArguments } from './types.js';
-import type { CommandParser, InstallCommand, UninstallCommand, ToolCommand, ToolsHelpCommand } from './parsers/types.js';
+import type { CommandParser } from './parsers/types.js';
 import { formatAppError } from '@laitszkin/tool-utils';
 import { InstallArgsParser } from './parsers/install-parser.js';
 import { UninstallArgsParser } from './parsers/uninstall-parser.js';
@@ -67,6 +67,11 @@ function parseArguments(argv: string[]): ParsedArguments {
   const toolParser = new ToolArgsParser();
 
   // Dispatch table for all known command types
+  // ==== Collision zone (FIX-09) ====
+  // L55-190 and L349-360 are high-collision regions touched by dispatch,
+  // parser, and error-boundary changes.  Modify with care.
+  // =================================
+
   const commandParsers = new Map<string, CommandParser<any>>([
     ['install', installParser],
     ['uninstall', new UninstallArgsParser()],
@@ -74,119 +79,21 @@ function parseArguments(argv: string[]): ParsedArguments {
     ['tool', toolParser],
   ]);
 
-  const parser = commandParsers.get(firstArg);
-  // FIX-16: The if-else chain below is intentional — each command type
-  // (uninstall, install, tools/tool) returns a different ParsedArguments
-  // shape. A handler-map refactor would need a union-to-discriminated
-  // mapping. Keeping explicit per-type branches is clearer for now.
-  //
-  // Adding a new command requires touching 3 locations:
-  // 1. Create a new parser class implementing CommandParser<T>
-  // 2. Add a Map.set() entry in the dispatch table above
-  // 3. Add a new if-else branch below to reshape the parsed result
-  //
-  // Ordering constraint: install/uninstall branches must precede
-  // tools/tool because the same parser reference (toolParser) serves both.
-  if (parser) {
-    if (firstArg === 'uninstall') {
-      const cmd = parser.parse(argv) as UninstallCommand;
-      return {
-        command: 'uninstall',
-        modes: cmd.modes,
-        showHelp: cmd.showHelp,
-        showToolsHelp: false,
-        toolkitHome: cmd.toolkitHome,
-        toolName: null,
-        toolArgs: [],
-        linkMode: null,
-        assumeYes: cmd.assumeYes,
-        explicitInstallCommand: false,
-        helpTopic: cmd.helpTopic,
-      };
+  // Command dispatch: iterate parsers, first match wins
+  for (const [name, parser] of commandParsers) {
+    if (firstArg === name) {
+      const result = parser.parse(argv);
+      return parser.toParsedArguments(result);
     }
-
-    if (firstArg === 'install') {
-      const cmd = parser.parse(argv) as InstallCommand;
-      return {
-        command: 'install',
-        modes: cmd.modes,
-        showHelp: cmd.showHelp,
-        showToolsHelp: false,
-        toolkitHome: cmd.toolkitHome,
-        toolName: null,
-        toolArgs: [],
-        linkMode: cmd.linkMode,
-        assumeYes: false,
-        explicitInstallCommand: cmd.explicitInstallCommand,
-        helpTopic: cmd.helpTopic,
-      };
-    }
-
-    // tools/tool dispatch
-    const cmd = parser.parse(argv) as ToolCommand | ToolsHelpCommand;
-    if (cmd.command === 'tools-help') {
-      return {
-        command: 'tools-help',
-        modes: [],
-        showHelp: false,
-        showToolsHelp: true,
-        toolkitHome: null,
-        toolName: null,
-        toolArgs: [],
-        linkMode: null,
-        assumeYes: false,
-        explicitInstallCommand: false,
-        helpTopic: 'tools-help',
-      };
-    }
-    return {
-      command: 'tool',
-      modes: [],
-      showHelp: false,
-      showToolsHelp: false,
-      toolkitHome: null,
-      toolName: cmd.toolName,
-      toolArgs: cmd.toolArgs,
-      linkMode: null,
-      assumeYes: false,
-      explicitInstallCommand: false,
-      helpTopic: 'overview',
-    };
   }
 
-  // Direct tool name (no "tools" prefix) — route through ToolArgsParser
+  // Direct tool name (no "tools" prefix) — route through the 'tool' dispatch table entry
   if (firstArg && isKnownToolName(firstArg)) {
-    const cmd = toolParser.parse(argv) as ToolCommand;
-    return {
-      command: 'tool',
-      modes: [],
-      showHelp: false,
-      showToolsHelp: false,
-      toolkitHome: null,
-      toolName: cmd.toolName,
-      toolArgs: cmd.toolArgs,
-      linkMode: null,
-      assumeYes: false,
-      explicitInstallCommand: false,
-      helpTopic: 'overview',
-    };
+    return toolParser.toParsedArguments(toolParser.parse(argv));
   }
 
   // Default: install (handles bare arguments like "codex", "--help", or empty argv)
-  const cmd = installParser.parse(argv);
-  return {
-    command: 'install',
-    modes: cmd.modes,
-    showHelp: cmd.showHelp,
-    showToolsHelp: false,
-    toolkitHome: cmd.toolkitHome,
-    toolName: null,
-    toolArgs: [],
-    linkMode: cmd.linkMode,
-    assumeYes: false,
-    explicitInstallCommand: cmd.explicitInstallCommand,
-    helpTopic: cmd.helpTopic,
-  };
+  return installParser.toParsedArguments(installParser.parse(argv));
 }
 
 function buildSymlinkInfo({ colorEnabled }: { colorEnabled: boolean }): string {

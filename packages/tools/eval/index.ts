@@ -40,6 +40,14 @@ import {
 import type { DedupedIssue } from './optimizer.js';
 import { promisePool } from './lib/promise-pool.js';
 
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  SCOPE EXCLUSION NOTICE                                                ║
+// ║  This tool is explicitly excluded from the CLI refactoring scope       ║
+// ║  (SPEC.md L28). It predates createToolRunner, AppError, and            ║
+// ║  PlatformAdapter. DO NOT use this tool's patterns as a template        ║
+// ║  for new tools. New tools should use createToolRunner + AppError.      ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /**

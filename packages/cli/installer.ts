@@ -366,7 +366,7 @@ async function replaceWithSymlink(sourcePath: string, targetPath: string): Promi
     await fsp.symlink(sourcePath, targetPath, adapter.symlinkType());
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code === 'EPERM') {
-      process.stderr.write('Warning: Symlink not supported (EPERM). Falling back to copy mode.\n');
+      process.stderr.write(`Warning: Symlink not supported (EPERM). Falling back to copy mode.${adapter.EOL}`);
       await replaceWithCopy(sourcePath, targetPath);
     } else {
       throw err;

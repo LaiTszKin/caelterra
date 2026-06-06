@@ -3,9 +3,6 @@ import assert from 'node:assert/strict';
 import { parseArguments, run, HelpTextBuilder } from '@laitszkin/cli';
 import { listTools, getTool, runTool } from '@laitszkin/tool-registry';
 
-// Note: tools are not yet registered in the new registry (Batch 4).
-// Tool handler tests will be enabled after tool migration.
-
 test('HelpTextBuilder.toolsHelp lists bundled tools', () => {
   const help = new HelpTextBuilder({ version: '1.2.3', colorEnabled: false }).toolsHelp();
   assert.match(help, /apltk tools/);
@@ -19,15 +16,8 @@ test('HelpTextBuilder.overview provides task-oriented overview help', () => {
   assert.match(help, /Examples:/);
 });
 
-test('parseArguments distinguishes overview, install, and uninstall help', () => {
-  assert.equal(parseArguments(['--help']).helpTopic, 'overview');
-  assert.equal(parseArguments(['codex', '--help']).helpTopic, 'install');
-  assert.equal(parseArguments(['uninstall', '--help']).helpTopic, 'uninstall');
-});
-
 test('listTools returns empty array when no tools registered', () => {
   const tools = listTools();
-  // No tools registered yet (will be populated in Batch 5)
   assert.ok(Array.isArray(tools));
 });
 

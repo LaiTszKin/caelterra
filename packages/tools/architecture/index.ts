@@ -146,7 +146,6 @@ function yamlStr(value: string): string {
 
 async function handleApply(applyArgs: string[], context: ToolContext): Promise<number> {
   const stdout = context.stdout || process.stdout;
-  const stderr = context.stderr || process.stderr;
   const sourceRoot =
     context.sourceRoot ||
     path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
@@ -479,7 +478,6 @@ async function handleApply(applyArgs: string[], context: ToolContext): Promise<n
 
 async function handleTemplate(templateArgs: string[], context: ToolContext): Promise<number> {
     const stdout = context.stdout || process.stdout;
-    const stderr = context.stderr || process.stderr;
     const adapter = createPlatformAdapter();
 
     // Parse --spec <dir> --output <dir>

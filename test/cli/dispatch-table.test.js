@@ -355,3 +355,130 @@ test('dispatch table processes uninstall --help successfully', async () => {
   // uninstall --help should work normally (test that existing behavior is preserved)
   assert.strictEqual(exitCode, 0);
 });
+
+// ---------------------------------------------------------------------------
+// REGTEST-02: Dispatch table backward compatibility & architectural extension
+// ---------------------------------------------------------------------------
+
+test('REGTEST-02: parseArguments backward compatibility — all command types', () => {
+  const scenarios = [
+    // Fallback to install (no dispatch match, not a known tool name)
+    { argv: ['--help'],            command: 'install',    props: { showHelp: true, helpTopic: 'overview' } },
+    // Dispatch table 'install' entry
+    { argv: ['install', '--help'], command: 'install',    props: { showHelp: true, helpTopic: 'install' } },
+    // Dispatch table 'uninstall' entry
+    { argv: ['uninstall', '--help'], command: 'uninstall', props: { showHelp: true, helpTopic: 'uninstall' } },
+    // Dispatch table 'tools' entry → tools-help
+    { argv: ['tools'],             command: 'tools-help', props: { showToolsHelp: true, showHelp: false } },
+    // isKnownToolName fallback → 'tool' command
+    { argv: ['filter-logs'],       command: 'tool',       props: { toolName: 'filter-logs' } },
+  ];
+
+  for (const { argv, command, props } of scenarios) {
+    const result = parseArguments(argv);
+    assert.equal(
+      result.command, command,
+      `parseArguments(${JSON.stringify(argv)}).command !== '${command}'`,
+    );
+    for (const [key, value] of Object.entries(props)) {
+      assert.equal(
+        result[key], value,
+        `parseArguments(${JSON.stringify(argv)}).${key} !== ${JSON.stringify(value)}`,
+      );
+    }
+  }
+});
+
+test('REGTEST-02: architectural — dispatch table supports independent command addition', () => {
+  // Create a mock command parser following the CommandParser interface
+  // (parse + toParsedArguments)
+  class MockParser {
+    parse(argv) {
+      return { type: 'mock', data: argv[0] };
+    }
+
+    toParsedArguments(result) {
+      return {
+        command: 'install',
+        modes: [],
+        showHelp: false,
+        showToolsHelp: false,
+        toolkitHome: null,
+        toolName: null,
+        toolArgs: [],
+        linkMode: null,
+        assumeYes: false,
+        explicitInstallCommand: false,
+        helpTopic: 'overview',
+      };
+    }
+  }
+
+  // Dispatch helper mirroring the real parseArguments dispatch loop pattern
+  function dispatchCommand(argv, parsers) {
+    const firstArg = argv[0];
+    for (const [name, parser] of parsers) {
+      if (firstArg === name) {
+        return parser.toParsedArguments(parser.parse(argv));
+      }
+    }
+    return null;
+  }
+
+  // Add a mock parser with 2 Map entries sharing the same instance
+  const mockParser = new MockParser();
+  const dispatchTable = new Map([
+    ['mock-cmd', mockParser],
+    ['mock-alias', mockParser],
+  ]);
+
+  // Two entries share one parser instance (the "2 locations" property)
+  assert.strictEqual(
+    dispatchTable.get('mock-cmd'),
+    dispatchTable.get('mock-alias'),
+  );
+
+  // Both entries route correctly through the dispatch loop
+  const resultA = dispatchCommand(['mock-cmd'], dispatchTable);
+  const resultB = dispatchCommand(['mock-alias'], dispatchTable);
+  assert.notEqual(resultA, null);
+  assert.notEqual(resultB, null);
+  assert.equal(resultA.command, 'install');
+  assert.equal(resultB.command, 'install');
+
+  // The real dispatch table has the same property:
+  // 'tools' and 'tool' entries share the toolParser instance
+  const toolsResult = parseArguments(['tools', 'codegraph']);
+  const toolResult = parseArguments(['tool', 'codegraph']);
+  assert.equal(toolsResult.command, 'tool');
+  assert.equal(toolsResult.toolName, 'codegraph');
+  assert.equal(toolResult.command, 'tool');
+  assert.equal(toolResult.toolName, 'codegraph');
+  assert.deepEqual(toolsResult, toolResult);
+});
+
+// ---------------------------------------------------------------------------
+// REGTEST-04: Tool name routing through dispatch table (not bypass)
+// ---------------------------------------------------------------------------
+
+test('REGTEST-04: Known tool names route through tool command', () => {
+  const knownTools = ['filter-logs', 'codegraph', 'architecture', 'docs-to-voice', 'eval'];
+  for (const toolName of knownTools) {
+    const result = parseArguments([toolName]);
+    assert.equal(
+      result.command, 'tool',
+      `parseArguments(['${toolName}']).command should be 'tool'`,
+    );
+    assert.equal(
+      result.toolName, toolName,
+      `parseArguments(['${toolName}']).toolName should be '${toolName}'`,
+    );
+  }
+});
+
+test('REGTEST-04: Unknown tool name does not route as tool command', () => {
+  const result = parseArguments(['nonexistent-tool']);
+  // Unknown tool names fall through to the install parser
+  assert.notEqual(result.command, 'tool');
+  assert.equal(result.command, 'install');
+});

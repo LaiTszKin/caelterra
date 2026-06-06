@@ -83,10 +83,7 @@ function syncAgentsFile(agentsFile: string, sectionText: string): void {
   }
 
   const base = removeExistingSection(original);
-  // Note: sectionText uses adapter.EOL internally. Hardcoded \n joiners
-  // here may produce mixed line endings on Windows. For this use case
-  // (AGENTS.md readability) both formats work correctly.
-  const updated = base ? `${base}\n\n${sectionText}\n` : `${sectionText}\n`;
+  const updated = base ? `${base}${EOL}${EOL}${sectionText}${EOL}` : `${sectionText}${EOL}`;
   fs.writeFileSync(agentsFile, updated, 'utf8');
 }
 

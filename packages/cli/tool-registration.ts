@@ -52,3 +52,6 @@ export async function registerAllTools(): Promise<void> {
     registerTool(mod.tool);
   }
 }
+
+/** Tools excluded from CLI refactoring scope (SPEC.md L28) */
+export const SCOPE_EXCLUDED_TOOLS = new Set(['eval']);

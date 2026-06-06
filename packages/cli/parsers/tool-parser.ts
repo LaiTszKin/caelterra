@@ -1,3 +1,4 @@
+import type { ParsedArguments } from '../types.js';
 import type { CommandParser, ToolCommand, ToolsHelpCommand } from './types.js';
 
 /**
@@ -28,6 +29,37 @@ export class ToolArgsParser implements CommandParser<ToolCommand | ToolsHelpComm
       command: 'tool',
       toolName: args.shift() ?? null,
       toolArgs: args,
+    };
+  }
+
+  toParsedArguments(result: ToolCommand | ToolsHelpCommand): ParsedArguments {
+    if (result.command === 'tools-help') {
+      return {
+        command: 'tools-help',
+        modes: [],
+        showHelp: false,
+        showToolsHelp: true,
+        toolkitHome: null,
+        toolName: null,
+        toolArgs: [],
+        linkMode: null,
+        assumeYes: false,
+        explicitInstallCommand: false,
+        helpTopic: 'tools-help',
+      };
+    }
+    return {
+      command: 'tool',
+      modes: [],
+      showHelp: false,
+      showToolsHelp: false,
+      toolkitHome: null,
+      toolName: result.toolName,
+      toolArgs: result.toolArgs,
+      linkMode: null,
+      assumeYes: false,
+      explicitInstallCommand: false,
+      helpTopic: 'overview',
     };
   }
 }

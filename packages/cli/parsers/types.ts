@@ -1,4 +1,4 @@
-import type { InstallMode } from '../types.js';
+import type { InstallMode, ParsedArguments } from '../types.js';
 
 /**
  * Parsed result for the install (default) command mode.
@@ -52,4 +52,5 @@ export type ParsedCommand = InstallCommand | UninstallCommand | ToolCommand | To
  */
 export interface CommandParser<T> {
   parse(argv: string[]): T;
+  toParsedArguments(result: T): ParsedArguments;
 }

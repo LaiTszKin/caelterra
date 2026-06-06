@@ -33,8 +33,8 @@ const schema = {
 
     try {
       buildTimezone(assumeTimezone);
-    } catch {
-      throw new UserInputError(`invalid timezone: ${assumeTimezone}`);
+    } catch (err) {
+      throw new UserInputError(`invalid timezone: ${assumeTimezone}`, { cause: err as Error });
     }
 
     let start: Date | null = null;
@@ -48,7 +48,7 @@ const schema = {
         end = parseCliTimestamp(values.end as string, assumeTimezone);
       }
     } catch (err) {
-      throw new UserInputError((err as Error).message);
+      throw new UserInputError((err as Error).message, { cause: err as Error });
     }
 
     if (start && end && start > end) {
@@ -75,7 +75,7 @@ const schema = {
         }
       }
     } catch (err) {
-      throw new SystemError((err as Error).message);
+      throw new SystemError((err as Error).message, { cause: err as Error });
     }
 
     if (countOnly) {

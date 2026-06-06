@@ -134,7 +134,7 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
     }
   } catch (error: unknown) {
     if (error instanceof SystemError || error instanceof UserInputError) throw error;
-    throw new SystemError(error instanceof Error ? error.message : 'Unknown error in codegraph');
+    throw new SystemError(error instanceof Error ? error.message : 'Unknown error in codegraph', { cause: error instanceof Error ? error : undefined });
   }
 }
 
