@@ -14,6 +14,7 @@ const DEFAULT_INSTRUCTIONS = [
 function titleFromMemoryFile(filePath: string): string {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
+    // Split on \n (trailing \r on Windows is stripped by .trim() below)
     for (const line of content.split('\n')) {
       const stripped = line.trim();
       if (stripped.startsWith('# ')) {
@@ -81,6 +82,9 @@ function syncAgentsFile(agentsFile: string, sectionText: string): void {
   }
 
   const base = removeExistingSection(original);
+  // Note: sectionText uses adapter.EOL internally. Hardcoded \n joiners
+  // here may produce mixed line endings on Windows. For this use case
+  // (AGENTS.md readability) both formats work correctly.
   const updated = base ? `${base}\n\n${sectionText}\n` : `${sectionText}\n`;
   fs.writeFileSync(agentsFile, updated, 'utf8');
 }
