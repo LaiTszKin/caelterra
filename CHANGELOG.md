@@ -2,6 +2,12 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v5.0.2] - 2026-06-06
+
+### Fixed
+
+- **codegraph `init` path resolution**: `findProjectRoot()` no longer walks up past the git root boundary, preventing it from finding `.codegraph/` in parent directories (e.g., the home directory) instead of the actual project. Running `apltk codegraph init` from inside the repo now correctly initializes the current project.
+
 ## [v5.0.1] - 2026-06-06
 
 ### Fixed
