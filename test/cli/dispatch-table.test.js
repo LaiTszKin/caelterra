@@ -339,13 +339,9 @@ test('run distinguishes overview help from install help dispatch', async () => {
 });
 
 test('dispatch table errors produce stderr output (SystemError path)', async () => {
-  // NOTE: assertCommand (private function inside parseArguments) now throws
-  // SystemError instead of generic Error. Direct testing of this function is
-  // not possible through the public API because no parser can be forced to
-  // return a mismatched command via parseArguments or run(). This test
-  // therefore verifies the happy path — that normal dispatch routing works
-  // correctly (assertCommand passes, no SystemError is thrown), confirming the
-  // error boundary path is NOT triggered when dispatch is configured properly.
+  // This test verifies that dispatch routing works correctly when parsers
+  // return expected command types. The error boundary path (formatAppError)
+  // is tested in handler-error-propagation.test.js.
 
   const stderr = { data: '', write(chunk) { this.data += chunk; return true; } };
   const stdout = { data: '', write(chunk) { this.data += chunk; return true; } };
