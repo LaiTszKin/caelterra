@@ -2,6 +2,14 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v5.0.1] - 2026-06-06
+
+### Fixed
+
+- **Publish CI**: Build now passes in fresh CI checkout. Added missing tsconfig `references` for `tui` and `tool-registry` to fix `tsc --build` dependency ordering. Broke circular type dependency between `tool-utils` and `tool-registry` by moving `ToolContext` into `tool-utils`.
+- **Stale tests**: `ToolNotFoundError` formatting tests updated to match `formatAppError` behavior (bare message, no "Error:" prefix). Architecture `REGTEST-15/17` tests updated to handle error-throwing handlers.
+- **Lockfile sync**: `package-lock.json` regenerated to match workspace `package.json` files after version bump.
+
 ## [v5.0.0] - 2026-06-06
 
 ### Added
