@@ -1,0 +1,43 @@
+slug: cli-dispatch
+title: CLI Dispatch and Install Engine
+story: >-
+  CLI entry point providing argument parsing, command dispatch, and install/uninstall orchestration
+  engine
+dependsOn: []
+submodules:
+  - slug: arg-parser
+    kind: service
+    role: 'parseArguments: CLI argument parsing and dispatch'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: help-builder
+    kind: service
+    role: 'buildHelpText family: command help text generation'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: installer-core
+    kind: service
+    role: 'installLinks/syncToolkitHome/uninstallSkills: installation engine'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: tool-discovery
+    kind: service
+    role: 'registerAllTools/isKnownToolName: dynamic tool loading'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: update-checker
+    kind: service
+    role: 'checkForPackageUpdate/execCommand: npm version check'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

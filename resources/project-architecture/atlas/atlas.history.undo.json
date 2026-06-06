@@ -2,8 +2,8 @@
   "base": {
     "meta": {
       "title": "Project architecture  (+ codegraph integration overlay)",
-      "summary": "Baseline: eval 系統 (8 features). Overlay: 新增 codegraph 功能模組，包含 lifecycle 命令、discovery 命令、validation/apply 命令。 新增外部 actor: @colbymchenry/codegraph (npm 套件)。\n",
-      "updatedAt": "2026-06-03T13:18:56.775Z"
+      "summary": "完整 C4 架構圖：eval 評測系統 (8 features) + codegraph 程式碼分析 (1 feature, 3 submodules)。 外部 actor: Judge Model API, GitHub Actions CI, Developer, Skill Files, @colbymchenry/codegraph (npm), @laitszkin/tool-registry, @laitszkin/tui。 Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter → CI Gate。\n",
+      "updatedAt": "2026-06-03T13:18:57.448Z"
     },
     "actors": [
       {
@@ -593,6 +593,17 @@
         },
         "kind": "data-row",
         "label": "執行結果觸發優化"
+      },
+      {
+        "id": "eval-cli-ci",
+        "from": {
+          "feature": "eval-cli"
+        },
+        "to": {
+          "feature": "eval-ci-gate"
+        },
+        "kind": "call",
+        "label": "CI 模式下觸發 PR 回報"
       }
     ]
   }

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" data-atlas-page="feature">
+<head>
+  <meta charset="utf-8">
+  <title>Tool Registry</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="../../assets/architecture.css">
+</head>
+<body>
+  <header class="feature-header">
+    <nav class="feature-breadcrumb"><a href="../../index.html">← Atlas</a></nav>
+    <h1>Tool Registry</h1>
+    
+  </header>
+  <main class="feature-main">
+    <section class="feature-story"><p>Central in-memory registry of ToolDefinition entries, supporting register/get/list/runTool and tool list formatting</p></section>
+    <section class="feature-submodules" aria-label="Submodules">
+      <h2>Submodules</h2>
+      <ul class="submodule-nav">
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="registry-core.html">
+          <span class="submodule-card__name">registry-core</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">registerTool/getTool/listTools/runTool: in-memory registry</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="formatter.html">
+          <span class="submodule-card__name">formatter</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">formatToolList/buildToolDiscoveryHelp: tool list display</p>
+      </li>
+      </ul>
+    </section>
+    
+  </main>
+</body>
+</html>

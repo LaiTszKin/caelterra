@@ -1,0 +1,29 @@
+slug: terminal-ui
+title: Terminal UI
+story: >-
+  Terminal output formatting: ANSI color, banner/welcome screen, interactive prompts, and structured
+  output functions
+dependsOn: []
+submodules:
+  - slug: terminal-detection
+    kind: service
+    role: 'isInteractive/supportsColor: TTY and color detection'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: banner-display
+    kind: service
+    role: 'buildBanner/buildWordmark: branding display'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: interactive-prompts
+    kind: service
+    role: 'promptForModes/promptYesNo: user prompts'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

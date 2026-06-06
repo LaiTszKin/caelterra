@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" data-atlas-page="feature">
+<head>
+  <meta charset="utf-8">
+  <title>Terminal UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="../../assets/architecture.css">
+</head>
+<body>
+  <header class="feature-header">
+    <nav class="feature-breadcrumb"><a href="../../index.html">← Atlas</a></nav>
+    <h1>Terminal UI</h1>
+    
+  </header>
+  <main class="feature-main">
+    <section class="feature-story"><p>Terminal output formatting: ANSI color, banner/welcome screen, interactive prompts, and structured output functions</p></section>
+    <section class="feature-submodules" aria-label="Submodules">
+      <h2>Submodules</h2>
+      <ul class="submodule-nav">
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="terminal-detection.html">
+          <span class="submodule-card__name">terminal-detection</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">isInteractive/supportsColor: TTY and color detection</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="banner-display.html">
+          <span class="submodule-card__name">banner-display</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">buildBanner/buildWordmark: branding display</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="interactive-prompts.html">
+          <span class="submodule-card__name">interactive-prompts</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">promptForModes/promptYesNo: user prompts</p>
+      </li>
+      </ul>
+    </section>
+    
+  </main>
+</body>
+</html>

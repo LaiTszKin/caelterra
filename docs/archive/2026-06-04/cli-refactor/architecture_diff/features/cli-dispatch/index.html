@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" data-atlas-page="feature">
+<head>
+  <meta charset="utf-8">
+  <title>CLI Dispatch and Install Engine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="../../assets/architecture.css">
+</head>
+<body>
+  <header class="feature-header">
+    <nav class="feature-breadcrumb"><a href="../../index.html">← Atlas</a></nav>
+    <h1>CLI Dispatch and Install Engine</h1>
+    
+  </header>
+  <main class="feature-main">
+    <section class="feature-story"><p>CLI entry point providing argument parsing, command dispatch, and install/uninstall orchestration engine</p></section>
+    <section class="feature-submodules" aria-label="Submodules">
+      <h2>Submodules</h2>
+      <ul class="submodule-nav">
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="arg-parser.html">
+          <span class="submodule-card__name">arg-parser</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">parseArguments: CLI argument parsing and dispatch</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="help-builder.html">
+          <span class="submodule-card__name">help-builder</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">buildHelpText family: command help text generation</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="installer-core.html">
+          <span class="submodule-card__name">installer-core</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">installLinks/syncToolkitHome/uninstallSkills: installation engine</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="tool-discovery.html">
+          <span class="submodule-card__name">tool-discovery</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">registerAllTools/isKnownToolName: dynamic tool loading</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="update-checker.html">
+          <span class="submodule-card__name">update-checker</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">checkForPackageUpdate/execCommand: npm version check</p>
+      </li>
+      </ul>
+    </section>
+    
+  </main>
+</body>
+</html>

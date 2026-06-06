@@ -463,30 +463,7 @@ const schema = {
       const outName = outputName || `voice-${timestamp}`;
       const hasExtension = outName.includes('.');
 
-        const tmpFile = path.join(fs.mkdtempSync('docs-to-voice-'), 'input.txt');
-        fs.mkdirSync(path.dirname(tmpFile), { recursive: true });
-        fs.writeFileSync(tmpFile, chunks[0], 'utf-8');
-        sayArgs.push('-f', tmpFile);
-
-        try {
-          execSync(`say ${sayArgs.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`, {
-            stdio: 'ignore',
-            timeout: 300000,
-          });
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : 'unknown error';
-          throw new SystemError(`say mode failed: ${msg}`, undefined, { cause: err });
-        } finally {
-          try { fs.unlinkSync(tmpFile); fs.rmdirSync(path.dirname(tmpFile)); } catch { /* ignore */ }
-        }
-
-        // Check if `say` is available
-        try {
-          execSync('which say', { stdio: 'ignore' });
-        } catch {
-          throw new UserInputError("macOS 'say' command not found.");
-        }
-
+      if (mode === 'say') {
         const finalOutputName = hasExtension ? outName : `${outName}.aiff`;
         const outputPath = path.join(outputDir, finalOutputName);
 
@@ -495,6 +472,10 @@ const schema = {
         }
 
         // Build prosody-enhanced text
+        const textChunks = splitTextForTts(sourceText, maxChars ? parseInt(maxChars, 10) || null : null);
+        if (textChunks.length === 0) {
+          throw new UserInputError('No text content found for conversion.');
+        }
         const chunks = noAutoProsody ? textChunks : textChunks.map(buildAutoProsodyText);
 
         if (chunks.length === 1) {

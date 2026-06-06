@@ -1,0 +1,22 @@
+slug: tool-utils
+title: Tool Utilities
+story: >-
+  Shared utilities consumed by tools: timestamp parsing, skill discovery, cross-platform abstraction
+  (after refactoring)
+dependsOn: []
+submodules:
+  - slug: log-utils
+    kind: service
+    role: 'extractTimestamp/parseCliTimestamp/inWindow: log parsing'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: skill-discovery
+    kind: service
+    role: 'iterSkillDirs: skill directory enumeration'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

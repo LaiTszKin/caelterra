@@ -1,0 +1,22 @@
+slug: tool-registry
+title: Tool Registry
+story: >-
+  Central in-memory registry of ToolDefinition entries, supporting register/get/list/runTool and
+  tool list formatting
+dependsOn: []
+submodules:
+  - slug: registry-core
+    kind: service
+    role: 'registerTool/getTool/listTools/runTool: in-memory registry'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: formatter
+    kind: service
+    role: 'formatToolList/buildToolDiscoveryHelp: tool list display'
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

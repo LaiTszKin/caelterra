@@ -1,11 +1,11 @@
 meta:
   title: Project architecture  (+ codegraph integration overlay)
   summary: >
-    完整 C4 架構圖：eval 評測系統 (8 features) + codegraph 程式碼分析 (1 feature, 3 submodules)。
-    外部 actor: Judge Model API, GitHub Actions CI, Developer, Skill Files,
-    @colbymchenry/codegraph (npm), @laitszkin/tool-registry, @laitszkin/tui。
-    Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter → CI Gate。
-  updatedAt: '2026-06-03T13:18:57.448Z'
+    完整 C4 架構圖：eval 評測系統 (8 features) + codegraph 程式碼分析 (1 feature, 3 submodules)。 外部 actor: Judge
+    Model API, GitHub Actions CI, Developer, Skill Files, @colbymchenry/codegraph (npm),
+    @laitszkin/tool-registry, @laitszkin/tui。 Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter →
+    CI Gate。
+  updatedAt: '2026-06-06T13:03:10.925Z'
 actors:
   - id: judge-model-api
     label: Judge Model API
@@ -31,6 +31,10 @@ features:
   - eval-executor
   - eval-scorer
   - eval-reporter
+  - cli-dispatch
+  - tool-registry
+  - tool-utils
+  - terminal-ui
 edges:
   - id: cg-e-001
     from:
@@ -106,3 +110,75 @@ edges:
       feature: eval-ci-gate
     kind: call
     label: CI 模式下觸發 PR 回報
+  - id: cli-edge-001
+    from:
+      feature: cli-dispatch
+      submodule: arg-parser
+    to:
+      feature: tool-registry
+      submodule: registry-core
+    kind: call
+    label: run() calls runTool()
+  - id: cli-edge-002
+    from:
+      feature: cli-dispatch
+      submodule: installer-core
+    to:
+      feature: terminal-ui
+      submodule: banner-display
+    kind: call
+    label: install summary uses banner
+  - id: cli-edge-003
+    from:
+      feature: cli-dispatch
+      submodule: installer-core
+    to:
+      feature: terminal-ui
+      submodule: interactive-prompts
+    kind: call
+    label: install prompts use inquirer
+  - id: cli-edge-004
+    from:
+      feature: cli-dispatch
+      submodule: help-builder
+    to:
+      feature: terminal-ui
+      submodule: banner-display
+    kind: call
+    label: help text uses buildBanner
+  - id: cli-edge-005
+    from:
+      feature: cli-dispatch
+      submodule: help-builder
+    to:
+      feature: tool-registry
+      submodule: formatter
+    kind: call
+    label: help text uses formatToolList
+  - id: cli-edge-006
+    from:
+      feature: cli-dispatch
+      submodule: tool-discovery
+    to:
+      feature: tool-registry
+      submodule: registry-core
+    kind: call
+    label: registerAllTools calls registerTool
+  - id: cli-edge-007
+    from:
+      feature: cli-dispatch
+      submodule: update-checker
+    to:
+      feature: terminal-ui
+      submodule: terminal-detection
+    kind: call
+    label: update check uses isInteractive
+  - id: cli-edge-008
+    from:
+      feature: cli-dispatch
+      submodule: installer-core
+    to:
+      feature: terminal-ui
+      submodule: terminal-detection
+    kind: call
+    label: installer uses supportsColor
