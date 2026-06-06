@@ -348,7 +348,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
 
     if (parsed.command === 'tool') {
       await registerAllTools();
-      return (context.runTool || runTool)(parsed.toolName!, parsed.toolArgs, {
+      return await (context.runTool || runTool)(parsed.toolName!, parsed.toolArgs, {
         sourceRoot, stdout, stderr, env, spawnCommand: context.spawnCommand, stdioWriter,
       });
     }
