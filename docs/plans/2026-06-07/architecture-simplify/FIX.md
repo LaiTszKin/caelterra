@@ -1,10 +1,10 @@
-# Fix Coordinator Prompt: 簡化 apltk architecture 指令 (Round 3)
+# Fix Coordinator Prompt: 簡化 apltk architecture 指令 (Round 4)
 
-- **Date**: 2026-06-07
+- **Date**: 2026-06-08
 - **Source REPORT**: `docs/plans/2026-06-07/architecture-simplify/REPORT.md`
 - **Source Spec**: `docs/plans/2026-06-07/architecture-simplify/`
-- **Total Issues**: P0:0, P1:0, P2:10, P3:14
-- **Total Regression Tests**: 9
+- **Total Issues**: P1:5, P2:12, P3:10
+- **Total Regression Tests**: 18
 
 ---
 
@@ -12,9 +12,9 @@
 
 ### Mission
 
-Fix all 24 issues identified in REPORT.md Round 3 for the architecture CLI simplification. The fixes span three source areas: `cli.js` (17 behavioral fixes in one worker), `cli-help.js` (1 localization export — same worker as cli.js since `MULTI_VERBS` export is added to cli.js), `skills/*/SKILL.md` and `DESIGN.md` (documentation updates in a separate worker). 9 regression tests in `test/atlas-cli.test.js` verify correctness.
+Fix all 27 issues identified in REPORT.md Round 4 for the architecture CLI simplification. The fixes span three source areas: `cli.js` + `cli-help.js` (18 fixes in FIX-01), `state.js` (1 fix in FIX-02), and `DESIGN.md` (1 docs update in FIX-03). 18 regression tests in `test/atlas-cli.test.js` verify correctness and close test coverage gaps.
 
-**Success looks like**: All 24 REPORT.md issues are resolved, all 9 regression tests pass on the fixed code, and the full test suite passes with no regressions.
+**Success looks like**: All 27 REPORT.md issues are resolved, all 18 regression tests pass on the fixed code, and the full test suite passes with no regressions.
 
 ### Your Role
 
@@ -22,7 +22,7 @@ Fix all 24 issues identified in REPORT.md Round 3 for the architecture CLI simpl
 
 **What you do:**
 - Read and understand the issue inventory, dependency analysis, and fix details below
-- Spawn workers to execute individual fixes, giving each a self-contained prompt (provided in `fix/*.md` files referenced in Section 3)
+- Spawn workers to execute individual fixes, giving each a self-contained prompt (provided in `fix/*.md` files)
 - After all fixes pass verification, spawn workers to implement regression tests
 - Wait for all workers in a batch to complete, then digest their results
 - Run verification commands at each checkpoint
@@ -50,6 +50,7 @@ Fix all 24 issues identified in REPORT.md Round 3 for the architecture CLI simpl
 - Resolve merge conflicts yourself — the coordinator handles them
 - For fixes marked as Complex: ensure the worker performs systematic debugging (reading related code, tracing execution paths) before applying the fix
 - After each batch completes, clean up any temporary branches or worktrees created by workers
+- Read the existing test file before dispatching the REGTEST worker to understand the insertion point
 
 **ASK FIRST** — pause and confirm with the user:
 - Fix approach conflicts with spec design intent
@@ -82,103 +83,71 @@ Fix all 24 issues identified in REPORT.md Round 3 for the architecture CLI simpl
 
 ### Issue Inventory
 
-| Fix ID | REPORT Issue | Severity | File | Description |
+| Fix ID | REPORT Issues | Severity | File | Description |
 |---|---|---|---|---|
-| FIX-01 | P2-1 | P2 | cli.js | `--depends-on` silently ignored for `relation` entity type |
-| FIX-01 | P2-2 | P2 | cli.js | Change summary shows flags not applied for relation |
-| FIX-01 | P2-3 | P2 | cli.js | Simple pair batch mode discards `'skipped'` return value |
-| FIX-01 | P2-4 | P2 | cli.js | Simple pair batch lacks pre-validation |
-| FIX-01 | P2-5 | P2 | cli.js | No output when all entities skipped in interleaved batch |
-| FIX-01 | P2-6 | P2 | cli.js | Relation flag naming asymmetry (no `--kind` forwarding on remove) |
-| FIX-01 | P2-7 | P2 | cli.js | Feature `--depends-on` leaves orphaned YAML references after remove |
-| FIX-01 | P2-10 | P2 | cli.js | Export `MULTI_VERBS` constant for sync verification |
-| FIX-01 | P3-1 | P3 | cli.js | Error message references batch syntax |
-| FIX-01 | P3-2 | P3 | cli.js | No duplicate detection for relation entity |
-| FIX-01 | P3-3 | P3 | cli.js | Passthrough flags undocumented in help |
-| FIX-01 | P3-4 | P3 | cli.js | Edge creation in batch omits `skipUndo` |
-| FIX-01 | P3-5 | P3 | cli.js | Dry-run output misleading in batch mode |
-| FIX-01 | P3-7 | P3 | cli.js | Output format mismatch between batch modes |
-| FIX-01 | P3-8 | P3 | cli.js | Relation remove lacks available edges in error |
-| FIX-01 | P3-9 | P3 | cli.js | Unified remove relation doesn't forward `--id` |
-| FIX-01 | P3-11 | P3 | cli.js | `apply`/`template` intercept ordered after `resolveProjectRoot` |
-| FIX-02 | P2-8 | P2 | SKILL.md | SKILL.md teaches retired apply/template commands |
-| FIX-02 | P2-9 | P2 | SKILL.md | SKILL.md teaches `diff --spec` but diff ignores it |
-| FIX-02 | P3-10 | P3 | DESIGN.md | DESIGN.md omits `--data-flow-to` for modules |
-| FIX-02 | P3-14 | P3 | DESIGN.md | DESIGN.md says 6 verbs but help lists 10 |
-| — | P3-6 | P3 | test file | No test for batch dry-run (regression test only) |
-| — | P3-12 | P3 | SPEC.md | SPEC mentions `diff --spec` but no such flag (spec error — report only) |
-| — | P3-13 | P3 | test file | No end-to-end test for unified `add --spec` + `diff` (regression test only) |
+| FIX-01 | P1-1, P1-2, P1-3, P1-5, P2-1, P2-2, P2-3, P2-4, P2-5, P2-6, P2-7, P2-8, P3-1, P3-2, P3-3, P3-4, P3-6, P3-8 | P1/P2/P3 | `cli.js`, `cli-help.js` | Behavioral fixes for cli.js + cli-help.js (18 issues) |
+| FIX-02 | P1-4 | P1 | `state.js` | `deriveOverlay()` doesn't populate `removed.submodules` |
+| FIX-03 | P3-5 | P3 | `DESIGN.md` | Batch atomicity statement outdated in DESIGN.md |
+
+### Cross-cutting Notes
+
+- **P3-7** (collectDiffChanges doesn't accept flags) is resolved as part of FIX-01's P1-5 fix (which adds `flags` parameter to `collectDiffChanges`).
+- **P2-9, P2-10, P2-11, P2-12, P3-9, P3-10** are test-coverage gaps addressed by the REGTEST worker, not fix workers.
 
 ### Fix Dependency Analysis
 
 **File overlaps (hard constraint for parallelization):**
 
-- **`cli.js`**: FIX-01 — all 17 behavioral fixes in one worker. This worker modifies cli.js only.
-- **`skills/*/SKILL.md`, `DESIGN.md`**: FIX-02 — documentation updates. No overlap with FIX-01.
-- **`test/atlas-cli.test.js`**: REGTEST-01 — all 9 regression tests. No overlap with any fix worker.
+| Worker | Files | Overlap with others |
+|---|---|---|
+| FIX-01 | `cli.js`, `cli-help.js` | Zero overlap with FIX-02, FIX-03, REGTEST-ALL |
+| FIX-02 | `state.js` | Zero overlap with FIX-01, FIX-03, REGTEST-ALL |
+| FIX-03 | `DESIGN.md` | Zero overlap with all others |
+| REGTEST-ALL | `test/atlas-cli.test.js` | Zero overlap with all others |
 
-Fix Worker A (cli.js) and Fix Worker B (SKILL.md + DESIGN.md) have **zero file overlap** → they can run in parallel.
-
-All regression tests go in `test/atlas-cli.test.js` → single REGTEST worker.
+**All three fix workers have ZERO file overlap → they can run in parallel.**
 
 **Logical dependencies:**
-- REGTEST-01 depends on both FIX-01 and FIX-02 completing first
-- No dependency between FIX-01 and FIX-02 (independent files)
+- REGTEST-ALL depends on all fix workers (FIX-01, FIX-02, FIX-03) completing first
+- No dependency between FIX-01, FIX-02, and FIX-03 (independent files, independent fixes)
 
 ### Fix Details (with Regression Test Design)
 
-#### FIX-01: All cli.js behavioral fixes (P2-1 through P3-11)
+#### FIX-01: cli.js + cli-help.js behavioral fixes (18 issues)
 
-**Root cause**: 17 interrelated issues in `cli.js` across relation entity handling, batch mode correctness, and dispatch ordering. All fixed in one worker due to shared file.
+**Root cause**: 18 issues in `cli.js` spanning missing guards (`'skipped'` not checked, missing `--depends-on` existence validation, missing `--spec` dir validation, `diff` ignores `--spec`), incorrect output routing (stderr vs stdout, history cleanup), flawed validation predicates (intra-feature dupes, flag parser, verbRemove validation), and dispatch inconsistencies (`open` strips `--spec`).
 
-**Files involved**: `skills/init-project-html/lib/atlas/cli.js` — multiple functions across the file
+**Files involved**: `skills/init-project-html/lib/atlas/cli.js`, `skills/init-project-html/lib/atlas/cli-help.js`
 
-**Fix approach** (17 tasks in one worker):
+**Fix approach**: See `fix/FIX-01-cli-r4.md` for the complete worker prompt with all 18 fixes.
 
-1. **P2-1**: In `processAddEntity` relation case (L762-781), add `--depends-on` handling — create a dependency edge when flag is present, similar to the module case (L729-743)
-2. **P2-2**: In `verbAdd` single-entity output (L963-968), guard flag display by entity type — for `relation`, only show `--data-flow-to`/`--implements`/`--deployed-on`; for `feature`, show `--depends-on`; for `module`, show all
-3. **P2-3/P3-7**: In simple pair batch mode, capture `processAddEntity` return value (L927), track skipped entities, adjust output message
-4. **P2-4**: Add pre-validation phase to simple pair batch mode (L922-928) — validate each entity via `validateEntity` before processing any
-5. **P2-5**: In interleaved batch output (L900-905), add fallback branch for `applied === 0` case
-6. **P2-6**: In `verbRemove` relation path (L1021-1034), forward `--kind` flag to `verbEdge('remove')`; in `verbEdge('remove')`, when `kind` is provided, add it to the filter predicate
-7. **P2-7**: In `removeFeature` (L297-304), add cleanup of `dependsOn` references on remaining features
-8. **P3-1**: Fix error message in single-entity mode (L953) to show `[relation-flags...]` instead of batch syntax
-9. **P3-2**: Check if edge already exists on relation add — before calling `verbEdge('add')`, check if identical endpoints + kind edge exists
-10. **P3-3**: In `buildArchitectureHelpPage` add case, add `--evidence` and `--kind` to optional flags
-11. **P3-4**: Forward `skipUndo` to all `verbEdge('add')` calls in `processAddEntity`
-12. **P3-5**: In batch mode output (L897-910, L938-944), check `flags['dry-run']` and produce appropriate message
-13. **P3-8**: In `verbEdge('remove')` error (L600-614), compute and include list of existing edge descriptions
-14. **P3-9**: In `verbRemove` relation path (L1021-1034), forward `--id` flag
-15. **P3-11**: Move `apply`/`template` intercept (L1589-1592) before `resolveProjectRoot` (L1581-1587)
-16. **P2-10 (export)**: Export `multiVerbs` set as `MULTI_VERBS` in `module.exports` for sync test
-17. **P3-3 (help)**: Ensure `--id`, `--evidence`, `--kind` appear in architecture diff or add help page
+**Complexity**: Complex — multiple interrelated changes in `processAddEntity`, `verbAdd`, `verbRemove`, `verbDiff`, `verbOpen`, `performMutation`, flag parsing, and help display.
 
-**Complexity**: Complex — requires systematic understanding of dispatch flow, processAddEntity, performMutation, batch parsing, and relation entity handling. Several changes are interdependent (relation entity handling, batch mode output).
+**Regression tests**: REGTEST-10 through REGTEST-23 (14 tests), REGTEST-24, REGTEST-25, REGTEST-27 (3 more) — 17 total for FIX-01 behavioral issues + coverage gaps.
 
-**Regression tests**: REGTEST-01 (Tests F01 through F09)
+#### FIX-02: state.js deriveOverlay removed.submodules (P1-4)
 
-#### FIX-02: Documentation updates (P2-8, P2-9, P3-10, P3-14)
+**Root cause**: `deriveOverlay()` at `state.js` L311 computes `removed.features` by diffing feature sets but never performs the equivalent check for submodules within features that exist in both states. The `removed.submodules` field exists in the schema and `mergeOverlay` has code to consume it, but it's never populated.
 
-**Root cause**: Skill files still reference retired commands; design docs contain imprecise claims.
+**Files involved**: `skills/init-project-html/lib/atlas/state.js`
 
-**Files involved**:
-- `skills/init-project-html/SKILL.md` (L69, L79)
-- `skills/design/SKILL.md` (L214, L217, L220)
-- `docs/plans/2026-06-07/architecture-simplify/DESIGN.md` (§2, §3.1)
+**Fix approach**: See `fix/FIX-02-state-r4.md` for details. Add submodule diff logic to `deriveOverlay`.
 
-**Fix approach** (4 tasks in one worker):
-1. **P2-8**: In both SKILL.md files, replace `apltk architecture apply` and `apltk architecture template` instructions with `apltk architecture add` equivalents
-2. **P2-9**: In `skills/design/SKILL.md` (L220), remove `--spec <spec_dir>` from diff instruction (diff auto-discovers all overlays)
-3. **P3-10**: In `DESIGN.md`, add `--data-flow-to` to the module relation flags documentation (§2 and §3.1)
-4. **P3-14**: In `DESIGN.md` (§2.3), clarify that `validate`, `status`, `scan`, `undo` are retained alongside the 6 core verbs
+**Complexity**: Complex — requires understanding `deriveOverlay`'s diff algorithm and how `mergeOverlay` consumes the data.
 
-**Complexity**: Simple — straightforward text replacements.
+**Regression tests**: REGTEST-13, REGTEST-26 — 2 tests specifically for this fix.
 
-**Regression tests**: None (documentation-only changes; manual verification)
+#### FIX-03: DESIGN.md batch atomicity update (P3-5)
 
-#### P3-12: SPEC mentions `diff --spec` but no such flag exists
+**Root cause**: DESIGN.md §7 was written before the batch rollback mechanism was implemented. The document describes non-atomicity that the code no longer has.
 
-This is a **spec error**. The SPEC example (L113) shows `diff --spec` which doesn't match the implementation. Per the coordinator's rules: "Do not modify spec documents (unless the fix reveals a spec error — report it instead)." This should be **reported to the user**, not fixed. No worker prompt needed.
+**Files involved**: `docs/plans/2026-06-07/architecture-simplify/DESIGN.md`
+
+**Fix approach**: See `fix/FIX-03-docs-r4.md` for details. Update §7 to describe the rollback mechanism accurately.
+
+**Complexity**: Simple — documentation-only update.
+
+**Regression tests**: None (documentation-only; manual verification).
 
 ---
 
@@ -190,43 +159,44 @@ This is a **spec error**. The SPEC example (L113) shows `diff --spec` which does
 
 | Fix ID | Worker Prompt File | Description |
 |---|---|---|
-| FIX-01 | `fix/FIX-01-cli-behavioral.md` | All 17 cli.js behavioral fixes (17 issues) |
-| FIX-02 | `fix/FIX-02-documentation.md` | SKILL.md + DESIGN.md documentation updates (4 issues) |
+| FIX-01 | `fix/FIX-01-cli-r4.md` | All cli.js + cli-help.js behavioral fixes (18 issues) |
+| FIX-02 | `fix/FIX-02-state-r4.md` | state.js deriveOverlay removed.submodules fix (P1-4) |
+| FIX-03 | `fix/FIX-03-docs-r4.md` | DESIGN.md batch atomicity update (P3-5) |
 
 **Regression Test Worker Prompts:**
 
 | Test ID | Worker Prompt File | Related Fix | Description |
 |---|---|---|---|
-| REGTEST-01 | `fix/REGTEST-01-integration.md` | FIX-01, FIX-02 | 9 integration tests in atlas-cli.test.js |
+| REGTEST-ALL | `fix/REGTEST-ALL-r4.md` | FIX-01, FIX-02 | 18 regression tests in atlas-cli.test.js |
 
 ### Batch Schedule
 
-#### Batch 1 — Fix Source Code (Parallel — zero file overlap)
+#### Batch 1 — All Fix Workers (Parallel — zero file overlap)
 
-**FIX-01 Worker**: All `cli.js` behavioral fixes (17 issues)
-**FIX-02 Worker**: Skill + design documentation updates (4 issues)
+**FIX-01 Worker**: 18 cli.js + cli-help.js behavioral fixes
+**FIX-02 Worker**: state.js deriveOverlay fix
+**FIX-03 Worker**: DESIGN.md doc update
 
-- **Strategy**: **Parallel** — zero file overlap between cli.js and documentation files
+- **Strategy**: **Parallel** — zero file overlap between all three workers
 - **Gate**:
   - [ ] FIX-01 worker reports success
   - [ ] FIX-02 worker reports success
+  - [ ] FIX-03 worker reports success
   - [ ] Verification: `node --test test/atlas-cli.test.js` → all existing tests pass
   - [ ] Verification: `node --test packages/tools/architecture/index.test.ts` → all tests pass
-  - [ ] Verification: `node --test test/tools/architecture-error-types.test.js` → all tests pass
   - [ ] Verification: `node --test test/architecture-script.test.js` → all tests pass
 
 #### Batch 2 — Regression Test Implementation
 
-**REGTEST-01 Worker**: 9 integration tests in `atlas-cli.test.js`
+**REGTEST-ALL Worker**: 18 regression tests in `atlas-cli.test.js`
 
-- **Strategy**: Sequential (single file, single worker)
-- **Depends on**: Batch 1 completed
+- **Strategy**: Sequential (single worker)
+- **Depends on**: Batch 1 completed (all fix workers)
 - **Gate**:
-  - [ ] REGTEST-01 worker reports success
-  - [ ] `node --test test/atlas-cli.test.js` → all tests pass (new + existing)
+  - [ ] REGTEST-ALL worker reports success
+  - [ ] `node --test test/atlas-cli.test.js` → all 18 new tests pass + all existing tests pass
   - [ ] Logical check: each REGTEST oracle is "fails on unfixed code, passes after fix"
   - [ ] Existing test suite passes: `node --test packages/tools/architecture/index.test.ts`
-  - [ ] Existing test suite passes: `node --test test/tools/architecture-error-types.test.js`
   - [ ] Existing test suite passes: `node --test test/architecture-script.test.js`
 
 #### Batch 3 — Final Integration
@@ -236,13 +206,13 @@ This is a **spec error**. The SPEC example (L113) shows `diff --spec` which does
 - **Depends on**: Batch 2 completed
 - **Gate**:
   - [ ] Full test suite passes: `npm test`
-  - [ ] Every issue in REPORT.md (P2:10, P3:14) confirmed resolved
+  - [ ] Every issue in REPORT.md (P1:5, P2:12, P3:10) confirmed resolved
 
 ---
 
 ## 4. Final Verification
 
-- [ ] Every issue in REPORT.md (P2: 10, P3: 14) has a completed fix
+- [ ] Every issue in REPORT.md (P1: 5, P2: 12, P3: 10) has a completed fix
 - [ ] Every fix has a corresponding regression test that passes (or manual verification for documentation-only fixes)
 - [ ] All worker prompts in Section 3 have been dispatched and returned success
 - [ ] `npm test` passes with no regressions
@@ -253,20 +223,22 @@ This is a **spec error**. The SPEC example (L113) shows `diff --spec` which does
 ## 5. References
 
 - **Worker prompt files**:
-  - `fix/FIX-01-cli-behavioral.md` — All 17 cli.js behavioral fixes (P2-1 through P3-11)
-  - `fix/FIX-02-documentation.md` — SKILL.md and DESIGN.md documentation updates (P2-8, P2-9, P3-10, P3-14)
-  - `fix/REGTEST-01-integration.md` — 9 integration tests in atlas-cli.test.js
+  - `fix/FIX-01-cli-r4.md` — 18 cli.js + cli-help.js behavioral fixes
+  - `fix/FIX-02-state-r4.md` — state.js deriveOverlay removed.submodules fix
+  - `fix/FIX-03-docs-r4.md` — DESIGN.md batch atomicity update
+  - `fix/REGTEST-ALL-r4.md` — 18 regression tests in atlas-cli.test.js
 
 - **Code files to modify** (across all fixes and regression tests):
-  - `skills/init-project-html/lib/atlas/cli.js` — FIX-01 worker (17 behavioral fixes)
-  - `skills/init-project-html/SKILL.md` — FIX-02 worker (replace apply/template references)
-  - `skills/design/SKILL.md` — FIX-02 worker (replace apply/template/diff --spec references)
-  - `docs/plans/2026-06-07/architecture-simplify/DESIGN.md` — FIX-02 worker (add module --data-flow-to, clarify verb count)
-  - `test/atlas-cli.test.js` — REGTEST-01 worker (9 new integration tests)
+  - `skills/init-project-html/lib/atlas/cli.js` — FIX-01 worker (18 behavioral fixes)
+  - `skills/init-project-html/lib/atlas/cli-help.js` — FIX-01 worker (hiddenVerbs export)
+  - `skills/init-project-html/lib/atlas/state.js` — FIX-02 worker (deriveOverlay removed.submodules)
+  - `docs/plans/2026-06-07/architecture-simplify/DESIGN.md` — FIX-03 worker (batch atomicity update)
+  - `test/atlas-cli.test.js` — REGTEST-ALL worker (18 new regression tests)
 
 - **Project context files**:
   - `CLAUDE.md` — Project instructions
   - `docs/architecture/cli-architecture.md` — CLI architecture docs
+  - `packages/cli/help-text-builder.ts` — Help text builder
 
 - **Related documents**:
   - `docs/plans/2026-06-07/architecture-simplify/REPORT.md` — Review findings (source of all issues)
@@ -275,6 +247,11 @@ This is a **spec error**. The SPEC example (L113) shows `diff --spec` which does
   - `docs/plans/2026-06-07/architecture-simplify/CHECKLIST.md` — Verification strategy
 
 - **Fix History**:
+
+  ### Round 3 — 2026-06-07
+  - **Issues fixed**: FIX-01, FIX-02, REGTEST-01 (P1:0, P2:10, P3:14)
+  - **Outcome**: All 24 issues resolved in commit `f3812b7`
+  - **Key notes**: Relation --depends-on, change summary filtering, batch pre-validation, skip tracking, SKILL.md updates, apply/template intercept ordering, MULTI_VERBS export, dry-run output, edge kind filtering, dependsOn cleanup on remove. All Round 3 issues verified resolved in Round 4 review.
 
   ### Round 2 — 2026-06-07
   - **Issues fixed**: FIX-01, FIX-02, REGTEST-01 (P1:3, P2:6, P3:4)
