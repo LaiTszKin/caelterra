@@ -1026,6 +1026,8 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
           '`--no-render` skips auto-render so you can batch several commands.',
           '`--project <root>` targets a specific repository root.',
           '`--dry-run` previews changes as JSON diff without writing to disk.',
+          '`--kind <kind>` — for modules: the submodule kind (service, api, ui, worker, external).',
+          '`--evidence <level[:source]>` — tags components with observed/inferred/assumed quality levels.',
         ],
         examples: [
           {

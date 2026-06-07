@@ -1460,3 +1460,161 @@ test('P3-13: legacy template suggests add', async () => {
   assert.match(io.stderr_text, /add/);
   assert.doesNotMatch(io.stderr_text, /Unknown verb/);
 });
+
+// ---- Round 3 regression tests (REGTEST-01 through REGTEST-09) ---------------
+
+test('REGTEST-01: relation --depends-on creates dependency edge (P2-1)', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'b', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'relation', 'a', '--depends-on', 'b', '--project', root, '--no-render'], io);
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const depEdge = (state.edges || []).find(e => e.from && e.from.feature === 'a' && e.to && e.to.feature === 'b' && e.kind === 'dependency');
+    assert.ok(depEdge, 'dependency edge should exist between a and b');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('REGTEST-02: relation change summary only shows actually applied flags (P2-2)', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'b', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'relation', 'a', '--depends-on', 'b', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    // Should NOT claim data-flow-to was applied (it wasn't)
+    assert.doesNotMatch(io.stdout_text, /data-flow-to/);
+    // Should mention depends-on since relation --depends-on IS now consumed
+    assert.match(io.stdout_text, /depends-on/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('REGTEST-03: simple pair batch mode reports skip count for duplicates (P2-3,P2-4)', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const code = await cli.dispatch(['add', 'feature', 'f1', 'feature', 'f1', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    assert.match(io.stdout_text, /1.*add.*1.*skip/);
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    assert.equal(state.features.length, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('REGTEST-04: batch all-skipped outputs message (P2-5)', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'existing', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'feature', 'existing', 'feature', 'existing', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    assert.match(io.stdout_text, /all.*2.*already exist|skip/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('REGTEST-05: remove relation --kind filters by edge kind (P2-6)', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'b', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'svc', '--part-of', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'api', '--part-of', 'b', '--project', root, '--no-render'], io);
+    // Add two edges: data-row and call
+    await cli.dispatch(['edge', 'add', '--from', 'a/svc', '--to', 'b/api', '--kind', 'data-row', '--project', root, '--no-render'], io);
+    await cli.dispatch(['edge', 'add', '--from', 'a/svc', '--to', 'b/api', '--kind', 'call', '--project', root, '--no-render'], io);
+    // Remove with --kind call — should only remove the call-kind edge
+    const code = await cli.dispatch(['remove', 'relation', 'a/svc', '--to', 'b/api', '--kind', 'call', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    assert.match(io.stdout_text, /kind: call/);
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const dataRowEdge = (state.edges || []).find(e => e.from && e.from.feature === 'a' && e.to && e.to.feature === 'b' && e.kind === 'data-row');
+    const callEdge = (state.edges || []).find(e => e.from && e.from.feature === 'a' && e.to && e.to.feature === 'b' && e.kind === 'call');
+    assert.ok(dataRowEdge, 'data-row edge should remain after removing call edge');
+    assert.equal(callEdge, undefined, 'call edge should be removed');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('REGTEST-06: remove feature cleans up dependsOn references on other features (P2-7)', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['feature', 'add', '--slug', 'Y', '--project', root, '--no-render'], io);
+    await cli.dispatch(['feature', 'add', '--slug', 'X', '--depends-on', 'Y', '--project', root, '--no-render'], io);
+    // Confirm dependsOn exists before removal
+    let state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const featXbefore = state.features.find(f => f.slug === 'X');
+    assert.ok(featXbefore.dependsOn.includes('Y'), 'X should depend on Y before removal');
+    // Remove Y
+    await cli.dispatch(['feature', 'remove', '--slug', 'Y', '--project', root, '--no-render'], io);
+    // Check that X no longer depends on Y
+    state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const featXafter = state.features.find(f => f.slug === 'X');
+    assert.ok(featXafter, 'feature X should still exist');
+    assert.equal(featXafter.dependsOn.includes('Y'), false, 'X should no longer depend on Y after Y is removed');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('REGTEST-07: MULTI_VERBS exported from cli.js (P2-10)', () => {
+  assert.ok(cli.MULTI_VERBS, 'MULTI_VERBS should be exported');
+  assert.ok(cli.MULTI_VERBS.has('feature'), 'MULTI_VERBS should include feature');
+  assert.ok(cli.MULTI_VERBS.has('submodule'), 'MULTI_VERBS should include submodule');
+  assert.ok(cli.MULTI_VERBS.has('edge'), 'MULTI_VERBS should include edge');
+  assert.equal(cli.MULTI_VERBS.has('add'), false, 'MULTI_VERBS should NOT include add');
+  assert.equal(cli.MULTI_VERBS.has('remove'), false, 'MULTI_VERBS should NOT include remove');
+});
+
+test('REGTEST-08: batch dry-run does not mutate state (P3-6)', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const statePath = path.join(root, 'resources/project-architecture/atlas');
+    await cli.dispatch(['add', 'feature', 'existing', '--project', root, '--no-render'], io);
+    const stateBefore = stateLib.load(statePath);
+    const beforeJson = JSON.stringify(stateBefore);
+    const code = await cli.dispatch(['add', 'feature', 'f1', 'feature', 'f2', '--dry-run', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const stateAfter = stateLib.load(statePath);
+    const afterJson = JSON.stringify(stateAfter);
+    assert.equal(afterJson, beforeJson, 'state should not change in dry-run mode');
+    assert.match(io.stdout_text, /dry-run/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('REGTEST-09: unified add --spec + diff end-to-end (P3-13)', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const specDir = 'docs/plans/test-spec';
+    // Add base feature
+    await cli.dispatch(['add', 'feature', 'base', '--project', root, '--no-render'], io);
+    // Add spec feature via unified add
+    await cli.dispatch(['add', 'feature', 'new-feature', '--spec', specDir, '--project', root, '--no-render'], io);
+    // Run diff
+    const outDir = path.join(root, 'diff-out');
+    const diffIo = makeIo();
+    const code = await cli.dispatch(['diff', '--project', root, '--out', outDir, '--no-open'], diffIo);
+    assert.equal(code, 0);
+    // Check diff output
+    assert.match(diffIo.stdout_text, /Diff pages/);
+    assert.ok(fs.existsSync(path.join(outDir, 'index.html')), 'diff viewer HTML should exist');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

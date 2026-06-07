@@ -57,10 +57,12 @@
 
 | | Baseline (current) | Target (after change) |
 |---|---|---|
-| CLI verbs | 20 verbs (含 `apply`/`template`/`feature`/`submodule`/etc.) | 6 verbs: `add`/`remove`/`diff`/`merge`/`render`/`open` |
+| CLI verbs | 20 verbs (含 `apply`/`template`/`feature`/`submodule`/etc.) | 6 core verbs: `add`/`remove`/`diff`/`merge`/`render`/`open`, plus retained support verbs: `validate`/`status`/`scan`/`undo` |
 | TS handler | intercepts `apply`, `template` | 不再 intercept 任何 verb（全數 delegate 到 cli.js） |
-| Help text | 列出所有 fine-grained 動詞 | 僅列出 6 個指令，fine-grained 動詞隱藏 |
+| Help text | 列出所有 fine-grained 動詞 | 列出 6 個核心指令與保留的支援指令（`validate`/`status`/`scan`/`undo`），fine-grained 動詞隱藏 |
 | Fine-grained verbs | 正常暴露給使用者 | 保留但隱藏（不阻斷，僅從 help 移除） |
+
+The `add` verb supports module relation flags `--implements`, `--deployed-on`, `--depends-on`, and `--data-flow-to` for capturing cross-entity relationships.
 
 ---
 
@@ -70,7 +72,7 @@
 
 | ID | Intent | Caller → Callee | Coupling Type | Information Crossing | Failure Propagation |
 |---|---|---|---|---|---|
-| `INT-001` | `add` 單一 entity 路由 | `verbAdd()` → `verbFeature()` / `verbSubmodule()` / `verbEdge()` | sync call | entity type, name, relation flags | 子 verb 拋錯 → `verbAdd()` 中斷回報 |
+| `INT-001` | `add` 單一 entity 路由 | `verbAdd()` → `verbFeature()` / `verbSubmodule()` / `verbEdge()` | sync call | entity type, name, relation flags (`--implements`, `--deployed-on`, `--depends-on`, `--data-flow-to`) | 子 verb 拋錯 → `verbAdd()` 中斷回報 |
 | `INT-002` | `add` batch 多 entity 路由 | `verbAdd()` → multiple calls to `performMutation()` | sync loop, sequential | entity specs, suppress auto-render flag | 任一 entity 失敗 → 回報錯誤（已成功的部分已寫入） |
 | `INT-003` | `remove` entity | `verbRemove()` → `verbFeature('remove')` / `verbSubmodule('remove')` / `*Edge` | sync call | entity type, name | 子 verb 拋錯 → 中斷回報 |
 | `INT-004` | Legacy verb 退役 | `architectureHandler()` → `cli.dispatch()` (passthrough only) | route removal | N/A | 不再有 `apply`/`template` route |

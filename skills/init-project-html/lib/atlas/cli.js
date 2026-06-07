@@ -48,6 +48,7 @@ const cliHelp = require('./cli-help');
 const { buildArchitectureHelpPage } = cliHelp;
 
 const BOOLEAN_FLAGS = new Set(['no-render', 'no-open', 'help', 'dry-run', 'json']);
+const MULTI_VERBS = new Set(['feature', 'submodule', 'function', 'variable', 'dataflow', 'error', 'edge', 'meta', 'actor']);
 
 // formatFix generates apltk CLI commands from structured params,
 // injected into schema.validate() so schema stays decoupled from CLI syntax.
@@ -300,6 +301,12 @@ function removeFeature(state, slug) {
   state.features = state.features.filter((f) => f.slug !== slug);
   // also drop cross-feature edges that reference this slug
   state.edges = (state.edges || []).filter((e) => !endpointReferences(e.from, slug) && !endpointReferences(e.to, slug));
+  // also clean up dependsOn references on remaining features
+  for (const feature of state.features) {
+    if (feature.dependsOn) {
+      feature.dependsOn = feature.dependsOn.filter((d) => d !== slug);
+    }
+  }
   return state.features.length < before;
 }
 
@@ -593,24 +600,36 @@ async function verbEdge(action, flags, projectRoot, io) {
         const before = (feature.edges || []).length;
         feature.edges = (feature.edges || []).filter((e) => {
           if (id && e.id === id) return false;
+          if (flags.kind && e.kind !== flags.kind) return true;
           const f = typeof e.from === 'string' ? e.from : e.from && e.from.submodule;
           const t = typeof e.to === 'string' ? e.to : e.to && e.to.submodule;
           return !(f === from.submodule && t === to.submodule);
         });
         if (feature.edges.length >= before) {
-          throw new Error(`Edge "${from.feature}/${from.submodule}" -> "${to.feature}/${to.submodule}" not found`);
+          const existing = (feature.edges || []).map(e => {
+            const ef = typeof e.from === 'string' ? e.from : (e.from && e.from.submodule);
+            const et = typeof e.to === 'string' ? e.to : (e.to && e.to.submodule);
+            return `"${ef}" -> "${et}"${e.kind ? ` (${e.kind})` : ''}`;
+          }).join(', ') || '(none)';
+          throw new Error(`Edge "${from.feature}/${from.submodule}" -> "${to.feature}/${to.submodule}" not found. Available edges: ${existing}`);
         }
         return;
       }
       const before = state.edges ? state.edges.length : 0;
       state.edges = (state.edges || []).filter((e) => {
         if (id && e.id === id) return false;
+        if (flags.kind && e.kind !== flags.kind) return true;
         return !(endpointEquals(e.from, from) && endpointEquals(e.to, to));
       });
       if ((state.edges ? state.edges.length : 0) >= before) {
         const fromStr = from.submodule ? `${from.feature}/${from.submodule}` : from.feature;
         const toStr = to.submodule ? `${to.feature}/${to.submodule}` : to.feature;
-        throw new Error(`Edge "${fromStr}" -> "${toStr}" not found`);
+        const existing = (state.edges || []).map(e => {
+          const ef = e.from && (e.from.submodule ? `${e.from.feature}/${e.from.submodule}` : e.from.feature);
+          const et = e.to && (e.to.submodule ? `${e.to.feature}/${e.to.submodule}` : e.to.feature);
+          return `"${ef}" -> "${et}"${e.kind ? ` (${e.kind})` : ''}`;
+        }).join(', ') || '(none)';
+        throw new Error(`Edge "${fromStr}" -> "${toStr}" not found. Available edges: ${existing}`);
       }
       return;
     }
@@ -671,18 +690,22 @@ async function verbAdd(args, flags, projectRoot, io) {
             evidence: entityFlags.evidence,
           }, projectRoot, io);
 
-          // Create dependency edge if --depends-on specified
+          // Create dependency edges if --depends-on specified (supports comma-separated)
           const featDependsOn = entityFlags['depends-on'];
           if (featDependsOn) {
-            await verbEdge('add', {
-              from: entityName,
-              to: featDependsOn,
-              kind: 'dependency',
-              spec: entityFlags.spec,
-              'no-render': true,
-              project: entityFlags.project,
-              'dry-run': entityFlags['dry-run'],
-            }, projectRoot, io);
+            const targets = String(featDependsOn).split(',').map(s => s.trim()).filter(Boolean);
+            for (const target of targets) {
+              await verbEdge('add', {
+                from: entityName,
+                to: target,
+                kind: 'dependency',
+                spec: entityFlags.spec,
+                'no-render': true,
+                project: entityFlags.project,
+                'dry-run': entityFlags['dry-run'],
+                skipUndo: entityFlags.skipUndo,
+              }, projectRoot, io);
+            }
           }
 
           return featResult;
@@ -712,6 +735,7 @@ async function verbAdd(args, flags, projectRoot, io) {
             'no-render': true,
             project: entityFlags.project,
             'dry-run': entityFlags['dry-run'],
+            skipUndo: entityFlags.skipUndo,
           }, projectRoot, io);
         }
         if (deployedOnTarget) {
@@ -723,6 +747,7 @@ async function verbAdd(args, flags, projectRoot, io) {
             'no-render': true,
             project: entityFlags.project,
             'dry-run': entityFlags['dry-run'],
+            skipUndo: entityFlags.skipUndo,
           }, projectRoot, io);
         }
 
@@ -739,6 +764,7 @@ async function verbAdd(args, flags, projectRoot, io) {
               'no-render': true,
               project: entityFlags.project,
               'dry-run': entityFlags['dry-run'],
+              skipUndo: entityFlags.skipUndo,
             }, projectRoot, io);
           }
         }
@@ -754,6 +780,7 @@ async function verbAdd(args, flags, projectRoot, io) {
             'no-render': true,
             project: entityFlags.project,
             'dry-run': entityFlags['dry-run'],
+            skipUndo: entityFlags.skipUndo,
           }, projectRoot, io);
         }
 
@@ -763,22 +790,63 @@ async function verbAdd(args, flags, projectRoot, io) {
         const dataFlowTo = entityFlags['data-flow-to'];
         const implementsTarget = entityFlags.implements;
         const deployedOn = entityFlags['deployed-on'];
+        const dependsOn = entityFlags['depends-on'];
         const to = dataFlowTo || implementsTarget || deployedOn;
-        if (!to) throw new Error('Missing required flag --data-flow-to, --implements, or --deployed-on for relation');
+        if (!to && !dependsOn) throw new Error('Missing required flag --data-flow-to, --implements, --deployed-on, or --depends-on for relation');
         let kind = 'call';
         if (dataFlowTo) kind = 'data-row';
         else if (implementsTarget) kind = 'implements';
         else if (deployedOn) kind = 'deployed-on';
-        return verbEdge('add', {
-          from: entityName,
-          to,
-          kind,
-          spec: entityFlags.spec,
-          'no-render': true,
-          project: entityFlags.project,
-          'dry-run': entityFlags['dry-run'],
-          id: entityFlags.id,
-        }, projectRoot, io);
+
+        // Check for duplicate edge before creation
+        if (to) {
+          const { base, merged } = loadResolvedState(projectRoot, entityFlags);
+          const currentState = entityFlags.spec ? merged : base;
+          const edges = currentState.edges || [];
+          const fromEndpoint = parseEndpoint(entityName);
+          const toEndpoint = parseEndpoint(to);
+          const hasExistingEdge = edges.some(e =>
+            endpointEquals(e.from, fromEndpoint) && endpointEquals(e.to, toEndpoint) && (e.kind || 'call') === kind
+          );
+          if (hasExistingEdge) {
+            return 'skipped';
+          }
+        }
+
+        // Create the primary edge (data-flow, implements, or deployed-on)
+        let result;
+        if (to) {
+          result = await verbEdge('add', {
+            from: entityName,
+            to,
+            kind,
+            spec: entityFlags.spec,
+            'no-render': true,
+            project: entityFlags.project,
+            'dry-run': entityFlags['dry-run'],
+            id: entityFlags.id,
+            skipUndo: entityFlags.skipUndo,
+          }, projectRoot, io);
+        }
+
+        // Create dependency edge if --depends-on specified
+        if (dependsOn) {
+          const targets = String(dependsOn).split(',').map(s => s.trim()).filter(Boolean);
+          for (const target of targets) {
+            await verbEdge('add', {
+              from: entityName,
+              to: target,
+              kind: 'dependency',
+              spec: entityFlags.spec,
+              'no-render': true,
+              project: entityFlags.project,
+              'dry-run': entityFlags['dry-run'],
+              skipUndo: entityFlags.skipUndo,
+            }, projectRoot, io);
+          }
+        }
+
+        return result;
       }
       default:
         throw new Error(`Unknown entity type: ${entityType}. Supported types: feature, module, relation`);
@@ -897,15 +965,18 @@ async function verbAdd(args, flags, projectRoot, io) {
       if (!flags['dry-run'] && !flags['no-render']) {
         await runRender({ projectRoot, flags });
       }
+      const dryRunPrefix = flags['dry-run'] ? ' (dry-run, no changes written)' : '';
       const applied = entities.length - skipped;
-      if (skipped > 0) {
-        io.stdout.write(`atlas: add applied — ${applied} entity(ies) added, ${skipped} skipped (already exist)\n`);
+      if (skipped > 0 && applied > 0) {
+        io.stdout.write(`atlas: add applied — ${applied} entity(ies) added, ${skipped} skipped (already exist)${dryRunPrefix}\n`);
       } else if (applied > 0) {
-        io.stdout.write(`atlas: add applied — ${applied} entities\n`);
+        io.stdout.write(`atlas: add applied — ${applied} entities${dryRunPrefix}\n`);
+      } else if (skipped > 0) {
+        io.stdout.write(`atlas: add — all ${skipped} entities already exist, skipped${dryRunPrefix}\n`);
       }
       if (entities.length > 0) {
         for (const e of entities) {
-          io.stdout.write(`  ${e.type}: "${e.name}"\n`);
+          io.stdout.write(`  ${e.type}: "${e.name}"${dryRunPrefix}\n`);
         }
       }
       return 0;
@@ -919,12 +990,31 @@ async function verbAdd(args, flags, projectRoot, io) {
     } else {
       preBatchState = stateLib.load(baseAtlasDir(projectRoot));
     }
+
+    // Pre-validate all entities before processing
+    const simpleEntities = [];
+    for (let i = 0; i < args.length; i += 2) {
+      const entityType = args[i];
+      const entityName = args[i + 1];
+      if (!entityName) throw new Error(`Missing name for entity type: ${entityType}`);
+      simpleEntities.push({ type: entityType, name: entityName, flags: { ...flags, skipUndo: true } });
+    }
+    let preError;
+    for (const entity of simpleEntities) {
+      try {
+        validateEntity(entity);
+      } catch (e) {
+        preError = e;
+        break;
+      }
+    }
+    if (preError) throw preError;
+
+    let skipped = 0;
     try {
-      for (let i = 0; i < args.length; i += 2) {
-        const entityType = args[i];
-        const entityName = args[i + 1];
-        if (!entityName) throw new Error(`Missing name for entity type: ${entityType}`);
-        await processAddEntity(entityType, entityName, {...flags, skipUndo: true});
+      for (const entity of simpleEntities) {
+        const result = await processAddEntity(entity.type, entity.name, entity.flags);
+        if (result === 'skipped') skipped++;
       }
     } catch (e) {
       if (flags.spec) {
@@ -938,9 +1028,15 @@ async function verbAdd(args, flags, projectRoot, io) {
     if (!flags['dry-run'] && !flags['no-render']) {
       await runRender({ projectRoot, flags });
     }
-    io.stdout.write(`atlas: add applied — ${args.length / 2} entities\n`);
-    for (let i = 0; i < args.length; i += 2) {
-      io.stdout.write(`  ${args[i]}: "${args[i + 1]}"\n`);
+    const dryRunPrefix = flags['dry-run'] ? ' (dry-run, no changes written)' : '';
+    const applied = simpleEntities.length - skipped;
+    if (skipped > 0) {
+      io.stdout.write(`atlas: add applied — ${applied} entity(ies) added, ${skipped} skipped (already exist)${dryRunPrefix}\n`);
+    } else {
+      io.stdout.write(`atlas: add applied — ${applied} entities${dryRunPrefix}\n`);
+    }
+    for (const entity of simpleEntities) {
+      io.stdout.write(`  ${entity.type}: "${entity.name}"${dryRunPrefix}\n`);
     }
     return 0;
   }
@@ -950,7 +1046,7 @@ async function verbAdd(args, flags, projectRoot, io) {
   const name = args[1];
 
   if (!type || !name) {
-    throw new Error('Usage: apltk architecture add <feature|module|relation> <name> [entity-type entity-name ...]');
+    throw new Error('Usage: apltk architecture add <feature|module|relation> <name> [relation-flags...]');
   }
 
   const addResult = await processAddEntity(type, name, flags);
@@ -961,11 +1057,17 @@ async function verbAdd(args, flags, projectRoot, io) {
     io.stderr.write(`atlas: no change — ${type} "${name}" already exists\n`);
   } else {
     const addedFlags = [];
-    if (type === 'module' && flags['part-of']) addedFlags.push(`part-of: ${flags['part-of']}`);
-    if (flags['depends-on']) addedFlags.push(`depends-on: ${flags['depends-on']}`);
-    if (flags['data-flow-to']) addedFlags.push(`data-flow-to: ${flags['data-flow-to']}`);
-    if (flags.implements) addedFlags.push(`implements: ${flags.implements}`);
-    if (flags['deployed-on']) addedFlags.push(`deployed-on: ${flags['deployed-on']}`);
+    const flagConsumed = {
+      feature: new Set(['depends-on']),
+      module: new Set(['part-of', 'depends-on', 'data-flow-to', 'implements', 'deployed-on']),
+      relation: new Set(['data-flow-to', 'implements', 'deployed-on', 'depends-on']),
+    };
+    const consumed = flagConsumed[type] || new Set();
+    if (consumed.has('part-of') && flags['part-of']) addedFlags.push(`part-of: ${flags['part-of']}`);
+    if (consumed.has('depends-on') && flags['depends-on']) addedFlags.push(`depends-on: ${flags['depends-on']}`);
+    if (consumed.has('data-flow-to') && flags['data-flow-to']) addedFlags.push(`data-flow-to: ${flags['data-flow-to']}`);
+    if (consumed.has('implements') && flags.implements) addedFlags.push(`implements: ${flags.implements}`);
+    if (consumed.has('deployed-on') && flags['deployed-on']) addedFlags.push(`deployed-on: ${flags['deployed-on']}`);
     const summary = addedFlags.length > 0 ? ` (${addedFlags.join(', ')})` : '';
     io.stdout.write(`atlas: add applied — ${type} "${name}"${summary}\n`);
   }
@@ -1019,17 +1121,20 @@ async function verbRemove(args, flags, projectRoot, io) {
       return 0;
     }
     case 'relation': {
-      if (!flags.to) throw new Error('Missing required flag --to for relation');
+      if (!flags.to && !flags.id) throw new Error('Missing required flag --to or --id for relation');
       await verbEdge('remove', {
         from: name,
         to: flags.to,
+        kind: flags.kind,
+        id: flags.id,
         spec: flags.spec,
         'no-render': flags['no-render'],
         project: flags.project,
         'dry-run': flags['dry-run'],
       }, projectRoot, io);
       if (!flags['dry-run']) {
-        io.stdout.write(`atlas: remove applied — relation "${name}"\n`);
+        const detail = flags.kind ? ` (kind: ${flags.kind})` : '';
+        io.stdout.write(`atlas: remove applied — relation "${name}"${detail}\n`);
       }
       return 0;
     }
@@ -1559,8 +1664,7 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
     args.splice(verbIdx, 1);
   }
   let subverb = null;
-  const multiVerbs = new Set(['feature', 'submodule', 'function', 'variable', 'dataflow', 'error', 'edge', 'meta', 'actor']);
-  if (multiVerbs.has(verb)) {
+  if (MULTI_VERBS.has(verb)) {
     const subverbIdx = findFirstPositional(args);
     if (subverbIdx >= 0) {
       subverb = args[subverbIdx];
@@ -1578,16 +1682,16 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
     return 0;
   }
 
+  if (verb === 'apply' || verb === 'template') {
+    io.stderr.write(`Error: "${verb}" has been removed. Use "apltk architecture add <feature|module|relation>" instead.\n`);
+    return 1;
+  }
+
   let projectRoot;
   try {
     projectRoot = resolveProjectRoot(flags);
   } catch (e) {
     io.stderr.write(`${e.message}\n\n${buildArchitectureHelpPage()}\n`);
-    return 1;
-  }
-
-  if (verb === 'apply' || verb === 'template') {
-    io.stderr.write(`Error: "${verb}" has been removed. Use "apltk architecture add <feature|module|relation>" instead.\n`);
     return 1;
   }
 
@@ -1637,6 +1741,7 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
 module.exports = {
   dispatch,
   parseFlags,
+  MULTI_VERBS,
   findProjectRoot,
   resolveProjectRoot,
   loadResolvedState,
