@@ -1033,3 +1033,228 @@ test('add --spec writes to overlay without mutating base files', async () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+// ---- regression tests for add/remove verbs --------------------------------
+
+test('batch mode with entity types and per-entity flags', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const code = await cli.dispatch(['add', 'feature', 'payment', '--depends-on', 'order', 'module', 'payment-api', '--part-of', 'payment', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const featYaml = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/features/payment.yaml'), 'utf8');
+    assert.match(featYaml, /order/);
+    assert.match(featYaml, /dependsOn/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('module --implements creates edge', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'gateway', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'module', 'stripe-adapter', '--part-of', 'payment', '--implements', 'gateway/svc', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const indexYaml = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/atlas.index.yaml'), 'utf8');
+    assert.match(indexYaml, /implements/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('module --deployed-on creates edge', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'module', 'payment-api', '--part-of', 'payment', '--deployed-on', 'eks-cluster', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const indexYaml = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/atlas.index.yaml'), 'utf8');
+    assert.match(indexYaml, /deployed-on/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('module --depends-on creates dependency edge', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'billing', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'svc', '--part-of', 'billing', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'module', 'payment-api', '--part-of', 'payment', '--depends-on', 'billing/svc', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const indexYaml = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/atlas.index.yaml'), 'utf8');
+    assert.match(indexYaml, /dependency/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('remove non-existent feature returns error with suggestions', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'billing', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['remove', 'feature', 'paymint', '--project', root, '--no-render'], io);
+    assert.notEqual(code, 0);
+    assert.match(io.stderr_text, /paymint/);
+    assert.match(io.stderr_text, /payment/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('remove non-existent module returns error', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'api', '--part-of', 'payment', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['remove', 'module', 'apix', '--part-of', 'payment', '--project', root, '--no-render'], io);
+    assert.notEqual(code, 0);
+    assert.match(io.stderr_text, /apix/);
+    assert.match(io.stderr_text, /api/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('remove --dry-run does not mutate', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    const stateBefore = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    assert.equal(stateBefore.features.length, 1);
+    const code = await cli.dispatch(['remove', 'feature', 'payment', '--project', root, '--no-render', '--dry-run'], io);
+    assert.equal(code, 0);
+    const stateAfter = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    assert.equal(stateAfter.features.length, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('module --part-of non-existent returns error', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'billing', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'module', 'orphan', '--part-of', 'nonexistent', '--project', root, '--no-render'], io);
+    assert.notEqual(code, 0);
+    assert.match(io.stderr_text, /nonexistent/);
+    assert.match(io.stderr_text, /payment/);
+    assert.match(io.stderr_text, /billing/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('duplicate feature add warns', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    let code = await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    code = await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    assert.match(io.stderr_text, /already exists/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('relation --implements produces implements kind', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'b', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'svc', '--part-of', 'a', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'relation', 'a/svc', '--implements', 'b/svc', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const edge = (state.edges || []).find(e => e.from.feature === 'a');
+    assert.ok(edge, 'edge should exist from feature a');
+    assert.equal(edge.kind, 'implements');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('batch add rolls back on validation failure', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'existing', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'feature', 'f1', 'module', 'm1', '--part-of', 'nonexistent', '--project', root, '--no-render'], io);
+    assert.notEqual(code, 0);
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const slugs = state.features.map(f => f.slug);
+    assert.equal(slugs.includes('f1'), false, 'f1 should not be added (batch rolled back)');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('legacy apply suggests add', async () => {
+  const io = makeIo();
+  const code = await cli.dispatch(['apply', '/tmp/dummy.yaml'], io);
+  assert.notEqual(code, 0);
+  assert.match(io.stderr_text, /add/);
+  assert.doesNotMatch(io.stderr_text, /Unknown verb/);
+});
+
+test('remove --dry-run JSON output', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['remove', 'feature', 'payment', '--project', root, '--no-render', '--dry-run'], io);
+    assert.equal(code, 0);
+    assert.match(io.stdout_text, /dry-run/);
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    assert.equal(state.features.length, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('help shows operational verbs', async () => {
+  const io = makeIo();
+  const code = await cli.dispatch(['help'], io);
+  assert.equal(code, 0);
+  assert.match(io.stdout_text, /validate/);
+  assert.match(io.stdout_text, /status/);
+  assert.match(io.stdout_text, /scan/);
+  assert.match(io.stdout_text, /undo/);
+});
+
+test('help hides fine-grained verbs', async () => {
+  const io = makeIo();
+  const code = await cli.dispatch(['help'], io);
+  assert.equal(code, 0);
+  assert.doesNotMatch(io.stdout_text, /feature add/);
+  assert.doesNotMatch(io.stdout_text, /submodule add/);
+  assert.doesNotMatch(io.stdout_text, /edge add/);
+});
+
+test('add auto-render without --no-render', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const code = await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-open'], io);
+    assert.equal(code, 0);
+    assert.ok(fs.existsSync(path.join(root, 'resources/project-architecture/index.html')));
+    assert.match(io.stdout_text, /applied/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

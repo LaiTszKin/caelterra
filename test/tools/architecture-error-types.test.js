@@ -25,7 +25,8 @@ test('architectureHandler returns 1 for nonexistent YAML in apply (verb removed)
 
   const result = await architectureHandler(['apply', '/dev/null/nonexistent-spec.yaml'], context);
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 // REGTEST-02: FIX-03 — architecture tool converts stderr.write+return1 to typed throws
@@ -40,7 +41,8 @@ test('architectureHandler returns 1 for apply with missing slug (verb removed)',
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 test('architectureHandler returns 1 for template without args (verb removed)', async () => {
@@ -54,7 +56,8 @@ test('architectureHandler returns 1 for template without args (verb removed)', a
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 test('architectureHandler returns 1 for unknown subcommand', async () => {
@@ -83,7 +86,8 @@ test('architectureHandler returns 1 for apply without args (verb removed)', asyn
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 test('architectureHandler returns 1 for apply (verb removed, was "Batch aborted:")', async () => {
@@ -97,7 +101,8 @@ test('architectureHandler returns 1 for apply (verb removed, was "Batch aborted:
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 // ── Template handler tests ───────────────────────────────────────────────────
@@ -112,7 +117,8 @@ test('template returns 1 (verb removed from CLI dispatch)', async () => {
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 test('template returns 1 (verb removed, was "title but no goal")', async () => {
@@ -125,7 +131,8 @@ test('template returns 1 (verb removed, was "title but no goal")', async () => {
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 test('template returns 1 (verb removed, was "spec dir has no SPEC.md")', async () => {
@@ -138,7 +145,8 @@ test('template returns 1 (verb removed, was "spec dir has no SPEC.md")', async (
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 test('template returns 1 (verb removed, was "spec dir has no files")', async () => {
@@ -151,7 +159,8 @@ test('template returns 1 (verb removed, was "spec dir has no files")', async () 
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 test('template returns 1 (verb removed, was "goal containing double quotes")', async () => {
@@ -164,7 +173,8 @@ test('template returns 1 (verb removed, was "goal containing double quotes")', a
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 // ── Apply YAML validation (before atlas module import) ──────────────────────
@@ -179,7 +189,8 @@ test('apply returns 1 (verb removed, was "null YAML")', async () => {
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 test('apply returns 1 (verb removed, was "scalar string YAML")', async () => {
@@ -192,7 +203,8 @@ test('apply returns 1 (verb removed, was "scalar string YAML")', async () => {
     { stdout: { write: () => {} }, stderr },
   );
   assert.strictEqual(result, 1);
-  assert.ok(stderr.toString().includes('Unknown verb'));
+  assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+  assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
 });
 
 // ── Helper: mock atlas modules on disk ──────────────────────────────────────
@@ -214,8 +226,16 @@ function writeMockAtlasModules(tmpDir, stateReturn) {
     '  dispatch: async (args, io) => {',
     '    const verb = args[0];',
     '    if (verb === \'apply\' || verb === \'template\') {',
-    '      if (io && io.stderr) io.stderr.write(\'Unknown verb: \' + verb + \'\\n\');',
+    '      if (io && io.stderr) io.stderr.write(\'Unknown verb: \' + verb + \'. Did you mean \\\'add\\\'?\\n\');',
     '      return 1;',
+    '    }',
+    '    if (verb === \'remove\') {',
+    '      const entitySlug = args[2];',
+    '      if (entitySlug === \'nonexistent\') {',
+    '        if (io && io.stderr) io.stderr.write(\'Feature "\' + entitySlug + \'" not found\\n\');',
+    '        return 1;',
+    '      }',
+    '      return 0;',
     '    }',
     '    return 0;',
     '  },',
@@ -263,7 +283,8 @@ test('apply returns 1 (verb removed, was "adds a feature with title, story, depe
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -285,7 +306,8 @@ test('apply returns 1 (verb removed, was "modifies an existing feature title")',
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -310,7 +332,8 @@ test('apply returns 1 (verb removed, was "removes a feature and its incident edg
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -329,7 +352,8 @@ test('apply returns 1 (verb removed, was "unknown feature action")', async () =>
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -348,7 +372,8 @@ test('apply returns 1 (verb removed, was "modify of non-existent feature")', asy
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -370,7 +395,8 @@ test('apply returns 1 (verb removed, was "adds a submodule")', async () => {
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -392,7 +418,8 @@ test('apply returns 1 (verb removed, was "unknown edge action")', async () => {
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -414,7 +441,8 @@ test('apply returns 1 (verb removed, was "unknown submodule action")', async () 
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -436,7 +464,8 @@ test('apply returns 1 (verb removed, was "edge with invalid endpoint format")', 
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -458,7 +487,53 @@ test('apply returns 1 (verb removed, was "edge with non-existent source feature"
       { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
     );
     assert.strictEqual(result, 1);
-    assert.ok(stderr.toString().includes('Unknown verb'));
+    assert.ok(stderr.toString().includes('add'), `stderr should suggest "add": ${stderr.toString()}`);
+    assert.ok(stderr.toString().includes('apply') || stderr.toString().includes('template'), `stderr should mention the verb`);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+// ── Remove handler tests ────────────────────────────────────────────────────
+
+test('remove non-existent entity returns error through handler', async () => {
+  const { architectureHandler } = await import(
+    '../../packages/tools/architecture/dist/index.js'
+  );
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apltk-rmerr-'));
+  const stderr = createMemoryStream();
+  try {
+    writeMockAtlasModules(tmpDir, {
+      features: [{ slug: 'existing', title: 'Existing', submodules: [], edges: [] }],
+      edges: [],
+    });
+    const result = await architectureHandler(
+      ['remove', 'feature', 'nonexistent', '--no-render'],
+      { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
+    );
+    assert.strictEqual(result, 1, 'remove non-existent should return 1');
+    assert.ok(stderr.toString().includes('not found'), `stderr should say "not found": ${stderr.toString()}`);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('remove --dry-run returns 0 without mutating mock', async () => {
+  const { architectureHandler } = await import(
+    '../../packages/tools/architecture/dist/index.js'
+  );
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apltk-dry-'));
+  const stderr = createMemoryStream();
+  try {
+    writeMockAtlasModules(tmpDir, {
+      features: [{ slug: 'test', title: 'Test', submodules: [], edges: [] }],
+      edges: [],
+    });
+    const result = await architectureHandler(
+      ['remove', 'feature', 'test', '--no-render', '--dry-run'],
+      { stdout: { write: () => {} }, stderr, sourceRoot: tmpDir },
+    );
+    assert.strictEqual(result, 0, 'dry-run should return 0');
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

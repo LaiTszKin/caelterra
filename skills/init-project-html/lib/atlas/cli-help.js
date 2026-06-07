@@ -737,10 +737,15 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         'apltk architecture merge --spec <dir>|--all',
         'apltk architecture render',
         'apltk architecture open',
+        'apltk architecture validate         # run schema and referential integrity checks',
+        'apltk architecture status           # print atlas state summary',
+        'apltk architecture scan             # scan directory for feature candidates',
+        'apltk architecture undo             # roll back recent mutations',
       ],
       useWhen: [
         'You need to browse or update `resources/project-architecture/` through YAML-backed atlas state.',
         'You need to render, compare, or merge spec overlays under `docs/plans/**/architecture_diff/`.',
+        'You need to validate atlas integrity, scan for candidate features, inspect status, or undo recent changes.',
       ],
       optionalFlags: [
         '`--project <root>` targets a specific repository root (otherwise the CLI walks upward from the cwd).',
@@ -755,7 +760,7 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
       notes: [
         'Use `apltk architecture add` to model features, modules, and relations.',
         'Use `apltk architecture remove` to retire entities from the diagram.',
-        'Top-level verbs include `add`, `remove`, `diff`, `merge`, `render`, and `open`.',
+        'Top-level verbs include `add`, `remove`, `diff`, `merge`, `render`, `open`, `validate`, `status`, `scan`, and `undo`.',
       ],
       examples: [
         {
@@ -1013,8 +1018,8 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
           '`--part-of <feature>` — for modules: the parent feature this module belongs to.',
           '`--depends-on <feature>` — for features/modules: declares a dependency.',
           '`--data-flow-to <endpoint>` — for relations: data flows from source to target.',
-          '`--implements <endpoint>` — for relations: implements an interface.',
-          '`--deployed-on <endpoint>` — for relations: deployment target.',
+          '`--implements <endpoint>` — for relations: implements an interface (alternative to --data-flow-to).',
+          '`--deployed-on <endpoint>` — for relations: deployment target (alternative to --data-flow-to).',
           '`--spec <spec_dir>` writes to a spec overlay instead of the base atlas.',
           '`--no-render` skips auto-render so you can batch several commands.',
           '`--project <root>` targets a specific repository root.',

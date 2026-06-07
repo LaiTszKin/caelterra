@@ -47,7 +47,7 @@ function writeMockAtlasModules(tmpDir, stateReturn, onSave) {
         '  dispatch: async (args, io) => {',
         '    const verb = args[0];',
         '    if (verb === \'apply\' || verb === \'template\') {',
-        '      if (io && io.stderr) io.stderr.write(\'Unknown verb: \' + verb + \'\\n\');',
+        '      if (io && io.stderr) io.stderr.write(\'Error: "\' + verb + \'" has been removed. Use "apltk architecture add <feature|module|relation>" instead.\\n\');',
         '      return 1;',
         '    }',
         '    return 0;',
@@ -93,7 +93,8 @@ describe('REGTEST-15: Unknown verb via CLI dispatch', () => {
             throw new Error('tool.handler is undefined');
         const exitCode = await handler(['template', '--spec', '/nonexistent/spec-dir', '--output', '/tmp/rg15-out'], makeContext(io));
         assert.equal(exitCode, 1, 'Expected exit code 1 for unknown verb "template"');
-        assert.ok(io.stderrText.includes('Unknown verb'), `stderr should contain "Unknown verb": got ${JSON.stringify(io.stderrText)}`);
+        assert.ok(io.stderrText.includes('add'), `stderr should suggest using "add": got ${JSON.stringify(io.stderrText)}`);
+        assert.ok(io.stderrText.includes('template'), `stderr should mention the verb "template": got ${JSON.stringify(io.stderrText)}`);
     });
 });
 // =========================================================================
@@ -148,7 +149,7 @@ describe('REGTEST-16: Verb dispatch — apply returns 1, add/remove return 0', (
             throw new Error('tool.handler is undefined');
         const exitCode = await handler(['apply', '/nonexistent/batch.yaml', '--no-render'], makeContext(io, { sourceRoot: tmpDir }));
         assert.equal(exitCode, 1, 'Expected exit code 1 for removed "apply" verb');
-        assert.ok(io.stderrText.includes('Unknown verb'), `stderr should contain "Unknown verb": got ${JSON.stringify(io.stderrText)}`);
+        assert.ok(io.stderrText.includes('add'), `stderr should suggest using "add": got ${JSON.stringify(io.stderrText)}`);
     });
     it('add feature returns 0 through CLI dispatch', async () => {
         const handler = tool.handler;
@@ -196,7 +197,7 @@ describe('REGTEST-17: Verb dispatch — apply returns 1, add verb returns 0', ()
             throw new Error('tool.handler is undefined');
         const exitCode = await handler(['apply', '/nonexistent/batch.yaml', '--no-render'], makeContext(io, { sourceRoot: tmpDir }));
         assert.equal(exitCode, 1, 'Expected exit code 1 for removed "apply" verb');
-        assert.ok(io.stderrText.includes('Unknown verb'), `stderr should contain "Unknown verb": got ${JSON.stringify(io.stderrText)}`);
+        assert.ok(io.stderrText.includes('add'), `stderr should suggest using "add": got ${JSON.stringify(io.stderrText)}`);
     });
     it('add feature returns 0 through CLI dispatch', async () => {
         const handler = tool.handler;
