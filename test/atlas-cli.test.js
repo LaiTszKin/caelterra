@@ -360,7 +360,7 @@ test('help prints usage and exits 0', async () => {
   const code = await cli.dispatch(['help'], io);
   assert.equal(code, 0);
   assert.match(io.stdout_text, /apltk architecture/);
-  assert.match(io.stdout_text, /feature add\|set\|remove/);
+  assert.match(io.stdout_text, /apltk architecture add feature/);
 });
 
 test('parseEndpoint accepts "feature/submodule" and rejects empty values', async () => {
@@ -382,8 +382,8 @@ test('--help and -h print usage without requiring a project root', async () => {
     const io = makeIo();
     const code = await cli.dispatch(argv, io);
     assert.equal(code, 0, argv.join(' '));
-    assert.match(io.stdout_text, /feature add\|set\|remove/);
-    assert.match(io.stdout_text, /error add\|remove/);
+    assert.match(io.stdout_text, /apltk architecture add/);
+    assert.match(io.stdout_text, /apltk architecture remove/);
   }
 });
 
@@ -907,6 +907,128 @@ test('merge --all merges multiple pending spec overlays', async () => {
     assert.ok(slugs.includes('from-spec-a'));
     assert.ok(slugs.includes('from-spec-b'));
     assert.ok(slugs.includes('base'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// ---- add/remove verb tests -----------------------------------------------
+
+test('add feature with --depends-on creates feature with dependency', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const code = await cli.dispatch(['add', 'feature', 'payment', '--depends-on', 'order', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const featYaml = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/features/payment.yaml'), 'utf8');
+    assert.match(featYaml, /order/);
+    assert.match(featYaml, /dependsOn/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('add module --part-of creates submodule under parent feature', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    let code = await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    code = await cli.dispatch(['add', 'module', 'payment-api', '--part-of', 'payment', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const featYaml = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/features/payment.yaml'), 'utf8');
+    assert.match(featYaml, /slug: payment-api/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('add relation --data-flow-to creates cross-feature edge', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'b', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'svc', '--part-of', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'api', '--part-of', 'b', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'relation', 'a/svc', '--data-flow-to', 'b/api', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const edge = state.edges.find((e) => e.from.feature === 'a' && e.to.feature === 'b');
+    assert.ok(edge, 'cross-feature edge should exist');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('add batch mode creates multiple features', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const code = await cli.dispatch(['add', 'feature', 'f1', 'feature', 'f2', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const slugs = state.features.map((f) => f.slug);
+    assert.ok(slugs.includes('f1'));
+    assert.ok(slugs.includes('f2'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('remove feature drops the feature from atlas', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'test-feat', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['remove', 'feature', 'test-feat', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    assert.equal(state.features.find((f) => f.slug === 'test-feat'), undefined);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('add error on unknown entity type', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const code = await cli.dispatch(['add', 'unknown', 'test', '--project', root, '--no-render'], io);
+    assert.notEqual(code, 0);
+    assert.match(io.stderr_text, /Unknown entity type/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('add module missing --part-of returns error', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const code = await cli.dispatch(['add', 'module', 'orphan', '--project', root, '--no-render'], io);
+    assert.notEqual(code, 0);
+    assert.match(io.stderr_text, /Missing required flag --part-of/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('add --spec writes to overlay without mutating base files', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    await cli.dispatch(['add', 'feature', 'base-feat', '--project', root, '--no-render'], io);
+    const baseYamlBefore = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/features/base-feat.yaml'), 'utf8');
+
+    const specDir = 'docs/plans/2026-05-14/spec-add-test';
+    await cli.dispatch(['add', 'feature', 'spec-feat', '--spec', specDir, '--project', root, '--no-render'], io);
+
+    const baseYamlAfter = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/features/base-feat.yaml'), 'utf8');
+    assert.equal(baseYamlAfter, baseYamlBefore, 'base YAML must not change in spec mode');
+
+    const overlayYaml = path.join(root, specDir, 'architecture_diff/atlas/features/spec-feat.yaml');
+    assert.equal(fs.existsSync(overlayYaml), true, 'overlay YAML should exist');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

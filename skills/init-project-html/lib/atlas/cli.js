@@ -610,6 +610,117 @@ async function verbActor(action, flags, projectRoot, io) {
   }, io);
 }
 
+async function verbAdd(args, flags, projectRoot, io) {
+  const type = args[0];
+  const name = args[1];
+
+  if (!type || !name) {
+    throw new Error('Usage: apltk architecture add <feature|module|relation> <name> [entity-type entity-name ...]');
+  }
+
+  const batch = args.length > 2;
+
+  async function processAddEntity(entityType, entityName, entityFlags) {
+    switch (entityType) {
+      case 'feature':
+        return verbFeature('add', {
+          slug: entityName,
+          'depends-on': entityFlags['depends-on'],
+          spec: entityFlags.spec,
+          'no-render': entityFlags['no-render'],
+          project: entityFlags.project,
+          'dry-run': entityFlags['dry-run'],
+          evidence: entityFlags.evidence,
+        }, projectRoot, io);
+      case 'module': {
+        if (!entityFlags['part-of']) throw new Error('Missing required flag --part-of for module');
+        return verbSubmodule('add', {
+          feature: entityFlags['part-of'],
+          slug: entityName,
+          spec: entityFlags.spec,
+          'no-render': entityFlags['no-render'],
+          project: entityFlags.project,
+          'dry-run': entityFlags['dry-run'],
+          kind: entityFlags.kind,
+          evidence: entityFlags.evidence,
+        }, projectRoot, io);
+      }
+      case 'relation': {
+        const to = entityFlags['data-flow-to'] || entityFlags.implements || entityFlags['deployed-on'];
+        if (!to) throw new Error('Missing required flag --data-flow-to, --implements, or --deployed-on for relation');
+        return verbEdge('add', {
+          from: entityName,
+          to,
+          kind: entityFlags['data-flow-to'] ? 'data-row' : 'call',
+          spec: entityFlags.spec,
+          'no-render': entityFlags['no-render'],
+          project: entityFlags.project,
+          'dry-run': entityFlags['dry-run'],
+          id: entityFlags.id,
+        }, projectRoot, io);
+      }
+      default:
+        throw new Error(`Unknown entity type: ${entityType}. Supported types: feature, module, relation`);
+    }
+  }
+
+  if (batch) {
+    const batchFlags = { ...flags, 'no-render': true };
+    for (let i = 0; i < args.length; i += 2) {
+      const entityType = args[i];
+      const entityName = args[i + 1];
+      if (!entityName) throw new Error(`Missing name for entity type: ${entityType}`);
+      await processAddEntity(entityType, entityName, batchFlags);
+    }
+    if (!flags['dry-run'] && !flags['no-render']) {
+      await runRender({ projectRoot, flags });
+    }
+  } else {
+    await processAddEntity(type, name, flags);
+  }
+}
+
+async function verbRemove(args, flags, projectRoot, io) {
+  const type = args[0];
+  const name = args[1];
+
+  if (!type || !name) {
+    throw new Error('Usage: apltk architecture remove <feature|module|relation> <name>');
+  }
+
+  switch (type) {
+    case 'feature':
+      return verbFeature('remove', {
+        slug: name,
+        spec: flags.spec,
+        'no-render': flags['no-render'],
+        project: flags.project,
+      }, projectRoot, io);
+    case 'module': {
+      if (!flags['part-of']) throw new Error('Missing required flag --part-of for module');
+      return verbSubmodule('remove', {
+        feature: flags['part-of'],
+        slug: name,
+        spec: flags.spec,
+        'no-render': flags['no-render'],
+        project: flags.project,
+      }, projectRoot, io);
+    }
+    case 'relation': {
+      if (!flags.to) throw new Error('Missing required flag --to for relation');
+      return verbEdge('remove', {
+        from: name,
+        to: flags.to,
+        spec: flags.spec,
+        'no-render': flags['no-render'],
+        project: flags.project,
+      }, projectRoot, io);
+    }
+    default:
+      throw new Error(`Unknown entity type: ${type}. Supported types: feature, module, relation`);
+  }
+}
+
 async function verbValidate(flags, projectRoot, io) {
   const { merged } = loadResolvedState(projectRoot, flags);
   const result = schema.validate(merged, formatFix);
@@ -1139,7 +1250,7 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
       args.splice(subverbIdx, 1);
     }
   }
-  const { flags } = parseFlags(args);
+  const { flags, positional: rest } = parseFlags(args);
 
   if (verb === 'help' || verb === '--help' || verb === '-h' || flags.help) {
     const helpText = explicitVerb && verb !== 'help' && verb !== '--help' && verb !== '-h'
@@ -1179,6 +1290,8 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
       case 'meta': await verbMeta(subverb, flags, projectRoot, io); break;
       case 'actor': await verbActor(subverb, flags, projectRoot, io); break;
       case 'merge': return await verbMerge(flags, projectRoot, io);
+      case 'add': await verbAdd(rest, flags, projectRoot, io); break;
+      case 'remove': await verbRemove(rest, flags, projectRoot, io); break;
       default:
         io.stderr.write(`Unknown verb: ${verb}\n\n${buildArchitectureHelpPage()}\n`);
         return 1;

@@ -731,7 +731,12 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
       summary: 'Inspect, mutate, validate, diff, and merge the project architecture atlas without hand-editing the rendered HTML output.',
       usageLines: [
         'apltk architecture [verb] [options]',
-        'apltk architecture help',
+        'apltk architecture add <entity-type> <name> [relation-flags...]',
+        'apltk architecture remove <entity-type> <name>',
+        'apltk architecture diff',
+        'apltk architecture merge --spec <dir>|--all',
+        'apltk architecture render',
+        'apltk architecture open',
       ],
       useWhen: [
         'You need to browse or update `resources/project-architecture/` through YAML-backed atlas state.',
@@ -748,35 +753,26 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         '`--all` (with `merge`) selects every pending spec overlay under `docs/plans/`.',
       ],
       notes: [
-        'Mutation families include `feature add|set|remove`, `submodule add|set|remove`, `function add|remove`, `variable add|remove`, `dataflow add|remove|reorder`, `error add|remove`, `edge add|remove`, `meta set`, and `actor add|remove`.',
-        'Top-level verbs include `open`, `diff`, `merge`, `render`, `validate`, `status`, `scan`, and `undo`.',
-        '`feature`, `submodule`, `function`, `variable`, `dataflow`, `error`, `edge`, `meta`, and `actor` all support deeper help such as `apltk architecture edge add --help`.',
-        'Run `apltk architecture validate` before declaring atlas work done.',
+        'Use `apltk architecture add` to model features, modules, and relations.',
+        'Use `apltk architecture remove` to retire entities from the diagram.',
+        'Top-level verbs include `add`, `remove`, `diff`, `merge`, `render`, and `open`.',
       ],
       examples: [
         {
-          command: 'apltk architecture',
-          result: 'Prints the base atlas HTML path and opens it unless `--no-open` is set.',
+          command: 'apltk architecture add feature payment --depends-on order',
+          result: 'Creates a "payment" feature with a dependency on "order", then re-renders.',
         },
         {
-          command: 'apltk architecture feature add --slug register --title "User registration"',
-          result: 'Creates or updates the feature entry and prints `atlas: feature add applied`.',
-        },
-        {
-          command: 'apltk architecture merge --spec docs/plans/2026-05-11/add-2fa',
-          result: 'Merges a spec overlay into the base atlas and re-renders.',
-        },
-        {
-          command: 'apltk architecture validate',
-          result: 'Prints `atlas: OK` when the atlas state passes validation.',
-        },
-        {
-          command: 'apltk architecture scan --src lib/',
-          result: 'Outputs a JSON array of directory entries in `lib/` with suggested feature slugs.',
+          command: 'apltk architecture add module payment-api --part-of payment',
+          result: 'Adds a "payment-api" submodule under the "payment" feature, then re-renders.',
         },
         {
           command: 'apltk architecture diff',
           result: 'Builds the paginated diff viewer and prints its generated HTML path.',
+        },
+        {
+          command: 'apltk architecture merge --spec docs/plans/2026-05-11/add-2fa',
+          result: 'Merges a spec overlay into the base atlas and re-renders.',
         },
       ],
     });
@@ -993,6 +989,77 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
           {
             command: 'apltk architecture merge --all --clean',
             result: 'Merges every pending spec overlay found under docs/plans/ and removes their diff directories.',
+          },
+        ],
+      });
+    case 'add':
+      return buildHelpPage({
+        title: 'apltk architecture add — add entities to the architecture diagram.',
+        summary: 'Add features, modules, or relations to the project architecture diagram. Supports both single-entity and batch mode.',
+        usageLines: [
+          'apltk architecture add feature <slug> [--depends-on <feature>]',
+          'apltk architecture add module <slug> --part-of <feature> [--depends-on <feature>]',
+          'apltk architecture add relation <endpoint> --data-flow-to <endpoint>',
+          '# Batch mode — multiple entities in one command:',
+          'apltk architecture add feature <slug> [--depends-on <feature>] module <slug> --part-of <feature>',
+        ],
+        useWhen: [
+          'You need to model a new feature in the architecture diagram.',
+          'You need to add a sub-module to an existing feature.',
+          'You need to express a dependency, data flow, or deployment relationship.',
+          'You need to add multiple entities and relationships in a single command.',
+        ],
+        optionalFlags: [
+          '`--part-of <feature>` — for modules: the parent feature this module belongs to.',
+          '`--depends-on <feature>` — for features/modules: declares a dependency.',
+          '`--data-flow-to <endpoint>` — for relations: data flows from source to target.',
+          '`--implements <endpoint>` — for relations: implements an interface.',
+          '`--deployed-on <endpoint>` — for relations: deployment target.',
+          '`--spec <spec_dir>` writes to a spec overlay instead of the base atlas.',
+          '`--no-render` skips auto-render so you can batch several commands.',
+          '`--project <root>` targets a specific repository root.',
+          '`--dry-run` previews changes as JSON diff without writing to disk.',
+        ],
+        examples: [
+          {
+            command: 'apltk architecture add feature payment --depends-on order',
+            result: 'Creates a "payment" feature with a dependency on "order", then re-renders.',
+          },
+          {
+            command: 'apltk architecture add module payment-api --part-of payment --depends-on order-service',
+            result: 'Adds a "payment-api" submodule under the "payment" feature with a dependency edge.',
+          },
+        ],
+      });
+    case 'remove':
+      return buildHelpPage({
+        title: 'apltk architecture remove — remove entities from the architecture diagram.',
+        summary: 'Remove features, modules, or relations from the project architecture diagram.',
+        usageLines: [
+          'apltk architecture remove feature <slug>',
+          'apltk architecture remove module <slug> --part-of <feature>',
+          'apltk architecture remove relation <from-endpoint> --to <to-endpoint>',
+        ],
+        useWhen: [
+          'You need to retire a feature from the architecture diagram.',
+          'You need to remove a sub-module from an existing feature.',
+          'You need to remove a dependency or relationship edge.',
+        ],
+        optionalFlags: [
+          '`--part-of <feature>` — for modules: which feature the module belongs to.',
+          '`--to <endpoint>` — for relations: the target endpoint of the edge being removed.',
+          '`--spec <spec_dir>` writes to a spec overlay instead of the base atlas.',
+          '`--no-render` skips auto-render.',
+          '`--project <root>` targets a specific repository root.',
+        ],
+        examples: [
+          {
+            command: 'apltk architecture remove feature legacy-auth',
+            result: 'Removes the feature and its related edges, then re-renders.',
+          },
+          {
+            command: 'apltk architecture remove module payment-api --part-of payment',
+            result: 'Removes the submodule and its local edges, then re-renders.',
           },
         ],
       });

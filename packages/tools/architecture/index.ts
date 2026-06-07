@@ -601,12 +601,7 @@ export async function architectureHandler(
   args: string[],
   context: ToolContext,
 ): Promise<number> {
-  // Intercept apply / template before passing through to the JS CLI
-  const first = args[0] || '';
-  if (first === 'apply') return await handleApply(args.slice(1), context);
-  if (first === 'template') return await handleTemplate(args.slice(1), context);
-
-  // Delegate to the existing atlas CLI (still in JS)
+  // Delegate all verbs to the atlas CLI (JS)
   const sourceRoot =
     context.sourceRoot ||
     path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
