@@ -9,7 +9,7 @@
 - `node dist/bin/apollo-toolkit.js tools` - List all built-in CLI tools and their categories.
 - `node dist/bin/apollo-toolkit.js <tool> [args...]` - Run a built-in tool (e.g., `codegraph`, `architecture`, `filter-logs`).
 - `apltk codegraph <subcommand> [options]` - CodeGraph code intelligence CLI (init/sync/status/search/explore/survey/list-apis/verify). Powered by [@colbymchenry/codegraph](https://github.com/colbymchenry/codegraph), a tree-sitter-backed code knowledge graph engine.
-- `apltk architecture [diff|merge|apply|template]` - Architecture atlas management and spec overlay operations.
+- `apltk architecture [add|remove|diff|merge|render|open]` - Architecture atlas management and spec overlay operations.
 - `apltk eval <skill>` - LLM-as-Judge skill evaluation.
 - `apltk validate-skill-frontmatter` - Validate SKILL.md frontmatter format.
 - `apltk validate-openai-agent-config` - Validate agents/openai.yaml configuration.
