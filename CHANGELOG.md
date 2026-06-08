@@ -2,6 +2,14 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v5.0.8] - 2026-06-09
+
+### Changed
+
+- **Review skill identity and workflow**: `skills/review/SKILL.md`, `README.md`, and `agents/openai.yaml` updated from the old "qa" identity to the new "review" identity. Workflow simplified from 6 steps (parse → dispatch per-requirement agents → cross-requirement → dispatch group agents → synthesize → generate) to 4 steps (parse → review each requirement → cross-requirement analysis → synthesize). Severity scale P0-P3 definition unified. Report generation step streamlined.
+- **Hallucination reference restructured**: `references/halluciation-review-instruction.md` converted from step-by-step process to a reference checklist organized by internal vs. external patterns.
+- **fix skill README reference**: Updated outdated `qa` reference to `review` in the list of review report sources.
+
 ## [v5.0.7] - 2026-06-09
 
 ### Changed
