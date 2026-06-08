@@ -2,6 +2,22 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v5.0.9] - 2026-06-09
+
+### Changed
+
+- **design SKILL.md optimized**: Single-vs-batch spec handling moved to a dedicated section, eliminating repetition across workflow steps. Workflow condensed. T1–T3 refactoring framework consolidated into a reference table. Scale awareness and design self-challenge retained as key behavioral content.
+- **spec SKILL.md optimized**: Behavioral quality checklist merged into the pre-delivery verification step. Workflow tightened with less repetition. Removed broken internal references.
+- **discuss SKILL.md optimized**: Clarified requirement summaries, which replace functional module design. PROPOSAL.md template section 5 updated from "Functional Module Design" to "Requirement Summary" with a simpler bullet format.
+- **fix SKILL.md simplified**: Condensed from a verbose multi-section coordinator prompt (Goal, Acceptance Criteria, 6-step workflow with preparation/environment setup and examples) to an essential 4-step workflow. Removed boilerplate that duplicated PROMPT.md content.
+- **implement SKILL.md simplified**: Same treatment as fix — condensed to an essential 4-step coordinator workflow.
+
+### Removed
+
+- **fix auxiliary files**: `skills/fix/CHANGELOG.md`, `skills/fix/README.md`, and `skills/fix/assets/templates/fix-summary.md` removed as outdated.
+- **implement references**: `skills/implement/references/branch-naming.md` removed.
+- **spec references**: `skills/spec/references/spec-quality-checklist.md` removed — behavioral content merged into `SKILL.md` pre-delivery verification.
+
 ## [v5.0.8] - 2026-06-09
 
 ### Changed

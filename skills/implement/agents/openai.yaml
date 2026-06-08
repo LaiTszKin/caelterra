@@ -1,4 +1,4 @@
 interface:
   display_name: "Implement"
   short_description: "Implement tasks from an approved spec set by coordinating worker agents"
-  default_prompt: "Read the approved spec set (SPEC.md → DESIGN.md → CHECKLIST.md → tasks), dispatch worker agents following the plan's batch schedule, verify each checkpoint, resolve conflicts, and finalize with $commit."
+  default_prompt: "Load PROMPT.md, dispatch workers following the batch schedule, verify gates, resolve conflicts, commit changes in batches, and report."

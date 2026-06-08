@@ -57,7 +57,15 @@
 
 ---
 
-## 5. Open Questions
+## 5. Requirement Summary
+
+- [Requirement area 1: one-sentence summary of what the user wants in this area]
+- [Requirement area 2: one-sentence summary]
+- [Requirement area 3: one-sentence summary]
+
+---
+
+## 6. Open Questions
 
 - [Any unresolved questions from the discussion phase]
 - [If none, write "None"]

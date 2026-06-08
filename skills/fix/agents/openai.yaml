@@ -1,4 +1,4 @@
 interface:
   display_name: "Solve Issues Found During Review"
   short_description: "Fix review findings from high to low severity"
-  default_prompt: "Use $fix to process a review report or finding list, fix each confirmed issue in severity order (Critical → High → Medium → Low), validate every fix before proceeding, and re-validate the full scope when all issues are resolved."
+  default_prompt: "Load FIX.md, dispatch fix and regression test workers following the batch schedule, verify gates, resolve conflicts, commit changes in batches, and report."
