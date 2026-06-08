@@ -1,10 +1,10 @@
-# Fix Coordinator Prompt: 簡化 apltk architecture 指令 (Round 6)
+# Fix Coordinator Prompt: 簡化 apltk architecture 指令 (Round 7)
 
-- **Date**: 2026-06-08
+- **Date**: 2026-06-09
 - **Source REPORT**: `docs/plans/2026-06-07/architecture-simplify/REPORT.md`
 - **Source Spec**: `docs/plans/2026-06-07/architecture-simplify/`
-- **Total Issues**: P1:11
-- **Total Regression Tests**: 11
+- **Total Issues**: P1:3, P2:1, P3:2
+- **Total Regression Tests**: 5 automated, 1 structural/manual verification
 
 ---
 
@@ -12,58 +12,60 @@
 
 ### Mission
 
-Fix all 11 P1 defects identified in REPORT.md Round 6 for the architecture CLI simplification. The work is split into seven fix workers and eleven regression-test workers. Most source changes touch `skills/init-project-html/lib/atlas/cli.js`, so those workers must run sequentially unless their allowed file sets have zero overlap.
+Fix all six Round 7 findings from `REPORT.md`: three requirement defects, one atomicity risk, and two suggestions. The plan uses six fix workers, five automated regression-test workers, and one structural/manual verification worker. Most implementation fixes touch `skills/init-project-html/lib/atlas/cli.js`, so the coordinator must enforce sequential execution for those workers.
 
-**Success looks like**: all 11 REPORT.md issues are resolved, all 11 new regression tests pass, `npm test` passes, and no fine-grained architecture command surface remains discoverable through public help or active agent docs.
+**Success looks like**: all Round 7 findings are resolved, all new regression tests pass, the architecture-related test subset passes, full `npm test` passes, and active agent-facing docs no longer expose hidden fine-grained architecture commands.
 
 ### Your Role
 
-**You are the fix coordinator.** You do not write code. Your job is to understand the issue inventory, dispatch the worker prompts in `fix/*.md`, digest each worker result, and verify that every issue is resolved without introducing regressions.
+**You are the fix coordinator.** You do not write code. Your job is to understand the issue inventory, dispatch workers using the prompt files listed below, digest each worker result, and verify that every issue is resolved without introducing regressions.
 
 **What you do:**
-- Read the issue inventory, dependency analysis, and fix details below.
-- Dispatch workers using the exact prompt files listed in Section 3.
+- Read the issue inventory, dependency analysis, fix details, and worker prompt files.
+- Dispatch each worker with the exact prompt file listed in Section 3.
 - Enforce the file-overlap gate: workers that edit the same file run sequentially.
 - Run verification commands after every batch.
-- Start regression-test workers only after all fix workers pass.
-- Resolve merge conflicts if parallel workers touch disjoint files but produce integration conflicts.
+- Start regression-test workers only after their related fixes are complete.
+- Resolve merge conflicts if workers touch disjoint files but produce integration conflicts.
+- Commit all changes in a single commit only after final verification passes.
 
 **What you NEVER do:**
-- Modify source or test files directly, except to resolve conflict markers after workers return.
+- Modify implementation or test files directly, except to resolve conflict markers.
 - Skip a verification checkpoint.
-- Start regression tests before all fix batches pass.
+- Start regression tests before the corresponding fixes pass.
 - Let workers spawn sub-workers.
-- Defer any REPORT.md issue to a later round.
+- Defer any `REPORT.md` issue to a later round.
 
 ### Boundaries
 
 **ALWAYS**
-- Run the listed gate verification immediately after each batch.
-- Keep the implementation within the architecture CLI/state/render/test/docs files listed in Section 5.
-- Preserve existing CLI behavior unless REPORT.md identifies it as defective.
-- Treat `--spec` writes as overlay-only and base writes as direct YAML writes.
-- Ensure each new regression test would fail against the Round 6 code and pass after the fix.
+- Keep changes scoped to files listed in each worker prompt.
+- Preserve existing CLI behavior unless `REPORT.md` identifies it as defective.
+- Preserve backward compatibility for hidden fine-grained verbs; hide discovery, do not block legacy execution.
+- Use existing `node:test` style in `test/atlas-cli.test.js` and `test/architecture-script.test.js`.
+- Ensure every automated regression test would fail against the Round 7 reviewed code and pass after its fix.
 
 **ASK FIRST**
-- A worker concludes that fixing a defect requires a new external dependency.
-- A worker concludes that the spec/design is internally contradictory and cannot be implemented coherently.
+- A worker concludes a fix requires a new external dependency.
+- A worker concludes the spec/design contradicts the required fix.
 - The same worker fails twice.
-- A regression test cannot be made to fail before the fix.
+- A regression test cannot be made to fail on the unfixed code.
 
 **NEVER**
 - Weaken, skip, or delete existing tests to make a batch pass.
 - Install uncommitted skill changes directly.
 - Modify `.codegraph/codegraph.db`.
-- Change unrelated formatting or refactor outside the named functions.
+- Refactor unrelated `cli.js` behavior while fixing targeted paths.
+- Reintroduce `apply` or `template` routing.
 
 ### Error Recovery
 
 | Scenario | Response |
 |---|---|
-| Fix worker reports failure | Send one retry to the same worker with the failing command/output and the specific file/function to re-check. |
+| Fix worker reports failure | Send one retry to the same worker with failing command/output and exact file/function to re-check. |
 | Same fix worker fails twice | Stop the flow and report the blocked worker, completed workers, and failing verification. |
 | Regression test fails after fix | Determine whether the test oracle is wrong or the related fix is incomplete. Return to the responsible worker. |
-| Regression test passes on unfixed code | Reject the test and redesign it before proceeding. |
+| Regression test passes on unfixed code | Reject the test and redesign the oracle before proceeding. |
 | Merge conflicts | Coordinator resolves conflict markers, then reruns the current batch gate. |
 | Existing tests regress | Stop and identify the worker and file that introduced the regression. |
 
@@ -73,126 +75,125 @@ Fix all 11 P1 defects identified in REPORT.md Round 6 for the architecture CLI s
 
 ### Issue Inventory
 
-- FIX-01 (P1-1, Complex): Unified `add` writes relation kinds rejected by schema — `cli.js`, `schema.js`, `render.js`, CSS asset if needed.
-- FIX-02 (P1-2/P1-3, Complex): Endpoint validation is incomplete for `--deployed-on`, `--implements`, and `--data-flow-to` — `cli.js`.
-- FIX-03 (P1-4/P1-6/P1-7, Complex): Single and batch `add` are not atomic enough; failed add writes partial state, `add --spec` batch hits `overlayDir is not defined`, and failed batch leaves undo/history side effects — `cli.js`.
-- FIX-04 (P1-5, Medium): Batch entity blocks inherit globally parsed relation flags instead of remaining independent — `cli.js`.
-- FIX-05 (P1-8, Medium): `remove module` leaves root-level cross-feature edges that reference the removed module — `cli.js`.
-- FIX-06 (P1-9/P1-10, Medium): Fine-grained commands remain discoverable through direct help and active skill docs — `cli.js`, `cli-help.js`, docs.
-- FIX-07 (P1-11, Medium): `diff --spec` can reference missing after-side HTML when overlay was created with `--no-render` — `cli.js`.
+- FIX-01 (P1-1, Simple): `add relation <endpoint> ...` validates relation targets but not the source endpoint — `skills/init-project-html/lib/atlas/cli.js`.
+- FIX-02 (P1-2, Simple): `remove relation` can fail without listing similar available names when an intra-feature source feature is missing — `skills/init-project-html/lib/atlas/cli.js`.
+- FIX-03 (P1-3, Documentation): active agent-facing atlas reference docs still expose hidden fine-grained commands — `skills/init-project-html/references/TEMPLATE_SPEC.md`, `test/architecture-script.test.js`.
+- FIX-04 (P2-1, Complex): batch atomicity is rollback-based rather than a true single transaction — `skills/init-project-html/lib/atlas/cli.js`.
+- FIX-05 (P3-1, Simple): hidden fine-grained help pages remain defined but unreachable — `skills/init-project-html/lib/atlas/cli-help.js`.
+- FIX-06 (P3-2, Test-only): no positive regression test asserts successful batch auto-render without `--no-render` — `test/atlas-cli.test.js`.
 
 ### Fix Dependency Analysis
 
 **Logical dependencies:**
-- FIX-01 should run before FIX-02 because endpoint validation may rely on the final accepted edge-kind vocabulary.
-- FIX-03 should run before FIX-04 because the batch parser and atomic processing paths are adjacent; keep the state/rollback changes settled first.
-- FIX-07 can run after FIX-03 because both touch `--spec` overlay behavior and `cli.js`.
-- FIX-06 docs can run after the CLI help behavior is fixed.
+- FIX-01 should run before FIX-02 because both touch relation endpoint behavior in `cli.js`.
+- FIX-04 should run after FIX-01 because staged batch processing must preserve relation source validation semantics.
+- FIX-03 and FIX-05 both support Req 4 but touch different files; they can run in parallel only after any current `test/architecture-script.test.js` worker dependency is considered.
+- REGTEST workers depend on their related fixes.
 
 **File overlaps:**
-- FIX-01 touches `cli.js`, `schema.js`, `render.js`, and possibly `skills/init-project-html/references/architecture.css`.
-- FIX-02, FIX-03, FIX-04, FIX-05, and FIX-07 all touch `cli.js`; run them sequentially.
-- FIX-06 touches `cli.js`, `cli-help.js`, `skills/design/references/architecture.md`, `skills/update-project-html/SKILL.md`, and tests; run after the `cli.js` fixes.
-- All REGTEST workers modify `test/atlas-cli.test.js` or `test/architecture-script.test.js`; tests sharing the same file must run sequentially.
+- FIX-01, FIX-02, and FIX-04 all modify `skills/init-project-html/lib/atlas/cli.js`; run sequentially.
+- REGTEST-44, REGTEST-45, and REGTEST-49 all modify `test/atlas-cli.test.js`; run sequentially.
+- REGTEST-46 and REGTEST-48 both modify `test/architecture-script.test.js`; run sequentially.
+- FIX-03 modifies `skills/init-project-html/references/TEMPLATE_SPEC.md`; no source overlap with FIX-05.
+- FIX-05 modifies `skills/init-project-html/lib/atlas/cli-help.js`; no source overlap with FIX-03.
 
 ### Fix Details (with Regression Test Design)
 
-#### FIX-01: Align relation edge kinds with schema/render (P1-1)
+#### FIX-01: Validate relation source endpoint before writing unified relation edges (P1-1)
 
-**Root cause**: `processAddEntity()` writes `dependency`, `implements`, and `deployed-on` edge kinds, but `schema.js` only accepts `call`, `return`, `data-row`, and `failure`. `render.js` marker/legend generation is also hard-coded to the old four kinds.
+**Root cause**: In `processAddEntity()` relation mode, the code validates only the target endpoint (`to`) at `cli.js:999-1001`. The source endpoint (`entityName`) is parsed and written by `verbEdge('add')` without referential checks, allowing invalid state that schema validation rejects later.
 
-**Files involved**: `schema.js` `EDGE_KINDS`; `render.js` marker and legend generation; `cli.js` relation add paths.
+**Files involved**: `skills/init-project-html/lib/atlas/cli.js` > `assertEndpointExists()` (`378-394`), `processAddEntity()` relation branch (`926-1032`).
 
-**Fix approach**: Add the three unified relation kinds to the schema vocabulary and render marker/legend support. Keep existing `data-row` spelling. Do not re-encode these relationships into labels or unrelated edge kinds.
+**Fix approach**: Reuse `assertEndpointExists(currentState, entityName, 'relation source')` before duplicate checks and before dependency-only relation writes. Validate source for both primary `to` relations and dependency-only relations. Keep legacy `verbEdge()` behavior unchanged for backward compatibility unless the worker finds a direct need.
+
+**Complexity**: Simple.
+
+**Regression test**: REGTEST-44 (Integration -> `test/atlas-cli.test.js`)
+- GIVEN target feature/module `b/api` exists and source `a/missing` does not exist
+- WHEN running `add relation a/missing --data-flow-to b/api`
+- THEN the command exits non-zero, stderr identifies the missing source endpoint, and no edge referencing `a/missing` is written.
+- Oracle: fails on Round 7 reviewed code because the invalid edge is written; passes after FIX-01.
+
+#### FIX-02: Include available-edge suggestions when removing relation with missing intra-feature source (P1-2)
+
+**Root cause**: `verbEdge('remove')` enters the intra-feature branch, then throws `Feature "<feature>" not found for edge removal` before constructing an available-edge suggestion list.
+
+**Files involved**: `skills/init-project-html/lib/atlas/cli.js` > `verbEdge()` remove branch (`644-690`), helper area near `sortBySimilarity()` (`349-376`).
+
+**Fix approach**: Add a small helper to format all available edges from `state.edges` and feature-local `feature.edges`, or inline equivalent logic in the missing-feature branch. Replace the early missing-feature error with a clear missing-entity message containing `Available edges: ...` and similar available relation strings.
+
+**Complexity**: Simple.
+
+**Regression test**: REGTEST-45 (Integration -> `test/atlas-cli.test.js`)
+- GIVEN feature `payment` has modules `ui` and `api` with an intra-feature edge `ui -> api`
+- WHEN running `remove relation paymint/ui --to paymint/api`
+- THEN the command exits non-zero and stderr includes `Available edges:` plus a similar existing relation.
+- Oracle: fails on Round 7 reviewed code because stderr lacks the available-edge list; passes after FIX-02.
+
+#### FIX-03: Rewrite active atlas reference docs to unified command surface (P1-3)
+
+**Root cause**: `skills/init-project-html/references/TEMPLATE_SPEC.md` remains active agent-facing reference material and still lists hidden commands such as `meta set`, `actor add`, `feature add`, `submodule add`, `function add`, and `edge add`.
+
+**Files involved**: `skills/init-project-html/references/TEMPLATE_SPEC.md` (`30-130`), `test/architecture-script.test.js` active-doc scan (`114-129`).
+
+**Fix approach**: Replace fine-grained CLI examples in `TEMPLATE_SPEC.md` with unified `apltk architecture add ...` / `remove ...` examples where supported. For meta/actor/function/variable/dataflow/error rows, describe YAML fields and say to consult `apltk architecture --help` for currently supported public commands; do not show hidden verb syntax. Extend the active-doc scan to include `skills/init-project-html/references/TEMPLATE_SPEC.md`.
+
+**Complexity**: Documentation + test update.
+
+**Regression test**: REGTEST-46 (Documentation scan -> `test/architecture-script.test.js`)
+- GIVEN active docs include `skills/design/references/architecture.md`, `skills/update-project-html/SKILL.md`, and `skills/init-project-html/references/TEMPLATE_SPEC.md`
+- WHEN the docs scan runs
+- THEN no file contains `apltk architecture (feature|submodule|function|variable|dataflow|error|edge|meta|actor) (add|set|remove|reorder)`.
+- Oracle: fails on Round 7 reviewed code because `TEMPLATE_SPEC.md` contains forbidden examples; passes after FIX-03.
+
+#### FIX-04: Replace rollback-only batch mutation with staged commit semantics (P2-1)
+
+**Root cause**: Both batch branches call mutation verbs sequentially, each of which saves YAML/overlay state. The catch block restores state on normal exceptions, but a process crash between writes can leave partial state.
+
+**Files involved**: `skills/init-project-html/lib/atlas/cli.js` > `performMutation()` (`217-259`), `processAddEntity()` (`748-1036`), interleaved batch branch (`1039-1195`), simple-pair batch branch (`1198-1278`).
+
+**Fix approach**: Introduce staged batch execution for `verbAdd()` batch modes. The worker should stage mutations against an in-memory state or temporary atlas/overlay directory and commit once after all entities succeed. Preserve undo/history behavior as one batch-level entry and preserve existing rollback tests. If a true temp-dir staging design is too invasive, report back before changing state.js.
 
 **Complexity**: Complex.
 
-**Regression test**: REGTEST-33, Integration, `test/atlas-cli.test.js`.
-- GIVEN features/modules exist WHEN unified add creates `dependency`, `implements`, and `deployed-on` relationships THEN `validate` returns code 0.
-- Oracle: Round 6 code fails validation; fixed code passes.
+**Structural/manual verification**: REGTEST-47 (Structural/manual -> no automatic source mutation required)
+- Inspect the resulting batch implementation and confirm it no longer relies on per-entity durable saves followed by rollback for normal batch success.
+- Confirm the old `Batch atomicity is best-effort` crash-risk comment is removed or replaced with wording that matches the implemented staged commit semantics.
+- Run existing rollback regressions and new relation-source tests.
+- Oracle: Round 7 reviewed code fails structural inspection because it explicitly uses rollback-based sequential writes; fixed code passes inspection.
 
-#### FIX-02: Validate relation endpoints fully (P1-2/P1-3)
+#### FIX-05: Remove unreachable hidden fine-grained help pages from help builder (P3-1)
 
-**Root cause**: Target checks only verify the feature portion of `feature/submodule` endpoints. Deployment targets are treated as normal atlas endpoints but the example target can be a non-feature infrastructure name.
+**Root cause**: `buildArchitectureHelpPage()` still defines `familyPages` and `actionPages` for hidden fine-grained verbs even though hidden-verb requests redirect before those pages are returned.
 
-**Files involved**: `cli.js` `processAddEntity()` and endpoint helper area.
+**Files involved**: `skills/init-project-html/lib/atlas/cli-help.js` > `familyPages` (`54-237`), `actionPages` (`239-788`), hidden redirect (`789-793`), public `add`/`remove` pages (`1010-1080`).
 
-**Fix approach**: Add a shared endpoint validation helper for atlas endpoints. Validate submodules when an endpoint includes `feature/submodule`. For `--deployed-on`, require the target to resolve to an existing feature or submodule unless the implementation introduces a deliberate existing-kind target supported by schema/render. Keep error messages listing available features or submodules.
+**Fix approach**: Remove hidden fine-grained `familyPages` and hidden action-page entries from `cli-help.js`. Keep public top-level help and unified `add`/`remove` pages. Keep hidden verb redirects so `feature add --help` and similar still point to public unified help.
 
-**Complexity**: Complex.
+**Complexity**: Simple.
 
-**Regression tests**: REGTEST-34 and REGTEST-35, Integration, `test/atlas-cli.test.js`.
-- REGTEST-34: GIVEN feature `b` exists without submodule `svc` WHEN adding `--implements b/svc` or `--data-flow-to b/svc` THEN command fails and no edge is written.
-- REGTEST-35: GIVEN no `eks-cluster` endpoint exists WHEN adding `--deployed-on eks-cluster` THEN command fails without writing an invalid edge.
+**Regression test**: REGTEST-48 (Unit/source scan -> `test/architecture-script.test.js`)
+- GIVEN `cli-help.js` is loaded
+- WHEN scanning source or invoking hidden help cases
+- THEN public help still works and the help builder source no longer contains hidden command usage strings such as `apltk architecture feature add --slug`.
+- Oracle: fails on Round 7 reviewed code because hidden help strings remain; passes after FIX-05.
 
-#### FIX-03: Make add mutations atomic and fix spec-batch overlayDir scope (P1-4/P1-6/P1-7)
+#### FIX-06: Add positive batch auto-render regression coverage (P3-2)
 
-**Root cause**: Feature/module creation happens before related edge/target validation. Batch code declares `overlayDir` inside blocks and later references it outside those blocks. Batch processing mutates delegated feature/module operations without forwarding `skipUndo`, so undo/history side effects can remain after rollback.
+**Root cause**: Batch render code exists in both batch paths, but tests cover only no-render and skipped-render behavior, not the positive successful render path.
 
-**Files involved**: `cli.js` `verbAdd()`, `processAddEntity()`, interleaved batch path, simple pair batch path.
+**Files involved**: `test/atlas-cli.test.js` near `REGTEST-22` / `REGTEST-23` render behavior (`1906-1945`).
 
-**Fix approach**: Pre-validate all relation targets before any entity write for single-entity and batch adds. Hoist or persist `overlayDir` for successful spec-batch undo/history writes. Forward `skipUndo` into delegated `verbFeature()` and `verbSubmodule()` calls during batch processing. Ensure rollback restores YAML and avoids extra history/undo entries for failed batches.
+**Fix approach**: Add one integration test that runs successful batch `add` without `--no-render`, then asserts `resources/project-architecture/index.html` exists. No source change is expected for this issue.
 
-**Complexity**: Complex.
+**Complexity**: Test-only.
 
-**Regression tests**: REGTEST-36, REGTEST-37, REGTEST-38, Integration, `test/atlas-cli.test.js`.
-- REGTEST-36: failed single `add feature bad --depends-on missing` leaves no `bad` feature in state.
-- REGTEST-37: successful `add --spec` batch exits 0 and writes overlay under the spec dir.
-- REGTEST-38: failed batch leaves no extra `atlas.history.log` or undo stack entries and restores state.
-
-#### FIX-04: Keep batch entity flags independent (P1-5)
-
-**Root cause**: `parseFlags()` captures relation flags before batch parsing, and the interleaved batch parser copies those global relation flags into any entity missing them.
-
-**Files involved**: `cli.js` interleaved batch parser.
-
-**Fix approach**: Only copy true global flags (`project`, `spec`, `no-render`, `dry-run`, `evidence`) into each entity. Do not copy `depends-on`, `part-of`, `data-flow-to`, `implements`, `deployed-on`, or `to` into later entities. Preserve normal single-entity parsing.
-
-**Complexity**: Medium.
-
-**Regression test**: REGTEST-39, Integration, `test/atlas-cli.test.js`.
-- GIVEN global-looking `--depends-on target` appears before the first entity in a batch WHEN adding `feature a feature b` THEN only the intended first entity receives the relation or the command requires explicit per-entity flags; later entities do not inherit it silently.
-- Oracle: Round 6 code gives both features the dependency; fixed code does not.
-
-#### FIX-05: Cascade remove module across root edges (P1-8)
-
-**Root cause**: `removeSubmodule()` removes local feature edges only. Root-level `state.edges` entries referencing `feature/submodule` are not filtered.
-
-**Files involved**: `cli.js` `removeSubmodule()` and/or `verbSubmodule('remove')`.
-
-**Fix approach**: When removing a submodule, also remove root-level edges whose `from` or `to` endpoint references the removed feature/submodule pair. Keep existing feature-remove cleanup intact.
-
-**Complexity**: Medium.
-
-**Regression test**: REGTEST-40, Integration, `test/atlas-cli.test.js`.
-- GIVEN a cross-feature edge from `a/svc` to `b/api` WHEN removing module `svc --part-of a` THEN the edge is removed from `state.edges`.
-
-#### FIX-06: Hide fine-grained command discovery from help/docs (P1-9/P1-10)
-
-**Root cause**: The dispatch help path still renders action-specific pages for hidden verbs, and active skill docs still teach fine-grained command syntax.
-
-**Files involved**: `cli.js` dispatch help branch; `cli-help.js`; `skills/design/references/architecture.md`; `skills/update-project-html/SKILL.md`; `test/architecture-script.test.js`.
-
-**Fix approach**: For hidden verbs, direct `--help` must show general public architecture help or a short message pointing to `add`/`remove`, not fine-grained action pages. Rewrite active docs to teach unified `add`/`remove` for feature/module/relation workflows and avoid listing hidden command examples.
-
-**Complexity**: Medium.
-
-**Regression tests**: REGTEST-41 and REGTEST-42.
-- REGTEST-41, Unit, `test/architecture-script.test.js`: `edge add --help` does not contain `apltk architecture edge add` and does contain unified public commands.
-- REGTEST-42, Documentation scan, `test/architecture-script.test.js` or a new node:test block: active docs do not contain forbidden examples for hidden verbs.
-
-#### FIX-07: Render after-side pages for diff --spec state overlays (P1-11)
-
-**Root cause**: `collectSingleSpecChanges()` maps after paths under `architecture_diff/` without rendering state-overlay HTML when it is missing.
-
-**Files involved**: `cli.js` `collectDiffChanges()`, `collectSingleSpecChanges()`, `diffToChanges()`.
-
-**Fix approach**: When `diff --spec` finds overlay state, render the merged state into the spec `architecture_diff/` output before building changes, or have `collectSingleSpecChanges()` render missing after pages using the same scoped render logic as `runRender()`. Ensure this does not mutate base atlas state.
-
-**Complexity**: Medium.
-
-**Regression test**: REGTEST-43, Integration, `test/atlas-cli.test.js`.
-- GIVEN `add --spec --no-render` writes overlay state only WHEN running `diff --spec` THEN every non-null `afterPath` referenced by the viewer exists on disk.
+**Regression test**: REGTEST-49 (Integration -> `test/atlas-cli.test.js`)
+- GIVEN a fresh project
+- WHEN running `add feature f1 feature f2 --project <root>` without `--no-render`
+- THEN the command exits 0 and `resources/project-architecture/index.html` exists.
+- Oracle: this is a coverage regression; it should pass on current behavior, but it closes the reported missing assertion.
 
 ---
 
@@ -204,87 +205,92 @@ Fix all 11 P1 defects identified in REPORT.md Round 6 for the architecture CLI s
 
 | Fix ID | Worker Prompt File | Description |
 |---|---|---|
-| FIX-01 | `fix/FIX-01-relation-edge-schema.md` | Align relation edge kinds with schema/render |
-| FIX-02 | `fix/FIX-02-endpoint-validation.md` | Validate submodule and deployment targets |
-| FIX-03 | `fix/FIX-03-add-atomicity.md` | Fix add atomicity, spec-batch overlayDir, and failed-batch side effects |
-| FIX-04 | `fix/FIX-04-batch-flag-scoping.md` | Prevent per-entity batch flag leakage |
-| FIX-05 | `fix/FIX-05-remove-module-cascade.md` | Remove root-level edges when removing modules |
-| FIX-06 | `fix/FIX-06-hide-fine-grained-help-docs.md` | Hide fine-grained command discovery in help and docs |
-| FIX-07 | `fix/FIX-07-diff-spec-render.md` | Ensure diff --spec renders missing after pages |
+| FIX-01 | `fix/FIX-01-relation-source-validation.md` | Validate unified relation source endpoints before writing edges |
+| FIX-02 | `fix/FIX-02-remove-relation-suggestions.md` | Include available-edge suggestions for missing intra-feature source removal |
+| FIX-03 | `fix/FIX-03-template-spec-docs.md` | Remove hidden fine-grained commands from active atlas reference docs |
+| FIX-04 | `fix/FIX-04-staged-batch-atomicity.md` | Replace rollback-only batch mutation with staged commit semantics |
+| FIX-05 | `fix/FIX-05-remove-hidden-help-pages.md` | Remove unreachable hidden fine-grained help pages from help builder |
+| FIX-06 | `fix/FIX-06-batch-auto-render-coverage.md` | Add positive batch auto-render coverage |
 
-**Regression Test Worker Prompts:**
+**Regression / Verification Worker Prompts:**
 
 | Test ID | Worker Prompt File | Related Fix | Description |
 |---|---|---|---|
-| REGTEST-33 | `fix/REGTEST-33-relation-kinds-validate.md` | FIX-01 | New relation kinds validate successfully |
-| REGTEST-34 | `fix/REGTEST-34-submodule-target-validation.md` | FIX-02 | Missing submodule targets are rejected |
-| REGTEST-35 | `fix/REGTEST-35-deployed-on-target-validation.md` | FIX-02 | Missing deployment endpoint is rejected |
-| REGTEST-36 | `fix/REGTEST-36-single-add-atomicity.md` | FIX-03 | Failed single add leaves no partial feature |
-| REGTEST-37 | `fix/REGTEST-37-spec-batch-success.md` | FIX-03 | add --spec batch exits 0 and writes overlay |
-| REGTEST-38 | `fix/REGTEST-38-failed-batch-side-effects.md` | FIX-03 | Failed batch leaves no history/undo side effects |
-| REGTEST-39 | `fix/REGTEST-39-batch-flag-scoping.md` | FIX-04 | Batch flags do not leak into later entities |
-| REGTEST-40 | `fix/REGTEST-40-remove-module-root-edges.md` | FIX-05 | Removing module removes root edges |
-| REGTEST-41 | `fix/REGTEST-41-hidden-verb-help.md` | FIX-06 | Hidden verb help no longer exposes nested syntax |
-| REGTEST-42 | `fix/REGTEST-42-docs-hide-fine-grained.md` | FIX-06 | Active docs no longer teach hidden commands |
-| REGTEST-43 | `fix/REGTEST-43-diff-spec-renders-after.md` | FIX-07 | diff --spec renders missing after pages |
+| REGTEST-44 | `fix/REGTEST-44-relation-source-validation.md` | FIX-01 | Missing source endpoint is rejected and no edge is written |
+| REGTEST-45 | `fix/REGTEST-45-remove-relation-suggestions.md` | FIX-02 | Missing intra-feature relation source reports available edges |
+| REGTEST-46 | `fix/REGTEST-46-template-spec-doc-scan.md` | FIX-03 | Active-doc scan includes `TEMPLATE_SPEC.md` |
+| REGTEST-47 | `fix/REGTEST-47-batch-atomicity-structural.md` | FIX-04 | Structural/manual verification of staged batch atomicity |
+| REGTEST-48 | `fix/REGTEST-48-hidden-help-source-scan.md` | FIX-05 | Hidden help strings are removed while public help still works |
+| REGTEST-49 | `fix/REGTEST-49-batch-auto-render.md` | FIX-06 | Successful batch add auto-renders without `--no-render` |
 
 ### Batch Schedule
 
-#### Batch 1 — Relation Vocabulary
+#### Batch 1 — Relation CLI Defects
 
-- **Worker**: `fix/FIX-01-relation-edge-schema.md`
-- **Strategy**: Single worker
+- **Workers**: FIX-01 -> FIX-02
+- **Strategy**: Sequential; both edit `skills/init-project-html/lib/atlas/cli.js`.
 - **Gate**:
-  - [ ] Worker reports success.
-  - [ ] `node --test test/atlas-cli.test.js --test-name-pattern "relation --implements|module --depends-on|module --deployed-on"` passes.
-  - [ ] Manual validation command for an `implements` edge returns code 0.
+  - [ ] FIX-01 and FIX-02 report success.
+  - [ ] `node --test test/atlas-cli.test.js --test-name-pattern "add relation|remove relation"` passes.
 
-#### Batch 2 — CLI Mutation Semantics
+#### Batch 2 — Batch Atomicity
 
-- **Workers, sequential**: `FIX-02` -> `FIX-03` -> `FIX-04` -> `FIX-05` -> `FIX-07`
-- **Strategy**: Sequential because all workers edit `cli.js`.
-- **Depends on**: Batch 1.
+- **Workers**: FIX-04
+- **Strategy**: Single complex worker; depends on Batch 1 because it touches `verbAdd()` relation processing.
 - **Gate**:
-  - [ ] Each worker reports success.
-  - [ ] `node --test test/atlas-cli.test.js` passes.
+  - [ ] FIX-04 reports success.
+  - [ ] `node --test test/atlas-cli.test.js --test-name-pattern "batch|REGTEST-38|REGTEST-39"` passes.
+  - [ ] Coordinator reads the diff and confirms batch mode no longer uses durable per-entity saves plus rollback as the success-path atomicity mechanism.
 
-#### Batch 3 — Help and Documentation
+#### Batch 3 — Documentation and Help Cleanup
 
-- **Worker**: `fix/FIX-06-hide-fine-grained-help-docs.md`
-- **Strategy**: Single worker after CLI dispatch behavior is stable.
+- **Workers**: FIX-03 and FIX-05 may run in parallel; they edit different files.
+- **Strategy**: Parallel if no local file overlap exists.
 - **Gate**:
-  - [ ] Worker reports success.
+  - [ ] FIX-03 and FIX-05 report success.
   - [ ] `node --test test/architecture-script.test.js` passes.
-  - [ ] `rg "apltk architecture (feature|submodule|function|variable|dataflow|error|edge|meta|actor) " skills/design/references/architecture.md skills/update-project-html/SKILL.md` returns no active hidden-command examples.
+  - [ ] `rg "apltk architecture (feature|submodule|function|variable|dataflow|error|edge|meta|actor) (add|set|remove|reorder)" skills/init-project-html/references/TEMPLATE_SPEC.md skills/design/references/architecture.md skills/update-project-html/SKILL.md` returns no active hidden-command examples.
 
-#### Batch 4 — Regression Tests
+#### Batch 4 — Test-Only Coverage
 
-- **Workers**: REGTEST-33 through REGTEST-43.
-- **Strategy**: Sequential by target file: first all `test/atlas-cli.test.js` tests in numeric order, then `test/architecture-script.test.js` tests.
+- **Workers**: FIX-06
+- **Strategy**: Single worker; modifies `test/atlas-cli.test.js`.
+- **Gate**:
+  - [ ] FIX-06 reports success.
+  - [ ] `node --test test/atlas-cli.test.js --test-name-pattern "batch auto-renders"` passes.
+
+#### Batch 5 — Regression / Verification Workers
+
+- **Workers, sequential by file overlap**:
+  - `test/atlas-cli.test.js`: REGTEST-44 -> REGTEST-45 -> REGTEST-49
+  - `test/architecture-script.test.js`: REGTEST-46 -> REGTEST-48
+  - Structural/manual: REGTEST-47
+- **Strategy**: Run sub-batches sequentially per target file; `REGTEST-47` can run after FIX-04.
 - **Depends on**: All fix batches.
 - **Gate**:
-  - [ ] Each REGTEST worker reports the oracle would fail on Round 6 code and passes after fixes.
+  - [ ] Each REGTEST worker reports the oracle status.
   - [ ] `node --test test/atlas-cli.test.js` passes.
   - [ ] `node --test test/architecture-script.test.js` passes.
 
-#### Batch 5 — Final Integration
+#### Batch 6 — Final Integration
 
-- **Tasks**: Full test suite and report cross-check.
+- **Tasks**: Full suite, build, report cross-check.
 - **Gate**:
   - [ ] `npm test` passes.
-  - [ ] `npm run build` passes if package build is expected in the current branch.
-  - [ ] Every Round 6 finding in `REPORT.md` maps to a completed FIX and REGTEST.
+  - [ ] `npm run build` passes.
   - [ ] `git diff --check` reports no whitespace errors.
+  - [ ] Every Round 7 `REPORT.md` finding maps to a completed fix/verification item.
 
 ---
 
 ## 4. Final Verification
 
-- [ ] Every issue in REPORT.md Round 6 (P1:11) has a completed fix.
-- [ ] Every fix has at least one regression test or shared regression test that covers its issue.
-- [ ] All worker prompts listed in Section 3 were dispatched and returned success.
+- [ ] Every issue in Round 7 `REPORT.md` has a completed fix or verification outcome.
+- [ ] Every P1 issue has an automated regression test that fails on the reviewed code and passes after the fix.
+- [ ] P2 batch atomicity has structural/manual verification and existing rollback tests still pass.
+- [ ] P3 coverage/help cleanup workers have completed.
+- [ ] All worker prompts in Section 3 have been dispatched and returned success.
 - [ ] Full test suite passes with no regressions.
-- [ ] Help/docs no longer expose hidden fine-grained verbs as agent-facing commands.
 - [ ] All changes are committed in a single commit after verification.
 
 ---
@@ -292,65 +298,36 @@ Fix all 11 P1 defects identified in REPORT.md Round 6 for the architecture CLI s
 ## 5. References
 
 - **Worker prompt files**:
-  - `fix/FIX-01-relation-edge-schema.md`
-  - `fix/FIX-02-endpoint-validation.md`
-  - `fix/FIX-03-add-atomicity.md`
-  - `fix/FIX-04-batch-flag-scoping.md`
-  - `fix/FIX-05-remove-module-cascade.md`
-  - `fix/FIX-06-hide-fine-grained-help-docs.md`
-  - `fix/FIX-07-diff-spec-render.md`
-  - `fix/REGTEST-33-relation-kinds-validate.md`
-  - `fix/REGTEST-34-submodule-target-validation.md`
-  - `fix/REGTEST-35-deployed-on-target-validation.md`
-  - `fix/REGTEST-36-single-add-atomicity.md`
-  - `fix/REGTEST-37-spec-batch-success.md`
-  - `fix/REGTEST-38-failed-batch-side-effects.md`
-  - `fix/REGTEST-39-batch-flag-scoping.md`
-  - `fix/REGTEST-40-remove-module-root-edges.md`
-  - `fix/REGTEST-41-hidden-verb-help.md`
-  - `fix/REGTEST-42-docs-hide-fine-grained.md`
-  - `fix/REGTEST-43-diff-spec-renders-after.md`
-
+  - `fix/FIX-01-relation-source-validation.md`
+  - `fix/FIX-02-remove-relation-suggestions.md`
+  - `fix/FIX-03-template-spec-docs.md`
+  - `fix/FIX-04-staged-batch-atomicity.md`
+  - `fix/FIX-05-remove-hidden-help-pages.md`
+  - `fix/FIX-06-batch-auto-render-coverage.md`
+  - `fix/REGTEST-44-relation-source-validation.md`
+  - `fix/REGTEST-45-remove-relation-suggestions.md`
+  - `fix/REGTEST-46-template-spec-doc-scan.md`
+  - `fix/REGTEST-47-batch-atomicity-structural.md`
+  - `fix/REGTEST-48-hidden-help-source-scan.md`
+  - `fix/REGTEST-49-batch-auto-render.md`
 - **Code files to modify**:
   - `skills/init-project-html/lib/atlas/cli.js`
-  - `skills/init-project-html/lib/atlas/schema.js`
-  - `skills/init-project-html/lib/atlas/render.js`
-  - `skills/init-project-html/references/architecture.css`
   - `skills/init-project-html/lib/atlas/cli-help.js`
-  - `skills/design/references/architecture.md`
-  - `skills/update-project-html/SKILL.md`
+  - `skills/init-project-html/references/TEMPLATE_SPEC.md`
   - `test/atlas-cli.test.js`
   - `test/architecture-script.test.js`
-
 - **Project context files**:
-  - `CLAUDE.md`
   - `AGENTS.md`
+  - `CLAUDE.md`
   - `docs/architecture/cli-architecture.md`
+- **Related documents**:
   - `docs/plans/2026-06-07/architecture-simplify/SPEC.md`
   - `docs/plans/2026-06-07/architecture-simplify/DESIGN.md`
   - `docs/plans/2026-06-07/architecture-simplify/CHECKLIST.md`
   - `docs/plans/2026-06-07/architecture-simplify/REPORT.md`
-  - `docs/plans/2026-06-07/architecture-simplify/references/README.md`
-
 - **Fix History**:
 
-  ### Round 5 — 2026-06-08
-  - **Issues planned**: P1:1, P2:3, P3:10 across `cli.js` and `test/atlas-cli.test.js`.
-  - **Plan shape**: Three fix workers and five regression-test workers. Key focus was relation `--depends-on` batch validation, batch undo support, single-entity validation, target validation, remove spec-dir validation, and diff filtering assertions.
-  - **Current status**: Round 6 review confirmed the Round 5 P1 was fixed, but found 11 new/current P1 defects requiring a fresh plan.
-
-  ### Round 4 — 2026-06-08
-  - **Issues planned**: P1:5, P2:12, P3:10.
-  - **Outcome noted by Round 5**: Most Round 4 findings were fixed; remaining concerns were recategorized or superseded.
-
-  ### Round 3 — 2026-06-07
-  - **Issues planned**: P2:10, P3:14.
-  - **Outcome**: Reported resolved in previous history.
-
-  ### Round 2 — 2026-06-07
-  - **Issues planned**: P1:3, P2:6, P3:4.
-  - **Outcome**: Reported resolved in previous history.
-
-  ### Round 1 — 2026-06-07
-  - **Issues planned**: P1:5, P2:8, P3:7.
-  - **Outcome**: Reported resolved in previous history.
+### Round 6 — 2026-06-08
+- **Issues planned**: P1:11
+- **Outcome**: Superseded by Round 7 review after implementation addressed the broad Round 6 defects.
+- **Key notes**: Round 6 planned fixes for schema-invalid relation kinds, endpoint validation, add atomicity, batch flag scoping, module cascade removal, hidden help/docs, and `diff --spec` after-page rendering. Round 7 confirms most of those broad issues are resolved and narrows remaining work to six findings.
