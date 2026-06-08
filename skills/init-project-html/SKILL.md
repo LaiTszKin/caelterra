@@ -66,7 +66,7 @@ Then read `sample-demo/` to understand the expected output format and abstractio
 
 Consult `references/codegraph.md` for detailed flags.
 
-### 2. Write the atlas with `apltk architecture apply`
+### 2. Write the atlas with `apltk architecture add`
 
 Generate the atlas incrementally by C4 level:
 Consult `references/architecture.md` for CLI flag details when needed (parameter reference, mutation series).
@@ -76,7 +76,7 @@ Consult `references/architecture.md` for CLI flag details when needed (parameter
 3. **Component level**: Define submodules with their internal elements (function, variable, dataflow, error)
 4. **Code level**: Declare `functions` and `variables` for every submodule, attaching `evidence` (source file and line number via `--evidence observed:path/file.ts:42`)
 
-Use `apltk architecture apply <proposal.yaml>` for batch atlas writes (replaces manual per-mutation CLI calls).
+Use `apltk architecture add` for incremental atlas writes (one entity per command).
 Transform the codebase knowledge gathered in the previous step into a clear architecture diagram.
 After completion, verify the atlas format is valid and renders correctly.
 

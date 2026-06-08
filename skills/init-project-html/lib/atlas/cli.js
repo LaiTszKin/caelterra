@@ -9,15 +9,8 @@
 //   diff                                          render paginated before/after viewer
 //   merge --spec <dir>|--all [--clean]            merge spec overlay(s) into base atlas
 //   render                                        force-regenerate HTML from current state
-//   feature add|set|remove                        feature lifecycle
-//   submodule add|set|remove                      sub-module lifecycle
-//   function add|remove                           function I/O rows
-//   variable add|remove                           variable rows
-//   dataflow add|remove|reorder                   ordered internal flow steps
-//   error add|remove                              error rows
-//   edge add|remove                               edges (intra-feature if both endpoints share a feature, otherwise cross-feature)
-//   meta set                                      meta.title / meta.summary
-//   actor add|remove                              top-level actors
+//   add <feature|module|relation>                 add entities to atlas (unified)
+//   remove <feature|module|relation>              remove entities from atlas (unified)
 //   validate                                      schema + referential integrity check
 //   scan                                          scan directory for feature candidates
 //   undo                                          revert the most recent mutation
@@ -48,9 +41,17 @@ const cliHelp = require('./cli-help');
 const { buildArchitectureHelpPage } = cliHelp;
 
 const BOOLEAN_FLAGS = new Set(['no-render', 'no-open', 'help', 'dry-run', 'json']);
+const MULTI_VERBS = new Set(['feature', 'submodule', 'function', 'variable', 'dataflow', 'error', 'edge', 'meta', 'actor']);
 
-// formatFix generates apltk CLI commands from structured params,
-// injected into schema.validate() so schema stays decoupled from CLI syntax.
+// Module-level staging state for batch add atomicity.
+// When active, all mutations apply to an in-memory clone; single durable write on success.
+let _batchStagingActive = false;
+let _batchStagedState = null;
+
+/**
+ * formatFix generates apltk CLI commands from structured params.
+ * The fix suggestions appear only in validation/status error output, not in help.
+ */
 function formatFix({ type, action, feature, submodule, name, side, scope, slug, kind }) {
   const parts = [`apltk architecture ${type} ${action}`];
   if (feature !== undefined) parts.push(`--feature ${feature}`);
@@ -197,6 +198,15 @@ function baseHtmlOutDir(projectRoot) {
 }
 
 function loadResolvedState(projectRoot, flags) {
+  // In batch staging mode, return from the in-memory staged state
+  // (includes cumulative changes from previously processed entities)
+  if (_batchStagingActive) {
+    if (flags.spec) {
+      const merged = stateLib.mergeOverlay(_batchStagedState.base, _batchStagedState.overlay);
+      return { base: _batchStagedState.base, merged, overlay: _batchStagedState.overlay };
+    }
+    return { base: _batchStagedState, merged: _batchStagedState, overlay: null };
+  }
   const base = stateLib.load(baseAtlasDir(projectRoot));
   if (!flags.spec) return { base, merged: base, overlay: null };
   const { overlayDir } = specOverlayDir(projectRoot, flags.spec);
@@ -238,6 +248,21 @@ async function performMutation(projectRoot, flags, action, args, mutate, io) {
     }
     return;
   }
+
+  // Batch staging mode: apply mutation to in-memory staged state without disk writes.
+  // All mutations accumulate in _batchStagedState; a single durable write happens after
+  // all entities in the batch succeed, eliminating the crash-window risk of per-entity saves.
+  if (_batchStagingActive) {
+    if (flags.spec) {
+      const merged = stateLib.mergeOverlay(_batchStagedState.base, _batchStagedState.overlay);
+      mutate(merged, _batchStagedState.base, _batchStagedState.overlay);
+      _batchStagedState.overlay = stateLib.deriveOverlay(_batchStagedState.base, merged);
+    } else {
+      mutate(_batchStagedState, _batchStagedState, null);
+    }
+    return;
+  }
+
   const isSpec = Boolean(flags.spec);
   const base = stateLib.load(baseAtlasDir(projectRoot));
   let merged = base;
@@ -247,17 +272,17 @@ async function performMutation(projectRoot, flags, action, args, mutate, io) {
     const overlay = stateLib.loadOverlay(overlayDir);
     merged = stateLib.mergeOverlay(base, overlay);
     const before = JSON.parse(JSON.stringify({ base, overlay }));
-    stateLib.writeUndoSnapshot(overlayDir, before);
+    if (!flags.skipUndo) stateLib.writeUndoSnapshot(overlayDir, before);
     mutate(merged, base, overlay);
     stateLib.saveOverlay(overlayDir, stateLib.deriveOverlay(base, merged));
-    stateLib.appendHistory(overlayDir, { action, args, mode: 'spec' });
+    if (!flags.skipUndo) stateLib.appendHistory(overlayDir, { action, args, mode: 'spec' });
   } else {
     ensureBaseAtlasDir(projectRoot);
     const before = JSON.parse(JSON.stringify({ base }));
-    stateLib.writeUndoSnapshot(baseAtlasDir(projectRoot), before);
+    if (!flags.skipUndo) stateLib.writeUndoSnapshot(baseAtlasDir(projectRoot), before);
     mutate(base, base, null);
     stateLib.save(baseAtlasDir(projectRoot), base);
-    stateLib.appendHistory(baseAtlasDir(projectRoot), { action, args, mode: 'base' });
+    if (!flags.skipUndo) stateLib.appendHistory(baseAtlasDir(projectRoot), { action, args, mode: 'base' });
   }
 
   if (!flags['no-render']) {
@@ -300,6 +325,12 @@ function removeFeature(state, slug) {
   state.features = state.features.filter((f) => f.slug !== slug);
   // also drop cross-feature edges that reference this slug
   state.edges = (state.edges || []).filter((e) => !endpointReferences(e.from, slug) && !endpointReferences(e.to, slug));
+  // also clean up dependsOn references on remaining features
+  for (const feature of state.features) {
+    if (feature.dependsOn) {
+      feature.dependsOn = feature.dependsOn.filter((d) => d !== slug);
+    }
+  }
   return state.features.length < before;
 }
 
@@ -344,6 +375,79 @@ function isIntraFeatureEdge(from, to) {
   return from && to && from.feature && to.feature && from.feature === to.feature && from.submodule && to.submodule;
 }
 
+function sortBySimilarity(input, names) {
+  if (!names || names.length === 0) return [];
+  const lowerInput = input.toLowerCase();
+  const scored = names.map(name => {
+    const lower = name.toLowerCase();
+    let score = 0;
+    // Exact match (shouldn't happen in practice since we're listing alternatives)
+    if (lower === lowerInput) score += 100;
+    // Common prefix length
+    for (let i = 0; i < Math.min(lower.length, lowerInput.length); i++) {
+      if (lower[i] === lowerInput[i]) score += 2;
+      else break;
+    }
+    // Substring match
+    if (lower.includes(lowerInput)) score += 10;
+    if (lowerInput.includes(lower)) score += 5;
+    // Character overlap (bag of letters)
+    const inputChars = new Set(lowerInput);
+    const matchChars = [...lower].filter(c => inputChars.has(c)).length;
+    score += matchChars;
+    return { name, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.slice(0, 5).map(s => s.name);
+  const remaining = scored.length - top.length;
+  if (remaining > 0) top.push(`and ${remaining} more`);
+  return top;
+}
+
+function formatAvailableEdges(state, feature) {
+  const edges = [];
+  for (const e of (state.edges || [])) {
+    const ef = e.from && (e.from.submodule ? `${e.from.feature}/${e.from.submodule}` : e.from.feature);
+    const et = e.to && (e.to.submodule ? `${e.to.feature}/${e.to.submodule}` : e.to.feature);
+    edges.push(`"${ef}" -> "${et}"${e.kind ? ` (${e.kind})` : ''}`);
+  }
+  if (feature) {
+    for (const e of (feature.edges || [])) {
+      const ef = typeof e.from === 'string' ? e.from : (e.from && e.from.submodule);
+      const et = typeof e.to === 'string' ? e.to : (e.to && e.to.submodule);
+      edges.push(`"${feature.slug}/${ef}" -> "${feature.slug}/${et}"${e.kind ? ` (${e.kind})` : ''}`);
+    }
+  } else {
+    // When no specific feature is known, collect intra-feature edges from all features
+    for (const f of (state.features || [])) {
+      for (const e of (f.edges || [])) {
+        const ef = typeof e.from === 'string' ? e.from : (e.from && e.from.submodule);
+        const et = typeof e.to === 'string' ? e.to : (e.to && e.to.submodule);
+        edges.push(`"${f.slug}/${ef}" -> "${f.slug}/${et}"${e.kind ? ` (${e.kind})` : ''}`);
+      }
+    }
+  }
+  return edges;
+}
+
+function assertEndpointExists(state, endpointValue, contextLabel) {
+  // Parse "feature" or "feature/submodule" and confirm the target exists.
+  const parsed = parseEndpoint(endpointValue);
+  const feat = findFeature(state, parsed.feature);
+  if (!feat) {
+    const allFeatures = (state.features || []).map(f => f.slug);
+    const similar = sortBySimilarity(parsed.feature, allFeatures);
+    throw new Error(`Target "${endpointValue}" not found for ${contextLabel}. Available features: ${similar.join(', ') || '(none)'}`);
+  }
+  if (parsed.submodule) {
+    if (!findSubmodule(feat, parsed.submodule)) {
+      const availableSubs = (feat.submodules || []).map(s => s.slug);
+      const similar = sortBySimilarity(parsed.submodule, availableSubs);
+      throw new Error(`Submodule "${parsed.submodule}" not found in feature "${parsed.feature}" for ${contextLabel}. Available submodules: ${similar.join(', ') || '(none)'}`);
+    }
+  }
+}
+
 // ---- verb dispatch ------------------------------------------------------
 
 async function verbFeature(action, flags, projectRoot, io) {
@@ -354,13 +458,26 @@ async function verbFeature(action, flags, projectRoot, io) {
     if (flags.story !== undefined) init.story = String(flags.story);
     if (flags['depends-on'] !== undefined) init.dependsOn = splitList(flags['depends-on']);
     if (flags.evidence !== undefined) init.evidence = parseEvidence(flags.evidence);
+    // Check for duplicate before mutation
+    if (action === 'add') {
+      const { base, merged } = loadResolvedState(projectRoot, flags);
+      const currentState = flags.spec ? merged : base;
+      if (findFeature(currentState, slug)) {
+        return 'skipped';
+      }
+    }
     return performMutation(projectRoot, flags, `feature ${action}`, { slug, ...init }, (state) => {
       ensureFeature(state, slug, init);
     }, io);
   }
   if (action === 'remove') {
     return performMutation(projectRoot, flags, 'feature remove', { slug }, (state) => {
-      removeFeature(state, slug);
+      const removed = removeFeature(state, slug);
+      if (!removed) {
+        const allFeatures = (state.features || []).map(f => f.slug);
+        const similar = sortBySimilarity(slug, allFeatures);
+        throw new Error(`Feature "${slug}" not found. Available features: ${similar.join(', ') || '(none)'}`);
+      }
     }, io);
   }
   throw new Error(`Unknown feature subverb: ${action}`);
@@ -374,15 +491,44 @@ async function verbSubmodule(action, flags, projectRoot, io) {
     if (flags.kind !== undefined) init.kind = String(flags.kind);
     if (flags.role !== undefined) init.role = String(flags.role);
     if (flags.evidence !== undefined) init.evidence = parseEvidence(flags.evidence);
+    // Check for duplicate before mutation
+    if (action === 'add') {
+      const { base, merged } = loadResolvedState(projectRoot, flags);
+      const currentState = flags.spec ? merged : base;
+      const feat = findFeature(currentState, featureSlug);
+      if (feat && findSubmodule(feat, slug)) {
+        return 'skipped';
+      }
+    }
     return performMutation(projectRoot, flags, `submodule ${action}`, { feature: featureSlug, slug, ...init }, (state) => {
-      const feature = ensureFeature(state, featureSlug);
+      const feature = findFeature(state, featureSlug);
+      if (!feature) {
+        const available = (state.features || []).map(f => f.slug).join(', ');
+        throw new Error(`Feature "${featureSlug}" not found. Available features: ${available || '(none)'}`);
+      }
       ensureSubmodule(feature, slug, init);
     }, io);
   }
   if (action === 'remove') {
     return performMutation(projectRoot, flags, 'submodule remove', { feature: featureSlug, slug }, (state) => {
       const feature = findFeature(state, featureSlug);
-      if (feature) removeSubmodule(feature, slug);
+      if (!feature) {
+        const available = (state.features || []).map(f => f.slug);
+        const similar = sortBySimilarity(featureSlug, available);
+        throw new Error(`Feature "${featureSlug}" not found for submodule removal. Available features: ${similar.join(', ') || '(none)'}`);
+      }
+      const removed = removeSubmodule(feature, slug);
+      if (!removed) {
+        const allSubs = (feature.submodules || []).map(s => s.slug);
+        const similar = sortBySimilarity(slug, allSubs);
+        throw new Error(`Submodule "${slug}" not found in feature "${featureSlug}". Available submodules: ${similar.join(', ') || '(none)'}`);
+      }
+      // Also drop root-level cross-feature edges that reference the removed submodule
+      state.edges = (state.edges || []).filter((e) => {
+        const fromIsTarget = typeof e.from === 'object' && e.from && e.from.feature === featureSlug && e.from.submodule === slug;
+        const toIsTarget = typeof e.to === 'object' && e.to && e.to.feature === featureSlug && e.to.submodule === slug;
+        return !fromIsTarget && !toIsTarget;
+      });
     }, io);
   }
   throw new Error(`Unknown submodule subverb: ${action}`);
@@ -555,21 +701,50 @@ async function verbEdge(action, flags, projectRoot, io) {
       const intra = isIntraFeatureEdge(from, to);
       if (intra) {
         const feature = findFeature(state, from.feature);
-        if (feature) {
-          feature.edges = (feature.edges || []).filter((e) => {
-            if (id && e.id === id) return false;
-            const f = typeof e.from === 'string' ? e.from : e.from && e.from.submodule;
-            const t = typeof e.to === 'string' ? e.to : e.to && e.to.submodule;
-            return !(f === from.submodule && t === to.submodule);
+        if (!feature) {
+          const inputEdgeStr = `"${from.feature}/${from.submodule}" -> "${to.feature}/${to.submodule}"`;
+          const available = formatAvailableEdges(state, null);
+          const similar = sortBySimilarity(inputEdgeStr, available);
+          throw new Error(`Feature "${from.feature}" not found for edge removal. Available edges: ${similar.join(', ') || '(none)'}`);
+        }
+        const before = (feature.edges || []).length;
+        feature.edges = (feature.edges || []).filter((e) => {
+          if (id && e.id === id) return false;
+          if (flags.kind && e.kind !== flags.kind) return true;
+          const f = typeof e.from === 'string' ? e.from : e.from && e.from.submodule;
+          const t = typeof e.to === 'string' ? e.to : e.to && e.to.submodule;
+          return !(f === from.submodule && t === to.submodule);
+        });
+        if (feature.edges.length >= before) {
+          const inputEdgeStr = `"${from.submodule}" -> "${to.submodule}"`;
+          const existingList = (feature.edges || []).map(e => {
+            const ef = typeof e.from === 'string' ? e.from : (e.from && e.from.submodule);
+            const et = typeof e.to === 'string' ? e.to : (e.to && e.to.submodule);
+            return `"${ef}" -> "${et}"${e.kind ? ` (${e.kind})` : ''}`;
           });
-          return;
+          const similar = sortBySimilarity(inputEdgeStr, existingList);
+          throw new Error(`Edge "${from.feature}/${from.submodule}" -> "${to.feature}/${to.submodule}" not found. Available edges: ${similar.join(', ') || '(none)'}`);
         }
         return;
       }
+      const before = state.edges ? state.edges.length : 0;
       state.edges = (state.edges || []).filter((e) => {
         if (id && e.id === id) return false;
+        if (flags.kind && e.kind !== flags.kind) return true;
         return !(endpointEquals(e.from, from) && endpointEquals(e.to, to));
       });
+      if ((state.edges ? state.edges.length : 0) >= before) {
+        const fromStr = from.submodule ? `${from.feature}/${from.submodule}` : from.feature;
+        const toStr = to.submodule ? `${to.feature}/${to.submodule}` : to.feature;
+        const inputEdgeStr = `"${fromStr}" -> "${toStr}"`;
+        const existingList = (state.edges || []).map(e => {
+          const ef = e.from && (e.from.submodule ? `${e.from.feature}/${e.from.submodule}` : e.from.feature);
+          const et = e.to && (e.to.submodule ? `${e.to.feature}/${e.to.submodule}` : e.to.feature);
+          return `"${ef}" -> "${et}"${e.kind ? ` (${e.kind})` : ''}`;
+        });
+        const similar = sortBySimilarity(inputEdgeStr, existingList);
+        throw new Error(`Edge "${fromStr}" -> "${toStr}" not found. Available edges: ${similar.join(', ') || '(none)'}`);
+      }
       return;
     }
     throw new Error(`Unknown edge subverb: ${action}`);
@@ -608,6 +783,674 @@ async function verbActor(action, flags, projectRoot, io) {
       throw new Error(`Unknown actor subverb: ${action}`);
     }
   }, io);
+}
+
+async function verbAdd(args, flags, projectRoot, io) {
+  // In batch mode (called with rawArgs), args contains interleaved --flags
+  // In single-entity mode, args is positional only and flags are pre-parsed
+  // Batch mode detection: if more than 2 positional args we have type/name pairs.
+  // This heuristic works because entity type keywords (feature/module/relation)
+  // don't start with '--', and flag names always do.
+  const isBatchMode = args.length > 2;
+
+  // Validate --spec directory exists before any entity processing
+  if (flags.spec) {
+    const specPath = path.isAbsolute(String(flags.spec))
+      ? String(flags.spec)
+      : path.resolve(projectRoot, String(flags.spec));
+    if (!fs.existsSync(specPath)) {
+      throw new Error(`Spec directory not found: ${flags.spec}`);
+    }
+  }
+
+  async function processAddEntity(entityType, entityName, entityFlags) {
+    switch (entityType) {
+      case 'feature':
+        {
+          const { base, merged } = loadResolvedState(projectRoot, entityFlags);
+          const preState = entityFlags.spec ? merged : base;
+
+          // Check for duplicate before validating depends-on targets
+          if (findFeature(preState, entityName)) {
+            return await verbFeature('add', {
+              slug: entityName,
+              'depends-on': entityFlags['depends-on'],
+              spec: entityFlags.spec,
+              'no-render': true,
+              project: entityFlags.project,
+              'dry-run': entityFlags['dry-run'],
+              evidence: entityFlags.evidence,
+              skipUndo: entityFlags.skipUndo,
+            }, projectRoot, io);
+          }
+
+          // Validate --depends-on targets before creating the feature (only for new features)
+          const featDependsOn = entityFlags['depends-on'];
+          if (featDependsOn) {
+            const targets = String(featDependsOn).split(',').map(s => s.trim()).filter(Boolean);
+            const availableFeatures = (preState.features || []).map(f => f.slug);
+            for (const target of targets) {
+              if (!availableFeatures.includes(target)) {
+                throw new Error(`Dependency target "${target}" not found. Available features: ${availableFeatures.join(', ') || '(none)'}`);
+              }
+            }
+          }
+
+          const featResult = await verbFeature('add', {
+            slug: entityName,
+            'depends-on': entityFlags['depends-on'],
+            spec: entityFlags.spec,
+            'no-render': true,
+            project: entityFlags.project,
+            'dry-run': entityFlags['dry-run'],
+            evidence: entityFlags.evidence,
+            skipUndo: entityFlags.skipUndo,
+          }, projectRoot, io);
+          if (featResult === 'skipped') return 'skipped';
+
+          // Create dependency edges if --depends-on specified (supports comma-separated)
+          if (featDependsOn) {
+            const targets = String(featDependsOn).split(',').map(s => s.trim()).filter(Boolean);
+            for (const target of targets) {
+              await verbEdge('add', {
+                from: entityName,
+                to: target,
+                kind: 'dependency',
+                spec: entityFlags.spec,
+                'no-render': true,
+                project: entityFlags.project,
+                'dry-run': entityFlags['dry-run'],
+                skipUndo: true,
+              }, projectRoot, io);
+            }
+          }
+
+          return featResult;
+        }
+      case 'module': {
+        if (!entityFlags['part-of']) throw new Error('Missing required flag --part-of for module');
+
+        // Prevalidate all endpoint targets before creating the submodule
+        const implementsTarget = entityFlags.implements;
+        const deployedOnTarget = entityFlags['deployed-on'];
+        const dependsOn = entityFlags['depends-on'];
+        const dataFlowTo = entityFlags['data-flow-to'];
+        const { merged: preState } = loadResolvedState(projectRoot, entityFlags);
+        if (implementsTarget) {
+          assertEndpointExists(preState, implementsTarget, '--implements');
+        }
+        if (dependsOn) {
+          const targets = String(dependsOn).split(',').map(s => s.trim()).filter(Boolean);
+          const availableFeatureSlugs = (preState.features || []).map(f => f.slug);
+          for (const target of targets) {
+            const [featSlug, subSlug] = target.split('/').map(s => s.trim());
+            if (subSlug) {
+              const feat = findFeature(preState, featSlug);
+              if (!feat) {
+                throw new Error(`Dependency target feature "${featSlug}" not found. Available features: ${availableFeatureSlugs.join(', ') || '(none)'}`);
+              }
+              if (!findSubmodule(feat, subSlug)) {
+                const availableSubs = (feat.submodules || []).map(s => s.slug).join(', ') || '(none)';
+                throw new Error(`Dependency target submodule "${subSlug}" not found in feature "${featSlug}". Available submodules: ${availableSubs}`);
+              }
+            } else {
+              if (!availableFeatureSlugs.includes(featSlug)) {
+                throw new Error(`Dependency target "${featSlug}" not found. Available features: ${availableFeatureSlugs.join(', ') || '(none)'}`);
+              }
+            }
+          }
+        }
+        if (dataFlowTo) {
+          assertEndpointExists(preState, dataFlowTo, '--data-flow-to');
+        }
+        if (deployedOnTarget) {
+          assertEndpointExists(preState, deployedOnTarget, '--deployed-on');
+        }
+
+        const result = await verbSubmodule('add', {
+          feature: entityFlags['part-of'],
+          slug: entityName,
+          spec: entityFlags.spec,
+          'no-render': true,
+          project: entityFlags.project,
+          'dry-run': entityFlags['dry-run'],
+          kind: entityFlags.kind,
+          evidence: entityFlags.evidence,
+          skipUndo: entityFlags.skipUndo,
+        }, projectRoot, io);
+        if (result === 'skipped') return 'skipped';
+
+        // Create implements/deployed-on edges if specified
+        if (implementsTarget) {
+          await verbEdge('add', {
+            from: `${entityFlags['part-of']}/${entityName}`,
+            to: implementsTarget,
+            kind: 'implements',
+            spec: entityFlags.spec,
+            'no-render': true,
+            project: entityFlags.project,
+            'dry-run': entityFlags['dry-run'],
+            skipUndo: true,
+          }, projectRoot, io);
+        }
+        if (deployedOnTarget) {
+          await verbEdge('add', {
+            from: `${entityFlags['part-of']}/${entityName}`,
+            to: deployedOnTarget,
+            kind: 'deployed-on',
+            spec: entityFlags.spec,
+            'no-render': true,
+            project: entityFlags.project,
+            'dry-run': entityFlags['dry-run'],
+            skipUndo: true,
+          }, projectRoot, io);
+        }
+
+        // Create dependency edges if --depends-on specified
+        if (dependsOn) {
+          const targets = String(dependsOn).split(',').map(s => s.trim()).filter(Boolean);
+          for (const target of targets) {
+            await verbEdge('add', {
+              from: `${entityFlags['part-of']}/${entityName}`,
+              to: target,
+              kind: 'dependency',
+              spec: entityFlags.spec,
+              'no-render': true,
+              project: entityFlags.project,
+              'dry-run': entityFlags['dry-run'],
+              skipUndo: true,
+            }, projectRoot, io);
+          }
+        }
+
+        // Create data-flow edge if --data-flow-to specified
+        if (dataFlowTo) {
+          await verbEdge('add', {
+            from: `${entityFlags['part-of']}/${entityName}`,
+            to: dataFlowTo,
+            kind: 'data-row',
+            spec: entityFlags.spec,
+            'no-render': true,
+            project: entityFlags.project,
+            'dry-run': entityFlags['dry-run'],
+            skipUndo: true,
+          }, projectRoot, io);
+        }
+
+        return result;
+      }
+      case 'relation': {
+        const dataFlowTo = entityFlags['data-flow-to'];
+        const implementsTarget = entityFlags.implements;
+        const deployedOn = entityFlags['deployed-on'];
+        const dependsOn = entityFlags['depends-on'];
+        const to = dataFlowTo || implementsTarget || deployedOn;
+        if (!to && !dependsOn) throw new Error('Missing required flag --data-flow-to, --implements, --deployed-on, or --depends-on for relation');
+        let kind = 'call';
+        if (dataFlowTo) kind = 'data-row';
+        else if (implementsTarget) kind = 'implements';
+        else if (deployedOn) kind = 'deployed-on';
+
+        const { base, merged } = loadResolvedState(projectRoot, entityFlags);
+        const currentState = entityFlags.spec ? merged : base;
+
+        // Validate source endpoint exists before any edge creation
+        assertEndpointExists(currentState, entityName, 'relation source');
+
+        // Check for duplicate edge before creation (cross-feature + intra-feature)
+        if (to) {
+          const edges = currentState.edges || [];
+          const fromEndpoint = parseEndpoint(entityName);
+          const toEndpoint = parseEndpoint(to);
+          const hasExistingEdge = edges.some(e =>
+            endpointEquals(e.from, fromEndpoint) && endpointEquals(e.to, toEndpoint) && (e.kind || 'call') === kind
+          );
+          // Check intra-feature edges if both endpoints share a feature
+          let hasExistingIntraEdge = false;
+          if (fromEndpoint && toEndpoint && isIntraFeatureEdge(fromEndpoint, toEndpoint)) {
+            const feature = findFeature(currentState, fromEndpoint.feature);
+            if (feature) {
+              const intraEdges = feature.edges || [];
+              hasExistingIntraEdge = intraEdges.some(e => {
+                const eFrom = typeof e.from === 'string' ? e.from : (e.from && e.from.submodule);
+                const eTo = typeof e.to === 'string' ? e.to : (e.to && e.to.submodule);
+                return eFrom === fromEndpoint.submodule && eTo === toEndpoint.submodule && (e.kind || 'call') === kind;
+              });
+            }
+          }
+          if (hasExistingEdge || hasExistingIntraEdge) {
+            return 'skipped';
+          }
+        }
+
+        // Check for duplicate dependency-only relation (all comma-separated targets)
+        if (!to && dependsOn) {
+          const dependsOnItems = splitList(dependsOn);
+          const edges = currentState.edges || [];
+          const fromEndpoint = parseEndpoint(entityName);
+          const existingDepEdges = edges.filter(e =>
+            e.kind === 'dependency' &&
+            endpointEquals(e.from, fromEndpoint)
+          );
+          for (const depTarget of dependsOnItems) {
+            const depEndpoint = parseEndpoint(depTarget);
+            const hasExistingDep = existingDepEdges.some(e =>
+              endpointEquals(e.to, depEndpoint)
+            );
+            if (hasExistingDep) return 'skipped';
+          }
+        }
+
+        // Validate dependency targets exist before creating edges
+        if (dependsOn) {
+          const depTargets = String(dependsOn).split(',').map(s => s.trim()).filter(Boolean);
+          const availableFeatureSlugs = (currentState.features || []).map(f => f.slug);
+          for (const target of depTargets) {
+            if (!availableFeatureSlugs.includes(target)) {
+              throw new Error(`Dependency target "${target}" not found. Available features: ${availableFeatureSlugs.join(', ') || '(none)'}`);
+            }
+          }
+        }
+
+        // Create the primary edge (data-flow, implements, or deployed-on)
+        let result;
+        if (to) {
+          // Validate target endpoint exists before writing edge
+          const ctxLabel = dataFlowTo ? '--data-flow-to' : implementsTarget ? '--implements' : '--deployed-on';
+          assertEndpointExists(currentState, to, ctxLabel);
+          result = await verbEdge('add', {
+            from: entityName,
+            to,
+            kind,
+            spec: entityFlags.spec,
+            'no-render': true,
+            project: entityFlags.project,
+            'dry-run': entityFlags['dry-run'],
+            id: entityFlags.id,
+            skipUndo: true,
+          }, projectRoot, io);
+        }
+
+        // Create dependency edge if --depends-on specified
+        if (dependsOn) {
+          const targets = String(dependsOn).split(',').map(s => s.trim()).filter(Boolean);
+          for (const target of targets) {
+            await verbEdge('add', {
+              from: entityName,
+              to: target,
+              kind: 'dependency',
+              spec: entityFlags.spec,
+              'no-render': true,
+              project: entityFlags.project,
+              'dry-run': entityFlags['dry-run'],
+              skipUndo: true,
+            }, projectRoot, io);
+          }
+        }
+
+        return result;
+      }
+      default:
+        throw new Error(`Unknown entity type: ${entityType}. Supported types: feature, module, relation`);
+    }
+  }
+
+  if (isBatchMode) {
+    // Batch mode with raw interleaved args: parse entities and their flags
+    if (args.some(t => t.startsWith('--'))) {
+      const entities = [];
+      let i = 0;
+      while (i < args.length) {
+        const token = args[i];
+        if (token === 'feature' || token === 'module' || token === 'relation') {
+          const entityType = token;
+          i++;
+          const entityName = args[i];
+          if (!entityName || entityName.startsWith('--')) {
+            throw new Error(`Missing name for entity type: ${entityType}`);
+          }
+          i++;
+
+          const entityFlags = {};
+          while (i < args.length && !['feature', 'module', 'relation'].includes(args[i])) {
+            const t = args[i];
+            if (t.startsWith('--')) {
+              const eq = t.indexOf('=');
+              let name, value;
+              if (eq !== -1) {
+                name = t.slice(2, eq);
+                value = t.slice(eq + 1);
+                i++;
+              } else {
+                name = t.slice(2);
+                const isBool = BOOLEAN_FLAGS.has(name);
+                const nextIsValue = i + 1 < args.length && !args[i + 1].startsWith('--') && !['feature', 'module', 'relation'].includes(args[i + 1]);
+                if (isBool || !nextIsValue) {
+                  value = true;
+                  i++;
+                } else {
+                  value = args[i + 1];
+                  i += 2;
+                }
+              }
+              entityFlags[name] = value;
+            } else if (t === '-h') {
+              entityFlags.help = true;
+              i++;
+            } else {
+              i++; // skip unexpected tokens
+            }
+          }
+
+          // Also copy global flags to entity flags
+          if (flags.project !== undefined) entityFlags.project = flags.project;
+          if (flags.spec !== undefined) entityFlags.spec = flags.spec;
+          if (flags['no-render'] !== undefined) entityFlags['no-render'] = flags['no-render'];
+          if (flags['dry-run'] !== undefined) entityFlags['dry-run'] = flags['dry-run'];
+          if (flags.evidence !== undefined) entityFlags.evidence = flags.evidence;
+          // Entity-specific relation flags MUST be defined per-entity and not leak from global scope
+          // Only true global flags (project, spec, no-render, dry-run, evidence) are copied above
+
+          // Validate that value-required flags have actual values
+          if (entityFlags['depends-on'] === true) {
+            throw new Error(`--depends-on requires a value (e.g., --depends-on feature-name)`);
+          }
+          if (entityFlags['part-of'] === true) {
+            throw new Error(`--part-of requires a value (e.g., --part-of feature-name)`);
+          }
+
+          entities.push({ type: entityType, name: entityName, flags: entityFlags });
+        } else {
+          i++;
+        }
+      }
+
+      // Check for empty entity list
+      if (entities.length === 0) {
+        throw new Error('No valid entities found. Usage: apltk architecture add <feature|module|relation> <name> [--flags...]');
+      }
+
+      // Pre-validation phase: check all entities before processing any
+      let error;
+      for (const entity of entities) {
+        try {
+          validateEntity(entity);
+        } catch (e) {
+          error = e;
+          break;
+        }
+      }
+      if (error) throw error;
+
+      // All valid — process with staged atomicity: in-memory mutations, single commit on success
+      let preBatchState, preBatchOverlayState;
+      let overlayDir;
+      if (!flags['dry-run']) {
+        _batchStagingActive = true;
+      }
+      if (flags.spec) {
+        const specResult = specOverlayDir(projectRoot, flags.spec);
+        overlayDir = specResult.overlayDir;
+        preBatchOverlayState = JSON.parse(JSON.stringify(stateLib.loadOverlay(overlayDir)));
+        if (_batchStagingActive) {
+          _batchStagedState = { base: stateLib.load(baseAtlasDir(projectRoot)), overlay: JSON.parse(JSON.stringify(preBatchOverlayState)) };
+        }
+      } else {
+        preBatchState = stateLib.load(baseAtlasDir(projectRoot));
+        if (_batchStagingActive) {
+          _batchStagedState = JSON.parse(JSON.stringify(preBatchState));
+        }
+      }
+      let skipped = 0;
+      try {
+        for (const entity of entities) {
+          entity.flags.skipUndo = true;
+          const result = await processAddEntity(entity.type, entity.name, entity.flags);
+          if (result === 'skipped') skipped++;
+        }
+      } catch (e) {
+        _batchStagingActive = false;
+        _batchStagedState = null;
+        throw e;
+      }
+
+      // Commit staged state: single durable write + batch undo snapshot
+      if (!flags['dry-run']) {
+        if (flags.spec) {
+          stateLib.saveOverlay(overlayDir, _batchStagedState.overlay);
+          stateLib.writeUndoSnapshot(overlayDir, { base: _batchStagedState.base, overlay: preBatchOverlayState });
+          stateLib.appendHistory(overlayDir, {
+            action: `batch add (${entities.length} entities: ${entities.map(e => `${e.type}:${e.name}`).join(', ')})`,
+            args: entities.map(e => ({ type: e.type, name: e.name, flags: e.flags })),
+            mode: 'spec',
+          });
+        } else {
+          stateLib.save(baseAtlasDir(projectRoot), _batchStagedState);
+          stateLib.writeUndoSnapshot(baseAtlasDir(projectRoot), { base: preBatchState });
+          stateLib.appendHistory(baseAtlasDir(projectRoot), {
+            action: `batch add (${entities.length} entities: ${entities.map(e => `${e.type}:${e.name}`).join(', ')})`,
+            args: entities.map(e => ({ type: e.type, name: e.name, flags: e.flags })),
+            mode: 'base',
+          });
+        }
+        _batchStagingActive = false;
+        _batchStagedState = null;
+      }
+
+      // Determine if any entity requested --no-render
+      const anyEntityNoRender = entities.some(e => e.flags['no-render']);
+      if (!flags['dry-run'] && !flags['no-render'] && !anyEntityNoRender) {
+        await runRender({ projectRoot, flags });
+      }
+      const dryRunPrefix = flags['dry-run'] ? ' (dry-run, no changes written)' : '';
+      const applied = entities.length - skipped;
+      if (skipped > 0 && applied > 0) {
+        io.stdout.write(`atlas: add applied — ${applied} entity(ies) added, ${skipped} skipped (already exists)${dryRunPrefix}\n`);
+      } else if (applied > 0) {
+        io.stdout.write(`atlas: add applied — ${applied} entities${dryRunPrefix}\n`);
+      } else if (skipped > 0) {
+        io.stdout.write(`atlas: add — all ${skipped} entities already exist, skipped${dryRunPrefix}\n`);
+      }
+      if (entities.length > 0) {
+        for (const e of entities) {
+          io.stdout.write(`  ${e.type}: "${e.name}"${dryRunPrefix}\n`);
+        }
+      }
+      return 0;
+    }
+
+    // Batch mode without interleaved flags — simple sequential pairs
+    let preBatchState, preBatchOverlayState;
+    let overlayDir;
+    if (!flags['dry-run']) {
+      _batchStagingActive = true;
+    }
+    if (flags.spec) {
+      const specResult = specOverlayDir(projectRoot, flags.spec);
+      overlayDir = specResult.overlayDir;
+      preBatchOverlayState = JSON.parse(JSON.stringify(stateLib.loadOverlay(overlayDir)));
+      if (_batchStagingActive) {
+        _batchStagedState = { base: stateLib.load(baseAtlasDir(projectRoot)), overlay: JSON.parse(JSON.stringify(preBatchOverlayState)) };
+      }
+    } else {
+      preBatchState = stateLib.load(baseAtlasDir(projectRoot));
+      if (_batchStagingActive) {
+        _batchStagedState = JSON.parse(JSON.stringify(preBatchState));
+      }
+    }
+
+    // Pre-validate all entities before processing
+    const simpleEntities = [];
+    for (let i = 0; i < args.length; i += 2) {
+      const entityType = args[i];
+      const entityName = args[i + 1];
+      if (!entityName) throw new Error(`Missing name for entity type: ${entityType}`);
+      simpleEntities.push({ type: entityType, name: entityName, flags: { ...flags, skipUndo: true } });
+    }
+    let preError;
+    for (const entity of simpleEntities) {
+      try {
+        validateEntity(entity);
+      } catch (e) {
+        preError = e;
+        break;
+      }
+    }
+    if (preError) throw preError;
+
+    let skipped = 0;
+    try {
+      for (const entity of simpleEntities) {
+        const result = await processAddEntity(entity.type, entity.name, entity.flags);
+        if (result === 'skipped') skipped++;
+      }
+    } catch (e) {
+      _batchStagingActive = false;
+      _batchStagedState = null;
+      throw e;
+    }
+
+    // Commit staged state: single durable write + batch undo snapshot
+    if (!flags['dry-run']) {
+      if (flags.spec) {
+        stateLib.saveOverlay(overlayDir, _batchStagedState.overlay);
+        stateLib.writeUndoSnapshot(overlayDir, { base: _batchStagedState.base, overlay: preBatchOverlayState });
+        stateLib.appendHistory(overlayDir, {
+          action: `batch add (${simpleEntities.length} entities: ${simpleEntities.map(e => `${e.type}:${e.name}`).join(', ')})`,
+          args: simpleEntities.map(e => ({ type: e.type, name: e.name, flags: e.flags })),
+          mode: 'spec',
+        });
+      } else {
+        stateLib.save(baseAtlasDir(projectRoot), _batchStagedState);
+        stateLib.writeUndoSnapshot(baseAtlasDir(projectRoot), { base: preBatchState });
+        stateLib.appendHistory(baseAtlasDir(projectRoot), {
+          action: `batch add (${simpleEntities.length} entities: ${simpleEntities.map(e => `${e.type}:${e.name}`).join(', ')})`,
+          args: simpleEntities.map(e => ({ type: e.type, name: e.name, flags: e.flags })),
+          mode: 'base',
+        });
+      }
+      _batchStagingActive = false;
+      _batchStagedState = null;
+    }
+
+    const anyEntityNoRender = simpleEntities.some(e => e.flags['no-render']);
+    if (!flags['dry-run'] && !flags['no-render'] && !anyEntityNoRender) {
+      await runRender({ projectRoot, flags });
+    }
+    const dryRunPrefix = flags['dry-run'] ? ' (dry-run, no changes written)' : '';
+    const applied = simpleEntities.length - skipped;
+    if (skipped > 0) {
+      io.stdout.write(`atlas: add applied — ${applied} entity(ies) added, ${skipped} skipped (already exist)${dryRunPrefix}\n`);
+    } else {
+      io.stdout.write(`atlas: add applied — ${applied} entities${dryRunPrefix}\n`);
+    }
+    for (const entity of simpleEntities) {
+      io.stdout.write(`  ${entity.type}: "${entity.name}"${dryRunPrefix}\n`);
+    }
+    return 0;
+  }
+
+  // Single-entity mode
+  const type = args[0];
+  const name = args[1];
+
+  if (!type || !name) {
+    throw new Error('Usage: apltk architecture add <feature|module|relation> <name> [relation-flags...]');
+  }
+
+  validateEntity({ type, name, flags });
+  const addResult = await processAddEntity(type, name, flags);
+  if (addResult !== 'skipped' && !flags['dry-run'] && !flags['no-render']) {
+    await runRender({ projectRoot, flags });
+  }
+  if (addResult === 'skipped') {
+    io.stdout.write(`atlas: no change — ${type} "${name}" already exists\n`);
+  } else {
+    const addedFlags = [];
+    const flagConsumed = {
+      feature: new Set(['depends-on']),
+      module: new Set(['part-of', 'depends-on', 'data-flow-to', 'implements', 'deployed-on']),
+      relation: new Set(['data-flow-to', 'implements', 'deployed-on', 'depends-on']),
+    };
+    const consumed = flagConsumed[type] || new Set();
+    if (consumed.has('part-of') && flags['part-of']) addedFlags.push(`part-of: ${flags['part-of']}`);
+    if (consumed.has('depends-on') && flags['depends-on']) addedFlags.push(`depends-on: ${flags['depends-on']}`);
+    if (consumed.has('data-flow-to') && flags['data-flow-to']) addedFlags.push(`data-flow-to: ${flags['data-flow-to']}`);
+    if (consumed.has('implements') && flags.implements) addedFlags.push(`implements: ${flags.implements}`);
+    if (consumed.has('deployed-on') && flags['deployed-on']) addedFlags.push(`deployed-on: ${flags['deployed-on']}`);
+    const summary = addedFlags.length > 0 ? ` (${addedFlags.join(', ')})` : '';
+    io.stdout.write(`atlas: add applied — ${type} "${name}"${summary}\n`);
+  }
+  return 0;
+}
+
+function validateEntity(entity) {
+  if (!entity.type || !entity.name) throw new Error('Missing entity type or name');
+  if (entity.type === 'module' && !entity.flags['part-of']) {
+    throw new Error('Missing required flag --part-of for module');
+  }
+  if (entity.type === 'relation' && !entity.flags['data-flow-to'] && !entity.flags.implements && !entity.flags['deployed-on'] && !entity.flags['depends-on']) {
+    throw new Error('Missing required flag --data-flow-to, --implements, --deployed-on, or --depends-on for relation');
+  }
+}
+
+async function verbRemove(args, flags, projectRoot, io) {
+  const type = args[0];
+  const name = args[1];
+
+  if (!type || !name) {
+    throw new Error('Usage: apltk architecture remove <feature|module|relation> <name>');
+  }
+
+  switch (type) {
+    case 'feature':
+      await verbFeature('remove', {
+        slug: name,
+        spec: flags.spec,
+        'no-render': flags['no-render'],
+        project: flags.project,
+        'dry-run': flags['dry-run'],
+      }, projectRoot, io);
+      if (!flags['dry-run']) {
+        io.stdout.write(`atlas: remove applied — feature "${name}"\n`);
+      }
+      return 0;
+    case 'module': {
+      if (!flags['part-of']) throw new Error('Missing required flag --part-of for module');
+      await verbSubmodule('remove', {
+        feature: flags['part-of'],
+        slug: name,
+        spec: flags.spec,
+        'no-render': flags['no-render'],
+        project: flags.project,
+        'dry-run': flags['dry-run'],
+      }, projectRoot, io);
+      if (!flags['dry-run']) {
+        io.stdout.write(`atlas: remove applied — module "${name}"\n`);
+      }
+      return 0;
+    }
+    case 'relation': {
+      if (!flags.to) throw new Error('Missing required flag --to for relation (--id is optional for precision targeting)');
+      await verbEdge('remove', {
+        from: name,
+        to: flags.to,
+        kind: flags.kind,
+        id: flags.id,
+        spec: flags.spec,
+        'no-render': flags['no-render'],
+        project: flags.project,
+        'dry-run': flags['dry-run'],
+      }, projectRoot, io);
+      if (!flags['dry-run']) {
+        const detail = flags.kind ? ` (kind: ${flags.kind})` : '';
+        io.stdout.write(`atlas: remove applied — relation "${name}"${detail}\n`);
+      }
+      return 0;
+    }
+    default:
+      throw new Error(`Unknown entity type: ${type}. Supported types: feature, module, relation`);
+  }
 }
 
 async function verbValidate(flags, projectRoot, io) {
@@ -752,8 +1595,31 @@ async function verbUndo(flags, projectRoot, io) {
 }
 
 async function verbOpen(flags, projectRoot, io) {
+  if (flags.spec) {
+    const { htmlOutDir } = specOverlayDir(projectRoot, flags.spec);
+    // Render spec overlay if needed
+    const overlayHtml = path.join(htmlOutDir, 'index.html');
+    if (!fs.existsSync(overlayHtml)) {
+      await runRender({ projectRoot, flags });
+    }
+    if (!fs.existsSync(overlayHtml)) {
+      io.stderr.write(`Spec overlay not found after render: ${overlayHtml}\n`);
+      return 1;
+    }
+    io.stdout.write(`${overlayHtml}\n`);
+    if (!flags['no-open']) openInBrowser(overlayHtml);
+    return 0;
+  }
+  // Existing base atlas logic
   const atlas = path.join(projectRoot, ATLAS_INDEX_REL);
   if (!fs.existsSync(atlas)) {
+    // Before rendering a fresh (empty) base atlas, check if spec overlays exist
+    const plansRoot = path.join(projectRoot, PLANS_REL);
+    const diffDirs = walkArchitectureDiffDirs(plansRoot);
+    if (diffDirs.length > 0) {
+      io.stdout.write(`Base atlas not found. Use --spec <dir> to open a spec overlay, or remove spec overlays to start fresh.\n`);
+      return 0;
+    }
     await runRender({ projectRoot, flags: { ...flags, spec: undefined } });
   }
   if (!fs.existsSync(atlas)) {
@@ -768,7 +1634,7 @@ async function verbOpen(flags, projectRoot, io) {
 async function verbDiff(flags, projectRoot, io) {
   const outDir = flags.out ? path.resolve(String(flags.out)) : path.join(projectRoot, DEFAULT_DIFF_OUT_REL);
   fs.mkdirSync(outDir, { recursive: true });
-  const changes = await collectDiffChanges({ projectRoot, outDir });
+  const changes = await collectDiffChanges({ projectRoot, outDir, flags });
 
   const html = renderDiffViewer({ changes, projectRoot, outDir });
   const indexPath = path.join(outDir, 'index.html');
@@ -780,7 +1646,18 @@ async function verbDiff(flags, projectRoot, io) {
   return 0;
 }
 
-async function collectDiffChanges({ projectRoot, outDir }) {
+async function collectDiffChanges({ projectRoot, outDir, flags = {} }) {
+  if (flags.spec) {
+    // Single spec mode: only collect changes for the specified spec
+    const specPath = path.isAbsolute(String(flags.spec)) ? String(flags.spec) : path.resolve(projectRoot, String(flags.spec));
+    const { overlayDir } = specOverlayDir(projectRoot, flags.spec);
+    if (hasOverlayState(overlayDir)) {
+      return await collectSingleSpecChanges({ projectRoot, specDir: specPath, specLabel: String(flags.spec) });
+    }
+    // Fallback to HTML manifest
+    return collectHtmlManifestChanges({ projectRoot, diffDir: path.join(specPath, DIFF_DIRNAME), specLabel: String(flags.spec) });
+  }
+  // Existing behavior: walk all plans directories
   const plansRoot = path.join(projectRoot, PLANS_REL);
   const groups = groupDiffDirsByBatch({ projectRoot, plansRoot });
   const changes = [];
@@ -789,7 +1666,7 @@ async function collectDiffChanges({ projectRoot, outDir }) {
     if (group.kind === 'batch') {
       changes.push(...await collectBatchGroupChanges({ projectRoot, outDir, group }));
     } else {
-      changes.push(...collectSingleSpecChanges({ projectRoot, specDir: group.specDir, specLabel: group.label }));
+      changes.push(...await collectSingleSpecChanges({ projectRoot, specDir: group.specDir, specLabel: group.label }));
     }
   }
 
@@ -835,7 +1712,7 @@ function findBatchRoot(specDir, plansRoot) {
   return null;
 }
 
-function collectSingleSpecChanges({ projectRoot, specDir, specLabel }) {
+async function collectSingleSpecChanges({ projectRoot, specDir, specLabel }) {
   const overlayDir = path.join(specDir, DIFF_DIRNAME, ATLAS_DIRNAME);
   if (!hasOverlayState(overlayDir)) {
     return collectHtmlManifestChanges({ projectRoot, diffDir: path.join(specDir, DIFF_DIRNAME), specLabel });
@@ -844,10 +1721,20 @@ function collectSingleSpecChanges({ projectRoot, specDir, specLabel }) {
   const overlay = stateLib.loadOverlay(overlayDir);
   const merged = stateLib.mergeOverlay(base, overlay);
   const diff = stateLib.diffPages(base, merged);
+  const htmlRoot = path.join(specDir, DIFF_DIRNAME);
+  // Render merged state so afterPath files exist even when the overlay
+  // was created with --no-render. Use scoped render to emit only pages
+  // that differ from the base atlas.
+  await renderLib.renderAll({
+    outDir: htmlRoot,
+    state: merged,
+    scope: renderLib.scopeFromDiff(diff),
+    removedPaths: renderLib.removedPagePathsFromDiff(diff),
+  });
   return diffToChanges({
     projectRoot,
     specLabel,
-    htmlRoot: path.join(specDir, DIFF_DIRNAME),
+    htmlRoot,
     diff,
   });
 }
@@ -861,7 +1748,7 @@ function hasOverlayState(overlayDir) {
 async function collectBatchGroupChanges({ projectRoot, outDir, group }) {
   const batchRootOverlayDir = path.join(group.key, DIFF_DIRNAME, ATLAS_DIRNAME);
   if (hasOverlayState(batchRootOverlayDir)) {
-    return collectSingleSpecChanges({ projectRoot, specDir: group.key, specLabel: group.label });
+    return await collectSingleSpecChanges({ projectRoot, specDir: group.key, specLabel: group.label });
   }
 
   const memberOverlayDirs = group.members.map((member) => ({
@@ -869,9 +1756,10 @@ async function collectBatchGroupChanges({ projectRoot, outDir, group }) {
     overlayDir: path.join(member.specDir, DIFF_DIRNAME, ATLAS_DIRNAME),
   }));
   if (memberOverlayDirs.some((member) => !hasOverlayState(member.overlayDir))) {
-    return group.members.flatMap((member) => (
+    const memberChanges = await Promise.all(group.members.map((member) => (
       collectSingleSpecChanges({ projectRoot, specDir: member.specDir, specLabel: member.label })
-    ));
+    )));
+    return memberChanges.flat();
   }
 
   const base = stateLib.load(baseAtlasDir(projectRoot));
@@ -1131,15 +2019,20 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
     args.splice(verbIdx, 1);
   }
   let subverb = null;
-  const multiVerbs = new Set(['feature', 'submodule', 'function', 'variable', 'dataflow', 'error', 'edge', 'meta', 'actor']);
-  if (multiVerbs.has(verb)) {
+  if (MULTI_VERBS.has(verb)) {
     const subverbIdx = findFirstPositional(args);
     if (subverbIdx >= 0) {
       subverb = args[subverbIdx];
       args.splice(subverbIdx, 1);
     }
   }
-  const { flags } = parseFlags(args);
+  const rawArgs = [...args];
+  const { flags, positional: rest } = parseFlags(args);
+
+  if (verb === 'apply' || verb === 'template') {
+    io.stderr.write(`Error: "${verb}" has been removed. Use "apltk architecture add <feature|module|relation>" instead.\n`);
+    return 1;
+  }
 
   if (verb === 'help' || verb === '--help' || verb === '-h' || flags.help) {
     const helpText = explicitVerb && verb !== 'help' && verb !== '--help' && verb !== '-h'
@@ -1179,11 +2072,18 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
       case 'meta': await verbMeta(subverb, flags, projectRoot, io); break;
       case 'actor': await verbActor(subverb, flags, projectRoot, io); break;
       case 'merge': return await verbMerge(flags, projectRoot, io);
+      case 'add':
+        if (rest.length > 2) {
+          return await verbAdd(rawArgs, flags, projectRoot, io);
+        }
+        return await verbAdd(rest, flags, projectRoot, io);
+      case 'remove': return await verbRemove(rest, flags, projectRoot, io);
       default:
         io.stderr.write(`Unknown verb: ${verb}\n\n${buildArchitectureHelpPage()}\n`);
         return 1;
     }
-    if (!flags['dry-run']) {
+    // Generic success for verbs without their own return — add/remove return above
+    if (verb !== 'add' && verb !== 'remove' && !flags['dry-run']) {
       io.stdout.write(`atlas: ${verb}${subverb ? ` ${subverb}` : ''} applied\n`);
     }
     return 0;
@@ -1196,6 +2096,7 @@ async function dispatch(argv, io = { stdout: process.stdout, stderr: process.std
 module.exports = {
   dispatch,
   parseFlags,
+  MULTI_VERBS,
   findProjectRoot,
   resolveProjectRoot,
   loadResolvedState,

@@ -83,13 +83,77 @@ test('HelpTextBuilder.overview surfaces architecture examples', async () => {
   assert.match(text, /Result:/);
 });
 
-test('atlas CLI returns action-specific help for nested verbs', async () => {
-  const io = makeIo();
-  const code = await atlasCli.dispatch(['edge', 'add', '--help'], io);
-  assert.equal(code, 0);
-  assert.match(io.stdout_text, /apltk architecture edge add/);
-  assert.match(io.stdout_text, /--from/);
-  assert.match(io.stdout_text, /Examples:/);
+test('atlas CLI redirects hidden verb action help to public unified help', async () => {
+  // FIX-06: hidden verbs such as edge/feature/submodule with action subverbs
+  // (add/set/remove) redirect to public unified help instead of exposing fine-grained syntax.
+  const hiddenVerbCases = [
+    ['edge', 'add'],
+    ['feature', 'add'],
+    ['submodule', 'add'],
+  ];
+
+  for (const [verb, action] of hiddenVerbCases) {
+    const io = makeIo();
+    const code = await atlasCli.dispatch([verb, action, '--help'], io);
+    assert.equal(code, 0, `exit code for ${verb} ${action} --help`);
+
+    // Must NOT expose hidden fine-grained syntax
+    assert.doesNotMatch(io.stdout_text, new RegExp(`apltk architecture ${verb} ${action}`),
+      `should not contain fine-grained syntax for ${verb} ${action}`);
+
+    // Must include public unified help (apltk architecture add)
+    assert.match(io.stdout_text, /apltk architecture add/,
+      `should contain public unified add help for ${verb} ${action}`);
+
+    // Must include key public usage patterns from the unified help
+    assert.match(io.stdout_text, /Usage:/,
+      `should include Usage section for ${verb} ${action}`);
+  }
+});
+
+test('REGTEST-48: cli-help.js source does not contain hidden fine-grained command strings', () => {
+  const helpPath = path.join(__dirname, '..', 'skills', 'init-project-html', 'lib', 'atlas', 'cli-help.js');
+  const source = fs.readFileSync(helpPath, 'utf8');
+
+  // Hidden verb-action usage strings must not appear anywhere in source
+  const hiddenCommands = [
+    'apltk architecture feature add',
+    'apltk architecture submodule add',
+    'apltk architecture edge add',
+  ];
+
+  for (const cmd of hiddenCommands) {
+    assert.ok(
+      !source.includes(cmd),
+      `${path.relative(process.cwd(), helpPath)} must not contain hidden command string "${cmd}" (should use unified public syntax)`,
+    );
+  }
+
+  // Catch-all: no hidden verb+action pattern should remain
+  const hiddenVerbActionRe = /apltk architecture (?:feature|submodule|function|variable|dataflow|error|edge|meta|actor) (?:add|set|remove|reorder)/;
+  assert.doesNotMatch(
+    source,
+    hiddenVerbActionRe,
+    `${path.relative(process.cwd(), helpPath)} must not contain any hidden verb+action usage strings`,
+  );
+});
+
+test('REGTEST-42: active docs do not expose fine-grained architecture verbs', () => {
+  const projectRoot = path.resolve(__dirname, '..');
+  const filesToScan = [
+    path.join(projectRoot, 'skills', 'design', 'references', 'architecture.md'),
+    path.join(projectRoot, 'skills', 'update-project-html', 'SKILL.md'),
+    path.join(projectRoot, 'skills', 'init-project-html', 'references', 'TEMPLATE_SPEC.md'),
+  ];
+  const re = /apltk architecture (feature|submodule|function|variable|dataflow|error|edge|meta|actor) (add|set|remove|reorder)/;
+  for (const filePath of filesToScan) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    assert.doesNotMatch(
+      content,
+      re,
+      `${filePath} should not expose fine-grained architecture verbs`,
+    );
+  }
 });
 
 test('open subcommand prints atlas path through atlas CLI', async () => {

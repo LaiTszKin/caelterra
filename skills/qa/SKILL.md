@@ -17,21 +17,12 @@ Worker prompts are written to individual files under `<spec_dir>/fix/` (single s
 
 ## Acceptance Criteria
 
-- `docs/plans/<YYYY-MM-DD>/<spec_name>/FIX.md` is produced and placed in the spec directory (same level as REPORT.md)
-- FIX.md is a **self-contained fix coordinator prompt**, containing:
-  - Coordinator role definition
-  - Issue inventory with dependency analysis
-  - Worker prompt index referencing `fix/*.md` files
-  - Pre-written worker prompts for every fix and regression test (stored in `fix/*.md`)
-  - Regression test design for every fix
-  - Batch schedule (fix batches + regression test batches + final verification)
-  - Error recovery strategy
-  - Boundary rules
-- Worker prompts are stored in `<spec_dir>/fix/*.md` or `<batch_dir>/fix/*.md`, one prompt per file
-- FIX.md References section cites:
-  - Worker prompt file paths (`fix/*.md`)
-  - All code file paths that need modification across all fixes and regression tests
-- **Every issue in REPORT.md (including P2/P3) has a complete fix plan with a corresponding worker prompt.** No issue may be deferred to a future round or marked as "handle later."
+- `docs/plans/<YYYY-MM-DD>/<spec_name>/FIX.md` is produced in the spec directory (same level as REPORT.md)
+- FIX.md is a **self-contained fix coordinator prompt** — the coordinator can execute it without referring back to any other document
+- Every issue in REPORT.md (P0–P3) has a corresponding fix worker prompt under `fix/`
+- Every fix has a corresponding regression test worker prompt under `fix/`
+- Every worker prompt is self-contained with concrete file-level instructions and verification commands
+- All code file paths that need modification are referenced somewhere in FIX.md or the worker prompts
 
 ## Workflow
 
@@ -56,41 +47,13 @@ Each subagent understands the actual code context of their assigned issue to ena
 
 **No-defer rule**: Every issue in REPORT.md — P0, P1, P2, and P3 — must have a complete fix plan in this FIX.md. There is no "handle later" or "defer to next round." If the number of issues is large, use batch scheduling to distribute them across phases, but every issue must be assigned to a specific batch with a complete worker prompt.
 
-For each issue in REPORT.md (in P0 → P1 → P2 → P3 order) → FIX.md Section 5 (Fix Details):
-
-- **Root cause analysis**: Determine the root cause through code reading
-- **Fix approach**: Describe concrete changes (which files, which functions, how to modify)
-- **Verification**: Define how to verify the fix
-- **Complexity classification**:
-  - **Simple fix**: Clear change within a single file
-  - **Complex fix**: Cross-file, requires deep understanding of execution paths — worker prompt needs more context
+For each issue in REPORT.md (in P0 → P1 → P2 → P3 order), do root cause analysis through code reading, design the fix approach, classify complexity (simple vs cross-file), and define how to verify it. Fix details are encoded into worker prompts, not stored inline in FIX.md.
 
 ### 4. Design Regression Tests for Each Fix
 
-For every fix issue, design a concrete regression test → FIX.md Section 5 (Fix Details, regression test field) → worker prompt in `fix/*REGtest*.md`.
+For every fix issue, design a concrete regression test. Each regression test should have a clear oracle that fails on the unfixed code and passes after the fix is applied. Choose the test type based on the issue: unit tests for logic errors, integration tests for state/contract errors, etc. The test design is encoded into the REGTEST worker prompt.
 
-Design principles:
-- **Every P0/P1 issue needs at least one regression test.** For P2/P3 issues, if automated testing is impractical, define manual verification steps.
-- **The regression test must fail on the unfixed code and pass after the fix is applied.** This is the core oracle.
-- Test type selection:
-  - Logic errors (wrong output) → Unit test, directly test the fixed function with input/output pairs that would fail before the fix
-  - State errors (intermittent, order-dependent) → Integration test, simulate the trigger condition
-  - Integration errors (boundary/contract) → Integration or contract test
-  - Hallucinated code → Unit test verifying the code is actually executed
-  - Architecture defects → Integration test verifying the new structure works correctly
-
-**Regression test design format** (stored in Fix Details):
-
-```
-- Test ID: REGTEST-{sequence}
-- Type: [Unit / Integration / E2E]
-- Location: [file path, new or existing file]
-- Scenario: GIVEN/WHEN/THEN
-- Oracle: [pass condition — must fail before fix, must pass after fix]
-- Related fix: FIX-{sequence}
-```
-
-### 5. Analyze Fix Dependencies → FIX.md Section 4
+### 5. Analyze Fix Dependencies
 
 - **File overlap dependency**: Multiple issues touch the same file → must be sequential. This is a hard constraint — parallel workers are only permitted when file sets have ZERO overlap, regardless of logical independence
 - **Logical dependency**: Fix B depends on Fix A being completed first
@@ -153,64 +116,52 @@ Use `assets/templates/REGTEST_WORKER.md`. The template follows the P1-P5 archite
 - Pure documentation or comment fixes
 - Extremely simple fixes that can be combined with their regression test in the same worker
 
-### 8. Create Batch Schedule → FIX.md Section 7
+### 8. Create Batch Schedule (→ COORDINATION section)
 
-**Batch partitioning principles (file overlap and logical dependency are the hard gates):**
-- Fix batches: Ordered by dependencies. P0 issues first. Within each batch, workers require ZERO file overlap AND no logical dependency to run in parallel — fixes with file overlap or logical dependency must be sequentialized across sub-batches.
-- Regression test batches: Dispatched **after all fixes are complete**, because tests verify the fixed code. Regression tests without file overlap can run in parallel; those sharing files must be sequential
-- Final batch: Full test suite + lint + confirmation that all issues are resolved.
+Design the batch schedule based on dependencies and file overlap. Think through:
 
-**Typical schedule:**
+- **Fix ordering**: Priority first (P0 before P1 before P2). Fixes with file overlap or logical dependencies must run sequentially. Independent fixes can be parallel in the same batch.
+- **Regression tests**: Schedule AFTER all fix batches complete. Tests without file overlap can be parallel.
+- **Final batch**: Full test suite, lint, confirmation that every issue is resolved.
 
-```
-Batch 1: Independent P0 fixes → verification
-Batch 2: Dependent P0 fixes → verification
-Batch 3: P1/P2 fixes → verification
-Batch 4: Regression test implementation (all REGTESTs in parallel)
-Batch 5: Final — full test suite + lint + cross-check REPORT.md
-```
+The exact batch layout depends on the dependency graph of the specific fixes. Describe the schedule in the COORDINATION section of FIX.md — reference worker prompts by their `fix/*.md` paths and specify verification gates for each batch.
 
-Group regression test workers by file overlap: no overlap = parallel, overlap = sub-batches.
+### 9. Define Error Recovery & Boundaries (→ RULES section)
 
-### 9. Set Verification Checkpoints and Error Recovery → FIX.md Sections 9-11
+Populate the RULES section with boundaries and error recovery rules. Think through:
 
-- Per-batch gate verification
-- Special gate for regression test batches: confirm each REGTEST worker's test fails on the unfixed code (logical check)
-- Worker failure handling (retain context → retry once → pause and report)
-- Boundary rules (ALWAYS / ASK FIRST / NEVER)
+- **Verification gates**: Every batch should have a gate that must pass before proceeding. Regression test batches need the additional check that each test fails on unfixed code.
+- **Failure handling**: What happens when a fix or test worker fails? Consider retry policies and escalation.
+- **Boundaries**: What must the coordinator always do, what should pause and ask the user, and what must it never do?
+
+Adapt the rules to the specific task — don't use a fixed template. The structure and detail should reflect the complexity of the fixes.
 
 ### 10. Fill FIX.md Sections
 
-Use `assets/templates/FIX.md`. Fill according to the table below.
+Use `assets/templates/FIX.md`. The template has three content sections — here is guidance on what each should contain:
 
-| Section | Content Source |
-|---------|---------------|
-| 1. Your Role & Rules | Fixed template (Mission from REPORT.md verdict + total issue count; Boundaries + Error Recovery are fixed scaffold; add spec-specific rules) |
-| 2. Context | Step 3 (issue inventory from REPORT.md) + Steps 5-6 (dependency analysis + file overlap) + Steps 3-4 (fix details + regression test design) |
-| 3. Execution Plan | Step 7 (worker prompts per `assets/templates/FIX_WORKER.md` and `assets/templates/REGTEST_WORKER.md`) + Step 8 (batch schedule). Per-batch verification commands from CHECKLIST.md |
-| 4. Final Verification | Fixed scaffold (meta-checks) |
-| 5. References | Worker prompt file paths (`fix/*.md`), all code file paths that need modification across all fixes/regtests, project context files, Fix History |
+**ROLE** — Define the fix coordinator's mission and responsibilities. Describe what the coordinator does (understand issues, dispatch fix/test workers, verify results) and what it avoids. Derive the mission from REPORT.md's verdict and issue count.
 
-### 11. Pre-delivery Self-Review
+**RULES** — The operating boundaries and error recovery rules you designed in step 9. Structure them clearly so the coordinator can reference them during execution.
 
-Before delivering FIX.md, verify all of the following.
+**WORKING STEPS → 1. PREPARATION** — List the files the coordinator must read before starting, with brief context on what each provides. This typically includes REPORT.md (issues), SPEC.md (original requirements), affected source files, references/, and all worker prompt files.
 
-**Worker prompt quality:**
+**WORKING STEPS → 2. COORDINATION** — The batch execution plan from steps 7-8. Describe each batch, which fixes/tests it contains, whether they run in parallel or sequentially, their dependencies, and the verification gate that must pass before proceeding. Reference worker prompts by their `fix/*.md` paths. Fix details (root cause, approach) are encoded into the worker prompts themselves, not in FIX.md.
 
-- Every worker prompt in `fix/*.md` is self-contained. Scan for phrases like "based on your findings", "fix it appropriately", "as discussed above" — these leak shared context assumptions.
-- Every fix worker prompt has concrete file-level Scope and a specific Verify command.
-- Worker prompt filenames match their fix IDs (`fix/FIX-{sequence}-*.md`, `fix/REGTEST-{sequence}-*.md`).
+**WORKING STEPS → 3. FINAL VERIFICATION** — The meta-checks that confirm every issue is resolved. Extract these from CHECKLIST.md and the issue inventory.
 
-**Coverage completeness:**
+### 11. Pre-delivery Quality Check
 
-- Every issue in REPORT.md (P0–P3) has a corresponding worker prompt. No deferred issues.
-- Every fix has a corresponding regression test (or documented manual verification steps for P2/P3 where automated testing is impractical).
+Before delivering, review the following:
 
-**Structural consistency:**
+**Worker prompts — are they truly self-contained?**
+Scan for phrases like "based on your findings", "fix it appropriately" — these leak context. Are file paths and line ranges concrete? Is the verification command precise? Do filenames match the fix IDs?
 
-- Each fix's dependency analysis matches the batch ordering. No fix scheduled before its dependencies are met.
-- Regression tests are scheduled after all fix batches complete.
-- Section 5 (References) lists all worker prompt paths and all code file paths.
+**Coverage — is anything missing?**
+Every issue in REPORT.md (P0–P3) must have a fix worker prompt. Every fix must have a regression test worker prompt (or documented manual verification steps for P2/P3 where automated testing is impractical). No issue may be deferred.
+
+**Consistency — does the schedule hold together?**
+Fix dependencies should match the batch ordering. Regression tests must be scheduled after all fix batches complete. No fix scheduled before its dependencies are met.
 
 ### 12. Produce FIX.md and Worker Prompts
 

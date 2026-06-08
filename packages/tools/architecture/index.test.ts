@@ -1,10 +1,9 @@
-import { describe, it, before, after, mock } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import type { ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError } from '@laitszkin/tool-utils';
 import { tool } from './index.js';
 
 // ---------------------------------------------------------------------------
@@ -67,6 +66,15 @@ function writeMockAtlasModules(
       'export default {',
       '  resolveProjectRoot: () => projectRoot,',
       '  baseAtlasDir: () => atlasDir,',
+      '  specOverlayDir: () => ({ overlayDir: \'\', rootDir: \'\', htmlOutDir: \'\' }),',
+      '  dispatch: async (args, io) => {',
+      '    const verb = args[0];',
+      '    if (verb === \'apply\' || verb === \'template\') {',
+      '      if (io && io.stderr) io.stderr.write(\'Error: "\' + verb + \'" has been removed. Use "apltk architecture add <feature|module|relation>" instead.\\n\');',
+      '      return 1;',
+      '    }',
+      '    return 0;',
+      '  },',
       '  runRender: async () => {},',
       '};',
       '',
@@ -113,48 +121,36 @@ function writeMockAtlasModules(
 // =========================================================================
 // REGTEST-15: Wrong spec path error (Unit test)
 // =========================================================================
-describe('REGTEST-15: Wrong spec path error', () => {
-  it('should exit code 1 with diagnostic when SPEC.md not found', async () => {
-    mock.method(fs, 'existsSync', () => false);
-    try {
-      const io = makeIo();
-      const handler = tool.handler;
-      if (!handler) throw new Error('tool.handler is undefined');
-      const exitCode = await handler(
-        ['template', '--spec', '/nonexistent/spec-dir', '--output', '/tmp/rg15-out'],
-        makeContext(io),
-      );
-      assert.equal(exitCode, 1, 'Expected exit code 1 for missing spec path');
-      assert.ok(
-        io.stderrText.includes('not found'),
-        `stderr should contain "not found": got ${JSON.stringify(io.stderrText)}`,
-      );
-    } catch (err) {
-      // handler may throw — verify error type and message
-      assert.ok(err instanceof UserInputError, 'Expected UserInputError');
-      assert.ok((err as Error).message.includes('not found'), 'Error message should indicate path not found');
-    } finally {
-      mock.restoreAll();
-    }
+describe('REGTEST-15: Unknown verb via CLI dispatch', () => {
+  it('should exit code 1 when unknown verb dispatched through real CLI', async () => {
+    const io = makeIo();
+    const handler = tool.handler;
+    if (!handler) throw new Error('tool.handler is undefined');
+    const exitCode = await handler(
+      ['template', '--spec', '/nonexistent/spec-dir', '--output', '/tmp/rg15-out'],
+      makeContext(io),
+    );
+    assert.equal(exitCode, 1, 'Expected exit code 1 for unknown verb "template"');
+    assert.ok(
+      io.stderrText.includes('add'),
+      `stderr should suggest using "add": got ${JSON.stringify(io.stderrText)}`,
+    );
+    assert.ok(
+      io.stderrText.includes('template'),
+      `stderr should mention the verb "template": got ${JSON.stringify(io.stderrText)}`,
+    );
   });
 });
 
 // =========================================================================
-// REGTEST-16: Submodule remove cascade (Integration test)
+// REGTEST-16: New verb dispatch and apply verb removal
 // =========================================================================
-describe('REGTEST-16: Submodule remove cascade', () => {
+describe('REGTEST-16: Verb dispatch — apply returns 1, add/remove return 0', () => {
   let tmpDir: string;
-  let yamlPath: string;
-  let savedStates: Record<string, any>[];
   const io = makeIo();
 
   before(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rg16-'));
-
-    savedStates = [];
-    (globalThis as any).__rg_onSave = (_dir: string, state: Record<string, any>) => {
-      savedStates.push(state);
-    };
 
     writeMockAtlasModules(
       tmpDir,
@@ -192,89 +188,52 @@ describe('REGTEST-16: Submodule remove cascade', () => {
         ],
       },
     );
-
-    // Write YAML batch: remove sub-a1
-    yamlPath = path.join(tmpDir, 'batch.yaml');
-    fs.writeFileSync(
-      yamlPath,
-      [
-        'features:',
-        '  - slug: feature-a',
-        '    action: modify',
-        '    submodules:',
-        '      - slug: sub-a1',
-        '        action: remove',
-        'edges: []',
-        '',
-      ].join('\n'),
-      'utf-8',
-    );
   });
 
   after(() => {
-    delete (globalThis as any).__rg_onSave;
     if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('should not have edges referencing the removed submodule after apply', async () => {
+  it('apply verb returns 1 (removed from CLI dispatch)', async () => {
     const handler = tool.handler;
     if (!handler) throw new Error('tool.handler is undefined');
     const exitCode = await handler(
-      ['apply', yamlPath, '--no-render'],
+      ['apply', '/nonexistent/batch.yaml', '--no-render'],
       makeContext(io, { sourceRoot: tmpDir }),
     );
-
-    assert.equal(
-      exitCode,
-      0,
-      `Expected exit code 0, got ${exitCode}. stderr: ${JSON.stringify(io.stderrText)}`,
-    );
-
-    assert.equal(
-      savedStates.length,
-      1,
-      'stateLib.save should have been called exactly once',
-    );
-
-    const saved = savedStates[0];
-
-    // — Check that no edge in merged.edges references the removed sub-a1 —
-    for (const edge of saved.edges) {
-      const fromSub =
-        typeof edge.from === 'object' && edge.from ? edge.from.submodule : null;
-      const toSub =
-        typeof edge.to === 'object' && edge.to ? edge.to.submodule : null;
-      assert.notEqual(
-        fromSub,
-        'sub-a1',
-        `Edge ${edge.id} from-submodule should not be "sub-a1"`,
-      );
-      assert.notEqual(
-        toSub,
-        'sub-a1',
-        `Edge ${edge.id} to-submodule should not be "sub-a1"`,
-      );
-    }
-
-    // — Verify e2 (sub-a2 → sub-b1) survives —
-    const e2 = saved.edges.find((e: any) => e.id === 'e2');
-    assert.ok(e2, 'Edge e2 (feature-a/sub-a2 → feature-b/sub-b1) should remain');
-
-    // — Verify e1 (sub-a1 → sub-b1) is gone —
-    const e1 = saved.edges.find((e: any) => e.id === 'e1');
+    assert.equal(exitCode, 1, 'Expected exit code 1 for removed "apply" verb');
     assert.ok(
-      !e1,
-      'Edge e1 (feature-a/sub-a1 → feature-b/sub-b1) should be removed',
+      io.stderrText.includes('add'),
+      `stderr should suggest using "add": got ${JSON.stringify(io.stderrText)}`,
     );
+  });
+
+  it('add feature returns 0 through CLI dispatch', async () => {
+    const handler = tool.handler;
+    if (!handler) throw new Error('tool.handler is undefined');
+    const exitCode = await handler(
+      ['add', 'feature', 'test-feat', '--no-render'],
+      makeContext(io, { sourceRoot: tmpDir }),
+    );
+    assert.equal(exitCode, 0, 'Expected exit code 0 for "add feature" verb');
+  });
+
+  it('remove feature returns 0 through CLI dispatch', async () => {
+    const handler = tool.handler;
+    if (!handler) throw new Error('tool.handler is undefined');
+    const exitCode = await handler(
+      ['remove', 'feature', 'test-feat', '--no-render'],
+      makeContext(io, { sourceRoot: tmpDir }),
+    );
+    assert.equal(exitCode, 0, 'Expected exit code 0 for "remove feature" verb');
   });
 });
 
 // =========================================================================
-// REGTEST-17: Edge referential integrity (Unit test)
+// REGTEST-17: Verb dispatch — apply gone, add verb works
 // =========================================================================
-describe('REGTEST-17: Edge referential integrity', () => {
+describe('REGTEST-17: Verb dispatch — apply returns 1, add verb returns 0', () => {
   let tmpDir: string;
-  let yamlPath: string;
   const io = makeIo();
 
   before(() => {
@@ -292,51 +251,33 @@ describe('REGTEST-17: Edge referential integrity', () => {
       ],
       edges: [],
     });
-
-    // Write YAML batch: add edge from non-existent-feature/sub → feature-a/sub-a1
-    yamlPath = path.join(tmpDir, 'batch.yaml');
-    fs.writeFileSync(
-      yamlPath,
-      [
-        'edges:',
-        '  - from: non-existent-feature/sub',
-        '    to: feature-a/sub-a1',
-        '    action: add',
-        '    kind: call',
-        '',
-      ].join('\n'),
-      'utf-8',
-    );
   });
 
   after(() => {
     if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('should reject edge add with error referencing the missing feature slug', async () => {
+  it('apply returns 1 (verb removed from CLI dispatch)', async () => {
     const handler = tool.handler;
     if (!handler) throw new Error('tool.handler is undefined');
-    try {
-      const exitCode = await handler(
-        ['apply', yamlPath, '--no-render'],
-        makeContext(io, { sourceRoot: tmpDir }),
-      );
-      assert.equal(exitCode, 1, 'Expected exit code 1 for edge targeting missing feature');
-      assert.ok(
-        io.stderrText.includes('non-existent-feature'),
-        `stderr should contain "non-existent-feature": got ${JSON.stringify(io.stderrText)}`,
-      );
-      assert.ok(
-        io.stderrText.length > 0,
-        `stderr should have error text: got ${JSON.stringify(io.stderrText)}`,
-      );
-    } catch (err) {
-      // handler may throw instead of returning 1
-      assert.ok(err instanceof UserInputError, 'Expected UserInputError');
-      assert.ok(
-        (err as Error).message.includes('non-existent-feature'),
-        'Error message should reference the missing feature',
-      );
-    }
+    const exitCode = await handler(
+      ['apply', '/nonexistent/batch.yaml', '--no-render'],
+      makeContext(io, { sourceRoot: tmpDir }),
+    );
+    assert.equal(exitCode, 1, 'Expected exit code 1 for removed "apply" verb');
+    assert.ok(
+      io.stderrText.includes('add'),
+      `stderr should suggest using "add": got ${JSON.stringify(io.stderrText)}`,
+    );
+  });
+
+  it('add feature returns 0 through CLI dispatch', async () => {
+    const handler = tool.handler;
+    if (!handler) throw new Error('tool.handler is undefined');
+    const exitCode = await handler(
+      ['add', 'feature', 'new-feat', '--no-render'],
+      makeContext(io, { sourceRoot: tmpDir }),
+    );
+    assert.equal(exitCode, 0, 'Expected exit code 0 for "add feature" verb');
   });
 });

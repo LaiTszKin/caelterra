@@ -311,6 +311,19 @@ function deriveOverlay(base, merged) {
   for (const slug of baseFeatures.keys()) {
     if (!mergedFeatures.has(slug)) {
       overlay.removed.features.push(slug);
+    } else {
+      // Check for removed submodules within features that exist in both states
+      const baseFeat = baseFeatures.get(slug);
+      const mergedFeat = mergedFeatures.get(slug);
+      if (baseFeat && mergedFeat) {
+        const baseSubs = new Set((baseFeat.submodules || []).map(s => s.slug));
+        const mergedSubs = new Set((mergedFeat.submodules || []).map(s => s.slug));
+        for (const subSlug of baseSubs) {
+          if (!mergedSubs.has(subSlug)) {
+            overlay.removed.submodules.push({ feature: slug, submodule: subSlug });
+          }
+        }
+      }
     }
   }
 

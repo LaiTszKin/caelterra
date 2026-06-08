@@ -57,10 +57,12 @@
 
 | | Baseline (current) | Target (after change) |
 |---|---|---|
-| CLI verbs | 20 verbs (含 `apply`/`template`/`feature`/`submodule`/etc.) | 6 verbs: `add`/`remove`/`diff`/`merge`/`render`/`open` |
+| CLI verbs | 20 verbs (含 `apply`/`template`/`feature`/`submodule`/etc.) | 6 core verbs: `add`/`remove`/`diff`/`merge`/`render`/`open`, plus retained support verbs: `validate`/`status`/`scan`/`undo` |
 | TS handler | intercepts `apply`, `template` | 不再 intercept 任何 verb（全數 delegate 到 cli.js） |
-| Help text | 列出所有 fine-grained 動詞 | 僅列出 6 個指令，fine-grained 動詞隱藏 |
+| Help text | 列出所有 fine-grained 動詞 | 列出 6 個核心指令與保留的支援指令（`validate`/`status`/`scan`/`undo`），fine-grained 動詞隱藏 |
 | Fine-grained verbs | 正常暴露給使用者 | 保留但隱藏（不阻斷，僅從 help 移除） |
+
+The `add` verb supports module relation flags `--implements`, `--deployed-on`, `--depends-on`, and `--data-flow-to` for capturing cross-entity relationships.
 
 ---
 
@@ -70,7 +72,7 @@
 
 | ID | Intent | Caller → Callee | Coupling Type | Information Crossing | Failure Propagation |
 |---|---|---|---|---|---|
-| `INT-001` | `add` 單一 entity 路由 | `verbAdd()` → `verbFeature()` / `verbSubmodule()` / `verbEdge()` | sync call | entity type, name, relation flags | 子 verb 拋錯 → `verbAdd()` 中斷回報 |
+| `INT-001` | `add` 單一 entity 路由 | `verbAdd()` → `verbFeature()` / `verbSubmodule()` / `verbEdge()` | sync call | entity type, name, relation flags (`--implements`, `--deployed-on`, `--depends-on`, `--data-flow-to`) | 子 verb 拋錯 → `verbAdd()` 中斷回報 |
 | `INT-002` | `add` batch 多 entity 路由 | `verbAdd()` → multiple calls to `performMutation()` | sync loop, sequential | entity specs, suppress auto-render flag | 任一 entity 失敗 → 回報錯誤（已成功的部分已寫入） |
 | `INT-003` | `remove` entity | `verbRemove()` → `verbFeature('remove')` / `verbSubmodule('remove')` / `*Edge` | sync call | entity type, name | 子 verb 拋錯 → 中斷回報 |
 | `INT-004` | Legacy verb 退役 | `architectureHandler()` → `cli.dispatch()` (passthrough only) | route removal | N/A | 不再有 `apply`/`template` route |
@@ -121,18 +123,17 @@ None — stdlib only, 全為 in-process 呼叫。
 | Decision | Rejected Alternatives | Lock-in Effect |
 |---|---|---|
 | `add`/`remove` verb 在 cli.js 中以 JS 實作，而非在 index.ts 以 TS 實作 | 在 TS 層實作可以獲得 type safety，但會破壞現有 delegate 架構，且需要重複現有 verb 的驗證邏輯 | `add`/`remove` 依賴現有 verb 函數的簽名一致；若未來這些 verb 簽名改變需同步更新 |
-| Batch 模式採 sequential apply with suppressed auto-render，而非 transactional | 使用 `apply` 的 atomic batch 邏輯需要暴露內部實作；建立 transaction 系統需要修改 `state.js`（out of scope） | Batch 非原子性：若中間 entity 失敗，已處理的部分已寫入磁碟。可接受 — 與現有手動順序呼叫的行為一致 |
+| Batch 模式採 sequential apply with suppressed auto-render，並實作 rollback 機制 | 使用 `apply` 的 atomic batch 邏輯需要暴露內部實作；建立完整 transaction 系統需要修改 `state.js`（out of scope）。狀態檔案 rollback 被選為實用折衷方案 | Batch 目前已實作 rollback：若中間 entity 失敗，系統自動還原狀態/overlay 檔案到 batch 開始前，確保不產生部分變更 |
 | Fine-grained verbs 保留但隱藏，而非刪除 | 刪除會破壞依賴這些內部動詞的現有腳本/測試 | 無 — 這些動詞本來就不應該被外部直接使用 |
 | Help text 採用白名單制，只列出 6 個指令 | 黑名單制（標記哪些要隱藏）需要維護隱藏清單 | 白名單較簡單 — `buildArchitectureHelpPage()` 只渲染公開 verb |
 
-### Batch 非原子性的風險評估
+### Batch 原子性保障 (自 Round 3 實作)
 
-Batch 非原子性是一個已知取捨。在真實使用場景中，agent 一次發出 3-5 個 entity 定義，如果第三個因語意錯誤失敗，前兩個已寫入。風險控制在於：
+Batch 操作目前具備完整的 rollback 機制（已在 cli.js L940-963, L1019-1027 實作）。當任一 entity 在處理過程中拋出錯誤時，系統會將狀態/overlay 檔案還原到 batch 開始前的內容，確保不會產生部分變更。注意事項：
 
-- 每個 entity 在 `performMutation` 層都有獨立驗證
-- 失敗 entity 的錯誤訊息明確，agent 可以修正後重試
-- 此行為與現有 `feature add` + `submodule add` 順序呼叫的行為完全一致
-- 如果要原子性，使用者應使用 spec 模式 + `diff` + `merge`，這套流程維持原子性
+- Rollback 還原的是 YAML 狀態檔案，不包含歷史記錄（`appendHistory` 中的條目在 rollback 後可能殘留）。
+- 此機制與 spec 模式下的 overlay rollback 行為一致（spec 模式和 base 模式都支援 rollback）。
+- 如果有強原子性需求（包括被 rollback 的 entity 不留下任何蹤跡），使用 spec 模式 + `diff` + `merge` 流程，它在更嚴格的語意下運作。
 
 ---
 

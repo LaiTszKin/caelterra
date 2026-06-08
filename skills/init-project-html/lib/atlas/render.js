@@ -94,7 +94,8 @@ function renderMacroSvg(layout, state, featureMap, edgeMetaMap) {
   const parts = [];
   parts.push(`<svg class="atlas-svg" viewBox="0 0 ${vbW} ${vbH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Project architecture atlas" data-atlas-svg="macro">`);
   parts.push('  <defs>');
-  for (const kind of ['call', 'return', 'data-row', 'failure']) {
+  const svgEdgeKinds = ['call', 'return', 'data-row', 'failure', 'dependency', 'implements', 'deployed-on'];
+  for (const kind of svgEdgeKinds) {
     parts.push(`    <marker id="arrow-${kind}" class="m-arrow m-arrow--${kind}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>`);
   }
   parts.push('  </defs>');
@@ -236,6 +237,9 @@ ${svg}
         <li><span class="legend-swatch legend-swatch--return"></span>return</li>
         <li><span class="legend-swatch legend-swatch--data-row"></span>data-row</li>
         <li><span class="legend-swatch legend-swatch--failure"></span>failure</li>
+        <li><span class="legend-swatch legend-swatch--dependency"></span>dependency</li>
+        <li><span class="legend-swatch legend-swatch--implements"></span>implements</li>
+        <li><span class="legend-swatch legend-swatch--deployed-on"></span>deployed-on</li>
       </ol>
     </section>
     <section class="atlas-index" aria-label="Submodule index">

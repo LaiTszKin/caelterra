@@ -18,17 +18,12 @@ Worker prompts are written to individual files under `<spec_dir>/plan/` (single 
 ## Acceptance Criteria
 
 - `docs/plans/<YYYY-MM-DD>/<spec_name>/PROMPT.md` is produced and placed at the root of the spec or batch spec directory
-- PROMPT.md is a **self-contained coordinator prompt**, containing:
-  - Coordinator role definition (what to do, what not to do)
-  - Task decomposition with dependency graph
-  - Worker prompt index referencing `plan/*.md` files
-  - Batch schedule with verification gates
-  - Error recovery strategy
-  - Boundary rules (ALWAYS / ASK FIRST / NEVER)
-- Worker prompts are stored in `<spec_dir>/plan/*.md` or `<batch_dir>/plan/*.md`, one prompt per file
-- PROMPT.md References section cites:
-  - Worker prompt file paths (`plan/*.md`)
-  - All code file paths that need modification across all tasks
+- PROMPT.md is a **self-contained coordinator prompt** — the coordinator can execute it without referring back to any other document
+- The coordinator's role, rules, and execution plan are clear enough that the coordinator can dispatch workers, verify results, and handle failures without ambiguity
+- Worker prompts are stored under `<spec_dir>/plan/*.md` or `<batch_dir>/plan/*.md`, one per file
+- Every worker prompt is self-contained (workers don't need access to the coordinator's context or source documents)
+- Every worker prompt has concrete file-level instructions (which files, which functions, what to change) and a verification command
+- All code file paths that need modification are referenced somewhere in PROMPT.md or the worker prompts
 
 ## Workflow
 
@@ -126,60 +121,48 @@ Based on dependency analysis and file overlap detection, build the batch schedul
 - Between batches: the previous batch must complete and pass its gate before the next batch begins
 - A final integration batch handles housekeeping tasks (lockfile update, final test suite)
 
-### 8. Define Error Recovery Strategy
+### 8. Define Error Recovery & Boundaries (→ RULES section)
 
-→ PROMPT.md Section 9 (Error Recovery).
+Populate the RULES section with boundaries and error recovery rules that fit the specific task. Think through:
 
-- Worker failure: Retry with existing context (do not create a new worker), at most one retry
-- After two failures: Pause the flow, preserve successful results from the same batch, notify the user
-- Merge conflicts: Coordinator resolves them directly
-- Test regression: Pause and report to the user
+- **What must the coordinator always do?** (e.g., verify after each batch, digest worker results, clean up temporary state)
+- **What should pause and ask the user?** (e.g., scope changes, external dependencies, repeated failures)
+- **What must the coordinator never do?** (e.g., write source code, skip verification, spawn nested workers)
+- **How should failures be handled?** Consider retry limits, escalation paths, and what happens when a worker fails mid-batch
 
-### 9. Set Boundaries
+The ALWAYS / ASK FIRST / NEVER framework is a useful structure, but adapt it as the task demands. The rules should emerge from the coordinator role and the task's specific constraints, not from a fixed template.
 
-→ PROMPT.md Section 10 (Boundaries).
+### 9. Fill PROMPT.md Sections
 
-- **ALWAYS**: Run gate verification after every batch, extract worker prompts verbatim from Section 7, digest results before deciding next step
-- **ASK FIRST**: Modify files not defined in SPEC/DESIGN, add new dependencies, two worker failures, regression with unclear cause
-- **NEVER**: Coordinator edits source code directly, workers spawn sub-workers, skip verification, issue vague instructions
+Use `assets/templates/PROMPT.md`. The template has three content sections — here is guidance on what each should contain:
 
-### 10. Fill PROMPT.md Sections
+**ROLE** — Define the coordinator's mission and responsibilities. Describe what the coordinator does, what it avoids, and what success looks like. Derive the mission from SPEC.md's Goal and business value.
 
-Use `assets/templates/PROMPT.md`. Fill each section according to the table below.
+**RULES** — The operating boundaries and error recovery rules you designed in step 8. Structure them clearly so the coordinator can reference them during execution.
 
-| Section | Content Source |
-|---------|---------------|
-| 1. Your Role & Rules | Fixed template (Mission from SPEC.md Goal + business value; Boundaries + Error Recovery are fixed scaffold; add spec-specific rules) |
-| 2. Context | SPEC.md In/Out of Scope + DESIGN.md: module list with responsibilities, interaction anchors (INT-###) and dependency order, external dependency setup order (EXT-###), system invariants, technical decisions and trade-offs |
-| 3. Execution Plan | Step 3 (task decomposition) + Step 4 (dependency analysis) + Step 6 (worker prompts per `assets/templates/WORKER_PROMPT.md`) + Step 7 (batch schedule). Per-batch verification commands from CHECKLIST.md |
-| 4. Final Verification | Fixed scaffold (meta-checks) |
-| 5. References | Worker prompt file paths (`plan/*.md`), all code file paths that need modification across all tasks, project context files, related documents |
+**WORKING STEPS → 1. PREPARATION** — List the files the coordinator must read before starting, with brief context on what each file provides. This typically includes SPEC.md (requirements), DESIGN.md (architecture), CHECKLIST.md (verification gates), references/, and all worker prompt files.
 
-### 11. Pre-delivery Self-Review
+**WORKING STEPS → 2. COORDINATION** — The batch execution plan from steps 3-7. Describe each batch, which tasks it contains, whether they run in parallel or sequentially, their dependencies, and the verification gate that must pass before proceeding. Reference worker prompt files by their `plan/*.md` paths. The format should be clear enough that the coordinator can execute without ambiguity.
 
-Before delivering PROMPT.md, verify all of the following.
+**WORKING STEPS → 3. FINAL VERIFICATION** — The meta-checks that confirm completeness. Extract these from CHECKLIST.md's verification gates.
 
-**Worker prompt quality:**
+The exact format, detail level, and structure of each section should fit the task — a simple spec needs less detail than a complex batch spec.
 
-- Every worker prompt in `plan/*.md` is self-contained. Scan for phrases like "based on your findings", "fix it appropriately", "as discussed above" — these leak shared context assumptions. If found, rewrite the prompt to include the necessary information inline.
-- Every worker prompt has a concrete file-level Scope (allowed + forbidden files listed explicitly).
-- Every worker prompt has a concrete Verify command with an expected output (not just "run tests").
-- Worker prompt filenames match their task IDs (`plan/T{batch}.{sequence}-*.md`).
+### 10. Pre-delivery Quality Check
 
-**Coverage completeness:**
+Before delivering, review the following:
 
-- Every BDD requirement from SPEC.md is addressed by at least one task in Section 3 (Task Units). If a requirement has no task, add one or document why it is already satisfied by existing code.
-- Every module from DESIGN.md has a corresponding task or is explicitly noted as unchanged.
-- Every hardening requirement from CHECKLIST.md appears in Section 4 (Final Verification) or in the Batch Schedule gates.
+**Worker prompts — are they truly self-contained?**
+Scan for phrases like "based on your findings", "fix it appropriately", "as discussed above" — these leak context assumptions. Every fact the worker needs should be written inline.
+Are file paths and line ranges concrete? Is the verification command precise (not just "run tests")?
 
-**Structural consistency:**
+**Coverage — is anything missing?**
+Every BDD requirement from SPEC.md should map to at least one task. Every DESIGN.md module should be addressed or explicitly noted as unchanged. Every CHECKLIST.md verification gate should appear somewhere in the execution plan.
 
-- Each task's Depends on field matches the batch ordering. No task scheduled in a batch before its dependencies are met.
-- Every task listed in Batch Schedule has a worker prompt in `plan/*.md` — unless it is explicitly marked as coordinator-handled.
-- No orphaned tasks (a task listed in Task Units that never appears in any batch), no missing dependencies (a Depends on field referencing a task ID that does not exist).
-- Section 5 (References) lists all worker prompt paths and all code file paths.
+**Consistency — does the schedule hold together?**
+Dependencies and batch ordering should be consistent. No task should be scheduled before its dependencies complete. No task should be orphaned (defined but never scheduled). Every worker prompt should have a matching entry in the execution plan.
 
-### 12. Produce PROMPT.md and Worker Prompts
+### 11. Produce PROMPT.md and Worker Prompts
 
 Place the PROMPT.md at the root of the spec or batch spec directory.
 Place worker prompts in `<spec_dir>/plan/` or `<batch_dir>/plan/`.

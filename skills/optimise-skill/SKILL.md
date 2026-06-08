@@ -1,123 +1,106 @@
 ---
 name: optimise-skill
-description: Applies prompt engineering to optimize agent skill SKILL.md files — reduces redundancy, separates behavioral guidance from format, aligns with proven methodology. Reads the target skill's full directory, analyzes its structure, and produces an optimized rewrite.
+description: Analyzes SKILL.md and supporting files, then produces an optimized rewrite that is clearer, more concise, and gives the agent more freedom to adapt.
 ---
 
 ## Goal
 
-Apply prompt engineering to optimize an agent skill's SKILL.md, reducing redundant expression and improving the agent's ability to understand and execute the skill effectively — without altering the skill's core purpose or deliverables.
+Analyze a skill's full directory and produce an optimized rewrite. The goal is not to change what the skill does — it's to make the skill easier for an LLM to understand and execute effectively, by removing redundancy, separating concerns, and replacing rigid instructions with guiding principles.
 
 ## Acceptance Criteria
 
-- The optimized skill's core deliverable and workflow are preserved
-- Behavioral guidance resides entirely in SKILL.md — no behavioral rules in templates or reference files
-- Templates (if any) contain format-only content — no "you should" instructions
-- Reference files contain tool usage guidance only — not required reading unless the LLM needs specific CLI flags
-- Token count is measurably reduced compared to the original (quantifiable by section/step count)
-- Every step in the workflow serves a distinct purpose — no duplicate or overlapping steps
-- Cross-file consistency is verified: no references to sections or fields that were removed or renamed
+- The skill's core deliverable and workflow are preserved unchanged
+- Behavioral guidance (what to do, how to think) lives in SKILL.md only — not in templates or reference files
+- Templates contain format-only content — the structure of the output, not instructions on how to fill it
+- Reference files are optional lookup — tool flags, API parameters — never marked as required reading
+- Token count is reduced compared to the original (fewer sections, less repetition)
+- Every workflow step serves a distinct purpose — no overlapping or duplicate steps
+- All cross-file references remain valid after changes
 
-## Workflow
+## Core Principle: Three-Layer Separation
 
-### 1. Read and Map the Skill
+A well-structured skill separates three distinct concerns:
 
-Read the skill's complete directory: SKILL.md, templates (assets/templates/), references (references/).
+| Layer | What it contains | Where it lives |
+|---|---|---|
+| **Behavioral** | How to think, what to check, what principles to follow | SKILL.md |
+| **Format** | What the output structure looks like | Template files |
+| **Tool** | CLI flags, API params, external commands | Reference files |
 
-Identify:
-- **Core deliverable**: What does this skill produce? Who consumes it?
-- **Upstream inputs**: Which documents does this skill read from previous stages?
-- **Downstream consumers**: Which documents does this skill produce, and which fields do consumers actually read?
+The most common problem in unoptimized skills is mixing these layers — templates that tell the agent what to do, SKILL.md that describes output formats, references that contain behavioral rules. Your job is to untangle them.
 
-### 2. Classify Every Section (Behavioral vs Format vs Tool)
+## Approach
 
-For every section across SKILL.md, templates, and references, classify into one of three categories:
+### 1. Read and Map
 
-| Category | Definition | Must live in |
-|----------|-----------|-------------|
-| **Behavioral guidance** | Tells the agent what to do, how to think, what to check | **SKILL.md** |
-| **Format guidance** | Shows the output structure | **Template** |
-| **Tool guidance** | CLI flags, API parameters, external tool usage | **References** (indexed, optional lookup) |
+Read the full skill directory — SKILL.md, templates, references. Before you can optimize, understand:
 
-**Common violations found during this step:**
-- Template sections containing "do this" instructions (should be in SKILL.md)
-- Reference files marked as "must read" that contain behavioral rules (should be in SKILL.md)
-- SKILL.md describing file format details better left in a template
+- **What does this skill produce** and who consumes it?
+- **What does it read** from upstream stages?
+- **Which parts actually get used** downstream vs which are decorative?
 
-### 3. Trace the Consumption Chain
+### 2. Classify and Untangle
 
-For each field in each template, trace who consumes it:
+Go through every section across all files and classify it as behavioral, format, or tool guidance. When you find content in the wrong layer, move it:
 
-```
-Field X in Template → Downstream skill Y reads it for decision Z
-                   → Nobody reads it → dead weight, remove
-```
+- **Behavioral content in templates** → move to SKILL.md, leave only the format skeleton
+- **Behavioral content in references** → move to SKILL.md, or remove if already covered
+- **Format content in SKILL.md** → keep lightweight description, move details to template
+- **Tool content in SKILL.md** → move to references/
 
-Key questions:
-- Is this column consumed by the downstream skill? Or is it just "nice to have"?
-- Is this ASCII diagram duplicating information already in a structured field?
-- Is this table expressing key-value pairs that would be clearer as natural language?
+The key question: *"If I removed this file, what would the agent lose?"* If the answer is "behavioral guidance," that content belongs in SKILL.md. If it's "structure to fill," it belongs in a template. "CLI flags to look up" belongs in references.
 
-Common pruning targets:
-- **ASCII dependency graphs**: Redundant with structured `Depends on` fields and batch schedules
-- **Key-value tables**: Labels + values expressed as `| Field | Value |` — use natural language instead
-- **File ownership tables**: Redundant with per-task `Files:` fields in task units
-- **Speculative columns**: Fields that ask for predictions (symptoms, "how will it be modified") — remove
+### 3. Trace Consumption
 
-### 4. Detect Contradictions
+For each field, section, and table in the skill's output (template), ask who actually reads it downstream. Prune what nobody consumes:
 
-Compare closely related rules across the skill's files:
+- Tables that duplicate information expressed elsewhere (e.g., an ASCII dependency graph alongside structured `Depends on` fields)
+- Columns that are "nice to have" but never referenced by downstream skills
+- Key-value pairs that would be clearer and shorter as natural language
+- Speculative fields that ask for predictions or guesses
 
-- Does the SKILL.md say one thing and the template say another? (e.g., implement SKILL.md Step 4 vs PROMPT.md NEVER rule)
-- Does a behavioral rule appear in both SKILL.md and a template, with slightly different wording?
-- Does a downstream skill's assumption about document structure conflict with upstream changes?
+### 4. Eliminate Contradictions
 
-### 5. Restructure
+Compare closely related rules across files. Contradictions confuse agents. Look for:
 
-Apply changes to align with the three-layer separation:
+- Same rule expressed with different wording in SKILL.md vs a template
+- Downstream skill assuming a structure that upstream changed
+- Two steps in the workflow that overlap in purpose or decision logic
 
-**SKILL.md** — Restructure so all behavioral guidance is here. Ensure:
-- Every step has a clear purpose, distinct from other steps
-- No step duplicates decision logic already present in another step
-- Self-review is included as its own step (for coordinator-type skills) or at the end of the last step
+### 5. Restructure SKILL.md for Clarity
 
-**Templates** — Strip to pure format:
-- Remove all behavioral instructions ("do this", "check that", "write X when Y")
-- Replace key-value tables with natural language
-- Remove speculative columns (symptoms, predictions)
-- Remove ASCII dependency graphs (redundant with structured fields)
-- Conditionally collapse empty sections (don't generate table headers for P0 if no P0 findings)
+After untangling, restructure SKILL.md so it guides the agent's thinking rather than scripting every keystroke:
 
-**References** — Keep as optional lookup:
-- No file marked "必讀" (must read) — the LLM reads them only if it needs specific CLI flags or definitions
-- If a reference file contains behavioral guidance, move it to SKILL.md first
+**Good:** "Define error recovery rules that fit the specific task. Think through retry limits, escalation paths, and what happens mid-batch. The ALWAYS / ASK FIRST / NEVER framework is one useful structure — adapt it as needed."
 
-### 6. Verify Cross-File Consistency
+**Avoid:** "Error Recovery: Worker fails → retry once. Fails again → pause. Merge conflict → coordinator resolves."
 
-Before finalizing, check:
+The former teaches the agent a thought process. The latter gives it text to copy-paste, which is brittle and task-specific.
 
-- Every field referenced by a downstream skill still exists in the optimized output
-- Section numbers and names referenced across files are updated to match changes
-- No contradictions introduced between SKILL.md and templates
-- All redundant files or sections removed
+Principles for writing guidance:
+- **Teach concepts, not steps** — explain the *why*, not just the *what*
+- **Provide frameworks, not scripts** — offer mental models the agent can adapt
+- **Ask questions** — prompt the agent to think ("What should happen when a worker fails? What's the right retry policy for this kind of task?")
+- **Describe outcomes, not methods** — "verify every issue is resolved" not "run command X and check for Y"
 
-### 7. Self-Review
+### 6. Verify Consistency
 
-Confirm all acceptance criteria are met:
+Before delivering, confirm:
 
-- [ ] Core deliverable preserved
-- [ ] No behavioral guidance in templates
-- [ ] No "required reading" references
-- [ ] Token count measurably reduced
-- [ ] No duplicate or overlapping steps
-- [ ] Cross-file consistency verified
-- [ ] All files translated to English (if the skill directory uses English naming conventions)
+- Every file referenced by downstream consumers still exists with the expected fields
+- Section names and file paths referenced across files are still valid
+- No contradictions between SKILL.md and templates
+- No behavioral guidance leaked into templates during restructuring
 
-## Examples
+### 7. Self-Check
 
-- "A skill with a 7-step workflow where Step 3 duplicates Step 2's decision logic" → Identify the duplication → Merge the two steps → Prune an unnecessary reference file → Verify no downstream consumers reference the removed content
-- "A skill whose template contains a behavioral blockquote in the history section" → Move the blockquote's instruction to SKILL.md → Keep only the format example in the template → If the instruction references a process already handled upstream, remove it entirely
-- "A coordinator skill with a 12-step SKILL.md that reimplements the prompt's execution loop" → Strip all execution steps from SKILL.md → Keep only environment setup, commit, and reporting → Ensure the prompt template fully defines the missing behavior
+- [ ] Core deliverable preserved (run the skill's original examples mentally — same inputs produce same outputs)
+- [ ] No behavioral guidance in templates — templates show structure only
+- [ ] No references marked as required reading
+- [ ] Token count and section count reduced from original
+- [ ] No duplicate or overlapping steps in the workflow
+- [ ] Cross-file references all valid
 
 ## References
 
-- `references/example_skill.md` — Example of an optimized skill structure (reference only, not required)
+- `references/example_skill.md` — Example of optimized skill structure (optional reference)
