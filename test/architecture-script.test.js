@@ -111,11 +111,39 @@ test('atlas CLI redirects hidden verb action help to public unified help', async
   }
 });
 
+test('REGTEST-48: cli-help.js source does not contain hidden fine-grained command strings', () => {
+  const helpPath = path.join(__dirname, '..', 'skills', 'init-project-html', 'lib', 'atlas', 'cli-help.js');
+  const source = fs.readFileSync(helpPath, 'utf8');
+
+  // Hidden verb-action usage strings must not appear anywhere in source
+  const hiddenCommands = [
+    'apltk architecture feature add',
+    'apltk architecture submodule add',
+    'apltk architecture edge add',
+  ];
+
+  for (const cmd of hiddenCommands) {
+    assert.ok(
+      !source.includes(cmd),
+      `${path.relative(process.cwd(), helpPath)} must not contain hidden command string "${cmd}" (should use unified public syntax)`,
+    );
+  }
+
+  // Catch-all: no hidden verb+action pattern should remain
+  const hiddenVerbActionRe = /apltk architecture (?:feature|submodule|function|variable|dataflow|error|edge|meta|actor) (?:add|set|remove|reorder)/;
+  assert.doesNotMatch(
+    source,
+    hiddenVerbActionRe,
+    `${path.relative(process.cwd(), helpPath)} must not contain any hidden verb+action usage strings`,
+  );
+});
+
 test('REGTEST-42: active docs do not expose fine-grained architecture verbs', () => {
   const projectRoot = path.resolve(__dirname, '..');
   const filesToScan = [
     path.join(projectRoot, 'skills', 'design', 'references', 'architecture.md'),
     path.join(projectRoot, 'skills', 'update-project-html', 'SKILL.md'),
+    path.join(projectRoot, 'skills', 'init-project-html', 'references', 'TEMPLATE_SPEC.md'),
   ];
   const re = /apltk architecture (feature|submodule|function|variable|dataflow|error|edge|meta|actor) (add|set|remove|reorder)/;
   for (const filePath of filesToScan) {

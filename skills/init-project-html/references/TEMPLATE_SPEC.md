@@ -27,7 +27,7 @@ resources/project-architecture/
 | summary | string | no       | Renders below the title; record scanned roots and deliberate omissions here. |
 | updatedAt | string (ISO) | auto | Touched on every save; do not set manually. |
 
-CLI: `apltk architecture meta set --title "..." --summary "..."`
+These are YAML/schema reference details. Run `apltk architecture --help` for the exact public command spelling.
 
 ### `actors`
 
@@ -36,7 +36,7 @@ CLI: `apltk architecture meta set --title "..." --summary "..."`
 | id    | kebab-case slug | yes | Stable identity. |
 | label | string | yes | Display name. |
 
-CLI: `apltk architecture actor add --id end-user --label "End user"`
+These are YAML/schema reference details. Run `apltk architecture --help` for the exact public command spelling.
 
 ### `feature`
 
@@ -49,7 +49,7 @@ CLI: `apltk architecture actor add --id end-user --label "End user"`
 | submodules | array of submodule | yes | Render-order matches list order. |
 | edges      | array of edge | no | Intra-feature edges (see below). |
 
-CLI: `apltk architecture feature add --slug <kebab> --title "..." --story "..." [--depends-on a,b]`
+CLI: `apltk architecture add feature <kebab> [--depends-on a,b]`
 
 ### `submodule`
 
@@ -63,7 +63,7 @@ CLI: `apltk architecture feature add --slug <kebab> --title "..." --story "..." 
 | dataflow   | array of dataflow step (string OR object — see below) | no | Renders the `sub-dataflow` internal flow SVG. |
 | errors     | array of error row | no | Renders the `sub-errors` table. |
 
-CLI: `apltk architecture submodule add --feature X --slug Y --kind api --role "..."`
+CLI: `apltk architecture add module <slug> --part-of <feature> [--kind service]`
 
 ### `function` row
 
@@ -75,7 +75,7 @@ CLI: `apltk architecture submodule add --feature X --slug Y --kind api --role ".
 | side    | enum `pure` `io` `write` `tx` `lock` `network` | no | Side-effect chip. |
 | purpose | string | no | One-line business purpose. |
 
-CLI: `apltk architecture function add --feature X --submodule Y --name fn --in "..." --out "..." --side tx --purpose "..."`
+These are YAML/schema reference details. Run `apltk architecture --help` for the exact public command spelling.
 
 ### `variable` row
 
@@ -86,7 +86,7 @@ CLI: `apltk architecture function add --feature X --submodule Y --name fn --in "
 | scope   | enum `call` `tx` `persist` `instance` `loop` | no | Lifetime/scope chip. |
 | purpose | string | no  | **Business** purpose — why this identifier exists, which branch it gates, what breaks without it. |
 
-CLI: `apltk architecture variable add --feature X --submodule Y --name v --type T --scope call --purpose "..."`
+These are YAML/schema reference details. Run `apltk architecture --help` for the exact public command spelling.
 
 ### `dataflow` step
 
@@ -99,13 +99,9 @@ Each step is either a plain string OR an object with one required and three opti
 | reads   | array of variable names | no | Each name must be a `variable` declared in the SAME sub-module. Shows up as `← reads: …` chip. |
 | writes  | array of variable names | no | Same constraint as `reads`. Shows up as `→ writes: …` chip. |
 
-Appended at the tail by default; pass `--at N` to insert at index N. Reorder with `apltk architecture dataflow reorder --feature X --submodule Y --from i --to j`. `--reads` / `--writes` accept comma-separated lists (`--reads "a, b"`).
+Appended at the tail by default. `--reads` / `--writes` accept comma-separated lists.
 
-CLI:
-
-```
-apltk architecture dataflow add --feature X --submodule Y --step "..." [--fn <declared-fn>] [--reads "v1,v2"] [--writes "v3,v4"]
-```
+These are YAML/schema reference details. Run `apltk architecture --help` for the exact public command spelling.
 
 ### `error` row
 
@@ -115,7 +111,7 @@ apltk architecture dataflow add --feature X --submodule Y --step "..." [--fn <de
 | when  | string | no | Condition that raises this error. |
 | means | string | no | Observable outcome (HTTP status, user feedback). |
 
-CLI: `apltk architecture error add --feature X --submodule Y --name ErrCode --when "..." --means "..."`
+These are YAML/schema reference details. Run `apltk architecture --help` for the exact public command spelling.
 
 ### `edge`
 
@@ -127,7 +123,7 @@ CLI: `apltk architecture error add --feature X --submodule Y --name ErrCode --wh
 | kind  | enum `call` `return` `data-row` `failure` | yes | Drives stroke/dash/colour and arrow head. |
 | label | string | no | Rendered at the middle of the edge path. |
 
-CLI: `apltk architecture edge add --from <feature>[/sub] --to <feature>[/sub] --kind call --label "..."`
+CLI: `apltk architecture add relation <feature/submodule> --data-flow-to <feature/submodule>`
 
 ### `evidence` (shared, optional on every entity above)
 

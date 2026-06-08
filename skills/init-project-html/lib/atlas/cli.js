@@ -43,6 +43,11 @@ const { buildArchitectureHelpPage } = cliHelp;
 const BOOLEAN_FLAGS = new Set(['no-render', 'no-open', 'help', 'dry-run', 'json']);
 const MULTI_VERBS = new Set(['feature', 'submodule', 'function', 'variable', 'dataflow', 'error', 'edge', 'meta', 'actor']);
 
+// Module-level staging state for batch add atomicity.
+// When active, all mutations apply to an in-memory clone; single durable write on success.
+let _batchStagingActive = false;
+let _batchStagedState = null;
+
 /**
  * formatFix generates apltk CLI commands from structured params.
  * The fix suggestions appear only in validation/status error output, not in help.
@@ -193,6 +198,15 @@ function baseHtmlOutDir(projectRoot) {
 }
 
 function loadResolvedState(projectRoot, flags) {
+  // In batch staging mode, return from the in-memory staged state
+  // (includes cumulative changes from previously processed entities)
+  if (_batchStagingActive) {
+    if (flags.spec) {
+      const merged = stateLib.mergeOverlay(_batchStagedState.base, _batchStagedState.overlay);
+      return { base: _batchStagedState.base, merged, overlay: _batchStagedState.overlay };
+    }
+    return { base: _batchStagedState, merged: _batchStagedState, overlay: null };
+  }
   const base = stateLib.load(baseAtlasDir(projectRoot));
   if (!flags.spec) return { base, merged: base, overlay: null };
   const { overlayDir } = specOverlayDir(projectRoot, flags.spec);
@@ -234,6 +248,21 @@ async function performMutation(projectRoot, flags, action, args, mutate, io) {
     }
     return;
   }
+
+  // Batch staging mode: apply mutation to in-memory staged state without disk writes.
+  // All mutations accumulate in _batchStagedState; a single durable write happens after
+  // all entities in the batch succeed, eliminating the crash-window risk of per-entity saves.
+  if (_batchStagingActive) {
+    if (flags.spec) {
+      const merged = stateLib.mergeOverlay(_batchStagedState.base, _batchStagedState.overlay);
+      mutate(merged, _batchStagedState.base, _batchStagedState.overlay);
+      _batchStagedState.overlay = stateLib.deriveOverlay(_batchStagedState.base, merged);
+    } else {
+      mutate(_batchStagedState, _batchStagedState, null);
+    }
+    return;
+  }
+
   const isSpec = Boolean(flags.spec);
   const base = stateLib.load(baseAtlasDir(projectRoot));
   let merged = base;
@@ -373,6 +402,32 @@ function sortBySimilarity(input, names) {
   const remaining = scored.length - top.length;
   if (remaining > 0) top.push(`and ${remaining} more`);
   return top;
+}
+
+function formatAvailableEdges(state, feature) {
+  const edges = [];
+  for (const e of (state.edges || [])) {
+    const ef = e.from && (e.from.submodule ? `${e.from.feature}/${e.from.submodule}` : e.from.feature);
+    const et = e.to && (e.to.submodule ? `${e.to.feature}/${e.to.submodule}` : e.to.feature);
+    edges.push(`"${ef}" -> "${et}"${e.kind ? ` (${e.kind})` : ''}`);
+  }
+  if (feature) {
+    for (const e of (feature.edges || [])) {
+      const ef = typeof e.from === 'string' ? e.from : (e.from && e.from.submodule);
+      const et = typeof e.to === 'string' ? e.to : (e.to && e.to.submodule);
+      edges.push(`"${feature.slug}/${ef}" -> "${feature.slug}/${et}"${e.kind ? ` (${e.kind})` : ''}`);
+    }
+  } else {
+    // When no specific feature is known, collect intra-feature edges from all features
+    for (const f of (state.features || [])) {
+      for (const e of (f.edges || [])) {
+        const ef = typeof e.from === 'string' ? e.from : (e.from && e.from.submodule);
+        const et = typeof e.to === 'string' ? e.to : (e.to && e.to.submodule);
+        edges.push(`"${f.slug}/${ef}" -> "${f.slug}/${et}"${e.kind ? ` (${e.kind})` : ''}`);
+      }
+    }
+  }
+  return edges;
 }
 
 function assertEndpointExists(state, endpointValue, contextLabel) {
@@ -647,7 +702,10 @@ async function verbEdge(action, flags, projectRoot, io) {
       if (intra) {
         const feature = findFeature(state, from.feature);
         if (!feature) {
-          throw new Error(`Feature "${from.feature}" not found for edge removal`);
+          const inputEdgeStr = `"${from.feature}/${from.submodule}" -> "${to.feature}/${to.submodule}"`;
+          const available = formatAvailableEdges(state, null);
+          const similar = sortBySimilarity(inputEdgeStr, available);
+          throw new Error(`Feature "${from.feature}" not found for edge removal. Available edges: ${similar.join(', ') || '(none)'}`);
         }
         const before = (feature.edges || []).length;
         feature.edges = (feature.edges || []).filter((e) => {
@@ -817,9 +875,7 @@ async function verbAdd(args, flags, projectRoot, io) {
         const deployedOnTarget = entityFlags['deployed-on'];
         const dependsOn = entityFlags['depends-on'];
         const dataFlowTo = entityFlags['data-flow-to'];
-        const preState = entityFlags.spec
-          ? stateLib.mergeOverlay(stateLib.load(baseAtlasDir(projectRoot)), stateLib.loadOverlay(specOverlayDir(projectRoot, entityFlags.spec).overlayDir))
-          : stateLib.load(baseAtlasDir(projectRoot));
+        const { merged: preState } = loadResolvedState(projectRoot, entityFlags);
         if (implementsTarget) {
           assertEndpointExists(preState, implementsTarget, '--implements');
         }
@@ -937,6 +993,9 @@ async function verbAdd(args, flags, projectRoot, io) {
 
         const { base, merged } = loadResolvedState(projectRoot, entityFlags);
         const currentState = entityFlags.spec ? merged : base;
+
+        // Validate source endpoint exists before any edge creation
+        assertEndpointExists(currentState, entityName, 'relation source');
 
         // Check for duplicate edge before creation (cross-feature + intra-feature)
         if (to) {
@@ -1123,20 +1182,26 @@ async function verbAdd(args, flags, projectRoot, io) {
       }
       if (error) throw error;
 
-      // All valid — process (with rollback on failure)
+      // All valid — process with staged atomicity: in-memory mutations, single commit on success
       let preBatchState, preBatchOverlayState;
       let overlayDir;
+      if (!flags['dry-run']) {
+        _batchStagingActive = true;
+      }
       if (flags.spec) {
         const specResult = specOverlayDir(projectRoot, flags.spec);
         overlayDir = specResult.overlayDir;
         preBatchOverlayState = JSON.parse(JSON.stringify(stateLib.loadOverlay(overlayDir)));
+        if (_batchStagingActive) {
+          _batchStagedState = { base: stateLib.load(baseAtlasDir(projectRoot)), overlay: JSON.parse(JSON.stringify(preBatchOverlayState)) };
+        }
       } else {
         preBatchState = stateLib.load(baseAtlasDir(projectRoot));
+        if (_batchStagingActive) {
+          _batchStagedState = JSON.parse(JSON.stringify(preBatchState));
+        }
       }
       let skipped = 0;
-      // NOTE: Batch atomicity is best-effort via JS-level try/catch rollback.
-      // A process crash (SIGKILL) mid-batch can leave partial state on disk.
-      // For strict atomicity, use --spec mode + diff + merge workflow instead.
       try {
         for (const entity of entities) {
           entity.flags.skipUndo = true;
@@ -1144,26 +1209,23 @@ async function verbAdd(args, flags, projectRoot, io) {
           if (result === 'skipped') skipped++;
         }
       } catch (e) {
-        if (flags.spec) {
-          const { overlayDir } = specOverlayDir(projectRoot, flags.spec);
-          stateLib.saveOverlay(overlayDir, preBatchOverlayState);
-        } else {
-          stateLib.save(baseAtlasDir(projectRoot), preBatchState);
-        }
+        _batchStagingActive = false;
+        _batchStagedState = null;
         throw e;
       }
 
-      // Write batch-level undo snapshot and history entry
+      // Commit staged state: single durable write + batch undo snapshot
       if (!flags['dry-run']) {
         if (flags.spec) {
-          const base = stateLib.load(baseAtlasDir(projectRoot));
-          stateLib.writeUndoSnapshot(overlayDir, { base, overlay: preBatchOverlayState });
+          stateLib.saveOverlay(overlayDir, _batchStagedState.overlay);
+          stateLib.writeUndoSnapshot(overlayDir, { base: _batchStagedState.base, overlay: preBatchOverlayState });
           stateLib.appendHistory(overlayDir, {
             action: `batch add (${entities.length} entities: ${entities.map(e => `${e.type}:${e.name}`).join(', ')})`,
             args: entities.map(e => ({ type: e.type, name: e.name, flags: e.flags })),
             mode: 'spec',
           });
         } else {
+          stateLib.save(baseAtlasDir(projectRoot), _batchStagedState);
           stateLib.writeUndoSnapshot(baseAtlasDir(projectRoot), { base: preBatchState });
           stateLib.appendHistory(baseAtlasDir(projectRoot), {
             action: `batch add (${entities.length} entities: ${entities.map(e => `${e.type}:${e.name}`).join(', ')})`,
@@ -1171,6 +1233,8 @@ async function verbAdd(args, flags, projectRoot, io) {
             mode: 'base',
           });
         }
+        _batchStagingActive = false;
+        _batchStagedState = null;
       }
 
       // Determine if any entity requested --no-render
@@ -1198,12 +1262,21 @@ async function verbAdd(args, flags, projectRoot, io) {
     // Batch mode without interleaved flags — simple sequential pairs
     let preBatchState, preBatchOverlayState;
     let overlayDir;
+    if (!flags['dry-run']) {
+      _batchStagingActive = true;
+    }
     if (flags.spec) {
       const specResult = specOverlayDir(projectRoot, flags.spec);
       overlayDir = specResult.overlayDir;
       preBatchOverlayState = JSON.parse(JSON.stringify(stateLib.loadOverlay(overlayDir)));
+      if (_batchStagingActive) {
+        _batchStagedState = { base: stateLib.load(baseAtlasDir(projectRoot)), overlay: JSON.parse(JSON.stringify(preBatchOverlayState)) };
+      }
     } else {
       preBatchState = stateLib.load(baseAtlasDir(projectRoot));
+      if (_batchStagingActive) {
+        _batchStagedState = JSON.parse(JSON.stringify(preBatchState));
+      }
     }
 
     // Pre-validate all entities before processing
@@ -1232,26 +1305,23 @@ async function verbAdd(args, flags, projectRoot, io) {
         if (result === 'skipped') skipped++;
       }
     } catch (e) {
-      if (flags.spec) {
-        const { overlayDir } = specOverlayDir(projectRoot, flags.spec);
-        stateLib.saveOverlay(overlayDir, preBatchOverlayState);
-      } else {
-        stateLib.save(baseAtlasDir(projectRoot), preBatchState);
-      }
+      _batchStagingActive = false;
+      _batchStagedState = null;
       throw e;
     }
 
-    // Write batch-level undo snapshot and history entry
+    // Commit staged state: single durable write + batch undo snapshot
     if (!flags['dry-run']) {
       if (flags.spec) {
-        const base = stateLib.load(baseAtlasDir(projectRoot));
-        stateLib.writeUndoSnapshot(overlayDir, { base, overlay: preBatchOverlayState });
+        stateLib.saveOverlay(overlayDir, _batchStagedState.overlay);
+        stateLib.writeUndoSnapshot(overlayDir, { base: _batchStagedState.base, overlay: preBatchOverlayState });
         stateLib.appendHistory(overlayDir, {
           action: `batch add (${simpleEntities.length} entities: ${simpleEntities.map(e => `${e.type}:${e.name}`).join(', ')})`,
           args: simpleEntities.map(e => ({ type: e.type, name: e.name, flags: e.flags })),
           mode: 'spec',
         });
       } else {
+        stateLib.save(baseAtlasDir(projectRoot), _batchStagedState);
         stateLib.writeUndoSnapshot(baseAtlasDir(projectRoot), { base: preBatchState });
         stateLib.appendHistory(baseAtlasDir(projectRoot), {
           action: `batch add (${simpleEntities.length} entities: ${simpleEntities.map(e => `${e.type}:${e.name}`).join(', ')})`,
@@ -1259,6 +1329,8 @@ async function verbAdd(args, flags, projectRoot, io) {
           mode: 'base',
         });
       }
+      _batchStagingActive = false;
+      _batchStagedState = null;
     }
 
     const anyEntityNoRender = simpleEntities.some(e => e.flags['no-render']);

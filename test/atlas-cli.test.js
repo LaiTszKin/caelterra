@@ -1944,6 +1944,18 @@ test('REGTEST-23: entity-level --no-render in batch suppresses batch render (P3-
   }
 });
 
+test('REGTEST-49: successful batch add auto-renders when no no-render flag is present', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const code = await cli.dispatch(['add', 'feature', 'f1', 'feature', 'f2', '--project', root], io);
+    assert.equal(code, 0);
+    assert.ok(fs.existsSync(path.join(root, 'resources/project-architecture/index.html')));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('REGTEST-24: unified add --spec + diff end-to-end with deeper assertions (P2-9)', async () => {
   const root = mkProject();
   try {
@@ -2057,14 +2069,17 @@ test('REGTEST-28: relation --depends-on in batch mode should succeed (P1-1)', as
     const io = await runCli(['architecture', 'add', 'feature', 'featA'], { cwd: dir });
     assert.equal(io.code, 0, 'add feature featA');
 
-    const io2 = await runCli([
+    const io2 = await runCli(['architecture', 'add', 'feature', 'relX'], { cwd: dir });
+    assert.equal(io2.code, 0, 'add feature relX as relation source');
+
+    const io3 = await runCli([
       'architecture', 'add',
       'relation', 'relX', '--depends-on', 'featA',
       'feature', 'featB',
     ], { cwd: dir });
-    assert.equal(io2.code, 0, 'batch with relation --depends-on should succeed');
-    assert.ok(io2.stdout_text.includes('add applied'), 'should report add applied');
-    assert.ok(io2.stdout_text.includes('relX'), 'should mention relation name');
+    assert.equal(io3.code, 0, 'batch with relation --depends-on should succeed');
+    assert.ok(io3.stdout_text.includes('add applied'), 'should report add applied');
+    assert.ok(io3.stdout_text.includes('relX'), 'should mention relation name');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -2213,6 +2228,36 @@ test('REGTEST-35: deployed-on requires existing endpoint', async () => {
     }
     assert.equal(allEdges.filter(e => e.kind === 'deployed-on').length, 0,
       'no deployed-on edge should exist after failed command');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-44: add relation rejects missing source endpoint (FIX-01)
+test('REGTEST-44: add relation rejects missing source endpoint', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // GIVEN feature b with module api exists, but source feature/submodule a/missing does not
+    await cli.dispatch(['add', 'feature', 'b', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'api', '--part-of', 'b', '--project', root, '--no-render'], io);
+
+    // WHEN adding relation a/missing --data-flow-to b/api
+    const io2 = makeIo();
+    const code = await cli.dispatch(['add', 'relation', 'a/missing', '--data-flow-to', 'b/api', '--project', root, '--no-render'], io2);
+
+    // THEN command exits non-zero
+    assert.notEqual(code, 0, 'should reject missing source endpoint');
+
+    // AND stderr mentions the missing source clearly enough to diagnose a/missing
+    assert.match(io2.stderr_text, /a\/missing/, 'stderr should mention the missing source endpoint');
+
+    // AND loaded state has no edge referencing feature a as from
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const edgeRefsA = (state.edges || []).filter(e =>
+      e.from && e.from.feature === 'a'
+    );
+    assert.equal(edgeRefsA.length, 0, 'no edge should reference feature a as from');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -2380,6 +2425,33 @@ test('REGTEST-43: diff spec renders missing after pages', async () => {
 });
 
 // REGTEST-39: batch relation flags do not leak to later entities
+// REGTEST-45: remove relation with missing intra-feature source lists available edges
+test('REGTEST-45: remove relation with missing intra-feature source lists available edges', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // GIVEN feature payment with modules ui and api, and relation payment/ui --data-flow-to payment/api
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'ui', '--part-of', 'payment', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'api', '--part-of', 'payment', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'relation', 'payment/ui', '--data-flow-to', 'payment/api', '--project', root, '--no-render'], io);
+
+    // WHEN removing relation with misspelled source feature 'paymint' (does not exist)
+    const io2 = makeIo();
+    const code = await cli.dispatch(['remove', 'relation', 'paymint/ui', '--to', 'paymint/api', '--project', root, '--no-render'], io2);
+
+    // THEN exits non-zero with available edges and similar endpoint suggestions
+    assert.notEqual(code, 0, 'should exit non-zero for non-existent source feature');
+    assert.match(io2.stderr_text, /Available edges:/, 'stderr should contain Available edges:');
+    // AND should list at least one of the existing endpoints as a similar available edge
+    const hasPaymentUi = io2.stderr_text.includes('payment/ui');
+    const hasPaymentApi = io2.stderr_text.includes('payment/api');
+    assert.ok(hasPaymentUi || hasPaymentApi, 'stderr should include payment/ui or payment/api');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('REGTEST-39: batch relation flags do not leak to later entities', async () => {
   const root = mkProject();
   try {
