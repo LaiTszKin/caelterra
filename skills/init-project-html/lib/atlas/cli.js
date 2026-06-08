@@ -9,15 +9,8 @@
 //   diff                                          render paginated before/after viewer
 //   merge --spec <dir>|--all [--clean]            merge spec overlay(s) into base atlas
 //   render                                        force-regenerate HTML from current state
-//   feature add|set|remove                        feature lifecycle
-//   submodule add|set|remove                      sub-module lifecycle
-//   function add|remove                           function I/O rows
-//   variable add|remove                           variable rows
-//   dataflow add|remove|reorder                   ordered internal flow steps
-//   error add|remove                              error rows
-//   edge add|remove                               edges (intra-feature if both endpoints share a feature, otherwise cross-feature)
-//   meta set                                      meta.title / meta.summary
-//   actor add|remove                              top-level actors
+//   add <feature|module|relation>                 add entities to atlas (unified)
+//   remove <feature|module|relation>              remove entities from atlas (unified)
 //   validate                                      schema + referential integrity check
 //   scan                                          scan directory for feature candidates
 //   undo                                          revert the most recent mutation
@@ -52,11 +45,7 @@ const MULTI_VERBS = new Set(['feature', 'submodule', 'function', 'variable', 'da
 
 /**
  * formatFix generates apltk CLI commands from structured params.
- * NOTE: formatFix generates CLI commands using fine-grained verb syntax
- * (e.g., "apltk architecture function add") because the unified "add" verb
- * does not support entity types like function, variable, dataflow, error, or edge.
- * These fix suggestions appear only in validation/status error output, not in help.
- * Trade-off: agents reading validation errors may discover hidden verb syntax.
+ * The fix suggestions appear only in validation/status error output, not in help.
  */
 function formatFix({ type, action, feature, submodule, name, side, scope, slug, kind }) {
   const parts = [`apltk architecture ${type} ${action}`];
@@ -386,6 +375,24 @@ function sortBySimilarity(input, names) {
   return top;
 }
 
+function assertEndpointExists(state, endpointValue, contextLabel) {
+  // Parse "feature" or "feature/submodule" and confirm the target exists.
+  const parsed = parseEndpoint(endpointValue);
+  const feat = findFeature(state, parsed.feature);
+  if (!feat) {
+    const allFeatures = (state.features || []).map(f => f.slug);
+    const similar = sortBySimilarity(parsed.feature, allFeatures);
+    throw new Error(`Target "${endpointValue}" not found for ${contextLabel}. Available features: ${similar.join(', ') || '(none)'}`);
+  }
+  if (parsed.submodule) {
+    if (!findSubmodule(feat, parsed.submodule)) {
+      const availableSubs = (feat.submodules || []).map(s => s.slug);
+      const similar = sortBySimilarity(parsed.submodule, availableSubs);
+      throw new Error(`Submodule "${parsed.submodule}" not found in feature "${parsed.feature}" for ${contextLabel}. Available submodules: ${similar.join(', ') || '(none)'}`);
+    }
+  }
+}
+
 // ---- verb dispatch ------------------------------------------------------
 
 async function verbFeature(action, flags, projectRoot, io) {
@@ -461,6 +468,12 @@ async function verbSubmodule(action, flags, projectRoot, io) {
         const similar = sortBySimilarity(slug, allSubs);
         throw new Error(`Submodule "${slug}" not found in feature "${featureSlug}". Available submodules: ${similar.join(', ') || '(none)'}`);
       }
+      // Also drop root-level cross-feature edges that reference the removed submodule
+      state.edges = (state.edges || []).filter((e) => {
+        const fromIsTarget = typeof e.from === 'object' && e.from && e.from.feature === featureSlug && e.from.submodule === slug;
+        const toIsTarget = typeof e.to === 'object' && e.to && e.to.feature === featureSlug && e.to.submodule === slug;
+        return !fromIsTarget && !toIsTarget;
+      });
     }, io);
   }
   throw new Error(`Unknown submodule subverb: ${action}`);
@@ -736,6 +749,35 @@ async function verbAdd(args, flags, projectRoot, io) {
     switch (entityType) {
       case 'feature':
         {
+          const { base, merged } = loadResolvedState(projectRoot, entityFlags);
+          const preState = entityFlags.spec ? merged : base;
+
+          // Check for duplicate before validating depends-on targets
+          if (findFeature(preState, entityName)) {
+            return await verbFeature('add', {
+              slug: entityName,
+              'depends-on': entityFlags['depends-on'],
+              spec: entityFlags.spec,
+              'no-render': true,
+              project: entityFlags.project,
+              'dry-run': entityFlags['dry-run'],
+              evidence: entityFlags.evidence,
+              skipUndo: entityFlags.skipUndo,
+            }, projectRoot, io);
+          }
+
+          // Validate --depends-on targets before creating the feature (only for new features)
+          const featDependsOn = entityFlags['depends-on'];
+          if (featDependsOn) {
+            const targets = String(featDependsOn).split(',').map(s => s.trim()).filter(Boolean);
+            const availableFeatures = (preState.features || []).map(f => f.slug);
+            for (const target of targets) {
+              if (!availableFeatures.includes(target)) {
+                throw new Error(`Dependency target "${target}" not found. Available features: ${availableFeatures.join(', ') || '(none)'}`);
+              }
+            }
+          }
+
           const featResult = await verbFeature('add', {
             slug: entityName,
             'depends-on': entityFlags['depends-on'],
@@ -744,22 +786,13 @@ async function verbAdd(args, flags, projectRoot, io) {
             project: entityFlags.project,
             'dry-run': entityFlags['dry-run'],
             evidence: entityFlags.evidence,
+            skipUndo: entityFlags.skipUndo,
           }, projectRoot, io);
           if (featResult === 'skipped') return 'skipped';
 
           // Create dependency edges if --depends-on specified (supports comma-separated)
-          const featDependsOn = entityFlags['depends-on'];
           if (featDependsOn) {
             const targets = String(featDependsOn).split(',').map(s => s.trim()).filter(Boolean);
-            // Validate that dependency targets exist
-            const { base, merged } = loadResolvedState(projectRoot, entityFlags);
-            const currentState = entityFlags.spec ? merged : base;
-            const availableFeatures = (currentState.features || []).map(f => f.slug);
-            for (const target of targets) {
-              if (!availableFeatures.includes(target)) {
-                throw new Error(`Dependency target "${target}" not found. Available features: ${availableFeatures.join(', ') || '(none)'}`);
-              }
-            }
             for (const target of targets) {
               await verbEdge('add', {
                 from: entityName,
@@ -778,6 +811,46 @@ async function verbAdd(args, flags, projectRoot, io) {
         }
       case 'module': {
         if (!entityFlags['part-of']) throw new Error('Missing required flag --part-of for module');
+
+        // Prevalidate all endpoint targets before creating the submodule
+        const implementsTarget = entityFlags.implements;
+        const deployedOnTarget = entityFlags['deployed-on'];
+        const dependsOn = entityFlags['depends-on'];
+        const dataFlowTo = entityFlags['data-flow-to'];
+        const preState = entityFlags.spec
+          ? stateLib.mergeOverlay(stateLib.load(baseAtlasDir(projectRoot)), stateLib.loadOverlay(specOverlayDir(projectRoot, entityFlags.spec).overlayDir))
+          : stateLib.load(baseAtlasDir(projectRoot));
+        if (implementsTarget) {
+          assertEndpointExists(preState, implementsTarget, '--implements');
+        }
+        if (dependsOn) {
+          const targets = String(dependsOn).split(',').map(s => s.trim()).filter(Boolean);
+          const availableFeatureSlugs = (preState.features || []).map(f => f.slug);
+          for (const target of targets) {
+            const [featSlug, subSlug] = target.split('/').map(s => s.trim());
+            if (subSlug) {
+              const feat = findFeature(preState, featSlug);
+              if (!feat) {
+                throw new Error(`Dependency target feature "${featSlug}" not found. Available features: ${availableFeatureSlugs.join(', ') || '(none)'}`);
+              }
+              if (!findSubmodule(feat, subSlug)) {
+                const availableSubs = (feat.submodules || []).map(s => s.slug).join(', ') || '(none)';
+                throw new Error(`Dependency target submodule "${subSlug}" not found in feature "${featSlug}". Available submodules: ${availableSubs}`);
+              }
+            } else {
+              if (!availableFeatureSlugs.includes(featSlug)) {
+                throw new Error(`Dependency target "${featSlug}" not found. Available features: ${availableFeatureSlugs.join(', ') || '(none)'}`);
+              }
+            }
+          }
+        }
+        if (dataFlowTo) {
+          assertEndpointExists(preState, dataFlowTo, '--data-flow-to');
+        }
+        if (deployedOnTarget) {
+          assertEndpointExists(preState, deployedOnTarget, '--deployed-on');
+        }
+
         const result = await verbSubmodule('add', {
           feature: entityFlags['part-of'],
           slug: entityName,
@@ -787,21 +860,12 @@ async function verbAdd(args, flags, projectRoot, io) {
           'dry-run': entityFlags['dry-run'],
           kind: entityFlags.kind,
           evidence: entityFlags.evidence,
+          skipUndo: entityFlags.skipUndo,
         }, projectRoot, io);
         if (result === 'skipped') return 'skipped';
 
         // Create implements/deployed-on edges if specified
-        const implementsTarget = entityFlags.implements;
-        const deployedOnTarget = entityFlags['deployed-on'];
         if (implementsTarget) {
-          // Validate implements target exists (feature part of endpoint must be a known feature slug)
-          const { base: vBase, merged: vMerged } = loadResolvedState(projectRoot, entityFlags);
-          const vState = entityFlags.spec ? vMerged : vBase;
-          const allFeats = (vState.features || []).map(f => f.slug);
-          const implFeat = parseEndpoint(implementsTarget).feature;
-          if (!allFeats.includes(implFeat)) {
-            throw new Error(`Target "${implementsTarget}" not found for --implements. Available features: ${allFeats.join(', ') || '(none)'}`);
-          }
           await verbEdge('add', {
             from: `${entityFlags['part-of']}/${entityName}`,
             to: implementsTarget,
@@ -827,32 +891,8 @@ async function verbAdd(args, flags, projectRoot, io) {
         }
 
         // Create dependency edges if --depends-on specified
-        const dependsOn = entityFlags['depends-on'];
         if (dependsOn) {
           const targets = String(dependsOn).split(',').map(s => s.trim()).filter(Boolean);
-          // Validate dependency targets exist (feature or feature/submodule)
-          const { base, merged } = loadResolvedState(projectRoot, entityFlags);
-          const currentState = entityFlags.spec ? merged : base;
-          const availableFeatureSlugs = (currentState.features || []).map(f => f.slug);
-          for (const target of targets) {
-            const [featSlug, subSlug] = target.split('/').map(s => s.trim());
-            if (subSlug) {
-              // feature/submodule target
-              const feat = findFeature(currentState, featSlug);
-              if (!feat) {
-                throw new Error(`Dependency target feature "${featSlug}" not found. Available features: ${availableFeatureSlugs.join(', ') || '(none)'}`);
-              }
-              if (!findSubmodule(feat, subSlug)) {
-                const availableSubs = (feat.submodules || []).map(s => s.slug).join(', ') || '(none)';
-                throw new Error(`Dependency target submodule "${subSlug}" not found in feature "${featSlug}". Available submodules: ${availableSubs}`);
-              }
-            } else {
-              // Plain feature target
-              if (!availableFeatureSlugs.includes(featSlug)) {
-                throw new Error(`Dependency target "${featSlug}" not found. Available features: ${availableFeatureSlugs.join(', ') || '(none)'}`);
-              }
-            }
-          }
           for (const target of targets) {
             await verbEdge('add', {
               from: `${entityFlags['part-of']}/${entityName}`,
@@ -868,16 +908,7 @@ async function verbAdd(args, flags, projectRoot, io) {
         }
 
         // Create data-flow edge if --data-flow-to specified
-        const dataFlowTo = entityFlags['data-flow-to'];
         if (dataFlowTo) {
-          // Validate data-flow-to target exists (feature part of endpoint must be a known feature slug)
-          const { base: vBase, merged: vMerged } = loadResolvedState(projectRoot, entityFlags);
-          const vState = entityFlags.spec ? vMerged : vBase;
-          const allFeats = (vState.features || []).map(f => f.slug);
-          const dfFeat = parseEndpoint(dataFlowTo).feature;
-          if (!allFeats.includes(dfFeat)) {
-            throw new Error(`Target "${dataFlowTo}" not found for --data-flow-to. Available features: ${allFeats.join(', ') || '(none)'}`);
-          }
           await verbEdge('add', {
             from: `${entityFlags['part-of']}/${entityName}`,
             to: dataFlowTo,
@@ -965,12 +996,9 @@ async function verbAdd(args, flags, projectRoot, io) {
         // Create the primary edge (data-flow, implements, or deployed-on)
         let result;
         if (to) {
-          // Validate target feature exists
-          const allFeats = (currentState.features || []).map(f => f.slug);
-          const toFeat = parseEndpoint(to).feature;
-          if (!allFeats.includes(toFeat)) {
-            throw new Error(`Target "${to}" not found. Available features: ${allFeats.join(', ') || '(none)'}`);
-          }
+          // Validate target endpoint exists before writing edge
+          const ctxLabel = dataFlowTo ? '--data-flow-to' : implementsTarget ? '--implements' : '--deployed-on';
+          assertEndpointExists(currentState, to, ctxLabel);
           result = await verbEdge('add', {
             from: entityName,
             to,
@@ -1061,13 +1089,8 @@ async function verbAdd(args, flags, projectRoot, io) {
           if (flags['no-render'] !== undefined) entityFlags['no-render'] = flags['no-render'];
           if (flags['dry-run'] !== undefined) entityFlags['dry-run'] = flags['dry-run'];
           if (flags.evidence !== undefined) entityFlags.evidence = flags.evidence;
-          // Copy entity-specific flags that were parsed before the first entity type
-          if (flags['depends-on'] !== undefined && entityFlags['depends-on'] === undefined) entityFlags['depends-on'] = flags['depends-on'];
-          if (flags['part-of'] !== undefined && entityFlags['part-of'] === undefined) entityFlags['part-of'] = flags['part-of'];
-          if (flags['data-flow-to'] !== undefined && entityFlags['data-flow-to'] === undefined) entityFlags['data-flow-to'] = flags['data-flow-to'];
-          if (flags.implements !== undefined && entityFlags.implements === undefined) entityFlags.implements = flags.implements;
-          if (flags['deployed-on'] !== undefined && entityFlags['deployed-on'] === undefined) entityFlags['deployed-on'] = flags['deployed-on'];
-          if (flags.to !== undefined && entityFlags.to === undefined) entityFlags.to = flags.to;
+          // Entity-specific relation flags MUST be defined per-entity and not leak from global scope
+          // Only true global flags (project, spec, no-render, dry-run, evidence) are copied above
 
           // Validate that value-required flags have actual values
           if (entityFlags['depends-on'] === true) {
@@ -1102,8 +1125,10 @@ async function verbAdd(args, flags, projectRoot, io) {
 
       // All valid — process (with rollback on failure)
       let preBatchState, preBatchOverlayState;
+      let overlayDir;
       if (flags.spec) {
-        const { overlayDir } = specOverlayDir(projectRoot, flags.spec);
+        const specResult = specOverlayDir(projectRoot, flags.spec);
+        overlayDir = specResult.overlayDir;
         preBatchOverlayState = JSON.parse(JSON.stringify(stateLib.loadOverlay(overlayDir)));
       } else {
         preBatchState = stateLib.load(baseAtlasDir(projectRoot));
@@ -1172,8 +1197,10 @@ async function verbAdd(args, flags, projectRoot, io) {
 
     // Batch mode without interleaved flags — simple sequential pairs
     let preBatchState, preBatchOverlayState;
+    let overlayDir;
     if (flags.spec) {
-      const { overlayDir } = specOverlayDir(projectRoot, flags.spec);
+      const specResult = specOverlayDir(projectRoot, flags.spec);
+      overlayDir = specResult.overlayDir;
       preBatchOverlayState = JSON.parse(JSON.stringify(stateLib.loadOverlay(overlayDir)));
     } else {
       preBatchState = stateLib.load(baseAtlasDir(projectRoot));
@@ -1553,7 +1580,7 @@ async function collectDiffChanges({ projectRoot, outDir, flags = {} }) {
     const specPath = path.isAbsolute(String(flags.spec)) ? String(flags.spec) : path.resolve(projectRoot, String(flags.spec));
     const { overlayDir } = specOverlayDir(projectRoot, flags.spec);
     if (hasOverlayState(overlayDir)) {
-      return collectSingleSpecChanges({ projectRoot, specDir: specPath, specLabel: String(flags.spec) });
+      return await collectSingleSpecChanges({ projectRoot, specDir: specPath, specLabel: String(flags.spec) });
     }
     // Fallback to HTML manifest
     return collectHtmlManifestChanges({ projectRoot, diffDir: path.join(specPath, DIFF_DIRNAME), specLabel: String(flags.spec) });
@@ -1567,7 +1594,7 @@ async function collectDiffChanges({ projectRoot, outDir, flags = {} }) {
     if (group.kind === 'batch') {
       changes.push(...await collectBatchGroupChanges({ projectRoot, outDir, group }));
     } else {
-      changes.push(...collectSingleSpecChanges({ projectRoot, specDir: group.specDir, specLabel: group.label }));
+      changes.push(...await collectSingleSpecChanges({ projectRoot, specDir: group.specDir, specLabel: group.label }));
     }
   }
 
@@ -1613,7 +1640,7 @@ function findBatchRoot(specDir, plansRoot) {
   return null;
 }
 
-function collectSingleSpecChanges({ projectRoot, specDir, specLabel }) {
+async function collectSingleSpecChanges({ projectRoot, specDir, specLabel }) {
   const overlayDir = path.join(specDir, DIFF_DIRNAME, ATLAS_DIRNAME);
   if (!hasOverlayState(overlayDir)) {
     return collectHtmlManifestChanges({ projectRoot, diffDir: path.join(specDir, DIFF_DIRNAME), specLabel });
@@ -1622,10 +1649,20 @@ function collectSingleSpecChanges({ projectRoot, specDir, specLabel }) {
   const overlay = stateLib.loadOverlay(overlayDir);
   const merged = stateLib.mergeOverlay(base, overlay);
   const diff = stateLib.diffPages(base, merged);
+  const htmlRoot = path.join(specDir, DIFF_DIRNAME);
+  // Render merged state so afterPath files exist even when the overlay
+  // was created with --no-render. Use scoped render to emit only pages
+  // that differ from the base atlas.
+  await renderLib.renderAll({
+    outDir: htmlRoot,
+    state: merged,
+    scope: renderLib.scopeFromDiff(diff),
+    removedPaths: renderLib.removedPagePathsFromDiff(diff),
+  });
   return diffToChanges({
     projectRoot,
     specLabel,
-    htmlRoot: path.join(specDir, DIFF_DIRNAME),
+    htmlRoot,
     diff,
   });
 }
@@ -1639,7 +1676,7 @@ function hasOverlayState(overlayDir) {
 async function collectBatchGroupChanges({ projectRoot, outDir, group }) {
   const batchRootOverlayDir = path.join(group.key, DIFF_DIRNAME, ATLAS_DIRNAME);
   if (hasOverlayState(batchRootOverlayDir)) {
-    return collectSingleSpecChanges({ projectRoot, specDir: group.key, specLabel: group.label });
+    return await collectSingleSpecChanges({ projectRoot, specDir: group.key, specLabel: group.label });
   }
 
   const memberOverlayDirs = group.members.map((member) => ({
@@ -1647,9 +1684,10 @@ async function collectBatchGroupChanges({ projectRoot, outDir, group }) {
     overlayDir: path.join(member.specDir, DIFF_DIRNAME, ATLAS_DIRNAME),
   }));
   if (memberOverlayDirs.some((member) => !hasOverlayState(member.overlayDir))) {
-    return group.members.flatMap((member) => (
+    const memberChanges = await Promise.all(group.members.map((member) => (
       collectSingleSpecChanges({ projectRoot, specDir: member.specDir, specLabel: member.label })
-    ));
+    )));
+    return memberChanges.flat();
   }
 
   const base = stateLib.load(baseAtlasDir(projectRoot));

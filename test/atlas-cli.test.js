@@ -1080,6 +1080,7 @@ test('module --implements creates edge', async () => {
     const io = makeIo();
     await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
     await cli.dispatch(['add', 'feature', 'gateway', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'svc', '--part-of', 'gateway', '--project', root, '--no-render'], io);
     const code = await cli.dispatch(['add', 'module', 'stripe-adapter', '--part-of', 'payment', '--implements', 'gateway/svc', '--project', root, '--no-render'], io);
     assert.equal(code, 0);
     const indexYaml = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/atlas.index.yaml'), 'utf8');
@@ -1094,10 +1095,11 @@ test('module --deployed-on creates edge', async () => {
   try {
     const io = makeIo();
     await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
-    const code = await cli.dispatch(['add', 'module', 'payment-api', '--part-of', 'payment', '--deployed-on', 'eks-cluster', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'api', '--part-of', 'payment', '--project', root, '--no-render'], io);
+    const code = await cli.dispatch(['add', 'module', 'payment-api', '--part-of', 'payment', '--deployed-on', 'payment/api', '--project', root, '--no-render'], io);
     assert.equal(code, 0);
-    const indexYaml = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/atlas.index.yaml'), 'utf8');
-    assert.match(indexYaml, /deployed-on/);
+    const featureYaml = fs.readFileSync(path.join(root, 'resources/project-architecture/atlas/features/payment.yaml'), 'utf8');
+    assert.match(featureYaml, /deployed-on/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -1203,6 +1205,7 @@ test('relation --implements produces implements kind', async () => {
     await cli.dispatch(['add', 'feature', 'a', '--project', root, '--no-render'], io);
     await cli.dispatch(['add', 'feature', 'b', '--project', root, '--no-render'], io);
     await cli.dispatch(['add', 'module', 'svc', '--part-of', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'svc', '--part-of', 'b', '--project', root, '--no-render'], io);
     const code = await cli.dispatch(['add', 'relation', 'a/svc', '--implements', 'b/svc', '--project', root, '--no-render'], io);
     assert.equal(code, 0);
     const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
@@ -2115,5 +2118,287 @@ test('REGTEST-32: --data-flow-to/--implements should reject non-existent targets
     assert.ok(io3.stderr_text.includes('not found'), 'error should mention target not found');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-33: unified relation edge kinds validate (FIX-01)
+test('REGTEST-33: unified relation edge kinds validate', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // Create two features with kebab-case slugs and modules
+    await cli.dispatch(['add', 'feature', 'feat-a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'feat-b', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'svc', '--part-of', 'feat-a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'api', '--part-of', 'feat-b', '--project', root, '--no-render'], io);
+
+    // Create dependency edge via unified relation (feature-level)
+    await cli.dispatch(['add', 'relation', 'feat-a', '--depends-on', 'feat-b', '--project', root, '--no-render'], io);
+    // Create implements edge via unified module (submodule-level)
+    await cli.dispatch(['add', 'module', 'adapter', '--part-of', 'feat-a', '--implements', 'feat-b/api', '--project', root, '--no-render'], io);
+    // Create deployed-on edge to an existing endpoint
+    await cli.dispatch(['add', 'module', 'runner', '--part-of', 'feat-b', '--deployed-on', 'feat-a/svc', '--project', root, '--no-render'], io);
+
+    // Validate should succeed with all three unified edge kinds
+    const validateIo = makeIo();
+    const code = await cli.dispatch(['validate', '--project', root], validateIo);
+    assert.equal(code, 0, 'validate should pass with dependency, implements, and deployed-on edge kinds');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-34: missing submodule relation targets are rejected (FIX-02)
+test('REGTEST-34: missing submodule relation targets are rejected', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // GIVEN features a, b and module a/src; no submodule b/svc
+    await cli.dispatch(['add', 'feature', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'b', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'src', '--part-of', 'a', '--project', root, '--no-render'], io);
+
+    // WHEN adding relation a/src --implements b/svc (b/svc does not exist)
+    const ioImpl = makeIo();
+    const code1 = await cli.dispatch(['add', 'relation', 'a/src', '--implements', 'b/svc', '--project', root, '--no-render'], ioImpl);
+    assert.notEqual(code1, 0, '--implements to missing submodule b/svc should fail');
+
+    // WHEN adding module other --part-of a --data-flow-to b/svc (b/svc does not exist)
+    const ioDf = makeIo();
+    const code2 = await cli.dispatch(['add', 'module', 'other', '--part-of', 'a', '--data-flow-to', 'b/svc', '--project', root, '--no-render'], ioDf);
+    assert.notEqual(code2, 0, '--data-flow-to to missing submodule b/svc should fail');
+
+    // THEN no edge in the atlas references b/svc
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    for (const edge of (state.edges || [])) {
+      const fromEp = edge.from ? `${edge.from.feature || ''}/${edge.from.submodule || ''}` : '';
+      const toEp = edge.to ? `${edge.to.feature || ''}/${edge.to.submodule || ''}` : '';
+      assert.equal(fromEp.includes('b/svc'), false, `index edge from should not reference b/svc: ${JSON.stringify(edge)}`);
+      assert.equal(toEp.includes('b/svc'), false, `index edge to should not reference b/svc: ${JSON.stringify(edge)}`);
+    }
+    for (const feat of (state.features || [])) {
+      for (const edge of (feat.edges || [])) {
+        const fromEp = edge.from ? `${edge.from.feature || ''}/${edge.from.submodule || ''}` : '';
+        const toEp = edge.to ? `${edge.to.feature || ''}/${edge.to.submodule || ''}` : '';
+        assert.equal(fromEp.includes('b/svc'), false, `feature-level edge from should not reference b/svc: ${JSON.stringify(edge)}`);
+        assert.equal(toEp.includes('b/svc'), false, `feature-level edge to should not reference b/svc: ${JSON.stringify(edge)}`);
+      }
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-35: deployed-on requires existing endpoint (FIX-02)
+test('REGTEST-35: deployed-on requires existing endpoint', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // GIVEN feature payment and module payment/api
+    await cli.dispatch(['add', 'feature', 'payment', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'api', '--part-of', 'payment', '--project', root, '--no-render'], io);
+
+    // WHEN adding module with --deployed-on to non-existent target
+    const io2 = makeIo();
+    const code = await cli.dispatch(['add', 'module', 'worker', '--part-of', 'payment', '--deployed-on', 'nonexistent', '--project', root, '--no-render'], io2);
+    // THEN command fails
+    assert.notEqual(code, 0, '--deployed-on to nonexistent target should fail');
+    assert.match(io2.stderr_text, /not found/i, 'stderr should mention target not found');
+
+    // AND no deployed-on edge was written
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const allEdges = [...(state.edges || [])];
+    for (const feat of (state.features || [])) {
+      allEdges.push(...(feat.edges || []));
+    }
+    assert.equal(allEdges.filter(e => e.kind === 'deployed-on').length, 0,
+      'no deployed-on edge should exist after failed command');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-36: failed single add leaves no partial feature (FIX-03)
+test('REGTEST-36: failed single add leaves no partial feature', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // GIVEN feature base exists
+    await cli.dispatch(['add', 'feature', 'base', '--project', root, '--no-render'], io);
+    // WHEN adding feature bad with --depends-on to non-existent target
+    const code = await cli.dispatch(['add', 'feature', 'bad', '--depends-on', 'missing', '--project', root, '--no-render'], io);
+    // THEN non-zero exit
+    assert.notEqual(code, 0);
+    // AND bad is absent from base state
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const slugs = state.features.map(f => f.slug);
+    assert.ok(slugs.includes('base'), 'base should exist');
+    assert.equal(slugs.includes('bad'), false, 'bad should not exist after failed add');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-37: spec batch add exits zero and writes overlay
+test('REGTEST-37: spec batch add exits zero and writes overlay', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    const specDir = 'docs/plans/spec-batch';
+    fs.mkdirSync(path.join(root, specDir), { recursive: true });
+    const code = await cli.dispatch(['add', 'feature', 'spec-a', 'feature', 'spec-b', '--spec', specDir, '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    const overlay = stateLib.loadOverlay(path.join(root, specDir, 'architecture_diff', 'atlas'));
+    const featureSlugs = Object.keys(overlay.features);
+    assert.ok(featureSlugs.includes('spec-a'), 'spec-a should be in overlay');
+    assert.ok(featureSlugs.includes('spec-b'), 'spec-b should be in overlay');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-38: failed batch leaves no history or undo side effects (FIX-03)
+test('REGTEST-38: failed batch leaves no history or undo side effects', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // GIVEN initial state with one feature
+    const atlasDir = path.join(root, 'resources/project-architecture/atlas');
+    await cli.dispatch(['feature', 'add', '--slug', 'existing', '--project', root, '--no-render'], io);
+
+    // Capture before counts — history log lines and undo stack length
+    const historyFile = path.join(atlasDir, 'atlas.history.log');
+    const undoStackFile = path.join(atlasDir, 'atlas.history.undo.stack.json');
+    const historyBefore = fs.existsSync(historyFile) ? fs.readFileSync(historyFile, 'utf8').trim().split('\n').filter(Boolean).length : 0;
+    const undoStackBefore = fs.existsSync(undoStackFile) ? JSON.parse(fs.readFileSync(undoStackFile, 'utf8')).length : 0;
+
+    // Capture YAML state before
+    const stateBefore = stateLib.load(atlasDir);
+    const featureSlugsBefore = (stateBefore.features || []).map(f => f.slug).sort();
+
+    // WHEN a batch succeeds for the first entity then fails on a later entity
+    // First entity: feature f1 (succeeds — passes pre-validation)
+    // Second entity: module with --part-of pointing to non-existent feature (fails during processing)
+    const batchIo = makeIo();
+    const code = await cli.dispatch(['add', 'feature', 'f1', 'module', 'm1', '--part-of', 'nonexistent', '--project', root, '--no-render'], batchIo);
+    assert.notEqual(code, 0, 'batch should exit non-zero after rollback');
+
+    // THEN YAML state is unchanged — f1 must NOT be present
+    const stateAfter = stateLib.load(atlasDir);
+    const featureSlugsAfter = (stateAfter.features || []).map(f => f.slug).sort();
+    assert.deepEqual(featureSlugsAfter, featureSlugsBefore, 'feature list should be identical after rollback');
+    assert.equal(featureSlugsAfter.includes('f1'), false, 'partially-created feature f1 should not exist after rollback');
+
+    // AND history side file matches before count
+    const historyAfter = fs.existsSync(historyFile) ? fs.readFileSync(historyFile, 'utf8').trim().split('\n').filter(Boolean).length : 0;
+    assert.equal(historyAfter, historyBefore, 'history log lines should not increase after rollback');
+
+    // AND undo stack side file matches before length
+    const undoStackAfter = fs.existsSync(undoStackFile) ? JSON.parse(fs.readFileSync(undoStackFile, 'utf8')).length : 0;
+    assert.equal(undoStackAfter, undoStackBefore, 'undo stack length should not change after rollback');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-40: remove module cascades root edges (FIX-05)
+test('REGTEST-40: remove module cascades root edges', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // GIVEN features a and b with modules svc and api
+    await cli.dispatch(['add', 'feature', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'feature', 'b', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'svc', '--part-of', 'a', '--project', root, '--no-render'], io);
+    await cli.dispatch(['add', 'module', 'api', '--part-of', 'b', '--project', root, '--no-render'], io);
+    // AND root edge a/svc --data-flow-to b/api
+    await cli.dispatch(['add', 'relation', 'a/svc', '--data-flow-to', 'b/api', '--project', root, '--no-render'], io);
+
+    // WHEN removing module svc --part-of a
+    await cli.dispatch(['remove', 'module', 'svc', '--part-of', 'a', '--project', root, '--no-render'], io);
+
+    // THEN state.edges has no endpoint referencing a/svc
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    for (const edge of (state.edges || [])) {
+      const fromEp = edge.from ? `${edge.from.feature || ''}/${edge.from.submodule || ''}` : '';
+      const toEp = edge.to ? `${edge.to.feature || ''}/${edge.to.submodule || ''}` : '';
+      assert.equal(fromEp.includes('a/svc'), false, `edge from should not reference a/svc: ${JSON.stringify(edge)}`);
+      assert.equal(toEp.includes('a/svc'), false, `edge to should not reference a/svc: ${JSON.stringify(edge)}`);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-39: batch relation flags do not leak to later entities
+// REGTEST-43: diff --spec renders missing after pages when overlay was created with --no-render
+test('REGTEST-43: diff spec renders missing after pages', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // GIVEN base feature in the atlas
+    await cli.dispatch(['add', 'feature', 'base', '--project', root, '--no-render'], io);
+
+    // AND a spec directory exists
+    const specRel = 'docs/plans/spec-diff-test';
+    const specDir = path.join(root, specRel);
+    fs.mkdirSync(specDir, { recursive: true });
+
+    // WHEN adding a new feature with --spec --no-render (creates overlay YAML but no HTML)
+    await cli.dispatch(['add', 'feature', 'new-feature', '--spec', specRel, '--project', root, '--no-render'], io);
+
+    // THEN overlay YAML exists
+    const overlayYaml = path.join(specDir, 'architecture_diff', 'atlas', 'features', 'new-feature.yaml');
+    assert.ok(fs.existsSync(overlayYaml), 'overlay feature YAML should exist');
+
+    // AND overlay HTML does NOT exist yet (created with --no-render)
+    const overlayFeatureHtml = path.join(specDir, 'architecture_diff', 'features', 'new-feature', 'index.html');
+    const overlayMacroHtml = path.join(specDir, 'architecture_diff', 'index.html');
+    assert.equal(fs.existsSync(overlayFeatureHtml), false, 'feature HTML should not exist before diff');
+    assert.equal(fs.existsSync(overlayMacroHtml), false, 'macro HTML should not exist before diff');
+
+    // WHEN running diff --spec (should render missing after pages internally)
+    const outDir = path.join(root, 'diff-render-out');
+    const diffIo = makeIo();
+    const code = await cli.dispatch(['diff', '--spec', specRel, '--project', root, '--out', outDir, '--no-open'], diffIo);
+    assert.equal(code, 0, 'diff --spec should succeed');
+
+    // THEN the diff viewer was written
+    assert.equal(fs.existsSync(path.join(outDir, 'index.html')), true, 'diff viewer HTML should exist');
+
+    // AND after-side HTML files now exist (rendered by collectSingleSpecChanges)
+    assert.ok(fs.existsSync(overlayFeatureHtml), 'after feature HTML should exist after diff');
+    assert.ok(fs.existsSync(overlayMacroHtml), 'after macro HTML should exist after diff');
+
+    // AND the viewer references these after paths
+    const viewer = fs.readFileSync(path.join(outDir, 'index.html'), 'utf8');
+    assert.match(viewer, /new-feature/, 'viewer should reference the new feature');
+    assert.match(viewer, /index\.html/, 'viewer should reference index.html paths');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// REGTEST-39: batch relation flags do not leak to later entities
+test('REGTEST-39: batch relation flags do not leak to later entities', async () => {
+  const root = mkProject();
+  try {
+    const io = makeIo();
+    // GIVEN a target feature exists
+    await cli.dispatch(['add', 'feature', 'target', '--project', root, '--no-render'], io);
+    // WHEN batch command includes --depends-on target on the first entity and then adds a second feature
+    const code = await cli.dispatch(['add', 'feature', 'a', '--depends-on', 'target', 'feature', 'b', '--project', root, '--no-render'], io);
+    assert.equal(code, 0);
+    // THEN the first entity gets the dependency
+    const state = stateLib.load(path.join(root, 'resources/project-architecture/atlas'));
+    const featA = state.features.find(f => f.slug === 'a');
+    const featB = state.features.find(f => f.slug === 'b');
+    assert.ok(featA, 'feature a should exist');
+    assert.ok(featB, 'feature b should exist');
+    assert.ok(featA.dependsOn && featA.dependsOn.includes('target'), 'first entity a should depend on target');
+    // AND later entity does NOT silently inherit the dependency
+    assert.equal(featB.dependsOn && featB.dependsOn.includes('target'), false, 'later entity b should not inherit depends-on target');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

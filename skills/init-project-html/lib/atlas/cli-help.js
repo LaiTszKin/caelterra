@@ -786,12 +786,18 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
     });
   }
 
+  // Hidden verbs redirect before any action-specific lookups (Req 4)
+  if (verb && hiddenVerbs.has(verb)) {
+    if (subverb === 'add' || subverb === 'set') return buildArchitectureHelpPage('add');
+    if (subverb === 'remove') return buildArchitectureHelpPage('remove');
+    return buildArchitectureHelpPage('add');
+  }
+
   if (actionPages[`${verb}:${subverb}`]) {
     return actionPages[`${verb}:${subverb}`];
   }
 
-  // Fine-grained verbs are hidden from --help per SPEC Requirement 4
-  if (familyPages[verb] && !hiddenVerbs.has(verb)) {
+  if (familyPages[verb]) {
     return familyPages[verb];
   }
 

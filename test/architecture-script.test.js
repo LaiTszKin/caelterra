@@ -83,13 +83,49 @@ test('HelpTextBuilder.overview surfaces architecture examples', async () => {
   assert.match(text, /Result:/);
 });
 
-test('atlas CLI returns action-specific help for nested verbs', async () => {
-  const io = makeIo();
-  const code = await atlasCli.dispatch(['edge', 'add', '--help'], io);
-  assert.equal(code, 0);
-  assert.match(io.stdout_text, /apltk architecture edge add/);
-  assert.match(io.stdout_text, /--from/);
-  assert.match(io.stdout_text, /Examples:/);
+test('atlas CLI redirects hidden verb action help to public unified help', async () => {
+  // FIX-06: hidden verbs such as edge/feature/submodule with action subverbs
+  // (add/set/remove) redirect to public unified help instead of exposing fine-grained syntax.
+  const hiddenVerbCases = [
+    ['edge', 'add'],
+    ['feature', 'add'],
+    ['submodule', 'add'],
+  ];
+
+  for (const [verb, action] of hiddenVerbCases) {
+    const io = makeIo();
+    const code = await atlasCli.dispatch([verb, action, '--help'], io);
+    assert.equal(code, 0, `exit code for ${verb} ${action} --help`);
+
+    // Must NOT expose hidden fine-grained syntax
+    assert.doesNotMatch(io.stdout_text, new RegExp(`apltk architecture ${verb} ${action}`),
+      `should not contain fine-grained syntax for ${verb} ${action}`);
+
+    // Must include public unified help (apltk architecture add)
+    assert.match(io.stdout_text, /apltk architecture add/,
+      `should contain public unified add help for ${verb} ${action}`);
+
+    // Must include key public usage patterns from the unified help
+    assert.match(io.stdout_text, /Usage:/,
+      `should include Usage section for ${verb} ${action}`);
+  }
+});
+
+test('REGTEST-42: active docs do not expose fine-grained architecture verbs', () => {
+  const projectRoot = path.resolve(__dirname, '..');
+  const filesToScan = [
+    path.join(projectRoot, 'skills', 'design', 'references', 'architecture.md'),
+    path.join(projectRoot, 'skills', 'update-project-html', 'SKILL.md'),
+  ];
+  const re = /apltk architecture (feature|submodule|function|variable|dataflow|error|edge|meta|actor) (add|set|remove|reorder)/;
+  for (const filePath of filesToScan) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    assert.doesNotMatch(
+      content,
+      re,
+      `${filePath} should not expose fine-grained architecture verbs`,
+    );
+  }
 });
 
 test('open subcommand prints atlas path through atlas CLI', async () => {

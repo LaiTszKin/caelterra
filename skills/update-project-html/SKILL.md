@@ -71,7 +71,7 @@ Consult `references/architecture.md` for CLI flag details (parameter reference, 
 
 When inferring components from a diff hunk, use `--evidence inferred` with a `file:line` source. For example:
 ```
-apltk architecture function add --feature <slug> --submodule <slug> --name <fn> \
+apltk architecture add module <slug> --part-of <feature> \
   --evidence inferred:src/auth/controller.ts:42
 ```
 

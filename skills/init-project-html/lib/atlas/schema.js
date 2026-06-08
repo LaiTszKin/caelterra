@@ -47,6 +47,9 @@ const EDGE_KINDS = Object.freeze([
   'return',
   'data-row',
   'failure',
+  'dependency',
+  'implements',
+  'deployed-on',
 ]);
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;
