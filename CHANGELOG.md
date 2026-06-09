@@ -2,6 +2,20 @@
 
 All notable changes to this repository are documented in this file.
 
+## [v5.1.0] - 2026-06-09
+
+### Removed
+
+- Dropped 19 unused skills to streamline the toolkit: analyse-app-logs, answering-questions-with-research, cjk-pdf, deep-research, develop-new-features, docs-to-voice, document-vision-reader, enhance-existing-features, feature-propose, financial-research, katex, merge-changes-from-local-branches, open-github-issue, open-source-pr-workflow, record-spending, resolve-review-comments, shadow-api-model-research, ship-github-issue-fix, weekly-financial-event-report
+
+### Changed
+
+- **design SKILL.md**: Replaced `deep-research` skill reference with generic "deep research" guidance
+- **implement SKILL.md + agents/openai.yaml**: Optimized with coordinator principles (shared working tree, no worktree isolation); removed worktree cleanup references
+- **fix SKILL.md + agents/openai.yaml**: Same optimization as implement; added regression test oracle verification guidance
+- **README.md**: Updated skill catalog list and compatibility notes
+- **docs/features/**: Removed sections referencing deleted skills across software-development.md, research-and-content.md, catalog-maintenance.md, and platform-automation.md
+
 ## [v5.0.9] - 2026-06-09
 
 ### Changed
