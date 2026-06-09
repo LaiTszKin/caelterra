@@ -1,4 +1,4 @@
 interface:
   display_name: "Implement"
-  short_description: "Implement tasks from an approved spec set by coordinating worker agents"
-  default_prompt: "Load PROMPT.md, dispatch workers following the batch schedule, verify gates, resolve conflicts, commit changes in batches, and report."
+  short_description: "Coordinate implementation workers from a plan (PROMPT.md) without writing code directly"
+  default_prompt: "Load PROMPT.md. Dispatch implementation workers per the batch schedule — workers share the working tree and safety comes from file overlap detection. Verify each batch gate. Resolve conflicts if they arise. Commit and report."

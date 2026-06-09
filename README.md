@@ -5,39 +5,22 @@ A curated skill catalog for Codex, OpenClaw, Trae, Agents, and Claude Code with 
 ## Included skills
 
 - docs-project
-- analyse-app-logs
-- answering-questions-with-research
 - archive
-- cjk-pdf
 - commit
-- develop-new-features
-- docs-to-voice
-- document-vision-reader
-- enhance-existing-features
 - exam-pdf-workflow
-- feature-propose
-- financial-research
 - spec
 - implement
 - plan
 - improve-observability
 - init-project-html
-- katex
 - learning-error-book
 - maintain-project-constraints
-- merge-changes-from-local-branches
 - novel-to-short-video
-- open-github-issue
-- open-source-pr-workflow
 - openai-text-to-image-storyboard
 - optimise-skill
 - read-github-issue
-- record-spending
-- resolve-review-comments
 - qa
 - review
-- shadow-api-model-research
-- ship-github-issue-fix
 - fix
 - systematic-debug
 - test-case-strategy
@@ -45,7 +28,6 @@ A curated skill catalog for Codex, OpenClaw, Trae, Agents, and Claude Code with 
 - update-project-html
 - version-release
 - video-production
-- weekly-financial-event-report
 
 ## Install with npm or npx
 
@@ -196,7 +178,7 @@ The install commands below were checked with the Skills CLI unless otherwise not
 
 Compatibility note:
 
-- `spec` is a local skill used by `develop-new-features` and `enhance-existing-features`, and it can produce either a single spec set under `docs/plans/{YYYY-MM-DD}/{change_name}/` or a coordinated parallel batch under `docs/plans/{YYYY-MM-DD}/{batch_name}/{change_name}/` with shared `coordination.md`.
+- `spec` produces standardized specification documents. It can produce either a single spec set under `docs/plans/{YYYY-MM-DD}/{change_name}/` or a coordinated parallel batch under `docs/plans/{YYYY-MM-DD}/{batch_name}/{change_name}/` with shared `coordination.md`.
 - `plan` converts completed spec documents into a detailed execution plan (`PROMPT.md`) with dependency analysis, batch scheduling, and subagent routing. `implement` then reads `PROMPT.md` and executes mechanically without making its own coordination decisions.
 
 - `read-github-issue` uses GitHub CLI (`gh`) directly for remote issue discovery and inspection, so it does not add any extra skill dependency.

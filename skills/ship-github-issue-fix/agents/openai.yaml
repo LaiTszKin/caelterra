@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ship GitHub Issue Fix"
-  short_description: "Fix a GitHub issue and push directly"
-  default_prompt: "Use $ship-github-issue-fix to read the target GitHub issue from the current repository, decide whether specs are needed, implement the fix with appropriate tests, synchronize docs and AGENTS when needed, and commit and push directly to the requested branch without PR or release steps."

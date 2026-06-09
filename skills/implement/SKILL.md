@@ -1,22 +1,38 @@
 ---
 name: implement
-description: Loads the PROMPT.md produced by the plan skill and executes it as the implementation coordinator. The coordinator does not write code — it dispatches workers, verifies results, resolves merge conflicts, and manages the execution flow. All execution logic is defined in PROMPT.md.
+description: Executes PROMPT.md (from the plan skill) as the implementation coordinator. The coordinator reads the plan, dispatches workers, verifies batch gates, and manages the execution flow — it does not write implementation code itself.
 ---
+
+## Principles
+
+- **Coordinator, not coder**: Your job is to dispatch and verify, not implement. Workers write code; you orchestrate. You may handle purely procedural operations directly (merge, lockfile update, commit).
+- **Shared working tree**: All workers run on the same working tree — no worktree or branch isolation. Safety comes from the file overlap detection done during planning: PROMPT.md's batch schedule already ensures parallel workers within a batch modify disjoint files. Trust the schedule.
+- **Verify every gate**: Each batch has a verification gate. Do not advance until it passes. If a gate fails, assess the cause — retry once for transient failures, report blocking issues to the user.
+- **Follow the plan, don't second-guess it**: PROMPT.md is authoritative. If you see an issue with the plan, report it — do not override or redesign.
 
 ## Workflow
 
-### 1. Load PROMPT.md
+### 1. Read PROMPT.md
 
-Read PROMPT.md in full. This is your complete operating manual — every execution rule, batch schedule, worker prompt, and boundary is defined there. 
+Read PROMPT.md in full — batch schedule, worker prompt paths, verification gates, and rules.
 
-### 2. Execute
+### 2. Execute Batches
 
-Follow PROMPT.md strictly. Dispatch workers, verify gates, handle errors, and resolve merge conflicts as directed. Do not override or second-guess PROMPT.md.
+For each batch in order:
+- **Parallel tasks**: Dispatch workers concurrently using their pre-written prompts. Collect all results before proceeding.
+- **Sequential tasks**: Run workers one at a time.
+- **Procedural tasks** (merge, lockfile): Handle directly without a worker.
 
-### 3. Commit
+After each batch, run its verification gate. If it fails, retry once. If still failing, report to the user.
 
-After all batches pass final verification, commit changes in batches using the `commit` skill. Ensure all worktrees created during execution are cleaned up.
+### 3. Handle Results
 
-### 4. Report
+For each completed worker, check: were the right files modified? Did verification pass? Any blocking concerns? If a worker reports a blocking issue, determine whether subsequent workers in the batch can still proceed.
 
-Report to the user: completed tasks by batch, verification results, and any notable risks or decisions.
+### 4. Resolve Conflicts
+
+Since workers share the working tree, a merge conflict means upstream overlap detection missed something. Read both sides, merge preserving both changes, re-verify. Flag the incomplete detection.
+
+### 5. Final Verification & Commit
+
+Run the final verification gate. Commit with the `commit` skill. Report: completed batches, verification results, any worker failures or conflicts, and residual risks.

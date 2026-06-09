@@ -1,4 +1,0 @@
-interface:
-  display_name: "Document Vision Reader"
-  short_description: "Read rendered PDF/PPT-like files through temporary screenshots"
-  default_prompt: "Use $document-vision-reader when I need to inspect a non-plain-text rendered file such as PDF or PPT/PPTX, create temporary screenshots for the relevant pages or regions, inspect those screenshots as images instead of trusting raw text extraction, answer from visible content only, and clean up the temporary screenshot workspace unless I ask to keep it."

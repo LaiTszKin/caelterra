@@ -1,4 +1,0 @@
-interface:
-  display_name: "Financial Research"
-  short_description: "Research the latest completed market week and produce a PDF watchlist"
-  default_prompt: "Use $financial-research to lock the user's local timezone and most recent completed 7-day window ending yesterday, gather authoritative financial and economic sources for that period, identify the key instruments to watch next week, and produce the final report as a PDF in Chinese by default via $pdf."

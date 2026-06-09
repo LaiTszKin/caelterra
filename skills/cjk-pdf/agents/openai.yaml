@@ -1,5 +1,0 @@
-interface:
-  display_name: "cjk-pdf"
-  short_description: "CJK-safe PDF rendering, font selection, and screenshot visual QA"
-  default_prompt: >-
-    Use $cjk-pdf when producing PDFs that include Chinese or mixed CJK text: verify macOS font paths, enforce content safety, delegate rendering to the external `pdf` skill, then run screenshot-based visual QA before returning the final artifact.

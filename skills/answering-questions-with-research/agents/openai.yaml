@@ -1,4 +1,0 @@
-interface:
-  display_name: "Answering Questions With Research"
-  short_description: "Combine repo discovery and web research for evidence-based answers"
-  default_prompt: "Use $answering-questions-with-research to answer this question by exploring the repository first, then verifying relevant external facts with current primary sources, and clearly separate confirmed findings from unknowns or assumptions."

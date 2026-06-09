@@ -1,4 +1,0 @@
-interface:
-  display_name: "Resolve Review Comments"
-  short_description: "Adopt PR feedback and resolve comments fast"
-  default_prompt: "Use $resolve-review-comments to process GitHub PR review comments, apply accepted feedback, and resolve addressed threads."

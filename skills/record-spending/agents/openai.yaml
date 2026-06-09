@@ -1,4 +1,0 @@
-interface:
-  display_name: "Record Spending"
-  short_description: "Maintain monthly multi-account bookkeeping ledgers in Excel"
-  default_prompt: "Use $record-spending to read ACCOUNT.md first, update the correct month ledger with one worksheet per account plus a monthly summary, keep ACCOUNT.md and CHART.md synchronized, and perform workbook edits through $spreadsheet."

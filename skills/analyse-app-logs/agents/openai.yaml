@@ -1,4 +1,0 @@
-interface:
-  display_name: "Analyse App Logs"
-  short_description: "Analyze logs with code context to detect issues"
-  default_prompt: "Use $analyse-app-logs to inspect application logs with code context, first anchor the investigation to a bounded recent time window such as the last container restart or deploy, use the bundled log-filter and log-search scripts to narrow the evidence set precisely, identify evidence-backed issues, suggest concrete remediation steps, and delegate confirmed GitHub issue publication to $open-github-issue."

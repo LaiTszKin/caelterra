@@ -36,18 +36,6 @@
 - **When** 使用 `implement` 技能
 - **Then** 嚴格按照 PROMPT.md 的批次排程與 subagent 路由執行實作，不做任何協同決策
 
-## 增強現有功能
-
-- **Given** 既有程式碼需要擴充
-- **When** 使用 `enhance-existing-features` 技能
-- **Then** 產生 spec、實作功能，並建立必要的回歸測試
-
-## 合併變更
-
-- **Given** 本地分支包含來自不同來源的變更
-- **When** 使用 `merge-changes-from-local-branches` 技能
-- **Then** 將指定分支的變更合併至目前分支，處理衝突
-
 ## 程式碼審查
 
 - **Given** 變更已實作完成
@@ -61,10 +49,6 @@
 - **Given** 已有 FIX.md
 - **When** 使用 `fix` 技能
 - **Then** 嚴格按照 FIX.md 的修復計畫執行，不做任何規劃決策
-
-- **Given** GitHub PR 上有審查意見
-- **When** 使用 `resolve-review-comments` 技能
-- **Then** 逐一處理審查意見並標記為已解決
 
 ## 架構圖同步
 

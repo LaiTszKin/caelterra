@@ -1,4 +1,0 @@
-interface:
-  display_name: "Open Source PR Workflow"
-  short_description: "Prepare and open high-quality OSS PRs"
-  default_prompt: "Use $open-source-pr-workflow to prepare a pull request for an open-source repository from existing changes, ensure branch names follow codex/{change_type}/{changes}, and default forked repositories to open PRs against the upstream parent repository unless the user explicitly asks for the fork. Open PRs directly by default without waiting for draft confirmation, and only show a draft when the user explicitly asks to review it first. Include related issues or motivation, engineering decisions with rationale, and test results with commands. If code changes are involved, run discover-edge-cases first, resolve any confirmed findings, and run code-simplifier before opening the PR. Keep PR content strictly about the PR itself and do not include internal skill or tool process notes. Do not implement new features in this workflow."

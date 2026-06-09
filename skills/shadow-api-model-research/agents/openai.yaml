@@ -1,4 +1,0 @@
-interface:
-  display_name: "Shadow API Model Research"
-  short_description: "Capture gated client traffic and attribute likely model families"
-  default_prompt: "Use $shadow-api-model-research when the task is to inspect Codex/OpenClaw/custom-provider request shapes, build a capture or replay workflow, compare a restricted endpoint against control providers, or estimate the likely underlying model with black-box fingerprinting."

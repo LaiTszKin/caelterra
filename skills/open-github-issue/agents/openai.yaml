@@ -1,4 +1,0 @@
-interface:
-  display_name: "Open GitHub Issue"
-  short_description: "Publish structured issues across multiple categories"
-  default_prompt: "Use $open-github-issue to publish a structured GitHub issue from prepared content, choose the correct issue category such as problem, feature, performance, security, docs, or observability, resolve the target repo, detect README language for issue sections, and fall back deterministically from gh CLI to GitHub token to draft-only output."

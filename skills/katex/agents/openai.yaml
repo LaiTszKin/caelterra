@@ -1,4 +1,0 @@
-interface:
-  display_name: "KaTeX"
-  short_description: "Render and embed math formulas with KaTeX using insertion-ready snippets."
-  default_prompt: "Use $katex to turn TeX math into insertion-ready KaTeX output, choose between pre-rendering and auto-render based on the target file, and use the bundled renderer script when a static snippet or preview file is needed."

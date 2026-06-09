@@ -1,4 +1,0 @@
-interface:
-  display_name: "Weekly Financial Event Report"
-  short_description: "Turn a marked finance PDF into a concise Chinese-capable PDF briefing"
-  default_prompt: "Use $weekly-financial-event-report to read the user's marked weekly finance PDF, extract the explicitly marked events, research each one with current sources, add any material breaking financial developments, prepare the report content, and then delegate final PDF generation and PDF QA to $pdf."

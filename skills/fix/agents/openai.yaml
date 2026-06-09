@@ -1,4 +1,4 @@
 interface:
   display_name: "Solve Issues Found During Review"
-  short_description: "Fix review findings from high to low severity"
-  default_prompt: "Load FIX.md, dispatch fix and regression test workers following the batch schedule, verify gates, resolve conflicts, commit changes in batches, and report."
+  short_description: "Coordinate fix and regression test workers from a fix plan (FIX.md) by severity order"
+  default_prompt: "Load FIX.md. Dispatch fix workers per the batch schedule (priority order), then dispatch regression test workers — workers share the working tree, safety comes from file overlap detection. Verify each test's oracle (fails on unfixed code). Resolve conflicts. Commit and report."

@@ -31,7 +31,7 @@ Read all SPEC.md files. Understand: business goal, BDD requirements, error/edge 
 
 ### 2. Web Research
 
-Complete three passes before designing. Use `deep-research` skill or direct web search.
+Complete three passes before designing. Do deep research to obtain required information.
 
 **2a. Technical Feasibility** — For each requirement, verify feasibility under the current tech stack. Flag high-risk points. Record key limitations.
 

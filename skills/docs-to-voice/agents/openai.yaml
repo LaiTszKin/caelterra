@@ -1,4 +1,0 @@
-interface:
-  display_name: "Docs to Voice"
-  short_description: "Convert text into voice files with macOS say or Model Studio API"
-  default_prompt: "Use $docs-to-voice to convert text into an audio file saved under project_dir/audio/{project_name}/, generate sentence timelines (.timeline.json and .srt), synthesize API mode sentence-by-sentence, and concatenate all generated parts into one final audio file."
