@@ -38,9 +38,9 @@ test('parseArguments classifies tools as tools-help', () => {
 });
 
 test('parseArguments classifies direct tool name as tool command', () => {
-  const parsed = parseArguments(['filter-logs']);
+  const parsed = parseArguments(['codegraph']);
   assert.equal(parsed.command, 'tool');
-  assert.equal(parsed.toolName, 'filter-logs');
+  assert.equal(parsed.toolName, 'codegraph');
 });
 
 test('parseArguments classifies tools <name> as tool command', () => {
@@ -86,10 +86,10 @@ test('parseArguments recognizes tools --help', () => {
 });
 
 test('parseArguments recognizes direct tool invocation', () => {
-  const result = parseArguments(['filter-logs', 'app.log', '--count-only']);
+  const result = parseArguments(['codegraph', 'status', '--json']);
   assert.equal(result.command, 'tool');
-  assert.equal(result.toolName, 'filter-logs');
-  assert.deepEqual(result.toolArgs, ['app.log', '--count-only']);
+  assert.equal(result.toolName, 'codegraph');
+  assert.deepEqual(result.toolArgs, ['status', '--json']);
 });
 
 test('parseArguments recognizes codegraph as a known tool', () => {
@@ -237,7 +237,7 @@ test('run writes tools help text for tools command', async () => {
 
 test('run dispatches known tool via context.runTool and returns 0', async () => {
   const calls = [];
-  const exitCode = await run(['filter-logs', '--help'], {
+  const exitCode = await run(['codegraph', '--help'], {
     stdout: mockStd(),
     stderr: mockStd(),
     env: {},
@@ -248,13 +248,13 @@ test('run dispatches known tool via context.runTool and returns 0', async () => 
   });
   assert.equal(exitCode, 0);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].name, 'filter-logs');
+  assert.equal(calls[0].name, 'codegraph');
   assert.deepEqual(calls[0].args, ['--help']);
 });
 
 test('run dispatches known tool and passes sourceRoot, stdout, stderr, env to runTool', async () => {
   const calls = [];
-  const exitCode = await run(['filter-logs'], {
+  const exitCode = await run(['codegraph'], {
     stdout: mockStd(),
     stderr: mockStd(),
     env: { CUSTOM_VAR: 'yes' },
@@ -271,7 +271,7 @@ test('run dispatches known tool and passes sourceRoot, stdout, stderr, env to ru
 });
 
 test('run returns 1 when runTool returns non-zero exit code', async () => {
-  const exitCode = await run(['filter-logs'], {
+  const exitCode = await run(['codegraph'], {
     stdout: mockStd(),
     stderr: mockStd(),
     env: {},
@@ -283,7 +283,7 @@ test('run returns 1 when runTool returns non-zero exit code', async () => {
 test('run returns 1 and writes error to stderr for unknown tool via mock runTool', async () => {
   let stderrText = '';
   const stderr = { write(chunk) { stderrText += chunk; return true; } };
-  const exitCode = await run(['filter-logs'], {
+  const exitCode = await run(['codegraph'], {
     stdout: mockStd(),
     stderr,
     env: {},
@@ -371,7 +371,7 @@ test('REGTEST-02: parseArguments backward compatibility — all command types', 
     // Dispatch table 'tools' entry → tools-help
     { argv: ['tools'],             command: 'tools-help', props: { showToolsHelp: true, showHelp: false } },
     // isKnownToolName fallback → 'tool' command
-    { argv: ['filter-logs'],       command: 'tool',       props: { toolName: 'filter-logs' } },
+    { argv: ['architecture'],       command: 'tool',       props: { toolName: 'architecture' } },
   ];
 
   for (const { argv, command, props } of scenarios) {
@@ -462,7 +462,7 @@ test('REGTEST-02: architectural — dispatch table supports independent command 
 // ---------------------------------------------------------------------------
 
 test('REGTEST-04: Known tool names route through tool command', () => {
-  const knownTools = ['filter-logs', 'codegraph', 'architecture', 'docs-to-voice', 'eval'];
+  const knownTools = ['architecture', 'codegraph', 'create-review-report', 'create-specs', 'eval'];
   for (const toolName of knownTools) {
     const result = parseArguments([toolName]);
     assert.equal(

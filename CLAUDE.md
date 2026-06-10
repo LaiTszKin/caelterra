@@ -8,7 +8,7 @@
 - `node dist/bin/apollo-toolkit.js [mode...]` - Start CLI, install skills to targets (codex/openclaw/trae/agents/claude-code/all).
 - `node dist/bin/apollo-toolkit.js uninstall [mode...]` - Remove Apollo Toolkit skills from targets.
 - `node dist/bin/apollo-toolkit.js tools` - List all built-in CLI tools and their categories.
-- `node dist/bin/apollo-toolkit.js <tool> [args...]` - Run a built-in tool (e.g., `codegraph`, `architecture`, `filter-logs`).
+- `node dist/bin/apollo-toolkit.js <tool> [args...]` - Run a built-in tool (e.g., `codegraph`, `architecture`, `create-specs`).
 - `apltk codegraph <subcommand> [options]` - CodeGraph codebase exploration tool. Run `apltk codegraph --help` and subcommand help before using it.
 - `apltk architecture [add|remove|diff|merge|render|open]` - Architecture atlas management and spec overlay operations.
 - `apltk eval <skill>` - LLM-as-Judge skill evaluation.

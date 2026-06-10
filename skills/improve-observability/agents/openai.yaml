@@ -1,4 +1,0 @@
-interface:
-  display_name: "Improve observability"
-  short_description: "Add targeted observability to debug hard-to-explain code paths."
-  default_prompt: "Use $improve-observability to add focused logs, traces, metrics, and tests around a failing or opaque workflow so the root cause becomes observable without changing product behavior."

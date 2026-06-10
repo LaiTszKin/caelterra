@@ -1,4 +1,0 @@
-interface:
-  display_name: "Learning Error Book"
-  short_description: "Summarize mistakes into structured MC and long-question error books"
-  default_prompt: "Use $learning-error-book to gather evidence about the user's mistakes, use $pdf whenever PDF extraction or OCR is needed, generate or update error_book/references/mc-question-reference.json and error_book/references/long-question-reference.json as applicable, then render polished PDFs directly to error_book/mc-question-error-book.pdf and error_book/long-question-error-book.pdf without using Markdown as an intermediate."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Novel to Short Video"
-  short_description: "Turn the best novel segment into a looping 50-60s short video"
-  default_prompt: "Use $novel-to-short-video to extract the single most compelling segment from my novel, ensure it forms a self-contained mini-story while ending with lingering curiosity, create a plan markdown from assets/plan-template.md under docs/plans with date+chapter naming, include beat-level audience-focus effects and a 3-4 chars/second narration pacing target in the plan, wait for my approval, then ensure <project_dir>/roles/roles.json exists first (create it if missing using references/roles-json.md), reuse existing role prompts, and only append missing roles before generating prompts/images, then generate storyboard images and voiceover, validate narration speed in 3-4 chars/second before render, and render a 50-60 second looping short video with controlled special effects while keeping the Remotion project editable."

@@ -4,14 +4,20 @@ All notable changes to this repository are documented in this file.
 
 ## [Unreleased]
 
+## [v5.2.0] - 2026-06-10
+
+### Added
+
+- **review-pr skill**: New PR review skill with 4-dimension code review (hallucination, architecture, performance, test validity) and severity-graded PR comments via `gh`.
+
+### Removed
+
+- **10 unused CLI tools**: `docs-to-voice`, `render-katex`, `render-error-book`, `extract-pdf-text`, `generate-storyboard-images`, `enforce-video-aspect-ratio`, `sync-memory-index`, `extract-conversations`, `filter-logs`, `search-logs` — tool packages, tests, registration, and documentation references cleaned up.
+
 ### Changed
 
 - **CodeGraph CLI refactored**: Replaced monolithic command modules (`cmd-explore`, `cmd-search`, `cmd-survey`, `cmd-list-apis`, `cmd-verify`) with focused smaller commands (`cmd-index`, `cmd-query`, `cmd-files`, `cmd-relations`, `cmd-impact`, `cmd-node`, `cmd-context`, `graph-output`). Run `apltk codegraph --help` for the current command surface.
 - **Documentation**: Added "--help first" guidance across all docs; updated codegraph subcommand descriptions in CLAUDE.md, AGENTS.md, and feature docs.
-
-### Removed
-
-- **CodeGraph legacy tests and survey/verify modules**: Removed test files and source modules for the deprecated monolithic command structure.
 
 ## [v5.1.0] - 2026-06-09
 

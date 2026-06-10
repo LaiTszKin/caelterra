@@ -80,7 +80,7 @@ Beyond installation mode, `apltk` also exposes common skill scripts as simple CL
 
 ```bash
 apltk tools
-apltk filter-logs app.log --start "2026-03-24T10:00:00Z"
+apltk codegraph status --json
 apltk create-specs "Membership upgrade flow" --change-name membership-upgrade-flow
 apltk open-github-issue --help
 

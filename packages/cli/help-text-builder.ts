@@ -35,7 +35,7 @@ export class HelpTextBuilder {
       { command: 'apltk tools --help', result: 'Lists bundled tools by task so you can decide which CLI helper to inspect next.' },
       { command: 'apltk architecture --help', result: 'Shows the architecture atlas command tree, task guidance, and action-specific follow-up help paths.' },
       { command: 'apltk tools architecture --help', result: 'Shows what the architecture atlas tool is for, then prints its native command tree and examples.' },
-      { command: 'apltk filter-logs app.log --start 2026-03-24T10:00:00Z', result: 'Prints only the log lines whose timestamps fall within the requested time window.' },
+      { command: 'apltk codegraph status --json', result: 'Prints CodeGraph index status in JSON format for programmatic use.' },
     ];
 
     return this.joinLines([

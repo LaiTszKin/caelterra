@@ -1,4 +1,0 @@
-interface:
-  display_name: "Exam PDF Workflow"
-  short_description: "Create, typeset, and grade exam PDFs with math rendering."
-  default_prompt: "Use $exam-pdf-workflow to read exam PDFs, generate mock exams and worked solutions, render math with KaTeX, or grade completed answer-book PDFs into a graded PDF."

@@ -36,8 +36,8 @@ export type SchemaOption =
  *     help: { type: 'boolean', short: 'h' },
  *   },
  *   allowPositionals: true,
- *   usage: 'apltk filter-logs [options] [<file>...]',
- *   description: 'Filter log lines by time window.',
+ *   usage: 'apltk example-tool [options] [<file>...]',
+ *   description: 'Example tool description.',
  *   handler: async (values, positionals, ctx) => { ... },
  * };
  * ```

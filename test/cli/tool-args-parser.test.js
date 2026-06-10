@@ -4,25 +4,25 @@ import { ToolArgsParser } from '@laitszkin/cli';
 
 test('ToolArgsParser: direct tool name with args', () => {
   const parser = new ToolArgsParser();
-  const result = parser.parse(['filter-logs', 'app.log', '--count-only']);
+  const result = parser.parse(['codegraph', 'status', '--json']);
   assert.equal(result.command, 'tool');
-  assert.equal(result.toolName, 'filter-logs');
-  assert.deepEqual(result.toolArgs, ['app.log', '--count-only']);
+  assert.equal(result.toolName, 'codegraph');
+  assert.deepEqual(result.toolArgs, ['status', '--json']);
 });
 
 test('ToolArgsParser: tools prefix with tool name and args', () => {
   const parser = new ToolArgsParser();
-  const result = parser.parse(['tools', 'filter-logs', 'app.log']);
+  const result = parser.parse(['tools', 'codegraph', 'app.log']);
   assert.equal(result.command, 'tool');
-  assert.equal(result.toolName, 'filter-logs');
+  assert.equal(result.toolName, 'codegraph');
   assert.deepEqual(result.toolArgs, ['app.log']);
 });
 
 test('ToolArgsParser: tool alias prefix works same as tools', () => {
   const parser = new ToolArgsParser();
-  const result = parser.parse(['tool', 'filter-logs', 'app.log']);
+  const result = parser.parse(['tool', 'codegraph', 'app.log']);
   assert.equal(result.command, 'tool');
-  assert.equal(result.toolName, 'filter-logs');
+  assert.equal(result.toolName, 'codegraph');
   assert.deepEqual(result.toolArgs, ['app.log']);
 });
 
@@ -80,8 +80,8 @@ test('ToolArgsParser: tools prefix with unknown tool name', () => {
 
 test('ToolArgsParser: tools prefix with --help after tool name does NOT return tools-help', () => {
   const parser = new ToolArgsParser();
-  const result = parser.parse(['tools', 'filter-logs', '--help']);
+  const result = parser.parse(['tools', 'codegraph', '--help']);
   assert.equal(result.command, 'tool');
-  assert.equal(result.toolName, 'filter-logs');
+  assert.equal(result.toolName, 'codegraph');
   assert.deepEqual(result.toolArgs, ['--help']);
 });

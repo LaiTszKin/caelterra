@@ -1,4 +1,0 @@
-interface:
-  display_name: "OpenAI Text to Image Storyboard"
-  short_description: "Generate image sets from agent-decided prompts"
-  default_prompt: "Use $openai-text-to-image-storyboard to decide scene prompts from text and generate images into pictures/{content_name}/ as soon as content is available. Always provide prompts through a JSON prompts file and run image generation directly when required inputs are present. Load API settings from ~/.codex/skills/openai-text-to-image-storyboard/.env by default."

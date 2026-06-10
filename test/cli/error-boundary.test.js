@@ -75,7 +75,7 @@ test('run: invalid mode causes error on stderr and exit code 1', async () => {
 test('run: successful tool dispatch returns exit code 0', async () => {
   const stdout = createMockStream();
   const stderr = createMockStream();
-  const result = await run(['filter-logs', '--help'], {
+  const result = await run(['codegraph', '--help'], {
     sourceRoot: PROJECT_ROOT,
     stdout,
     stderr,
@@ -89,7 +89,7 @@ test('run: successful tool dispatch returns exit code 0', async () => {
 test('run: handler throwing UserInputError writes message without "Error:" prefix and exits 1', async () => {
   const stdout = createMockStream();
   const stderr = createMockStream();
-  const result = await run(['filter-logs'], {
+  const result = await run(['codegraph'], {
     sourceRoot: PROJECT_ROOT,
     stdout,
     stderr,
@@ -108,7 +108,7 @@ test('run: handler throwing UserInputError writes message without "Error:" prefi
 test('run: handler throwing SystemError writes message and stack trace', async () => {
   const stdout = createMockStream();
   const stderr = createMockStream();
-  const result = await run(['filter-logs'], {
+  const result = await run(['codegraph'], {
     sourceRoot: PROJECT_ROOT,
     stdout,
     stderr,
@@ -130,7 +130,7 @@ test('run: handler throwing SystemError writes message and stack trace', async (
 test('run: handler throwing ToolNotFoundError writes message without prefix', async () => {
   const stdout = createMockStream();
   const stderr = createMockStream();
-  const result = await run(['filter-logs'], {
+  const result = await run(['codegraph'], {
     sourceRoot: PROJECT_ROOT,
     stdout,
     stderr,

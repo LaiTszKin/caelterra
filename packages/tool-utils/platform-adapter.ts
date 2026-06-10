@@ -26,7 +26,7 @@ export interface PlatformAdapter {
   /**
    * OS-specific line ending.
    * Available for file writes that need \r\n (Windows) vs \n (POSIX).
-   * Consumed by sync-memory-index for cross-platform file writes.
+   * Useful for cross-platform file writes where line-ending convention matters.
    */
   readonly EOL: string;
 
@@ -59,7 +59,7 @@ export class WindowsAdapter implements PlatformAdapter {
 
   get EOL(): string {
     // Available for consumers that need OS-specific line endings.
-    // Consumed by sync-memory-index for cross-platform file writes.
+    // Useful for cross-platform file writes where line-ending convention matters.
     return os.EOL;
   }
 }
@@ -88,7 +88,7 @@ export class PosixAdapter implements PlatformAdapter {
 
   get EOL(): string {
     // Available for consumers that need OS-specific line endings.
-    // Consumed by sync-memory-index for cross-platform file writes.
+    // Useful for cross-platform file writes where line-ending convention matters.
     return os.EOL;
   }
 }

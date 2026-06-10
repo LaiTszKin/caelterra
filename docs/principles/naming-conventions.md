@@ -22,6 +22,6 @@
 
 ## 工具命令：連字號分隔多詞
 
-工具註冊名稱使用連字號分隔：`filter-logs`、`search-logs`、`create-specs`、`render-katex`、`render-error-book`、`open-github-issue`、`extract-pdf-text-pdfkit`。
+工具註冊名稱使用連字號分隔：`architecture`、`codegraph`、`create-specs`、`create-review-report`、`open-github-issue`、`validate-skill-frontmatter`。
 
 **理由**: CLI 環境中連字號比底線更易輸入，且與 npm script 命名慣例一致。

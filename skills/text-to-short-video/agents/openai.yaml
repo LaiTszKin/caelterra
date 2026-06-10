@@ -1,4 +1,0 @@
-interface:
-  display_name: "Text to Short Video"
-  short_description: "Turn text into 30-60s short videos via API"
-  default_prompt: "Use $text-to-short-video to convert my text into one 30-60 second short video using an API-only workflow. Before building the final prompt, load <project_dir>/pictures/<content_name>/roles.json as the role source and keep role consistency: do not modify existing role id/name/appearance/outfit, only update role descriptions for clip-specific actions. Then call an OpenAI-compatible /videos/generations endpoint with settings from ~/.codex/skills/text-to-short-video/.env, poll until completion, download the MP4, and run post-process crop/resize only when output aspect ratio or size mismatches."

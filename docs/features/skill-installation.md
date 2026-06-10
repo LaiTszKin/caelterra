@@ -47,7 +47,7 @@
 - **Then** 顯示工具目的、使用時機、替代方案、原生指令標誌與範例
 
 - **Given** 使用者知道工具名稱
-- **When** 直接執行 `apltk filter-logs app.log --start 2026-03-24T10:00:00Z`
+- **When** 直接執行 `apltk codegraph status --json`
 - **Then** 工具包裝器以對應執行環境（node/python3/swift）啟動技能腳本
 
 ## 自動更新檢查
