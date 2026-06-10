@@ -4,6 +4,12 @@ All notable changes to this repository are documented in this file.
 
 ## [Unreleased]
 
+## [v5.2.2] - 2026-06-10
+
+### Changed
+
+- **maintain-project-constraints skill**: Root-level Documentation Index templates now reference per-module constraint files (`<module_name>/CLAUDE.md`, `<module_name>/AGENTS.md`).
+
 ## [v5.2.1] - 2026-06-10
 
 ### Changed
