@@ -15,6 +15,7 @@
 - `docs/architecture/<file>.md` — <one-line description>
 - `docs/principles/<file>.md` — <one-line description>
 - `README.md` — <one-line description>
+- `<module_name>/AGENTS.md` — <one-line description>
 
 ## Prohibitions
 

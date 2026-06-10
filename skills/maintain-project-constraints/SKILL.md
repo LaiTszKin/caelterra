@@ -53,7 +53,7 @@ Create or update `CLAUDE.md` and `AGENTS.md` in the project root using `assets/t
 
 1. **Common Development Commands** — only include commands verifiable against real entry points (`package.json`, Makefile, scripts, CI config). Before using any `apltk` command, run its `--help` first. Append a one-line purpose per command.
 2. **Project Business Goals** — project-level purpose and value, not a feature list.
-3. **Project Documentation Index** — cover all files under `docs/features/`, `docs/architecture/`, `docs/principles/`, plus important root files (`README.md`, etc.).
+3. **Project Documentation Index** — cover all files under `docs/features/`, `docs/architecture/`, `docs/principles/`, plus important root files (`README.md`, etc.). Also include each sub-module's constraint file: `<module_name>/CLAUDE.md` in CLAUDE.md, `<module_name>/AGENTS.md` in AGENTS.md — each with a one-line description.
 
 **AGENTS.md vs CLAUDE.md split:**
 
@@ -86,6 +86,7 @@ Self-review before delivery:
 - [ ] Every prohibition has supporting evidence (git commit hash, issue link, CI config line number, or doc excerpt)
 - [ ] Every `RULES SHOULD NOT BE VIOLATED` entry can be traced back to code structure or project history — no invented rules
 - [ ] Documentation Index contains no dead links
+- [ ] Root-level Documentation Index references every sub-module's constraint file
 
 ## References
 
