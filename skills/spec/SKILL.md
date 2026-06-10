@@ -1,6 +1,6 @@
 ---
 name: spec
-description: Transforms user requirements into strictly-scoped business specification documents (SPEC.md). Must dispatch subagents to research the repository before writing (skippable for greenfield repos). Produces batch specs when requirements exceed 5 BDD items. Not for discussion without PROPOSAL.md, nor for single-file changes that don't need a spec.
+description: Transforms user requirements into strictly-scoped business specification documents (SPEC.md). Deeply explores the codebase to calibrate every requirement against actual code. Produces batch specs when requirements exceed 5 BDD items. Not for discussion without PROPOSAL.md, nor for single-file changes that don't need a spec.
 ---
 
 ## Goal
@@ -11,10 +11,11 @@ Technical architecture belongs to `design`. Execution methodology belongs to `pl
 
 ## Acceptance Criteria
 
-- SPEC.md follows the template format, including: business goal, scope (In/Out), BDD behaviors, error/edge cases, clarification questions
-- SPEC.md References section cites key code file paths affected by the requirements
+- SPEC.md follows the template format: business goal, scope (In/Out), BDD behaviors, error/edge cases, clarification questions
+- References section cites key code file paths affected by the requirements
 - High-uncertainty requirements marked with Uncertainty Level and reflected in Clarification Questions
-- For non-greenfield repos: CodeGraph-assisted repo exploration completed, subagent repo research complete, every requirement's boundary calibrated against actual code
+- For non-greenfield repos: CodeGraph-assisted repo exploration completed, every requirement's boundary calibrated against actual code
+- Work started on a `feature/<spec-name>` branch
 - Output at `docs/plans/<YYYY-MM-DD>/<spec_name>/SPEC.md` (single) or `docs/plans/<YYYY-MM-DD>/<batch-name>/<spec_name>/SPEC.md` (batch)
 
 ## Workflow
@@ -25,13 +26,13 @@ Technical architecture belongs to `design`. Execution methodology belongs to `pl
 
 **Non-greenfield repo**: Establish code-level understanding of module boundaries, existing APIs, and data structures BEFORE reading requirements. This ensures every BDD requirement is scoped correctly against real code.
 
-Before choosing commands, run `apltk codegraph --help` and `apltk codegraph <subcommand> --help`. Use the live help output to pick suitable exploration commands for files, symbols, callers/callees, context, or impact analysis. Record the CodeGraph findings that affect requirement scope.
+Before choosing commands, run `apltk codegraph --help` and `apltk codegraph <subcommand> --help`. Use the live help output to pick suitable exploration commands for files, symbols, callers/callees, context, or impact analysis. Record findings that affect requirement scope.
 
 ### 2. Read PROPOSAL.md and Understand Requirements
 
 Analyze the user's requirements from PROPOSAL.md. Compare CodeGraph findings against what PROPOSAL.md describes — if actual code contradicts or constrains the proposal, note these calibrations explicitly.
 
-For complex repos, dispatch multiple subagents in parallel to investigate:
+Deeply explore the codebase to find relevant code:
 - Affected modules and responsibility boundaries
 - Existing data structures and persistence patterns
 - Existing API contracts and call relationships
@@ -55,7 +56,15 @@ Define **Error and Edge Cases** covering five categories: authorization boundari
 
 If a requirement remains unclear after research and affects scope, record it and wait for the user's answer before proceeding.
 
-### 4. Generate SPEC.md
+### 4. Ensure Dedicated Branch (Before File Creation)
+
+Before generating the file, check the current git branch. If on `main`, `master`, `develop`, or any non-dedicated branch:
+1. Derive the branch type prefix from the work's nature (e.g., `feature` for new capabilities, `refactor` for restructuring, `fix` for bug fixes, `chore` for maintenance)
+2. Derive a kebab-case name from the spec/feature name
+3. Run `git checkout -b <type>/<kebab-case-name>`
+4. Confirm the branch was created before proceeding
+
+### 5. Generate SPEC.md
 
 Use `assets/templates/SPEC.md`. Before creating files, run `apltk create-specs --help` and follow the live CLI guidance. Create structure with:
 ```

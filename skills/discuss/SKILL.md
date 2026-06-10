@@ -15,6 +15,7 @@ Help users transform vague ideas into a structured high-level design. Assume the
 - No unverified assumptions or guesses remain in the stated requirements
 - PROPOSAL.md covers all required dimensions with no internal contradictions
 - User explicitly confirms they have no remaining questions
+- Work started on a `feature/<topic>` branch
 
 ## Workflow
 
@@ -54,14 +55,22 @@ After completing all four dimensions, distill the conversation into **3-7 requir
 
 This becomes the **Requirement Summary** section of PROPOSAL.md, consumed by the `spec` skill.
 
-### 5. Termination and PROPOSAL.md Generation
+### 5. Ensure Dedicated Branch (Before File Creation)
+
+Before generating the file, check the current git branch. If on `main`, `master`, `develop`, or any non-dedicated branch:
+1. Derive the branch type prefix from the work's nature (e.g., `feature` for new capabilities, `refactor` for restructuring, `fix` for bug fixes, `chore` for maintenance)
+2. Derive a kebab-case name from the converged topic
+3. Run `git checkout -b <type>/<kebab-case-name>`
+4. Confirm the branch was created before proceeding
+
+### 6. Termination and PROPOSAL.md Generation
 
 Continue rounds until: all relevant dimensions covered, no contradictions remain, user explicitly confirms "that's enough."
 
 Generate PROPOSAL.md using `assets/templates/PROPOSAL.md` at:
 `docs/plans/{YYYY-MM-DD}/{feature_name}/PROPOSAL.md`
 
-### 6. Optional Handoff
+### 7. Optional Handoff
 
 After generating PROPOSAL.md, ask: "Would you like me to pass this to the `spec` skill to transform it into formal business requirement documents (SPEC.md)?" If agreed, invoke `spec` with the PROPOSAL.md path.
 

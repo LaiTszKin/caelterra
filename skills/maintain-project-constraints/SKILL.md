@@ -1,57 +1,94 @@
 ---
 name: maintain-project-constraints
-description: 基於 repo 最新程式碼與文檔，更新 CLAUDE.md 和 AGENTS.md 這兩份項目規範文件。注意兩者服務不同的 coding agent：CLAUDE.md 給 Claude Code，AGENTS.md 給 Codex 等非 Claude agent。
+description: Reads the latest codebase and docs to update CLAUDE.md and AGENTS.md at both the project root and per sub-module (crate, package, etc.). CLAUDE.md targets Claude Code; AGENTS.md targets non-Claude agents (Codex, etc.).
 ---
 
-## 技能目標
+## Goal
 
-基於當前 repo 的最新文檔與程式碼，維護項目規範文件。
+Maintain project constraint files at both root and sub-module levels so that every agent modifying any part of the codebase has clear boundaries to follow.
 
-## 驗收條件
+**Deliverables:**
+- Root-level `CLAUDE.md` + `AGENTS.md` (three-section format: Commands / Business Goals / Documentation Index)
+- Per-module `CLAUDE.md` + `AGENTS.md` (description / file list / non-violable rules)
 
-- `CLAUDE.md`、`AGENTS.md` 已經被更新到最新狀態
-- `AGENTS.md` 保持 agent 中立（架構 + 指令 + conventions），`CLAUDE.md` 可包含 Claude Code 特有設定
-- 兩者皆維持在 100 行以內，只放最高訊號的內容
-- 已知禁令已從專案歷史萃取並納入 prohibitions 區塊
+## Acceptance Criteria
 
-## 工作流程
+- Root `CLAUDE.md` and `AGENTS.md` updated and consistent with actual code
+- Prohibitions extracted from git history, issues, and CI config
+- Every discovered sub-module has its own constraint files
+- All generated files accurately reflect the current codebase state
 
-### 1. 閱讀 repo
+## Workflow
 
-通過並行調度 subagents 完成對 repo 代碼的深入閱讀，建立對項目的全面認知。
+### 1. Explore the Codebase
 
-### 2. 萃取已知禁令
+Read the repository to understand:
+- Project structure and how modules are organised
+- Build system and package managers in use
+- Existing documentation and development conventions
+- CI config, git history, and issue patterns
 
-從以下來源萃取消 prohibitions（禁止事項）：
-- 過去 issues 中反覆出現的錯誤模式
-- git commit 歷史中的 revert / fix 記錄
-- CI 配置中明確禁止的操作
-- 專案既有文檔中標註的不可行方案
+### 2. Extract Prohibitions
 
-這些將納入 `AGENTS.md` 與 `CLAUDE.md` 的 prohibitions 區塊。
+Look across the project for implicit and explicit prohibitions. Concrete sources:
+- Recurring revert / fix commits in git log
+- Infeasible approaches mentioned in past issues
+- Operations explicitly banned in CI config
+- Technical limitations annotated in project docs
 
-### 3. 更新項目規範文檔
+Each prohibition must be specific and actionable (e.g. "never auto-create database migrations" not "handle databases carefully"). Include them in root-level `AGENTS.md` and `CLAUDE.md` under a Prohibitions section.
 
-按模板格式更新或創建 `CLAUDE.md` 與 `AGENTS.md`，注意以下區分：
+### 3. Discover Sub-modules
 
-- **AGENTS.md**（給 Codex 等非 Claude agent）：agent 中立格式，只包含架構概覽、建構指令、通用慣例。不使用 Claude 特有語法。
-- **CLAUDE.md**（給 Claude Code）：在 AGENTS.md 的基礎上，可加入 Claude Code 特有設定（hooks、scheduled tasks、cowork 整合、MCP servers）。
+Identify every sub-module that needs its own constraint files. A directory qualifies if EITHER:
 
-若專案中已存在 `docs/features/`、`docs/architecture/`、`docs/principles/` 標準化文檔，應在 Documentation Index 中列出。
+1. **Has a package manifest**: the directory contains `Cargo.toml`, `package.json`, `pyproject.toml`, `go.mod`, `pom.xml`, `build.gradle`, etc.
+2. **Lives in a well-known group directory**: resides under `packages/`, `crates/`, `apps/`, `lib/`, `modules/`, `components/` AND has a clear boundary (own entry point, README, or standalone deployment unit)
 
-> 兩份檔案皆應維持在 100 行以內。若超過此限制，優先精煉而非擴充。
+For each sub-module record: relative path and a brief description (extract from the manifest's `description` field or README; infer from code if neither exists).
 
-#### 加入 `apltk` 工具使用規則
+### 4. Write Root-level Files
 
-在兩份文檔的 `Common Development Commands` 區塊中，加入：
+Create or update `CLAUDE.md` and `AGENTS.md` in the project root using `assets/templates/root-AGENTS.md` and `assets/templates/root-CLAUDE.md` as format skeletons. Both use exactly three sections in this order:
 
-- 通用規則：使用任何 `apltk` 或 `node dist/bin/apollo-toolkit.js` 命令前，先執行對應 `--help`，依 live CLI 指引選擇子命令與 flags。
-- `apltk codegraph <subcommand> [options]` — CodeGraph 代碼庫探索工具。開始前用 `apltk codegraph --help` 與子命令 help 確認最新用法。
+1. **Common Development Commands** — only include commands verifiable against real entry points (`package.json`, Makefile, scripts, CI config). Before using any `apltk` command, run its `--help` first. Append a one-line purpose per command.
+2. **Project Business Goals** — project-level purpose and value, not a feature list.
+3. **Project Documentation Index** — cover all files under `docs/features/`, `docs/architecture/`, `docs/principles/`, plus important root files (`README.md`, etc.).
 
-#### 加入代碼調查要求
+**AGENTS.md vs CLAUDE.md split:**
 
-在兩份文檔中，明確要求 agent 在開始實作前，應先執行相關 `apltk ... --help`；若需要代碼調查，先執行 `apltk codegraph --help`，再根據子命令 help 選擇合適的 CodeGraph 探索命令，確保變更基於對現有代碼的真實理解。此規則可放在 `Common Development Commands` 區塊的開頭作為前置條件說明。
+| Aspect | AGENTS.md | CLAUDE.md |
+|--------|-----------|-----------|
+| Audience | Non-Claude agents (Codex, etc.) | Claude Code |
+| Syntax | Agent-neutral, no platform-specific syntax | May use Claude-specific syntax |
+| Claude-only content | Must not include | May include hooks, scheduled tasks, cowork, MCP |
+| Common base | Three sections + Prohibitions | Same as AGENTS.md |
 
-## 參考資料
+Both files must stay under **100 lines**. Prioritise brevity over completeness when constrained.
 
-- `references/constraint-file-reference.md`：三區塊契約、撰寫規則、AGENTS.md vs CLAUDE.md 區分指引、核對清單與輸出模板。
+### 5. Write Per-module Files
+
+For each sub-module discovered in Step 3, create or update `CLAUDE.md` and `AGENTS.md` in its directory using `assets/templates/module-CLAUDE.md` as the format skeleton.
+
+Key points:
+- Module-level `CLAUDE.md` and `AGENTS.md` have identical content — the format is simple and carries no platform-specific information
+- `MODULE FILE LIST` covers all source files; exclude generated output, dist, node_modules, target, etc.
+- `RULES SHOULD NOT BE VIOLATED` derives from: module boundary rules, dependency direction, internal conventions, and historical error patterns
+- If files already exist, verify their accuracy and update stale content — don't just append
+
+## Verification
+
+Self-review before delivery:
+
+- [ ] Every sub-module has both `CLAUDE.md` and `AGENTS.md`
+- [ ] All sub-modules discovered in Step 3 are covered — none missed
+- [ ] File lists match actual source files in each directory
+- [ ] Every prohibition has supporting evidence (git commit hash, issue link, CI config line number, or doc excerpt)
+- [ ] Every `RULES SHOULD NOT BE VIOLATED` entry can be traced back to code structure or project history — no invented rules
+- [ ] Documentation Index contains no dead links
+
+## References
+
+- `assets/templates/root-AGENTS.md` — format skeleton for root-level AGENTS.md
+- `assets/templates/root-CLAUDE.md` — format skeleton for root-level CLAUDE.md
+- `assets/templates/module-CLAUDE.md` — format skeleton for per-module constraint files
