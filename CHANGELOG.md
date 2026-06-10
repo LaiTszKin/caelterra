@@ -4,6 +4,15 @@ All notable changes to this repository are documented in this file.
 
 ## [Unreleased]
 
+## [v5.2.1] - 2026-06-10
+
+### Changed
+
+- **review-pr skill**: Optimised SKILL.md — added diff-read verification and gh comment posting verification steps.
+- **maintain-project-constraints skill**: Three-layer restructure, English translation, added per-module constraint file generation with format templates, evidence-backed self-review checklist.
+- **discuss skill**: Added dedicated branch step before PROPOSAL.md creation.
+- **spec skill**: Replaced subagent mandate with deep codebase exploration guidance, added dedicated branch step before SPEC.md creation.
+
 ## [v5.2.0] - 2026-06-10
 
 ### Added
