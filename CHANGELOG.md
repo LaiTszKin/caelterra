@@ -4,6 +4,12 @@ All notable changes to this repository are documented in this file.
 
 ## [Unreleased]
 
+## [v5.2.3] - 2026-06-11
+
+### Changed
+
+- **spec skill**: Restructured SKILL.md — fixed duplicate step numbering, eliminated redundant error-category repetition, added enriched Clarification Questions format (background context, impact analysis, agent recommendation with self-questioning workflow). Updated README.md to match current skill scope. Fixed stale template reference in openai.yaml.
+
 ## [v5.2.2] - 2026-06-10
 
 ### Changed

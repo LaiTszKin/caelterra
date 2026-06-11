@@ -39,8 +39,10 @@
 
 ## Clarification Questions
 
-- [Question for the user]
-- [Question for the user]
+### [Question title — e.g., "Pagination Strategy for Search Results"]
+- **Background**: [Why this question exists — uncertain area, code constraint, context the user may lack]
+- **Impact**: [How the choice affects requirements scope, design decisions, or implementation complexity]
+- **Recommendation**: [Agent's suggested option, determined through self-questioning]
 
 ## References
 
