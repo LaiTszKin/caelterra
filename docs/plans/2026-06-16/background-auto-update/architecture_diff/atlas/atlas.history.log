@@ -1,0 +1,3 @@
+{"ts":"2026-06-16T12:59:19.048Z","action":"submodule add","args":{"feature":"cli-dispatch","slug":"background-update-controller","kind":"service"},"mode":"spec"}
+{"ts":"2026-06-16T12:59:19.154Z","action":"submodule add","args":{"feature":"cli-dispatch","slug":"background-task-scheduler","kind":"service"},"mode":"spec"}
+{"ts":"2026-06-16T12:59:19.155Z","action":"submodule add","args":{"feature":"cli-dispatch","slug":"skill-update-runner","kind":"worker"},"mode":"spec"}
