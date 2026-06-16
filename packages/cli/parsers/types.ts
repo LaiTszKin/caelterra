@@ -43,9 +43,25 @@ export interface ToolsHelpCommand {
 }
 
 /**
+ * Valid actions for the auto-update command.
+ */
+export type AutoUpdateAction = 'enable' | 'disable' | 'status' | 'run';
+
+/**
+ * Parsed result for the auto-update command mode.
+ */
+export interface AutoUpdateCommand {
+  command: 'auto-update';
+  action: AutoUpdateAction | null;
+  showHelp: boolean;
+  toolkitHome: string | null;
+  helpTopic: 'auto-update';
+}
+
+/**
  * Union of all parsed commands returned by the CLI arg parsers.
  */
-export type ParsedCommand = InstallCommand | UninstallCommand | ToolCommand | ToolsHelpCommand;
+export type ParsedCommand = InstallCommand | UninstallCommand | ToolCommand | ToolsHelpCommand | AutoUpdateCommand;
 
 /**
  * Parser interface for turning raw argv arrays into strongly-typed command objects.

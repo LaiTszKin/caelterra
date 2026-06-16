@@ -30,7 +30,7 @@ export interface SyncResult {
 // ---- Active return type of parseArguments() / input contract for run() --------
 
 export interface ParsedArguments {
-  command: 'install' | 'uninstall' | 'tool' | 'tools-help';
+  command: 'install' | 'uninstall' | 'tool' | 'tools-help' | 'auto-update';
   modes: InstallMode[];
   showHelp: boolean;
   showToolsHelp: boolean;
@@ -40,7 +40,8 @@ export interface ParsedArguments {
   linkMode: 'copy' | 'symlink' | null;
   assumeYes: boolean;
   explicitInstallCommand: boolean;
-  helpTopic: 'overview' | 'install' | 'uninstall' | 'tools-help';
+  autoUpdateAction: 'enable' | 'disable' | 'status' | 'run' | null;
+  helpTopic: 'overview' | 'install' | 'uninstall' | 'tools-help' | 'auto-update';
 }
 
 export interface CliContext {

@@ -24,6 +24,19 @@ import {
 } from './installer.js';
 import { checkForPackageUpdate, compareVersions, execCommand } from './updater.js';
 import { registerAllTools, isKnownToolName } from './tool-registration.js';
+import { AutoUpdateArgsParser } from './parsers/auto-update-parser.js';
+import {
+  readAutoUpdateConfig,
+  writeAutoUpdateConfig,
+} from './auto-update-state.js';
+import {
+  registerAutoUpdateTask,
+  unregisterAutoUpdateTask,
+  getAutoUpdateTaskStatus,
+  buildRunnerCommand,
+} from './auto-update-scheduler.js';
+import { runAutoUpdate } from './auto-update-runner.js';
+import { createPacotePackageSource } from './package-source.js';
 
 // Re-export installer functions for external consumers (tests, bin)
 export {
@@ -47,6 +60,10 @@ export {
   compareVersions,
   execCommand,
 };
+// Re-export auto-update modules for external consumers (tests, bin)
+export { readAutoUpdateConfig, writeAutoUpdateConfig, readAutoUpdateStatus, writeAutoUpdateStatus, resolveAutoUpdatePaths } from './auto-update-state.js';
+export { registerAutoUpdateTask, unregisterAutoUpdateTask, getAutoUpdateTaskStatus } from './auto-update-scheduler.js';
+export { runAutoUpdate } from './auto-update-runner.js';
 import type { CliContext, InstallMode, ParsedArguments } from './types.js';
 import type { CommandParser } from './parsers/types.js';
 import { formatAppError } from '@laitszkin/tool-utils';
@@ -77,6 +94,7 @@ function parseArguments(argv: string[]): ParsedArguments {
     ['uninstall', new UninstallArgsParser()],
     ['tools', toolParser],
     ['tool', toolParser],
+    ['auto-update', new AutoUpdateArgsParser()],
   ]);
 
   // Command dispatch: iterate parsers, first match wins
@@ -217,6 +235,7 @@ export { UninstallArgsParser } from './parsers/uninstall-parser.js';
 export { ToolArgsParser } from './parsers/tool-parser.js';
 export { HelpTextBuilder } from './help-text-builder.js';
 export { normalizeParseError } from './parsers/parser-utils.js';
+export { AutoUpdateArgsParser } from './parsers/auto-update-parser.js';
 
 export { parseArguments, buildBanner, buildWelcomeScreen, registerAllTools };
 
@@ -242,7 +261,9 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
         ? builder.install()
         : parsed.helpTopic === 'uninstall'
           ? builder.uninstall()
-          : builder.overview();
+          : parsed.helpTopic === 'auto-update'
+            ? builder.autoUpdate()
+            : builder.overview();
       stdout.write(`${helpText}\n`);
       return 0;
     }
@@ -318,6 +339,101 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       return 0;
     }
 
+    // Auto-update flow
+    if (parsed.command === 'auto-update') {
+      const toolkitHome = parsed.toolkitHome || resolveToolkitHome(env);
+      const action = parsed.autoUpdateAction;
+
+      try {
+        if (action === 'enable') {
+          const nodePath = process.execPath;
+          const cliPath = fileURLToPath(import.meta.url);
+          const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+          const result = await registerAutoUpdateTask({
+            toolkitHome,
+            runnerCommand,
+            env,
+          });
+          await writeAutoUpdateConfig(toolkitHome, {
+            enabled: true,
+            updatedAt: new Date().toISOString(),
+          });
+          stdout.write(`Auto-update enabled (${result.platform}).\n`);
+          return 0;
+        }
+
+        if (action === 'disable') {
+          const nodePath = process.execPath;
+          const cliPath = fileURLToPath(import.meta.url);
+          const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+          await unregisterAutoUpdateTask({
+            toolkitHome,
+            runnerCommand,
+            env,
+          });
+          await writeAutoUpdateConfig(toolkitHome, {
+            enabled: false,
+            updatedAt: new Date().toISOString(),
+          });
+          stdout.write('Auto-update disabled.\n');
+          return 0;
+        }
+
+        if (action === 'status') {
+          const config = await readAutoUpdateConfig(toolkitHome);
+          stdout.write(`Auto-update: ${config.enabled ? 'enabled' : 'disabled'}\n`);
+          stdout.write(`Last config update: ${config.updatedAt}\n`);
+
+          try {
+            const nodePath = process.execPath;
+            const cliPath = fileURLToPath(import.meta.url);
+            const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+            const taskStatus = await getAutoUpdateTaskStatus({
+              toolkitHome,
+              runnerCommand,
+              env,
+            });
+            stdout.write(`Scheduler: ${taskStatus.registered ? 'registered' : 'not registered'} (${taskStatus.platform})\n`);
+            if (taskStatus.message) {
+              stdout.write(`  ${taskStatus.message}\n`);
+            }
+          } catch {
+            stdout.write('Scheduler status unavailable (non-fatal).\n');
+          }
+          return 0;
+        }
+
+        if (action === 'run') {
+          const packageSource = createPacotePackageSource();
+          const result = await runAutoUpdate({
+            sourceRoot,
+            toolkitHome,
+            packageName: packageJson.name,
+            currentVersion: packageJson.version,
+            modes: [...VALID_MODES],
+            env,
+            packageSource,
+          });
+          if (result.updated) {
+            stdout.write(`Auto-update: updated from ${result.previousVersion ?? '(unknown)'} to ${result.latestVersion ?? '(unknown)'}.\n`);
+            return 0;
+          }
+          if (result.lastError) {
+            stdout.write(`Auto-update: failed - ${result.lastError}\n`);
+            return 1;
+          }
+          stdout.write(`Auto-update: already up-to-date (${result.latestVersion ?? '(unknown)'}).\n`);
+          return 0;
+        }
+
+        stdout.write('No action specified. Use: enable, disable, status, or run.\n');
+        return 1;
+      } catch (error) {
+        formatAppError(stderr, error);
+        return 1;
+      }
+    }
+
     // Install flow
     const updateResult = await checkForPackageUpdate({
       packageName: packageJson.name,
@@ -375,6 +491,9 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       return 1;
     }
 
+    // Read auto-update config before syncToolkitHome (which wipes the directory)
+    const preinstallAutoUpdateConfig = await readAutoUpdateConfig(toolkitHome);
+
     const syncResult = await syncToolkitHome({ sourceRoot, toolkitHome, version: packageJson.version, modes: effectiveModes });
     const installResult = await installLinks({
       toolkitHome,
@@ -386,6 +505,36 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
     });
 
     printSummary({ stdout, version: packageJson.version, toolkitHome, modes, installResult, env });
+
+    // Enable background auto-update by default unless explicitly disabled.
+    // Always re-write the config since syncToolkitHome wipes the directory.
+    // If previously disabled, preserve that state rather than defaulting to enabled.
+    try {
+      const enableAutoUpdate = preinstallAutoUpdateConfig.enabled !== false;
+      await writeAutoUpdateConfig(toolkitHome, {
+        enabled: enableAutoUpdate,
+        updatedAt: new Date().toISOString(),
+      });
+      if (enableAutoUpdate) {
+        const nodePath = process.execPath;
+        const cliPath = fileURLToPath(import.meta.url);
+        const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+        try {
+          await registerAutoUpdateTask({
+            toolkitHome,
+            runnerCommand,
+            env: { ...env, APOLLO_TOOLKIT_HOME: toolkitHome },
+          });
+        } catch (schedulerError) {
+          stderr.write(`Warning: Failed to register background auto-update scheduler: ${(schedulerError as Error).message}
+`);
+        }
+      }
+    } catch (autoUpdateError) {
+      stderr.write(`Warning: Failed to enable background auto-update: ${(autoUpdateError as Error).message}
+`);
+    }
+
     return 0;
   } catch (error) {
     formatAppError(stderr, error);

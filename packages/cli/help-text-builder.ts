@@ -149,6 +149,45 @@ export class HelpTextBuilder {
     ]);
   }
 
+  /** Auto-update command help. */
+  autoUpdate(): string {
+    const examples = [
+      { command: 'apltk auto-update status', result: 'Shows whether the background auto-update is enabled or disabled, plus the last check time.' },
+      { command: 'apltk auto-update enable', result: 'Enables scheduled background auto-update checks (default behaviour).' },
+      { command: 'apltk auto-update disable', result: 'Disables the scheduled background auto-update check so the CLI never auto-updates.' },
+      { command: 'apltk auto-update run', result: 'Runs a one-off background auto-update check now (does not update the running CLI package).' },
+      { command: 'apltk auto-update --home /custom/path status', result: 'Uses a custom toolkit home directory for the auto-update status check.' },
+    ];
+
+    return this.joinLines([
+      buildBanner({ version: this.version, colorEnabled: this.colorEnabled }),
+      '',
+      'Usage:',
+      '  apltk auto-update <action>',
+      '  apollo-toolkit auto-update <action>',
+      '',
+      'Actions:',
+      '  enable   Enable the scheduled background auto-update check (default-on).',
+      '  disable  Disable the scheduled background auto-update check.',
+      '  status   Show whether auto-update is currently enabled or disabled.',
+      '  run      Run a one-off auto-update check in the background.',
+      '',
+      'Behavior notes:',
+      '  - Background auto-update is enabled by default after installation.',
+      '  - `disable` only stops the scheduled background check; it does not uninstall or modify the CLI package.',
+      '  - `run` triggers a one-off check without waiting for the next scheduled interval.',
+      '  - `run` does not update the running CLI package; it updates the managed toolkit checkout.',
+      '  - Without an action, `status` is assumed.',
+      '',
+      'Options:',
+      '  --home <path>  Override Apollo Toolkit home directory',
+      '  --help         Show this auto-update help',
+      '',
+      'Examples:',
+      formatExamples(examples),
+    ]);
+  }
+
   /** Replaces  buildToolsHelp  –  tools listing help screen. */
   toolsHelp(): string {
     const examples = [
