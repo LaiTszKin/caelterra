@@ -409,6 +409,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
         }
 
         if (action === 'run') {
+          const config = await readAutoUpdateConfig(toolkitHome);
           const packageSource = createPacotePackageSource();
           const result = await runAutoUpdate({
             sourceRoot,
@@ -418,6 +419,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
             modes: [...VALID_MODES],
             env,
             packageSource,
+            autoUpdateEnabled: config.enabled,
           });
           if (result.updated) {
             stdout.write(`Auto-update: updated from ${result.previousVersion ?? '(unknown)'} to ${result.latestVersion ?? '(unknown)'}.\n`);

@@ -39,6 +39,15 @@ function readStatusFile(toolkitHome) {
   return JSON.parse(readFileSync(p, 'utf8'));
 }
 
+/**
+ * Read the auto-update config JSON from toolkitHome.
+ */
+function readConfigFile(toolkitHome) {
+  const p = join(toolkitHome, '.apollo-toolkit-auto-update.json');
+  if (!existsSync(p)) return null;
+  return JSON.parse(readFileSync(p, 'utf8'));
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -171,7 +180,163 @@ describe('auto-update-runner', () => {
     assert.ok(!status.lastError);
   });
 
-  // ---- Test 3: Extraction/validation failure preserves previous toolkit home ----
+  // ---- Test 3a: Preserves disabled config during manual auto-update run ----
+  it('preserves disabled config during manual auto-update run', async (t) => {
+    const tmp = mkdtempSync(join(tmpdir(), 'runner-disabled-'));
+    t.after(() => rmSync(tmp, { recursive: true, force: true }));
+
+    const toolkitHome = join(tmp, 'toolkit-home');
+    createSourceFixture(toolkitHome, '1.0.0', '# Old content\n');
+
+    // Write config with disabled state before the run.
+    writeFileSync(
+      join(toolkitHome, '.apollo-toolkit-auto-update.json'),
+      JSON.stringify({ enabled: false, updatedAt: '2026-06-16T00:00:00.000Z' }, null, 2),
+      'utf8',
+    );
+
+    // Fake PackageSource that extracts a newer version successfully.
+    const fakeSource = {
+      resolveLatest: async (_pkgName) => ({ version: '2.0.0', spec: `${_pkgName}@2.0.0` }),
+      extract: async (_spec, dest) => {
+        writeFileSync(join(dest, 'package.json'), JSON.stringify({ name: '@laitszkin/cli', version: '2.0.0' }));
+        mkdirSync(join(dest, 'skills', 'test-skill'), { recursive: true });
+        writeFileSync(join(dest, 'skills', 'test-skill', 'SKILL.md'), '# New content\n');
+        return { version: '2.0.0', sourceRoot: dest };
+      },
+    };
+
+    const { runAutoUpdate } = await import(
+      '../../packages/cli/dist/auto-update-runner.js'
+    );
+
+    const result = await runAutoUpdate({
+      sourceRoot: tmp,
+      toolkitHome,
+      packageName: '@laitszkin/cli',
+      currentVersion: '1.0.0',
+      modes: [],
+      packageSource: fakeSource,
+      autoUpdateEnabled: false,
+    });
+
+    assert.equal(result.updated, true, 'should indicate update was performed');
+    assert.equal(result.latestVersion, '2.0.0', 'should report new version');
+
+    // Config file must keep disabled state.
+    const config = readConfigFile(toolkitHome);
+    assert.ok(config, 'config file should exist');
+    assert.equal(config.enabled, false, 'config.enabled should remain false');
+
+    // Status file must record disabled state alongside update metadata.
+    const status = readStatusFile(toolkitHome);
+    assert.ok(status, 'status file should exist');
+    assert.equal(status.enabled, false, 'status.enabled should be false');
+    assert.ok(status.lastSuccessAt, 'status should have lastSuccessAt');
+    assert.equal(status.lastVersion, '2.0.0', 'status should record new version');
+  });
+
+  // ---- Test 4b: Only updates manifest-backed installed targets ----
+  it('updates only manifest-backed installed targets when candidate modes include all', async (t) => {
+    const tmp = mkdtempSync(join(tmpdir(), 'runner-manifest-scope-'));
+    t.after(() => rmSync(tmp, { recursive: true, force: true }));
+
+    const homeDir = join(tmp, 'home');
+    const toolkitHome = join(homeDir, '.apollo-toolkit');
+    const traeRoot = join(homeDir, '.trae', 'skills');
+
+    // Create current toolkit content with version 1.0.0
+    createSourceFixture(toolkitHome, '1.0.0', '# Old content\n');
+
+    // Create existing Trae target skill (simulating previously installed skill)
+    mkdirSync(join(traeRoot, 'test-skill'), { recursive: true });
+    writeFileSync(join(traeRoot, 'test-skill', 'SKILL.md'), '# Locally modified target\n', 'utf8');
+
+    // Write Trae manifest via writeManifest
+    const { writeManifest } = await import('../../packages/cli/dist/installer.js');
+    await writeManifest(traeRoot, {
+      version: '1.0.0',
+      linkMode: 'copy',
+      skills: ['test-skill'],
+      previousSkills: [],
+    });
+
+    // Intentionally do NOT create .openclaw directory (should not cause error)
+
+    // Fake PackageSource that extracts version 2.0.0 with updated skill content
+    const fakeSource = {
+      resolveLatest: async (_pkgName) => ({ version: '2.0.0', spec: `${_pkgName}@2.0.0` }),
+      extract: async (_spec, dest) => {
+        writeFileSync(
+          join(dest, 'package.json'),
+          JSON.stringify({ name: '@laitszkin/cli', version: '2.0.0' }),
+          'utf8',
+        );
+        mkdirSync(join(dest, 'skills', 'test-skill'), { recursive: true });
+        writeFileSync(join(dest, 'skills', 'test-skill', 'SKILL.md'), '# New content\n', 'utf8');
+        return { version: '2.0.0', sourceRoot: dest };
+      },
+    };
+
+    const { runAutoUpdate } = await import(
+      '../../packages/cli/dist/auto-update-runner.js'
+    );
+
+    const result = await runAutoUpdate({
+      sourceRoot: tmp,
+      toolkitHome,
+      packageName: '@laitszkin/cli',
+      currentVersion: '1.0.0',
+      modes: ['codex', 'openclaw', 'trae', 'agents', 'claude-code'],
+      env: { HOME: homeDir, APOLLO_TOOLKIT_HOME: toolkitHome },
+      packageSource: fakeSource,
+    });
+
+    assert.equal(result.updated, true, 'should indicate update was performed');
+    assert.equal(result.latestVersion, '2.0.0', 'should report new version');
+    assert.equal(result.previousVersion, '1.0.0', 'should report previous version');
+    assert.ok(!result.lastError, 'should have no error');
+
+    // Trae skill (which HAS a manifest) SHOULD be updated
+    assert.equal(
+      readFileSync(join(traeRoot, 'test-skill', 'SKILL.md'), 'utf8'),
+      '# New content\n',
+      'Trae skill should be updated with new content',
+    );
+
+    // Unselected targets (no manifest) should NOT have skill directories created
+    assert.equal(
+      existsSync(join(homeDir, '.codex', 'skills', 'test-skill')),
+      false,
+      'Codex skill should NOT exist',
+    );
+    assert.equal(
+      existsSync(join(homeDir, '.agents', 'skills', 'test-skill')),
+      false,
+      'Agents skill should NOT exist',
+    );
+    assert.equal(
+      existsSync(join(homeDir, '.claude', 'skills', 'test-skill')),
+      false,
+      'Claude Code skill should NOT exist',
+    );
+
+    // OpenClaw directory should not be created (error was caught and skipped)
+    assert.equal(
+      existsSync(join(homeDir, '.openclaw')),
+      false,
+      'OpenClaw directory should NOT have been created',
+    );
+
+    // Status should record success
+    const status = readStatusFile(toolkitHome);
+    assert.ok(status, 'status file should exist');
+    assert.equal(status.lastVersion, '2.0.0', 'status should record new version');
+    assert.ok(status.lastSuccessAt, 'status should have lastSuccessAt');
+    assert.ok(!status.lastError, 'status should not have lastError');
+  });
+
+  // ---- Test 5: Extraction/validation failure preserves previous toolkit home ----
   it('preserves previous toolkit home when validation fails (missing skills/)', async (t) => {
     const tmp = mkdtempSync(join(tmpdir(), 'runner-bad-extract-'));
     t.after(() => rmSync(tmp, { recursive: true, force: true }));

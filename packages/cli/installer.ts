@@ -348,6 +348,28 @@ export async function getUninstallTargetRoots(modes: string[] = [...VALID_MODES]
   return targets;
 }
 
+export async function getManagedInstallTargets(modes: string[] = [...VALID_MODES], env: NodeJS.ProcessEnv = process.env): Promise<InstallTarget[]> {
+  const managedTargets: InstallTarget[] = [];
+  const normalizedModes = normalizeModes(modes);
+  for (const mode of normalizedModes) {
+    try {
+      const targets = await getTargetRoots([mode], env);
+      for (const target of targets) {
+        if (target.root) {
+          const manifest = await readManifest(target.root);
+          if (manifest) {
+            managedTargets.push(target);
+          }
+        }
+      }
+    } catch {
+      // Best-effort: skip modes whose roots cannot be resolved
+      // (e.g. OpenClaw when no workspace directories exist)
+    }
+  }
+  return managedTargets;
+}
+
 async function ensureDirectory(dirPath: string): Promise<void> {
   await fsp.mkdir(dirPath, { recursive: true });
 }

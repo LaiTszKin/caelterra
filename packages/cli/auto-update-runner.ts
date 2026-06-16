@@ -7,6 +7,7 @@ import {
   syncToolkitHome,
   installLinks,
   listSkillNames,
+  getManagedInstallTargets,
 } from './installer.js';
 import {
   withAutoUpdateLock,
@@ -36,6 +37,8 @@ export interface AutoUpdateOptions {
   env?: NodeJS.ProcessEnv;
   /** Package source abstraction; if omitted a pacote-backed one is created. */
   packageSource?: PackageSource;
+  /** Preserves the persisted scheduler setting while a manual or scheduled run records status. */
+  autoUpdateEnabled?: boolean;
 }
 
 /**
@@ -76,6 +79,7 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
     modes = [],
     env = process.env,
     packageSource,
+    autoUpdateEnabled = true,
   } = options;
 
   if (!packageSource) {
@@ -94,7 +98,7 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
         // 2. No-op if we are already on the latest version
         if (compareVersions(latest.version, currentVersion) <= 0) {
           await writeRunnerStatus(toolkitHome, {
-            enabled: true,
+            enabled: autoUpdateEnabled,
             lastRunAt: new Date().toISOString(),
             lastSuccessAt: new Date().toISOString(),
             lastVersion: currentVersion,
@@ -120,29 +124,33 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
           throw new Error(`Extracted package missing skills/ directory at ${skillsPath}`);
         }
 
-        // 6. Sync toolkit home with the extracted source
+        // 6. Discover managed targets and derive managedModes
+        const managedTargets = modes.length > 0 ? await getManagedInstallTargets(modes, env) : [];
+        const managedModes = [...new Set(managedTargets.map((target) => target.id))];
+
+        // 7. Sync toolkit home with the extracted source (using managedModes for codex content)
         await syncToolkitHome({
           sourceRoot: extractedRoot,
           toolkitHome,
           version: extractedVersion,
-          modes,
+          modes: managedModes,
         });
 
-        // 7. Re-install links to agent targets
-        if (modes.length > 0) {
-          const previousSkillNames = await listSkillNames(toolkitHome, modes).catch(() => []);
+        // 8. Re-install links only to managed agent targets
+        if (managedModes.length > 0) {
+          const previousSkillNames = await listSkillNames(toolkitHome, managedModes).catch(() => []);
           await installLinks({
             toolkitHome,
-            modes,
+            modes: managedModes,
             previousSkillNames,
             linkMode: 'copy',
             env,
           });
         }
 
-        // 8. Write success status
+        // 9. Write success status
         await writeRunnerStatus(toolkitHome, {
-          enabled: true,
+          enabled: autoUpdateEnabled,
           lastRunAt: new Date().toISOString(),
           lastSuccessAt: new Date().toISOString(),
           lastVersion: extractedVersion,
@@ -150,7 +158,7 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
 
         // Persist updated config
         await writeAutoUpdateConfig(toolkitHome, {
-          enabled: true,
+          enabled: autoUpdateEnabled,
           updatedAt: new Date().toISOString(),
         }).catch(() => {});
 
@@ -159,7 +167,7 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
         // Inner catch: update failure inside the lock
         const errorMessage = (error as Error).message;
         await writeRunnerStatus(toolkitHome, {
-          enabled: true,
+          enabled: autoUpdateEnabled,
           lastRunAt: new Date().toISOString(),
           lastError: errorMessage,
         });
@@ -175,7 +183,7 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
     // Lock could not be acquired (another update is running)
     const errorMessage = `Lock acquisition failed: ${(lockError as Error).message}`;
     await writeRunnerStatus(toolkitHome, {
-      enabled: true,
+      enabled: autoUpdateEnabled,
       lastRunAt: new Date().toISOString(),
       lastError: errorMessage,
     });
