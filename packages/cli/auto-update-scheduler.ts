@@ -127,6 +127,13 @@ function escapeXml(s: string): string {
     .replace(/'/g, '&apos;');
 }
 
+function quoteWindowsArg(arg: string): string {
+  if (/[ "]/.test(arg)) {
+    return `"${arg.replace(/"/g, '\\"')}"`;
+  }
+  return arg;
+}
+
 function resolveHomeDir(platform: SchedulerPlatform, env: NodeJS.ProcessEnv): string {
   return platform === 'win32'
     ? (env.USERPROFILE ?? env.HOME ?? '')
@@ -272,7 +279,7 @@ export async function registerAutoUpdateTask(options: SchedulerOptions): Promise
       }
 
       case 'win32': {
-        const commandStr = options.runnerCommand.join(' ');
+        const commandStr = options.runnerCommand.map(quoteWindowsArg).join(' ');
         await exec('schtasks', [
           '/Create',
           '/SC', 'DAILY',

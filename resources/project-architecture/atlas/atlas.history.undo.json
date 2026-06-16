@@ -3,7 +3,7 @@
     "meta": {
       "title": "Project architecture  (+ codegraph integration overlay)",
       "summary": "完整 C4 架構圖：eval 評測系統 (8 features) + codegraph 程式碼分析 (1 feature, 3 submodules)。 外部 actor: Judge Model API, GitHub Actions CI, Developer, Skill Files, @colbymchenry/codegraph (npm), @laitszkin/tool-registry, @laitszkin/tui。 Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter → CI Gate。\n",
-      "updatedAt": "2026-06-03T13:18:57.448Z"
+      "updatedAt": "2026-06-06T13:03:10.925Z"
     },
     "actors": [
       {
@@ -492,6 +492,150 @@
           }
         ],
         "edges": []
+      },
+      {
+        "slug": "cli-dispatch",
+        "title": "CLI Dispatch and Install Engine",
+        "story": "CLI entry point providing argument parsing, command dispatch, and install/uninstall orchestration engine",
+        "dependsOn": [],
+        "submodules": [
+          {
+            "slug": "arg-parser",
+            "kind": "service",
+            "role": "parseArguments: CLI argument parsing and dispatch",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          },
+          {
+            "slug": "help-builder",
+            "kind": "service",
+            "role": "buildHelpText family: command help text generation",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          },
+          {
+            "slug": "installer-core",
+            "kind": "service",
+            "role": "installLinks/syncToolkitHome/uninstallSkills: installation engine",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          },
+          {
+            "slug": "tool-discovery",
+            "kind": "service",
+            "role": "registerAllTools/isKnownToolName: dynamic tool loading",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          },
+          {
+            "slug": "update-checker",
+            "kind": "service",
+            "role": "checkForPackageUpdate/execCommand: npm version check",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          }
+        ],
+        "edges": []
+      },
+      {
+        "slug": "tool-registry",
+        "title": "Tool Registry",
+        "story": "Central in-memory registry of ToolDefinition entries, supporting register/get/list/runTool and tool list formatting",
+        "dependsOn": [],
+        "submodules": [
+          {
+            "slug": "registry-core",
+            "kind": "service",
+            "role": "registerTool/getTool/listTools/runTool: in-memory registry",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          },
+          {
+            "slug": "formatter",
+            "kind": "service",
+            "role": "formatToolList/buildToolDiscoveryHelp: tool list display",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          }
+        ],
+        "edges": []
+      },
+      {
+        "slug": "tool-utils",
+        "title": "Tool Utilities",
+        "story": "Shared utilities consumed by tools: timestamp parsing, skill discovery, cross-platform abstraction (after refactoring)",
+        "dependsOn": [],
+        "submodules": [
+          {
+            "slug": "log-utils",
+            "kind": "service",
+            "role": "extractTimestamp/parseCliTimestamp/inWindow: log parsing",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          },
+          {
+            "slug": "skill-discovery",
+            "kind": "service",
+            "role": "iterSkillDirs: skill directory enumeration",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          }
+        ],
+        "edges": []
+      },
+      {
+        "slug": "terminal-ui",
+        "title": "Terminal UI",
+        "story": "Terminal output formatting: ANSI color, banner/welcome screen, interactive prompts, and structured output functions",
+        "dependsOn": [],
+        "submodules": [
+          {
+            "slug": "terminal-detection",
+            "kind": "service",
+            "role": "isInteractive/supportsColor: TTY and color detection",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          },
+          {
+            "slug": "banner-display",
+            "kind": "service",
+            "role": "buildBanner/buildWordmark: branding display",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          },
+          {
+            "slug": "interactive-prompts",
+            "kind": "service",
+            "role": "promptForModes/promptYesNo: user prompts",
+            "functions": [],
+            "variables": [],
+            "dataflow": [],
+            "errors": []
+          }
+        ],
+        "edges": []
       }
     ],
     "edges": [
@@ -604,6 +748,110 @@
         },
         "kind": "call",
         "label": "CI 模式下觸發 PR 回報"
+      },
+      {
+        "id": "cli-edge-001",
+        "from": {
+          "feature": "cli-dispatch",
+          "submodule": "arg-parser"
+        },
+        "to": {
+          "feature": "tool-registry",
+          "submodule": "registry-core"
+        },
+        "kind": "call",
+        "label": "run() calls runTool()"
+      },
+      {
+        "id": "cli-edge-002",
+        "from": {
+          "feature": "cli-dispatch",
+          "submodule": "installer-core"
+        },
+        "to": {
+          "feature": "terminal-ui",
+          "submodule": "banner-display"
+        },
+        "kind": "call",
+        "label": "install summary uses banner"
+      },
+      {
+        "id": "cli-edge-003",
+        "from": {
+          "feature": "cli-dispatch",
+          "submodule": "installer-core"
+        },
+        "to": {
+          "feature": "terminal-ui",
+          "submodule": "interactive-prompts"
+        },
+        "kind": "call",
+        "label": "install prompts use inquirer"
+      },
+      {
+        "id": "cli-edge-004",
+        "from": {
+          "feature": "cli-dispatch",
+          "submodule": "help-builder"
+        },
+        "to": {
+          "feature": "terminal-ui",
+          "submodule": "banner-display"
+        },
+        "kind": "call",
+        "label": "help text uses buildBanner"
+      },
+      {
+        "id": "cli-edge-005",
+        "from": {
+          "feature": "cli-dispatch",
+          "submodule": "help-builder"
+        },
+        "to": {
+          "feature": "tool-registry",
+          "submodule": "formatter"
+        },
+        "kind": "call",
+        "label": "help text uses formatToolList"
+      },
+      {
+        "id": "cli-edge-006",
+        "from": {
+          "feature": "cli-dispatch",
+          "submodule": "tool-discovery"
+        },
+        "to": {
+          "feature": "tool-registry",
+          "submodule": "registry-core"
+        },
+        "kind": "call",
+        "label": "registerAllTools calls registerTool"
+      },
+      {
+        "id": "cli-edge-007",
+        "from": {
+          "feature": "cli-dispatch",
+          "submodule": "update-checker"
+        },
+        "to": {
+          "feature": "terminal-ui",
+          "submodule": "terminal-detection"
+        },
+        "kind": "call",
+        "label": "update check uses isInteractive"
+      },
+      {
+        "id": "cli-edge-008",
+        "from": {
+          "feature": "cli-dispatch",
+          "submodule": "installer-core"
+        },
+        "to": {
+          "feature": "terminal-ui",
+          "submodule": "terminal-detection"
+        },
+        "kind": "call",
+        "label": "installer uses supportsColor"
       }
     ]
   }

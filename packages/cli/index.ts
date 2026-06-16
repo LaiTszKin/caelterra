@@ -76,6 +76,11 @@ function readPackageJson(sourceRoot: string): { version: string; name: string } 
   return JSON.parse(fs.readFileSync(path.join(sourceRoot, 'package.json'), 'utf8'));
 }
 
+/** Derive the executable CLI bin wrapper path from the project source root. */
+function getCliBinPath(sourceRoot: string): string {
+  return path.join(sourceRoot, 'dist', 'bin', 'apollo-toolkit.js');
+}
+
 function parseArguments(argv: string[]): ParsedArguments {
   const firstArg = argv[0];
 
@@ -347,7 +352,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       try {
         if (action === 'enable') {
           const nodePath = process.execPath;
-          const cliPath = fileURLToPath(import.meta.url);
+          const cliPath = getCliBinPath(sourceRoot);
           const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
           const result = await registerAutoUpdateTask({
             toolkitHome,
@@ -364,7 +369,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
 
         if (action === 'disable') {
           const nodePath = process.execPath;
-          const cliPath = fileURLToPath(import.meta.url);
+          const cliPath = getCliBinPath(sourceRoot);
           const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
           await unregisterAutoUpdateTask({
             toolkitHome,
@@ -386,7 +391,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
 
           try {
             const nodePath = process.execPath;
-            const cliPath = fileURLToPath(import.meta.url);
+            const cliPath = getCliBinPath(sourceRoot);
             const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
             const taskStatus = await getAutoUpdateTaskStatus({
               toolkitHome,
@@ -517,7 +522,7 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       });
       if (enableAutoUpdate) {
         const nodePath = process.execPath;
-        const cliPath = fileURLToPath(import.meta.url);
+        const cliPath = getCliBinPath(sourceRoot);
         const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
         try {
           await registerAutoUpdateTask({

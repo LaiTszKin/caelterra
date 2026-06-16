@@ -381,6 +381,43 @@ test('Windows: status calls schtasks /Query and returns registered=true', async 
   tmp.cleanup();
 });
 
+test('Windows: register /TR argument preserves spaces via quoteWindowsArg', async () => {
+  const tmp = createTempHome();
+  const exec = createFakeExecutor();
+  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'win32', execOverride: exec });
+
+  // Override runnerCommand with paths containing spaces to verify quoteWindowsArg
+  opts.runnerCommand = [
+    'C:\\Program Files\\nodejs\\node.exe',
+    'C:\\Program Files\\Apollo Toolkit\\dist\\bin\\apollo-toolkit.js',
+    'auto-update',
+    'run',
+    '--home',
+    'C:\\Users\\Jane Doe\\.apollo-toolkit',
+  ];
+
+  await registerAutoUpdateTask(opts);
+
+  assert.equal(exec.calls.length, 1);
+  assert.equal(exec.calls[0].command, 'schtasks');
+
+  // Find /TR and read the next argument
+  const args = exec.calls[0].args;
+  const trIndex = args.indexOf('/TR');
+  assert.notEqual(trIndex, -1, 'should include /TR flag');
+  const tr = args[trIndex + 1];
+
+  // Assert each spaced argument is double-quoted
+  assert.match(tr, /"C:\\Program Files\\nodejs\\node\.exe"/);
+  assert.match(tr, /"C:\\Program Files\\Apollo Toolkit\\dist\\bin\\apollo-toolkit\.js"/);
+  assert.match(tr, /"C:\\Users\\Jane Doe\\.apollo-toolkit"/);
+
+  // Assert non-spaced arguments still appear unquoted
+  assert.match(tr, /auto-update run --home/);
+
+  tmp.cleanup();
+});
+
 // ---------------------------------------------------------------------------
 // Idempotent unregister (missing tasks)
 // ---------------------------------------------------------------------------

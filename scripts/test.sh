@@ -124,6 +124,10 @@ run_coverage_group() {
 }
 
 
+# Group 1 test file list (excludes mock.module-dependent tests that require
+# --experimental-test-module-mocks, which are run separately in Group 3).
+CLI_TEST_FILES=$(find test -name '*.test.js' -not -name 'auto-update-cli-wiring.test.js' | sort | tr '\n' ' ')
+
 # Group 2 test file list (shared between coverage and non-coverage paths)
 EXCLUDE='(cmd-init|cmd-list-apis|cmd-survey|eval)'
 PACKAGE_TEST_FILES=$(find packages -name '*.test.js' -not -path '*/node_modules/*' | grep -v -E "$EXCLUDE" | sort | tr '\n' ' ')
@@ -131,7 +135,7 @@ PACKAGE_TEST_FILES=$(find packages -name '*.test.js' -not -path '*/node_modules/
 if [ "$COVERAGE" = "true" ]; then
   # Group 1: stable non-mock tests (test/) — coverage with thresholds
   run_coverage_group "Stable tests (test/)" 75 60 65 G1_PCT G1_FILES \
-    --test 'test/**/*.test.js'
+    --test $CLI_TEST_FILES
 
   # Group 2: package tests (no mock.module) — coverage with thresholds
   run_coverage_group "Package tests (no mock.module)" 65 60 65 G2_PCT G2_FILES \
@@ -139,7 +143,7 @@ if [ "$COVERAGE" = "true" ]; then
 else
   # Group 1: stable non-mock tests (test/)
   run_test_group "Stable tests (test/)" \
-    node --test 'test/**/*.test.js'
+    node --test $CLI_TEST_FILES
 
   # Group 2: package .test.js files that do NOT need mock.module
   run_test_group "Package tests (no mock.module)" \
@@ -152,7 +156,8 @@ run_test_group "Package tests (mock.module)" \
   node --experimental-test-module-mocks --test \
     'packages/tools/codegraph/dist/lib/cmd-init.test.js' \
     'packages/tools/codegraph/dist/lib/cmd-list-apis.test.js' \
-    'packages/tools/codegraph/dist/lib/cmd-survey.test.js'
+    'packages/tools/codegraph/dist/lib/cmd-survey.test.js' \
+    'test/cli/auto-update-cli-wiring.test.js'
 
 # Combined weighted coverage enforcement (Groups 1 + 2 only)
 if [ "$COVERAGE" = "true" ]; then
