@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@laitszkin/tui": "*",
+    "pacote": "^22.0.0",
     "@laitszkin/tool-registry": "*",
     "@laitszkin/tool-utils": "*",
     "@laitszkin/tool-validate-skill-frontmatter": "*",

@@ -88,6 +88,7 @@ export class InstallArgsParser implements CommandParser<InstallCommand> {
       linkMode: result.linkMode,
       assumeYes: false,
       explicitInstallCommand: result.explicitInstallCommand,
+      autoUpdateAction: null,
       helpTopic: result.helpTopic,
     };
   }

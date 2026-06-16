@@ -15,6 +15,7 @@
 - `apltk validate-skill-frontmatter` - Validate SKILL.md frontmatter format.
 - `apltk validate-openai-agent-config` - Validate agents/openai.yaml configuration.
 - `./scripts/install_skills.sh [mode...]` - Local shell script to install skills.
+- `apltk auto-update enable|disable|status|run` - Manage background skill auto-update. Run `apltk auto-update --help` before using.
 
 ## Project Business Goals
 
@@ -37,6 +38,7 @@
 - `docs/principles/naming-conventions.md` - Naming conventions: kebab-case, documentation naming, tool naming
 - `docs/principles/skill-development.md` - Skill development conventions: frontmatter, body structure, dependency declarations
 - `docs/principles/testing-conventions.md` - Testing conventions: node:test, isolation, output capture
+- `docs/README.md` - Documentation structure, maintenance guidelines, and drift detection
 - `README.md` - Public installation guide and skill catalog
 - `CHANGELOG.md` - Release history
 - `LICENSE` - MIT License

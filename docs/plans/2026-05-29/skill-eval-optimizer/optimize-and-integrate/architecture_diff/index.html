@@ -2,7 +2,7 @@
 <html lang="en" data-atlas-page="macro">
 <head>
   <meta charset="utf-8">
-  <title>Project architecture</title>
+  <title>Project architecture  (+ codegraph integration overlay)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,8 +12,9 @@
 </head>
 <body>
   <header class="atlas-header">
-    <h1>Project architecture</h1>
-    
+    <h1>Project architecture  (+ codegraph integration overlay)</h1>
+    <p class="atlas-summary">完整 C4 架構圖：eval 評測系統 (8 features) + codegraph 程式碼分析 (1 feature, 3 submodules)。 外部 actor: Judge Model API, GitHub Actions CI, Developer, Skill Files, @colbymchenry/codegraph (npm), @laitszkin/tool-registry, @laitszkin/tui。 Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter → CI Gate。
+</p>
   </header>
   <main class="atlas-main">
     <section class="atlas-canvas" aria-label="Macro architecture diagram">
@@ -23,109 +24,323 @@
         <button type="button" data-pan-zoom="fit" aria-label="Reset view">Fit</button>
       </div>
       <div class="atlas-canvas__viewport" data-pan-zoom-viewport>
-<svg class="atlas-svg" viewBox="0 0 1659 820" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Project architecture atlas" data-atlas-svg="macro">
+<svg class="atlas-svg" viewBox="0 0 1836 3182" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Project architecture atlas" data-atlas-svg="macro">
   <defs>
     <marker id="arrow-call" class="m-arrow m-arrow--call" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
     <marker id="arrow-return" class="m-arrow m-arrow--return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
     <marker id="arrow-data-row" class="m-arrow m-arrow--data-row" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
     <marker id="arrow-failure" class="m-arrow m-arrow--failure" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-dependency" class="m-arrow m-arrow--dependency" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-implements" class="m-arrow m-arrow--implements" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
+    <marker id="arrow-deployed-on" class="m-arrow m-arrow--deployed-on" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>
   </defs>
   <g transform="translate(24,24)">
     <g class="m-cluster" data-feature="eval-optimizer">
-      <rect class="m-cluster__bg" x="1275.00" y="20.00" width="255.00" height="405.00" rx="14" ry="14" />
-      <text class="m-cluster__title" x="1402.50" y="46.00" text-anchor="middle">優化引擎</text>
+      <rect class="m-cluster__bg" x="1275.00" y="2275.00" width="255.00" height="405.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="1402.50" y="2301.00" text-anchor="middle">優化引擎</text>
     </g>
     <g class="m-cluster" data-feature="eval-cli">
-      <rect class="m-cluster__bg" x="688.00" y="266.00" width="291.00" height="295.00" rx="14" ry="14" />
-      <text class="m-cluster__title" x="833.50" y="292.00" text-anchor="middle">CLI命令</text>
+      <rect class="m-cluster__bg" x="688.00" y="2521.00" width="291.00" height="295.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="833.50" y="2547.00" text-anchor="middle">CLI命令</text>
     </g>
     <g class="m-cluster" data-feature="eval-ci-gate">
-      <rect class="m-cluster__bg" x="20.00" y="266.00" width="342.00" height="295.00" rx="14" ry="14" />
-      <text class="m-cluster__title" x="191.00" y="292.00" text-anchor="middle">PR閘門</text>
+      <rect class="m-cluster__bg" x="20.00" y="2521.00" width="342.00" height="295.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="191.00" y="2547.00" text-anchor="middle">PR閘門</text>
     </g>
     <g class="m-cluster" data-feature="eval-isolation">
-      <rect class="m-cluster__bg" x="1275.00" y="457.00" width="316.00" height="295.00" rx="14" ry="14" />
-      <text class="m-cluster__title" x="1433.00" y="483.00" text-anchor="middle">上下文隔離與工具模擬</text>
+      <rect class="m-cluster__bg" x="1275.00" y="2712.00" width="316.00" height="295.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="1433.00" y="2738.00" text-anchor="middle">上下文隔離與工具模擬</text>
+    </g>
+    <g class="m-cluster" data-feature="codegraph">
+      <rect class="m-cluster__bg" x="20.00" y="1024.00" width="1748.00" height="241.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="894.00" y="1050.00" text-anchor="middle">CodeGraph Integration</text>
+    </g>
+    <g class="m-cluster" data-feature="eval-question">
+      <rect class="m-cluster__bg" x="687.00" y="2848.00" width="252.00" height="266.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="813.00" y="2874.00" text-anchor="middle">評測題庫</text>
+    </g>
+    <g class="m-cluster" data-feature="eval-executor">
+      <rect class="m-cluster__bg" x="617.00" y="2191.00" width="322.00" height="298.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="778.00" y="2217.00" text-anchor="middle">評測執行器</text>
+    </g>
+    <g class="m-cluster" data-feature="eval-scorer">
+      <rect class="m-cluster__bg" x="20.00" y="1595.00" width="451.00" height="266.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="245.50" y="1621.00" text-anchor="middle">評分引擎</text>
+    </g>
+    <g class="m-cluster" data-feature="eval-reporter">
+      <rect class="m-cluster__bg" x="20.00" y="20.00" width="252.00" height="156.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="146.00" y="46.00" text-anchor="middle">評測報告</text>
+    </g>
+    <g class="m-cluster" data-feature="cli-dispatch">
+      <rect class="m-cluster__bg" x="20.00" y="616.00" width="764.00" height="376.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="402.00" y="642.00" text-anchor="middle">CLI Dispatch and Install Engine</text>
+    </g>
+    <g class="m-cluster" data-feature="tool-registry">
+      <rect class="m-cluster__bg" x="20.00" y="1893.00" width="423.00" height="266.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="231.50" y="1919.00" text-anchor="middle">Tool Registry</text>
+    </g>
+    <g class="m-cluster" data-feature="tool-utils">
+      <rect class="m-cluster__bg" x="20.00" y="1297.00" width="411.00" height="266.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="225.50" y="1323.00" text-anchor="middle">Tool Utilities</text>
+    </g>
+    <g class="m-cluster" data-feature="terminal-ui">
+      <rect class="m-cluster__bg" x="20.00" y="208.00" width="381.00" height="376.00" rx="14" ry="14" />
+      <text class="m-cluster__title" x="210.50" y="234.00" text-anchor="middle">Terminal UI</text>
     </g>
     <a class="m-node m-node--service" href="features/eval-optimizer/issue-extractor.html" data-feature="eval-optimizer" data-submodule="issue-extractor" tabindex="0" aria-label="issue-extractor — 從score.json提取問題、分類統計 — open sub-module page">
       <title>issue-extractor — 從score.json提取問題、分類統計</title>
-      <rect x="1292.50" y="203.00" width="220.00" height="94.00" rx="10" ry="10" />
-      <text class="m-node__title" x="1402.50" y="233.00" text-anchor="middle">issue-extractor</text>
-      <text class="m-node__kind" x="1402.50" y="249.00" text-anchor="middle">Service</text>
-      <text class="m-node__role" x="1402.50" y="269.00" text-anchor="middle">從score.json提取問題、分類統計</text>
+      <rect x="1292.50" y="2458.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="1402.50" y="2488.00" text-anchor="middle">issue-extractor</text>
+      <text class="m-node__kind" x="1402.50" y="2504.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="1402.50" y="2524.00" text-anchor="middle">從score.json提取問題、分類統計</text>
     </a>
     <a class="m-node m-node--service" href="features/eval-optimizer/dedup-engine.html" data-feature="eval-optimizer" data-submodule="dedup-engine" tabindex="0" aria-label="dedup-engine — Jaccard+Judge語意去重 — open sub-module page">
       <title>dedup-engine — Jaccard+Judge語意去重</title>
-      <rect x="1292.50" y="313.00" width="220.00" height="94.00" rx="10" ry="10" />
-      <text class="m-node__title" x="1402.50" y="343.00" text-anchor="middle">dedup-engine</text>
-      <text class="m-node__kind" x="1402.50" y="359.00" text-anchor="middle">Service</text>
-      <text class="m-node__role" x="1402.50" y="379.00" text-anchor="middle">Jaccard+Judge語意去重</text>
+      <rect x="1292.50" y="2568.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="1402.50" y="2598.00" text-anchor="middle">dedup-engine</text>
+      <text class="m-node__kind" x="1402.50" y="2614.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="1402.50" y="2634.00" text-anchor="middle">Jaccard+Judge語意去重</text>
     </a>
     <a class="m-node m-node--service" href="features/eval-optimizer/diff-generator.html" data-feature="eval-optimizer" data-submodule="diff-generator" tabindex="0" aria-label="diff-generator — FIND/REPLACE diff生成與備份/復原 — open sub-module page">
       <title>diff-generator — FIND/REPLACE diff生成與備份/復原</title>
-      <rect x="1291.00" y="93.00" width="223.00" height="94.00" rx="10" ry="10" />
-      <text class="m-node__title" x="1402.50" y="123.00" text-anchor="middle">diff-generator</text>
-      <text class="m-node__kind" x="1402.50" y="139.00" text-anchor="middle">Service</text>
-      <text class="m-node__role" x="1402.50" y="159.00" text-anchor="middle">FIND/REPLACE diff生成與備份/復原</text>
+      <rect x="1291.00" y="2348.00" width="223.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="1402.50" y="2378.00" text-anchor="middle">diff-generator</text>
+      <text class="m-node__kind" x="1402.50" y="2394.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="1402.50" y="2414.00" text-anchor="middle">FIND/REPLACE diff生成與備份/復原</text>
     </a>
     <a class="m-node m-node--service" href="features/eval-cli/cli-handler.html" data-feature="eval-cli" data-submodule="cli-handler" tabindex="0" aria-label="cli-handler — ToolDefinition註冊、參數解析、流程編排 — open sub-module page">
       <title>cli-handler — ToolDefinition註冊、參數解析、流程編排</title>
-      <rect x="704.00" y="339.00" width="259.00" height="94.00" rx="10" ry="10" />
-      <text class="m-node__title" x="833.50" y="369.00" text-anchor="middle">cli-handler</text>
-      <text class="m-node__kind" x="833.50" y="385.00" text-anchor="middle">Service</text>
-      <text class="m-node__role" x="833.50" y="405.00" text-anchor="middle">ToolDefinition註冊、參數解析、流程編排</text>
+      <rect x="704.00" y="2594.00" width="259.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="833.50" y="2624.00" text-anchor="middle">cli-handler</text>
+      <text class="m-node__kind" x="833.50" y="2640.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="833.50" y="2660.00" text-anchor="middle">ToolDefinition註冊、參數解析、流程編排</text>
     </a>
     <a class="m-node m-node--ui" href="features/eval-cli/progress-display.html" data-feature="eval-cli" data-submodule="progress-display" tabindex="0" aria-label="progress-display — 終端機進度指示 — open sub-module page">
       <title>progress-display — 終端機進度指示</title>
-      <rect x="723.50" y="449.00" width="220.00" height="94.00" rx="10" ry="10" />
-      <text class="m-node__title" x="833.50" y="479.00" text-anchor="middle">progress-display</text>
-      <text class="m-node__kind" x="833.50" y="495.00" text-anchor="middle">UI</text>
-      <text class="m-node__role" x="833.50" y="515.00" text-anchor="middle">終端機進度指示</text>
+      <rect x="723.50" y="2704.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="833.50" y="2734.00" text-anchor="middle">progress-display</text>
+      <text class="m-node__kind" x="833.50" y="2750.00" text-anchor="middle">UI</text>
+      <text class="m-node__role" x="833.50" y="2770.00" text-anchor="middle">終端機進度指示</text>
     </a>
     <a class="m-node m-node--service" href="features/eval-ci-gate/workflow-trigger.html" data-feature="eval-ci-gate" data-submodule="workflow-trigger" tabindex="0" aria-label="workflow-trigger — GitHub Actions workflow on PR skill file change — open sub-module page">
       <title>workflow-trigger — GitHub Actions workflow on PR skill file change</title>
-      <rect x="36.00" y="339.00" width="310.00" height="94.00" rx="10" ry="10" />
-      <text class="m-node__title" x="191.00" y="369.00" text-anchor="middle">workflow-trigger</text>
-      <text class="m-node__kind" x="191.00" y="385.00" text-anchor="middle">Service</text>
-      <text class="m-node__role" x="191.00" y="405.00" text-anchor="middle">GitHub Actions workflow on PR skill file change</text>
+      <rect x="36.00" y="2594.00" width="310.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="191.00" y="2624.00" text-anchor="middle">workflow-trigger</text>
+      <text class="m-node__kind" x="191.00" y="2640.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="191.00" y="2660.00" text-anchor="middle">GitHub Actions workflow on PR skill file change</text>
     </a>
     <a class="m-node m-node--service" href="features/eval-ci-gate/pr-reporter.html" data-feature="eval-ci-gate" data-submodule="pr-reporter" tabindex="0" aria-label="pr-reporter — PR評論回報評測結果 — open sub-module page">
       <title>pr-reporter — PR評論回報評測結果</title>
-      <rect x="81.00" y="449.00" width="220.00" height="94.00" rx="10" ry="10" />
-      <text class="m-node__title" x="191.00" y="479.00" text-anchor="middle">pr-reporter</text>
-      <text class="m-node__kind" x="191.00" y="495.00" text-anchor="middle">Service</text>
-      <text class="m-node__role" x="191.00" y="515.00" text-anchor="middle">PR評論回報評測結果</text>
+      <rect x="81.00" y="2704.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="191.00" y="2734.00" text-anchor="middle">pr-reporter</text>
+      <text class="m-node__kind" x="191.00" y="2750.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="191.00" y="2770.00" text-anchor="middle">PR評論回報評測結果</text>
     </a>
     <a class="m-node m-node--service" href="features/eval-isolation/tool-dispatcher.html" data-feature="eval-isolation" data-submodule="tool-dispatcher" tabindex="0" aria-label="tool-dispatcher — 工具調用攔截：read passthrough / write mock — open sub-module page">
       <title>tool-dispatcher — 工具調用攔截：read passthrough / write mock</title>
-      <rect x="1291.00" y="530.00" width="284.00" height="94.00" rx="10" ry="10" />
-      <text class="m-node__title" x="1433.00" y="560.00" text-anchor="middle">tool-dispatcher</text>
-      <text class="m-node__kind" x="1433.00" y="576.00" text-anchor="middle">Service</text>
-      <text class="m-node__role" x="1433.00" y="596.00" text-anchor="middle">工具調用攔截：read passthrough / write mock</text>
+      <rect x="1291.00" y="2785.00" width="284.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="1433.00" y="2815.00" text-anchor="middle">tool-dispatcher</text>
+      <text class="m-node__kind" x="1433.00" y="2831.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="1433.00" y="2851.00" text-anchor="middle">工具調用攔截：read passthrough / write mock</text>
     </a>
     <a class="m-node m-node--service" href="features/eval-isolation/context-factory.html" data-feature="eval-isolation" data-submodule="context-factory" tabindex="0" aria-label="context-factory — 獨立評分上下文工廠 — open sub-module page">
       <title>context-factory — 獨立評分上下文工廠</title>
-      <rect x="1323.00" y="640.00" width="220.00" height="94.00" rx="10" ry="10" />
-      <text class="m-node__title" x="1433.00" y="670.00" text-anchor="middle">context-factory</text>
-      <text class="m-node__kind" x="1433.00" y="686.00" text-anchor="middle">Service</text>
-      <text class="m-node__role" x="1433.00" y="706.00" text-anchor="middle">獨立評分上下文工廠</text>
+      <rect x="1323.00" y="2895.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="1433.00" y="2925.00" text-anchor="middle">context-factory</text>
+      <text class="m-node__kind" x="1433.00" y="2941.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="1433.00" y="2961.00" text-anchor="middle">獨立評分上下文工廠</text>
+    </a>
+    <a class="m-node m-node--service" href="features/codegraph/cg-lifecycle.html" data-feature="codegraph" data-submodule="cg-lifecycle" tabindex="0" aria-label="cg-lifecycle — Manage CodeGraph index lifecycle — init, sync, status, search — open sub-module page">
+      <title>cg-lifecycle — Manage CodeGraph index lifecycle — init, sync, status, search</title>
+      <rect x="36.00" y="1121.00" width="393.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="232.50" y="1151.00" text-anchor="middle">cg-lifecycle</text>
+      <text class="m-node__kind" x="232.50" y="1167.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="232.50" y="1187.00" text-anchor="middle">Manage CodeGraph index lifecycle — init, sync, status, search</text>
+    </a>
+    <a class="m-node m-node--service" href="features/codegraph/cg-discovery.html" data-feature="codegraph" data-submodule="cg-discovery" tabindex="0" aria-label="cg-discovery — Explore and survey code structure — explore, survey, list-apis — open sub-module page">
+      <title>cg-discovery — Explore and survey code structure — explore, survey, list-apis</title>
+      <rect x="701.00" y="1153.00" width="399.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="900.50" y="1183.00" text-anchor="middle">cg-discovery</text>
+      <text class="m-node__kind" x="900.50" y="1199.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="900.50" y="1219.00" text-anchor="middle">Explore and survey code structure — explore, survey, list-apis</text>
+    </a>
+    <a class="m-node m-node--service" href="features/codegraph/cg-validation.html" data-feature="codegraph" data-submodule="cg-validation" tabindex="0" aria-label="cg-validation — Verify architecture proposals and batch-apply atlas mutations — open sub-module page">
+      <title>cg-validation — Verify architecture proposals and batch-apply atlas mutations</title>
+      <rect x="1352.00" y="1121.00" width="400.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="1552.00" y="1151.00" text-anchor="middle">cg-validation</text>
+      <text class="m-node__kind" x="1552.00" y="1167.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="1552.00" y="1187.00" text-anchor="middle">Verify architecture proposals and batch-apply atlas mutations</text>
+    </a>
+    <a class="m-node m-node--service" href="features/eval-question/question-loader.html" data-feature="eval-question" data-submodule="question-loader" tabindex="0" aria-label="question-loader — 題目載入與JSON Schema驗證 — open sub-module page">
+      <title>question-loader — 題目載入與JSON Schema驗證</title>
+      <rect x="703.00" y="2892.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="813.00" y="2922.00" text-anchor="middle">question-loader</text>
+      <text class="m-node__kind" x="813.00" y="2938.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="813.00" y="2958.00" text-anchor="middle">題目載入與JSON Schema驗證</text>
+    </a>
+    <a class="m-node m-node--service" href="features/eval-question/variant-generator.html" data-feature="eval-question" data-submodule="variant-generator" tabindex="0" aria-label="variant-generator — LLM變體生成，保留評分標準 — open sub-module page">
+      <title>variant-generator — LLM變體生成，保留評分標準</title>
+      <rect x="703.00" y="3002.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="813.00" y="3032.00" text-anchor="middle">variant-generator</text>
+      <text class="m-node__kind" x="813.00" y="3048.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="813.00" y="3068.00" text-anchor="middle">LLM變體生成，保留評分標準</text>
+    </a>
+    <a class="m-node m-node--service" href="features/eval-executor/trace-recorder.html" data-feature="eval-executor" data-submodule="trace-recorder" tabindex="0" aria-label="trace-recorder — 多輪tool-use loop軌跡記錄：tool_call/tool_result事件序列、JSONL行號標記、.done完成標記 — open sub-module page">
+      <title>trace-recorder — 多輪tool-use loop軌跡記錄：tool_call/tool_result事件序列、JSONL行號標記、.done完成標記</title>
+      <rect x="633.00" y="2235.00" width="290.00" height="126.00" rx="10" ry="10" />
+      <text class="m-node__title" x="778.00" y="2265.00" text-anchor="middle">trace-recorder</text>
+      <text class="m-node__kind" x="778.00" y="2281.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="778.00" y="2301.00" text-anchor="middle">多輪tool-use loop軌跡記錄：</text>
+      <text class="m-node__role" x="778.00" y="2317.00" text-anchor="middle">tool_call/tool_result事件序列、JSONL行號標</text>
+      <text class="m-node__role" x="778.00" y="2333.00" text-anchor="middle">記、.done完成標記</text>
+    </a>
+    <a class="m-node m-node--api" href="features/eval-executor/exec-api-client.html" data-feature="eval-executor" data-submodule="exec-api-client" tabindex="0" aria-label="exec-api-client — Exec Model HTTP client with retry — open sub-module page">
+      <title>exec-api-client — Exec Model HTTP client with retry</title>
+      <rect x="633.00" y="2377.00" width="227.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="746.50" y="2407.00" text-anchor="middle">exec-api-client</text>
+      <text class="m-node__kind" x="746.50" y="2423.00" text-anchor="middle">API</text>
+      <text class="m-node__role" x="746.50" y="2443.00" text-anchor="middle">Exec Model HTTP client with retry</text>
+    </a>
+    <a class="m-node m-node--service" href="features/eval-scorer/judge-prompt-builder.html" data-feature="eval-scorer" data-submodule="judge-prompt-builder" tabindex="0" aria-label="judge-prompt-builder — 評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示 — open sub-module page">
+      <title>judge-prompt-builder — 評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示</title>
+      <rect x="36.00" y="1639.00" width="419.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="245.50" y="1669.00" text-anchor="middle">judge-prompt-builder</text>
+      <text class="m-node__kind" x="245.50" y="1685.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="245.50" y="1705.00" text-anchor="middle">評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示</text>
+    </a>
+    <a class="m-node m-node--api" href="features/eval-scorer/judge-api-client.html" data-feature="eval-scorer" data-submodule="judge-api-client" tabindex="0" aria-label="judge-api-client — Judge Model HTTP client with parse fallback — open sub-module page">
+      <title>judge-api-client — Judge Model HTTP client with parse fallback</title>
+      <rect x="36.00" y="1749.00" width="287.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="179.50" y="1779.00" text-anchor="middle">judge-api-client</text>
+      <text class="m-node__kind" x="179.50" y="1795.00" text-anchor="middle">API</text>
+      <text class="m-node__role" x="179.50" y="1815.00" text-anchor="middle">Judge Model HTTP client with parse fallback</text>
+    </a>
+    <a class="m-node m-node--service" href="features/eval-reporter/report-composer.html" data-feature="eval-reporter" data-submodule="report-composer" tabindex="0" aria-label="report-composer — Markdown報告組合與渲染 — open sub-module page">
+      <title>report-composer — Markdown報告組合與渲染</title>
+      <rect x="36.00" y="64.00" width="220.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="146.00" y="94.00" text-anchor="middle">report-composer</text>
+      <text class="m-node__kind" x="146.00" y="110.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="146.00" y="130.00" text-anchor="middle">Markdown報告組合與渲染</text>
+    </a>
+    <a class="m-node m-node--service" href="features/cli-dispatch/arg-parser.html" data-feature="cli-dispatch" data-submodule="arg-parser" tabindex="0" aria-label="arg-parser — parseArguments: CLI argument parsing and dispatch — open sub-module page">
+      <title>arg-parser — parseArguments: CLI argument parsing and dispatch</title>
+      <rect x="36.00" y="660.00" width="327.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="199.50" y="690.00" text-anchor="middle">arg-parser</text>
+      <text class="m-node__kind" x="199.50" y="706.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="199.50" y="726.00" text-anchor="middle">parseArguments: CLI argument parsing and dispatch</text>
+    </a>
+    <a class="m-node m-node--service" href="features/cli-dispatch/help-builder.html" data-feature="cli-dispatch" data-submodule="help-builder" tabindex="0" aria-label="help-builder — buildHelpText family: command help text generation — open sub-module page">
+      <title>help-builder — buildHelpText family: command help text generation</title>
+      <rect x="379.00" y="660.00" width="334.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="546.00" y="690.00" text-anchor="middle">help-builder</text>
+      <text class="m-node__kind" x="546.00" y="706.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="546.00" y="726.00" text-anchor="middle">buildHelpText family: command help text generation</text>
+    </a>
+    <a class="m-node m-node--service" href="features/cli-dispatch/installer-core.html" data-feature="cli-dispatch" data-submodule="installer-core" tabindex="0" aria-label="installer-core — installLinks/syncToolkitHome/uninstallSkills: installation engine — open sub-module page">
+      <title>installer-core — installLinks/syncToolkitHome/uninstallSkills: installation engine</title>
+      <rect x="36.00" y="770.00" width="436.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="254.00" y="800.00" text-anchor="middle">installer-core</text>
+      <text class="m-node__kind" x="254.00" y="816.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="254.00" y="836.00" text-anchor="middle">installLinks/syncToolkitHome/uninstallSkills: installation engine</text>
+    </a>
+    <a class="m-node m-node--service" href="features/cli-dispatch/tool-discovery.html" data-feature="cli-dispatch" data-submodule="tool-discovery" tabindex="0" aria-label="tool-discovery — registerAllTools/isKnownToolName: dynamic tool loading — open sub-module page">
+      <title>tool-discovery — registerAllTools/isKnownToolName: dynamic tool loading</title>
+      <rect x="36.00" y="880.00" width="364.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="218.00" y="910.00" text-anchor="middle">tool-discovery</text>
+      <text class="m-node__kind" x="218.00" y="926.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="218.00" y="946.00" text-anchor="middle">registerAllTools/isKnownToolName: dynamic tool loading</text>
+    </a>
+    <a class="m-node m-node--service" href="features/cli-dispatch/update-checker.html" data-feature="cli-dispatch" data-submodule="update-checker" tabindex="0" aria-label="update-checker — checkForPackageUpdate/execCommand: npm version check — open sub-module page">
+      <title>update-checker — checkForPackageUpdate/execCommand: npm version check</title>
+      <rect x="416.00" y="880.00" width="352.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="592.00" y="910.00" text-anchor="middle">update-checker</text>
+      <text class="m-node__kind" x="592.00" y="926.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="592.00" y="946.00" text-anchor="middle">checkForPackageUpdate/execCommand: npm version check</text>
+    </a>
+    <a class="m-node m-node--service" href="features/tool-registry/registry-core.html" data-feature="tool-registry" data-submodule="registry-core" tabindex="0" aria-label="registry-core — registerTool/getTool/listTools/runTool: in-memory registry — open sub-module page">
+      <title>registry-core — registerTool/getTool/listTools/runTool: in-memory registry</title>
+      <rect x="36.00" y="1937.00" width="391.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="231.50" y="1967.00" text-anchor="middle">registry-core</text>
+      <text class="m-node__kind" x="231.50" y="1983.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="231.50" y="2003.00" text-anchor="middle">registerTool/getTool/listTools/runTool: in-memory registry</text>
+    </a>
+    <a class="m-node m-node--service" href="features/tool-registry/formatter.html" data-feature="tool-registry" data-submodule="formatter" tabindex="0" aria-label="formatter — formatToolList/buildToolDiscoveryHelp: tool list display — open sub-module page">
+      <title>formatter — formatToolList/buildToolDiscoveryHelp: tool list display</title>
+      <rect x="36.00" y="2047.00" width="377.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="224.50" y="2077.00" text-anchor="middle">formatter</text>
+      <text class="m-node__kind" x="224.50" y="2093.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="224.50" y="2113.00" text-anchor="middle">formatToolList/buildToolDiscoveryHelp: tool list display</text>
+    </a>
+    <a class="m-node m-node--service" href="features/tool-utils/log-utils.html" data-feature="tool-utils" data-submodule="log-utils" tabindex="0" aria-label="log-utils — extractTimestamp/parseCliTimestamp/inWindow: log parsing — open sub-module page">
+      <title>log-utils — extractTimestamp/parseCliTimestamp/inWindow: log parsing</title>
+      <rect x="36.00" y="1341.00" width="379.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="225.50" y="1371.00" text-anchor="middle">log-utils</text>
+      <text class="m-node__kind" x="225.50" y="1387.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="225.50" y="1407.00" text-anchor="middle">extractTimestamp/parseCliTimestamp/inWindow: log parsing</text>
+    </a>
+    <a class="m-node m-node--service" href="features/tool-utils/skill-discovery.html" data-feature="tool-utils" data-submodule="skill-discovery" tabindex="0" aria-label="skill-discovery — iterSkillDirs: skill directory enumeration — open sub-module page">
+      <title>skill-discovery — iterSkillDirs: skill directory enumeration</title>
+      <rect x="36.00" y="1451.00" width="289.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="180.50" y="1481.00" text-anchor="middle">skill-discovery</text>
+      <text class="m-node__kind" x="180.50" y="1497.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="180.50" y="1517.00" text-anchor="middle">iterSkillDirs: skill directory enumeration</text>
+    </a>
+    <a class="m-node m-node--service" href="features/terminal-ui/terminal-detection.html" data-feature="terminal-ui" data-submodule="terminal-detection" tabindex="0" aria-label="terminal-detection — isInteractive/supportsColor: TTY and color detection — open sub-module page">
+      <title>terminal-detection — isInteractive/supportsColor: TTY and color detection</title>
+      <rect x="36.00" y="252.00" width="349.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="210.50" y="282.00" text-anchor="middle">terminal-detection</text>
+      <text class="m-node__kind" x="210.50" y="298.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="210.50" y="318.00" text-anchor="middle">isInteractive/supportsColor: TTY and color detection</text>
+    </a>
+    <a class="m-node m-node--service" href="features/terminal-ui/banner-display.html" data-feature="terminal-ui" data-submodule="banner-display" tabindex="0" aria-label="banner-display — buildBanner/buildWordmark: branding display — open sub-module page">
+      <title>banner-display — buildBanner/buildWordmark: branding display</title>
+      <rect x="36.00" y="362.00" width="298.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="185.00" y="392.00" text-anchor="middle">banner-display</text>
+      <text class="m-node__kind" x="185.00" y="408.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="185.00" y="428.00" text-anchor="middle">buildBanner/buildWordmark: branding display</text>
+    </a>
+    <a class="m-node m-node--service" href="features/terminal-ui/interactive-prompts.html" data-feature="terminal-ui" data-submodule="interactive-prompts" tabindex="0" aria-label="interactive-prompts — promptForModes/promptYesNo: user prompts — open sub-module page">
+      <title>interactive-prompts — promptForModes/promptYesNo: user prompts</title>
+      <rect x="36.00" y="472.00" width="279.00" height="94.00" rx="10" ry="10" />
+      <text class="m-node__title" x="175.50" y="502.00" text-anchor="middle">interactive-prompts</text>
+      <text class="m-node__kind" x="175.50" y="518.00" text-anchor="middle">Service</text>
+      <text class="m-node__role" x="175.50" y="538.00" text-anchor="middle">promptForModes/promptYesNo: user prompts</text>
     </a>
     <g class="m-edge m-edge--call m-edge--cross" data-edge="e-101">
-      <path d="M979.00,364.33 L989.00,364.33 L989.00,222.50 L1275.00,222.50" fill="none" marker-end="url(#arrow-call)" />
-      <text class="m-edge__label" x="1107.00" y="212.50" text-anchor="middle">
+      <path d="M979.00,2619.33 L989.00,2619.33 L989.00,2477.50 L1275.00,2477.50" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="1107.00" y="2467.50" text-anchor="middle">
         <tspan x="1107.00">trigger optimization after scoring</tspan>
       </text>
     </g>
     <g class="m-edge m-edge--call m-edge--cross" data-edge="e-102">
-      <path d="M979.00,462.67 L989.00,462.67 L989.00,604.50 L1275.00,604.50" fill="none" marker-end="url(#arrow-call)" />
-      <text class="m-edge__label" x="1107.00" y="622.50" text-anchor="middle">
+      <path d="M979.00,2717.67 L989.00,2717.67 L989.00,2859.50 L1275.00,2859.50" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="1107.00" y="2877.50" text-anchor="middle">
         <tspan x="1107.00">setup tool mock + context isolation</tspan>
       </text>
     </g>
     <g class="m-edge m-edge--call m-edge--cross" data-edge="e-103">
-      <path d="M362.00,413.50 L688.00,413.50" fill="none" marker-end="url(#arrow-call)" />
-      <text class="m-edge__label" x="525.00" y="431.50" text-anchor="middle">
+      <path d="M362.00,2668.50 L688.00,2668.50" fill="none" marker-end="url(#arrow-call)" />
+      <text class="m-edge__label" x="525.00" y="2686.50" text-anchor="middle">
         <tspan x="525.00">invoke apltk eval --mode standard</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--data-row" data-edge="cg-fe-001">
+      <path d="M429.00,1183.67 L439.00,1183.67 L439.00,1200.00 L701.00,1200.00" fill="none" marker-end="url(#arrow-data-row)" />
+      <text class="m-edge__label" x="565.00" y="1218.00" text-anchor="middle">
+        <tspan x="565.00">survey/list-apis 依賴已索引的資料庫</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--data-row" data-edge="cg-fe-002">
+      <path d="M1100.00,1200.00 L1334.00,1200.00 L1334.00,1183.67 L1352.00,1183.67" fill="none" marker-end="url(#arrow-data-row)" />
+      <text class="m-edge__label" x="1226.00" y="1218.00" text-anchor="middle">
+        <tspan x="1226.00">verify 使用 discovery 的搜尋能力</tspan>
+      </text>
+    </g>
+    <g class="m-edge m-edge--data-row" data-edge="cg-fe-003">
+      <path d="M1352.00,1152.33 L1334.00,1152.33 L1334.00,1136.00 L439.00,1136.00 L439.00,1152.33 L429.00,1152.33" fill="none" marker-end="url(#arrow-data-row)" />
+      <text class="m-edge__label" x="900.50" y="1112.00" text-anchor="middle">
+        <tspan x="900.50">apply 非索引操作，不需 lifecycle — 但</tspan>
+        <tspan x="900.50" dy="14">template 可搭配 list-apis</tspan>
       </text>
     </g>
   </g>
@@ -136,6 +351,9 @@
         <li><span class="legend-swatch legend-swatch--return"></span>return</li>
         <li><span class="legend-swatch legend-swatch--data-row"></span>data-row</li>
         <li><span class="legend-swatch legend-swatch--failure"></span>failure</li>
+        <li><span class="legend-swatch legend-swatch--dependency"></span>dependency</li>
+        <li><span class="legend-swatch legend-swatch--implements"></span>implements</li>
+        <li><span class="legend-swatch legend-swatch--deployed-on"></span>deployed-on</li>
       </ol>
     </section>
     <section class="atlas-index" aria-label="Submodule index">
@@ -212,6 +430,182 @@
             <span class="atlas-submodule-index__kind">Service</span>
           </a>
           <p class="atlas-submodule-index__role">獨立評分上下文工廠</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/codegraph/cg-lifecycle.html">
+            <span class="atlas-submodule-index__feature">CodeGraph Integration</span>
+            <span class="atlas-submodule-index__sub">cg-lifecycle</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">Manage CodeGraph index lifecycle — init, sync, status, search</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/codegraph/cg-discovery.html">
+            <span class="atlas-submodule-index__feature">CodeGraph Integration</span>
+            <span class="atlas-submodule-index__sub">cg-discovery</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">Explore and survey code structure — explore, survey, list-apis</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/codegraph/cg-validation.html">
+            <span class="atlas-submodule-index__feature">CodeGraph Integration</span>
+            <span class="atlas-submodule-index__sub">cg-validation</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">Verify architecture proposals and batch-apply atlas mutations</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-question/question-loader.html">
+            <span class="atlas-submodule-index__feature">評測題庫</span>
+            <span class="atlas-submodule-index__sub">question-loader</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">題目載入與JSON Schema驗證</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-question/variant-generator.html">
+            <span class="atlas-submodule-index__feature">評測題庫</span>
+            <span class="atlas-submodule-index__sub">variant-generator</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">LLM變體生成，保留評分標準</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-executor/trace-recorder.html">
+            <span class="atlas-submodule-index__feature">評測執行器</span>
+            <span class="atlas-submodule-index__sub">trace-recorder</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">多輪tool-use loop軌跡記錄：tool_call/tool_result事件序列、JSONL行號標記、.done完成標記</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-executor/exec-api-client.html">
+            <span class="atlas-submodule-index__feature">評測執行器</span>
+            <span class="atlas-submodule-index__sub">exec-api-client</span>
+            <span class="atlas-submodule-index__kind">API</span>
+          </a>
+          <p class="atlas-submodule-index__role">Exec Model HTTP client with retry</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-scorer/judge-prompt-builder.html">
+            <span class="atlas-submodule-index__feature">評分引擎</span>
+            <span class="atlas-submodule-index__sub">judge-prompt-builder</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-scorer/judge-api-client.html">
+            <span class="atlas-submodule-index__feature">評分引擎</span>
+            <span class="atlas-submodule-index__sub">judge-api-client</span>
+            <span class="atlas-submodule-index__kind">API</span>
+          </a>
+          <p class="atlas-submodule-index__role">Judge Model HTTP client with parse fallback</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/eval-reporter/report-composer.html">
+            <span class="atlas-submodule-index__feature">評測報告</span>
+            <span class="atlas-submodule-index__sub">report-composer</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">Markdown報告組合與渲染</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/cli-dispatch/arg-parser.html">
+            <span class="atlas-submodule-index__feature">CLI Dispatch and Install Engine</span>
+            <span class="atlas-submodule-index__sub">arg-parser</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">parseArguments: CLI argument parsing and dispatch</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/cli-dispatch/help-builder.html">
+            <span class="atlas-submodule-index__feature">CLI Dispatch and Install Engine</span>
+            <span class="atlas-submodule-index__sub">help-builder</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">buildHelpText family: command help text generation</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/cli-dispatch/installer-core.html">
+            <span class="atlas-submodule-index__feature">CLI Dispatch and Install Engine</span>
+            <span class="atlas-submodule-index__sub">installer-core</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">installLinks/syncToolkitHome/uninstallSkills: installation engine</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/cli-dispatch/tool-discovery.html">
+            <span class="atlas-submodule-index__feature">CLI Dispatch and Install Engine</span>
+            <span class="atlas-submodule-index__sub">tool-discovery</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">registerAllTools/isKnownToolName: dynamic tool loading</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/cli-dispatch/update-checker.html">
+            <span class="atlas-submodule-index__feature">CLI Dispatch and Install Engine</span>
+            <span class="atlas-submodule-index__sub">update-checker</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">checkForPackageUpdate/execCommand: npm version check</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/tool-registry/registry-core.html">
+            <span class="atlas-submodule-index__feature">Tool Registry</span>
+            <span class="atlas-submodule-index__sub">registry-core</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">registerTool/getTool/listTools/runTool: in-memory registry</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/tool-registry/formatter.html">
+            <span class="atlas-submodule-index__feature">Tool Registry</span>
+            <span class="atlas-submodule-index__sub">formatter</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">formatToolList/buildToolDiscoveryHelp: tool list display</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/tool-utils/log-utils.html">
+            <span class="atlas-submodule-index__feature">Tool Utilities</span>
+            <span class="atlas-submodule-index__sub">log-utils</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">extractTimestamp/parseCliTimestamp/inWindow: log parsing</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/tool-utils/skill-discovery.html">
+            <span class="atlas-submodule-index__feature">Tool Utilities</span>
+            <span class="atlas-submodule-index__sub">skill-discovery</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">iterSkillDirs: skill directory enumeration</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/terminal-ui/terminal-detection.html">
+            <span class="atlas-submodule-index__feature">Terminal UI</span>
+            <span class="atlas-submodule-index__sub">terminal-detection</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">isInteractive/supportsColor: TTY and color detection</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/terminal-ui/banner-display.html">
+            <span class="atlas-submodule-index__feature">Terminal UI</span>
+            <span class="atlas-submodule-index__sub">banner-display</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">buildBanner/buildWordmark: branding display</p>
+        </li>
+        <li class="atlas-submodule-index__item">
+          <a href="features/terminal-ui/interactive-prompts.html">
+            <span class="atlas-submodule-index__feature">Terminal UI</span>
+            <span class="atlas-submodule-index__sub">interactive-prompts</span>
+            <span class="atlas-submodule-index__kind">Service</span>
+          </a>
+          <p class="atlas-submodule-index__role">promptForModes/promptYesNo: user prompts</p>
         </li>
       </ul>
     </section>

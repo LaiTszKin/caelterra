@@ -37,3 +37,4 @@
 {"ts":"2026-06-03T13:18:56.778Z","action":"edge add","args":{"from":{"feature":"eval-executor"},"to":{"feature":"eval-optimizer"},"kind":"data-row","label":"執行結果觸發優化","id":"eval-exec-optimizer"},"mode":"base"}
 {"ts":"2026-06-03T13:18:57.451Z","action":"edge add","args":{"from":{"feature":"eval-cli"},"to":{"feature":"eval-ci-gate"},"kind":"call","label":"CI 模式下觸發 PR 回報","id":"eval-cli-ci"},"mode":"base"}
 {"ts":"2026-06-06T13:03:10.932Z","action":"merge","args":{"specs":["docs/plans/2026-06-04/cli-refactor"]},"mode":"base"}
+{"ts":"2026-06-16T14:02:04.156Z","action":"merge","args":{"specs":["docs/plans/2026-06-16/background-auto-update"]},"mode":"base"}

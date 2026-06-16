@@ -40,4 +40,29 @@ submodules:
     variables: []
     dataflow: []
     errors: []
+  - slug: background-update-controller
+    kind: service
+    role: >-
+      CLI command surface for enabling, disabling, querying, and manually invoking background skill
+      updates
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: background-task-scheduler
+    kind: service
+    role: Cross-platform registration and removal of daily OS scheduled tasks for Apollo Toolkit updates
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: skill-update-runner
+    kind: service
+    role: >-
+      One-shot background update execution that refreshes Apollo Toolkit managed skills and records
+      status
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
 edges: []

@@ -17,6 +17,20 @@ test('parseArguments classifies --help as overview help', () => {
   assert.equal(parsed.command, 'install');
 });
 
+test('parseArguments classifies auto-update status as auto-update command', () => {
+  const parsed = parseArguments(['auto-update', 'status']);
+  assert.equal(parsed.command, 'auto-update');
+  assert.equal(parsed.autoUpdateAction, 'status');
+  assert.equal(parsed.showHelp, false);
+});
+
+test('parseArguments classifies auto-update --help as auto-update help', () => {
+  const parsed = parseArguments(['auto-update', '--help']);
+  assert.equal(parsed.command, 'auto-update');
+  assert.equal(parsed.showHelp, true);
+  assert.equal(parsed.helpTopic, 'auto-update');
+});
+
 test('parseArguments classifies install --help as install help', () => {
   const parsed = parseArguments(['install', '--help']);
   assert.equal(parsed.showHelp, true);
@@ -372,6 +386,9 @@ test('REGTEST-02: parseArguments backward compatibility — all command types', 
     { argv: ['tools'],             command: 'tools-help', props: { showToolsHelp: true, showHelp: false } },
     // isKnownToolName fallback → 'tool' command
     { argv: ['architecture'],       command: 'tool',       props: { toolName: 'architecture' } },
+    // Dispatch table 'auto-update' entry
+    { argv: ['auto-update', 'status'], command: 'auto-update', props: { autoUpdateAction: 'status', showHelp: false } },
+    { argv: ['auto-update', '--help'],  command: 'auto-update', props: { showHelp: true, helpTopic: 'auto-update' } },
   ];
 
   for (const { argv, command, props } of scenarios) {
