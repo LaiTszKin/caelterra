@@ -11,14 +11,11 @@ describe('registry error handling', () => {
       description: 'Test tool with no handler',
     });
 
-    await assert.rejects(
-      async () => {
-        await runTool('test-unconfigured-tool', [], {
-          stdout: { write() {} },
-          stderr: { write() {} },
-        });
-      },
-      /not fully configured/,
-    );
+    await assert.rejects(async () => {
+      await runTool('test-unconfigured-tool', [], {
+        stdout: { write() {} },
+        stderr: { write() {} },
+      });
+    }, /not fully configured/);
   });
 });

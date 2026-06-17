@@ -17,6 +17,7 @@
 ## 選擇性擴充目錄
 
 技能可依需求包含以下子目錄：
+
 - `agents/openai.yaml`：OpenAI 相容的代理人介面定義（幾乎所有技能必備）
 - `references/`：補充說明文件、模板與格式指南
 - `scripts/`：可執行輔助腳本（Python/Shell），由 `lib/tool-runner.ts` 中的 TypeScript handler 直接調用

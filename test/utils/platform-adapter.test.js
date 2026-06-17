@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
-import { createPlatformAdapter, WindowsAdapter, PosixAdapter } from '../../packages/tool-utils/dist/platform-adapter.js';
+import {
+  createPlatformAdapter,
+  WindowsAdapter,
+  PosixAdapter,
+} from '../../packages/tool-utils/dist/platform-adapter.js';
 
 // ----------------------------------------------------------------
 // createPlatformAdapter() factory (singleton)
@@ -151,4 +155,3 @@ test('PosixAdapter.EOL returns os.EOL', () => {
   const adapter = new PosixAdapter();
   assert.equal(adapter.EOL, os.EOL);
 });
-

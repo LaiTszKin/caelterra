@@ -59,6 +59,7 @@
 ### Output
 
 When done, report back to the coordinator:
+
 - **Test file**: [path]
 - **Test name**: [test name or description]
 - **Oracle confirmed**: [test fails before fix / test passes after fix]

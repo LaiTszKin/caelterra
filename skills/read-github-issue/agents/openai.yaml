@@ -1,4 +1,4 @@
 interface:
-  display_name: "Read GitHub Issue"
-  short_description: "Read and search remote GitHub issues"
-  default_prompt: "Use $read-github-issue to verify the target GitHub repository with gh, prefer the bundled issue scripts when they work, fall back to raw gh issue commands when they do not, inspect the selected issue with comments and structured fields, summarize the trustworthy issue context, and call out any missing details before any separate planning or implementation work."
+  display_name: 'Read GitHub Issue'
+  short_description: 'Read and search remote GitHub issues'
+  default_prompt: 'Use $read-github-issue to verify the target GitHub repository with gh, prefer the bundled issue scripts when they work, fall back to raw gh issue commands when they do not, inspect the selected issue with comments and structured fields, summarize the trustworthy issue context, and call out any missing details before any separate planning or implementation work.'

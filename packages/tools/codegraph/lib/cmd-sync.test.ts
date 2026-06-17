@@ -10,7 +10,11 @@ describe('cmd-sync handleSync', () => {
     // and mock isInitialized BEFORE the module under test is evaluated, so
     // the mock is in place when cmd-sync.ts runs its own require().
     const { CodeGraph } = require('@colbymchenry/codegraph');
-    const isInitializedMock = mock.method(CodeGraph, 'isInitialized', () => false);
+    const isInitializedMock = mock.method(
+      CodeGraph,
+      'isInitialized',
+      () => false,
+    );
 
     // Capture stderr output
     const stderrWriteMock = mock.method(process.stderr, 'write', () => true);
@@ -26,9 +30,11 @@ describe('cmd-sync handleSync', () => {
 
     // Verify stderr mentions "init"
     assert.strictEqual(stderrWriteMock.mock.calls.length, 1);
-    const callArg = stderrWriteMock.mock.calls[0].arguments[0];
-    assert.ok(callArg !== undefined, 'Expected stderr write argument to be defined');
-    const stderrOutput = typeof callArg === 'string' ? callArg : Buffer.from(callArg).toString('utf8');
+    const callArg = stderrWriteMock.mock.calls[0]?.arguments[0] ?? '';
+    const stderrOutput =
+      typeof callArg === 'string'
+        ? callArg
+        : Buffer.from(callArg).toString('utf8');
     assert.ok(
       stderrOutput.toLowerCase().includes('init'),
       `Expected stderr to mention "init", got: ${JSON.stringify(stderrOutput)}`,

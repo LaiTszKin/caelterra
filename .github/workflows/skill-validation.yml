@@ -14,16 +14,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build TypeScript
-        run: npm run build
+        run: pnpm run build
+      - name: Lint check
+        run: pnpm lint --cache
+      - name: Format check
+        run: pnpm format:check
 
       - name: Validate SKILL.md frontmatter
         run: node dist/bin/apollo-toolkit.js validate-skill-frontmatter
@@ -34,16 +43,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build TypeScript
-        run: npm run build
+        run: pnpm run build
+      - name: Lint check
+        run: pnpm lint --cache
+      - name: Format check
+        run: pnpm format:check
 
       - name: Validate SKILL.md description length
         run: node dist/bin/apollo-toolkit.js validate-skill-frontmatter
@@ -54,16 +72,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build TypeScript
-        run: npm run build
+        run: pnpm run build
+      - name: Lint check
+        run: pnpm lint --cache
+      - name: Format check
+        run: pnpm format:check
 
       - name: Validate agents/openai.yaml
         run: node dist/bin/apollo-toolkit.js validate-openai-agent-config

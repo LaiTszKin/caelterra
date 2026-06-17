@@ -39,7 +39,16 @@ class DiskSpaceError extends Error {
 // --- Public Types ---
 
 export interface TraceEvent {
-  type: 'start' | 'thinking' | 'response' | 'tool_call' | 'tool_result' | 'error' | 'end' | 'parse_error' | 'round';
+  type:
+    | 'start'
+    | 'thinking'
+    | 'response'
+    | 'tool_call'
+    | 'tool_result'
+    | 'error'
+    | 'end'
+    | 'parse_error'
+    | 'round';
   timestamp: string;
   data: Record<string, unknown>;
   _lineNumber?: number;
@@ -71,8 +80,20 @@ async function initWorkspace(
   date: string,
 ): Promise<string> {
   const rootDir = getProjectRoot();
-  const workspaceDir = resolve(rootDir, 'assets', 'spec', date, `test_${testNo}`);
-  const resultsDir = resolve(rootDir, 'results', 'spec', date, `test_${testNo}`);
+  const workspaceDir = resolve(
+    rootDir,
+    'assets',
+    'spec',
+    date,
+    `test_${testNo}`,
+  );
+  const resultsDir = resolve(
+    rootDir,
+    'results',
+    'spec',
+    date,
+    `test_${testNo}`,
+  );
 
   await mkdir(workspaceDir, { recursive: true });
   await mkdir(resultsDir, { recursive: true });
@@ -124,7 +145,7 @@ function buildSystemPrompt(
     projectContext.description || '(无)',
     '',
     '工作目录中的初始文件 (仅供参考，你应该在此基础上产出 spec 文件)：',
-    ...projectContext.files.map(f => `  - ${f.path}`),
+    ...projectContext.files.map((f) => `  - ${f.path}`),
   ].join('\n');
 }
 
@@ -150,15 +171,18 @@ async function withRetry<T>(
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
       if (attempt < maxRetries) {
-        const delaySec = delays[Math.min(attempt, delays.length - 1)];
+        const delaySec = delays[Math.min(attempt, delays.length - 1)] ?? 1;
         console.error(
-          `[executor] Retry (${attempt + 1}/${maxRetries})... ${delaySec}s later: ${lastError.message.split('\n')[0]}`,
+          `[executor] Retry (${String(attempt + 1)}/${String(maxRetries)})... ${String(delaySec)}s later: ${String(lastError.message.split('\n')[0])}`,
         );
-        await new Promise(r => setTimeout(r, delaySec * 1000));
+        await new Promise((r) => setTimeout(r, delaySec * 1000));
       }
     }
   }
 
+  if (!lastError) {
+    lastError = new Error('All retries exhausted');
+  }
   throw lastError;
 }
 
@@ -189,7 +213,13 @@ async function executeSingleTest(
 ): Promise<TestResult> {
   const testNo = question.id;
   const rootDir = getProjectRoot();
-  const resultsDir = resolve(rootDir, 'results', 'spec', date, `test_${testNo}`);
+  const resultsDir = resolve(
+    rootDir,
+    'results',
+    'spec',
+    date,
+    `test_${testNo}`,
+  );
   const tracePath = resolve(resultsDir, 'trace.jsonl');
   const donePath = resolve(resultsDir, '.done');
 
@@ -231,8 +261,16 @@ async function executeSingleTest(
   try {
     // 剝離評分標準，確保被測模型看不到評分條件
     const stripped = stripScoringCriteria(question);
-    const workspaceDir = await initWorkspace(testNo, stripped.projectContext, date);
-    const systemPrompt = buildSystemPrompt(workspaceDir, stripped.projectContext, skillName);
+    const workspaceDir = await initWorkspace(
+      testNo,
+      stripped.projectContext,
+      date,
+    );
+    const systemPrompt = buildSystemPrompt(
+      workspaceDir,
+      stripped.projectContext,
+      skillName,
+    );
 
     await appendTraceBuffered({
       type: 'thinking',
@@ -257,47 +295,58 @@ async function executeSingleTest(
       // 呼叫執行模型（含 AbortController timeout）
       const controller = new AbortController();
       const timeoutMs = env.EXEC_TIMEOUT * 1000;
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, timeoutMs);
 
       let response: Record<string, unknown>;
       try {
-        response = await callExecModel(
-          messages,
-          env,
-          controller.signal,
-        );
+        response = await callExecModel(messages, env, controller.signal);
       } finally {
         clearTimeout(timeoutId);
       }
 
-      const choices = response.choices as Array<Record<string, unknown>> | undefined;
-      const finishReason = choices?.[0]?.finish_reason as string | undefined;
-      const assistantMessage = choices?.[0]?.message as Record<string, unknown> | undefined;
+      const choices = response['choices'] as
+        | Array<Record<string, unknown>>
+        | undefined;
+      const finishReason = choices?.[0]?.['finish_reason'] as
+        | string
+        | undefined;
+      const assistantMessage = choices?.[0]?.['message'] as
+        | Record<string, unknown>
+        | undefined;
 
       // FIX-04: 記錄每個 LLM 回合到 trace (含 tool_calls 回合)
-      const rawContent = typeof assistantMessage?.content === 'string'
-        ? assistantMessage.content
-        : JSON.stringify(assistantMessage?.content ?? '');
+      const rawContent =
+        typeof assistantMessage?.['content'] === 'string'
+          ? assistantMessage['content']
+          : JSON.stringify(assistantMessage?.['content'] ?? '');
       await appendTraceBuffered({
         type: 'round',
         timestamp: new Date().toISOString(),
         data: {
-          model: response.model,
-          usage: response.usage,
+          model: response['model'],
+          usage: response['usage'],
           finish_reason: finishReason,
-          content: rawContent.length > 2000 ? rawContent.substring(0, 2000) + '...(truncated)' : rawContent,
+          content:
+            rawContent.length > 2000
+              ? rawContent.substring(0, 2000) + '...(truncated)'
+              : rawContent,
           round: round + 1,
         },
       });
 
-      if (finishReason === 'stop' || (finishReason !== 'tool_calls' && round > 0)) {
+      if (
+        finishReason === 'stop' ||
+        (finishReason !== 'tool_calls' && round > 0)
+      ) {
         // 記錄最終 response
         await appendTraceBuffered({
           type: 'response',
           timestamp: new Date().toISOString(),
           data: {
-            model: response.model,
-            usage: response.usage,
+            model: response['model'],
+            usage: response['usage'],
             message: assistantMessage,
             finish_reason: finishReason,
             rounds: round + 1,
@@ -309,13 +358,18 @@ async function executeSingleTest(
       }
 
       if (finishReason === 'tool_calls') {
-        const toolCalls = assistantMessage?.tool_calls as Array<Record<string, unknown>> | undefined;
+        const toolCalls = assistantMessage?.['tool_calls'] as
+          | Array<Record<string, unknown>>
+          | undefined;
         if (!toolCalls || toolCalls.length === 0) {
           // 異常：finish_reason 為 tool_calls 但無 tool_calls 資料
           await appendTraceBuffered({
             type: 'error',
             timestamp: new Date().toISOString(),
-            data: { error: 'finish_reason is tool_calls but no tool_calls in response' },
+            data: {
+              error:
+                'finish_reason is tool_calls but no tool_calls in response',
+            },
           });
           break;
         }
@@ -323,18 +377,21 @@ async function executeSingleTest(
         // 將 assistant message（含 tool_calls）加入 messages
         messages.push({
           role: 'assistant',
-          content: (assistantMessage?.content as string | null) ?? null,
+          content: (assistantMessage?.['content'] as string | null) ?? null,
           tool_calls: toolCalls,
         });
 
         for (const tc of toolCalls) {
-          const id = tc.id as string;
-          const func = tc.function as Record<string, unknown> | undefined;
-          const toolName = (func?.name as string) || (tc.tool as string) || 'unknown';
-          const rawArgs = func?.arguments as string | undefined;
+          const id = tc['id'] as string;
+          const func = tc['function'] as Record<string, unknown> | undefined;
+          const toolName =
+            (func?.['name'] as string) || (tc['tool'] as string) || 'unknown';
+          const rawArgs = func?.['arguments'] as string | undefined;
           let args: Record<string, unknown>;
           try {
-            args = rawArgs ? (JSON.parse(rawArgs) as Record<string, unknown>) : {};
+            args = rawArgs
+              ? (JSON.parse(rawArgs) as Record<string, unknown>)
+              : {};
           } catch {
             args = {};
           }
@@ -358,8 +415,16 @@ async function executeSingleTest(
 
           // Truncate large tool results to prevent unbounded growth
           const MAX_RESULT_LENGTH = 5000;
-          if (result.data && typeof result.data === 'string' && result.data.length > MAX_RESULT_LENGTH) {
-            result = { ...result, data: result.data.substring(0, MAX_RESULT_LENGTH) + '...(truncated)' };
+          if (
+            result.data &&
+            typeof result.data === 'string' &&
+            result.data.length > MAX_RESULT_LENGTH
+          ) {
+            result = {
+              ...result,
+              data:
+                result.data.substring(0, MAX_RESULT_LENGTH) + '...(truncated)',
+            };
           }
 
           // 將 tool result 加入 messages
@@ -381,8 +446,8 @@ async function executeSingleTest(
         type: 'response',
         timestamp: new Date().toISOString(),
         data: {
-          model: response.model,
-          usage: response.usage,
+          model: response['model'],
+          usage: response['usage'],
           message: assistantMessage,
           finish_reason: finishReason,
         },
@@ -417,7 +482,8 @@ async function executeSingleTest(
     return { testId: testNo, success: true };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-    const isTimeout = error.name === 'AbortError' || error.name === 'TimeoutError';
+    const isTimeout =
+      error.name === 'AbortError' || error.name === 'TimeoutError';
 
     await appendTraceBuffered({
       type: 'error',
@@ -512,7 +578,9 @@ export async function runAllTests(
     const stats = statfsSync(resultsBase);
     const availableMB = (stats.bavail * stats.bsize) / (1024 * 1024);
     if (availableMB < 100) {
-      throw new DiskSpaceError('Eval aborted: insufficient disk space (< 100MB available)');
+      throw new DiskSpaceError(
+        'Eval aborted: insufficient disk space (< 100MB available)',
+      );
     }
   } catch (err: unknown) {
     if (err instanceof DiskSpaceError) {
@@ -528,32 +596,31 @@ export async function runAllTests(
 
   // SIGINT handler: 同步清理 exec lock，防止 process.exit 跳過 finally
   const sigintCleanup = () => {
-    try { rmSync(lockPath, { recursive: true, force: true }); } catch {}
+    try {
+      rmSync(lockPath, { recursive: true, force: true });
+    } catch {
+      /* ignore cleanup errors */
+    }
   };
   process.once('SIGINT', sigintCleanup);
 
   try {
     const total = questions.length;
-    let completed = 0;
-    let failed = 0;
 
     const results = await promisePool(
       questions,
       async (question: Question, i: number) => {
-        const label = `[${i + 1}/${total}] ${question.id} (${question.difficulty})`;
+        const label = `[${String(i + 1)}/${String(total)}] ${question.id} (${question.difficulty})`;
 
         try {
           const result = await runSingleTest(question, env, date, skillName);
-          completed++;
           if (result.success) {
             console.log(`${label} 完成`);
           } else {
-            failed++;
-            console.error(`${label} 失败: ${result.error}`);
+            console.error(`${label} 失败: ${String(result.error)}`);
           }
           return result;
         } catch (err) {
-          failed++;
           const msg = err instanceof Error ? err.message : String(err);
           console.error(`${label} 最终失败 (重试耗尽): ${msg}`);
           return { testId: question.id, success: false, error: msg };

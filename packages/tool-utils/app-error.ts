@@ -7,7 +7,6 @@
  * - SystemError: unexpected system failures (exit code 1, includes stack)
  */
 
-
 import { EOL } from 'node:os';
 
 export type ErrorDetails = Record<string, unknown>;
@@ -19,7 +18,7 @@ export class AppError extends Error {
   public readonly code: string;
   public readonly statusCode: number;
   public readonly isOperational: boolean;
-  public readonly details?: ErrorDetails;
+  public readonly details: ErrorDetails | undefined;
 
   constructor(
     message: string,
@@ -37,9 +36,7 @@ export class AppError extends Error {
     this.details = details;
 
     // Capture stack trace, excluding constructor call from it
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor);
-    }
+    Error.captureStackTrace(this, this.constructor);
   }
 }
 
@@ -86,7 +83,7 @@ export function formatAppError(
   if (err instanceof UserInputError) {
     stderr.write(`${err.message}${EOL}`);
   } else if (err instanceof SystemError) {
-    stderr.write(`${err.message}${EOL}${err.stack}${EOL}`);
+    stderr.write(`${err.message}${EOL}${err.stack ?? ''}${EOL}`);
   } else if (err instanceof ToolNotFoundError) {
     stderr.write(`${err.message}${EOL}`);
   } else if (err instanceof AppError) {

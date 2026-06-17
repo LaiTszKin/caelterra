@@ -8,10 +8,22 @@ function makeIo() {
     let stdoutBuf = '';
     let stderrBuf = '';
     return {
-        stdout: { write: (s) => { stdoutBuf += s; } },
-        stderr: { write: (s) => { stderrBuf += s; } },
-        get stdoutText() { return stdoutBuf; },
-        get stderrText() { return stderrBuf; },
+        stdout: {
+            write: (s) => {
+                stdoutBuf += s;
+            },
+        },
+        stderr: {
+            write: (s) => {
+                stderrBuf += s;
+            },
+        },
+        get stdoutText() {
+            return stdoutBuf;
+        },
+        get stderrText() {
+            return stderrBuf;
+        },
     };
 }
 function makeContext(io, extra) {
@@ -28,7 +40,7 @@ function makeContext(io, extra) {
  * The state module's `load()` returns `stateReturn`.  If `onSave` is provided it is
  * called back whenever the real code calls `stateLib.save(dir, state)`.
  */
-function writeMockAtlasModules(tmpDir, stateReturn, onSave) {
+function writeMockAtlasModules(tmpDir, stateReturn, _onSave) {
     const atlasDir = path.join(tmpDir, 'skills', 'init-project-html', 'lib', 'atlas');
     fs.mkdirSync(atlasDir, { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'resources', 'project-architecture'), {
@@ -43,10 +55,10 @@ function writeMockAtlasModules(tmpDir, stateReturn, onSave) {
         'export default {',
         '  resolveProjectRoot: () => projectRoot,',
         '  baseAtlasDir: () => atlasDir,',
-        '  specOverlayDir: () => ({ overlayDir: \'\', rootDir: \'\', htmlOutDir: \'\' }),',
+        "  specOverlayDir: () => ({ overlayDir: '', rootDir: '', htmlOutDir: '' }),",
         '  dispatch: async (args, io) => {',
         '    const verb = args[0];',
-        '    if (verb === \'apply\' || verb === \'template\') {',
+        "    if (verb === 'apply' || verb === 'template') {",
         '      if (io && io.stderr) io.stderr.write(\'Error: "\' + verb + \'" has been removed. Use "apltk architecture add <feature|module|relation>" instead.\\n\');',
         '      return 1;',
         '    }',
@@ -91,7 +103,13 @@ describe('REGTEST-15: Unknown verb via CLI dispatch', () => {
         const handler = tool.handler;
         if (!handler)
             throw new Error('tool.handler is undefined');
-        const exitCode = await handler(['template', '--spec', '/nonexistent/spec-dir', '--output', '/tmp/rg15-out'], makeContext(io));
+        const exitCode = await handler([
+            'template',
+            '--spec',
+            '/nonexistent/spec-dir',
+            '--output',
+            '/tmp/rg15-out',
+        ], makeContext(io));
         assert.equal(exitCode, 1, 'Expected exit code 1 for unknown verb "template"');
         assert.ok(io.stderrText.includes('add'), `stderr should suggest using "add": got ${JSON.stringify(io.stderrText)}`);
         assert.ok(io.stderrText.includes('template'), `stderr should mention the verb "template": got ${JSON.stringify(io.stderrText)}`);

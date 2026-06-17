@@ -5,8 +5,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { parseArguments, HelpTextBuilder, registerAllTools } from '@laitszkin/cli';
-import { listTools, getTool } from '@laitszkin/tool-registry';
+import {
+  parseArguments,
+  HelpTextBuilder,
+  registerAllTools,
+} from '@laitszkin/cli';
+import { listTools } from '@laitszkin/tool-registry';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -16,26 +20,56 @@ function makeIo() {
   let stdoutBuf = '';
   let stderrBuf = '';
   return {
-    stdout: { write: (s) => { stdoutBuf += s; } },
-    stderr: { write: (s) => { stderrBuf += s; } },
-    get stdout_text() { return stdoutBuf; },
-    get stderr_text() { return stderrBuf; },
+    stdout: {
+      write: (s) => {
+        stdoutBuf += s;
+      },
+    },
+    stderr: {
+      write: (s) => {
+        stderrBuf += s;
+      },
+    },
+    get stdout_text() {
+      return stdoutBuf;
+    },
+    get stderr_text() {
+      return stderrBuf;
+    },
   };
 }
 
 function makeFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aplt-arch-'));
   const atlasDir = path.join(root, 'resources', 'project-architecture');
-  fs.mkdirSync(path.join(atlasDir, 'features', 'invite-code-registration'), { recursive: true });
+  fs.mkdirSync(path.join(atlasDir, 'features', 'invite-code-registration'), {
+    recursive: true,
+  });
   fs.mkdirSync(path.join(atlasDir, 'assets'), { recursive: true });
-  fs.writeFileSync(path.join(atlasDir, 'index.html'), '<html><body>atlas</body></html>');
-  fs.writeFileSync(path.join(atlasDir, 'features', 'invite-code-registration', 'index.html'), '<html><body>feature</body></html>');
   fs.writeFileSync(
-    path.join(atlasDir, 'features', 'invite-code-registration', 'registration-service.html'),
+    path.join(atlasDir, 'index.html'),
+    '<html><body>atlas</body></html>',
+  );
+  fs.writeFileSync(
+    path.join(atlasDir, 'features', 'invite-code-registration', 'index.html'),
+    '<html><body>feature</body></html>',
+  );
+  fs.writeFileSync(
+    path.join(
+      atlasDir,
+      'features',
+      'invite-code-registration',
+      'registration-service.html',
+    ),
     '<html><body>service before</body></html>',
   );
   fs.writeFileSync(
-    path.join(atlasDir, 'features', 'invite-code-registration', 'legacy-page.html'),
+    path.join(
+      atlasDir,
+      'features',
+      'invite-code-registration',
+      'legacy-page.html',
+    ),
     '<html><body>legacy</body></html>',
   );
   fs.writeFileSync(path.join(atlasDir, 'assets', 'architecture.css'), 'body{}');
@@ -55,7 +89,10 @@ function makeSpec(root, specPath, files) {
     fs.writeFileSync(full, contents);
   }
   if (files.removed && files.removed.length > 0) {
-    fs.writeFileSync(path.join(diffDir, '_removed.txt'), files.removed.join('\n') + '\n');
+    fs.writeFileSync(
+      path.join(diffDir, '_removed.txt'),
+      files.removed.join('\n') + '\n',
+    );
   }
   return diffDir;
 }
@@ -66,7 +103,10 @@ test('architecture tool is registered in tool-runner', async () => {
   const tool = tools.find((entry) => entry.name === 'architecture');
   assert.ok(tool, 'architecture tool should be registered');
   assert.equal(tool.skill, 'init-project-html');
-  assert.ok(tool.handler || tool.script, 'architecture must have a script or handler');
+  assert.ok(
+    tool.handler || tool.script,
+    'architecture must have a script or handler',
+  );
 });
 
 test('parseArguments routes architecture invocation through tool dispatch', () => {
@@ -78,7 +118,10 @@ test('parseArguments routes architecture invocation through tool dispatch', () =
 
 test('HelpTextBuilder.overview surfaces architecture examples', async () => {
   await registerAllTools();
-  const text = new HelpTextBuilder({ version: '0.0.0', colorEnabled: false }).overview();
+  const text = new HelpTextBuilder({
+    version: '0.0.0',
+    colorEnabled: false,
+  }).overview();
   assert.match(text, /apltk architecture/);
   assert.match(text, /Result:/);
 });
@@ -98,21 +141,38 @@ test('atlas CLI redirects hidden verb action help to public unified help', async
     assert.equal(code, 0, `exit code for ${verb} ${action} --help`);
 
     // Must NOT expose hidden fine-grained syntax
-    assert.doesNotMatch(io.stdout_text, new RegExp(`apltk architecture ${verb} ${action}`),
-      `should not contain fine-grained syntax for ${verb} ${action}`);
+    assert.doesNotMatch(
+      io.stdout_text,
+      new RegExp(`apltk architecture ${verb} ${action}`),
+      `should not contain fine-grained syntax for ${verb} ${action}`,
+    );
 
     // Must include public unified help (apltk architecture add)
-    assert.match(io.stdout_text, /apltk architecture add/,
-      `should contain public unified add help for ${verb} ${action}`);
+    assert.match(
+      io.stdout_text,
+      /apltk architecture add/,
+      `should contain public unified add help for ${verb} ${action}`,
+    );
 
     // Must include key public usage patterns from the unified help
-    assert.match(io.stdout_text, /Usage:/,
-      `should include Usage section for ${verb} ${action}`);
+    assert.match(
+      io.stdout_text,
+      /Usage:/,
+      `should include Usage section for ${verb} ${action}`,
+    );
   }
 });
 
 test('REGTEST-48: cli-help.js source does not contain hidden fine-grained command strings', () => {
-  const helpPath = path.join(__dirname, '..', 'skills', 'init-project-html', 'lib', 'atlas', 'cli-help.js');
+  const helpPath = path.join(
+    __dirname,
+    '..',
+    'skills',
+    'init-project-html',
+    'lib',
+    'atlas',
+    'cli-help.js',
+  );
   const source = fs.readFileSync(helpPath, 'utf8');
 
   // Hidden verb-action usage strings must not appear anywhere in source
@@ -130,7 +190,8 @@ test('REGTEST-48: cli-help.js source does not contain hidden fine-grained comman
   }
 
   // Catch-all: no hidden verb+action pattern should remain
-  const hiddenVerbActionRe = /apltk architecture (?:feature|submodule|function|variable|dataflow|error|edge|meta|actor) (?:add|set|remove|reorder)/;
+  const hiddenVerbActionRe =
+    /apltk architecture (?:feature|submodule|function|variable|dataflow|error|edge|meta|actor) (?:add|set|remove|reorder)/;
   assert.doesNotMatch(
     source,
     hiddenVerbActionRe,
@@ -143,9 +204,16 @@ test('REGTEST-42: active docs do not expose fine-grained architecture verbs', ()
   const filesToScan = [
     path.join(projectRoot, 'skills', 'design', 'references', 'architecture.md'),
     path.join(projectRoot, 'skills', 'update-project-html', 'SKILL.md'),
-    path.join(projectRoot, 'skills', 'init-project-html', 'references', 'TEMPLATE_SPEC.md'),
+    path.join(
+      projectRoot,
+      'skills',
+      'init-project-html',
+      'references',
+      'TEMPLATE_SPEC.md',
+    ),
   ];
-  const re = /apltk architecture (feature|submodule|function|variable|dataflow|error|edge|meta|actor) (add|set|remove|reorder)/;
+  const re =
+    /apltk architecture (feature|submodule|function|variable|dataflow|error|edge|meta|actor) (add|set|remove|reorder)/;
   for (const filePath of filesToScan) {
     const content = fs.readFileSync(filePath, 'utf8');
     assert.doesNotMatch(
@@ -160,9 +228,15 @@ test('open subcommand prints atlas path through atlas CLI', async () => {
   const root = makeFixture();
   try {
     const io = makeIo();
-    const code = await atlasCli.dispatch(['open', '--project', root, '--no-open'], io);
+    const code = await atlasCli.dispatch(
+      ['open', '--project', root, '--no-open'],
+      io,
+    );
     assert.equal(code, 0);
-    assert.match(io.stdout_text, /resources\/project-architecture\/index\.html/);
+    assert.match(
+      io.stdout_text,
+      /resources\/project-architecture\/index\.html/,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -172,10 +246,20 @@ test('open subcommand bootstraps atlas when resources tree is empty', async () =
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aplt-empty-'));
   try {
     const io = makeIo();
-    const code = await atlasCli.dispatch(['open', '--project', root, '--no-open'], io);
+    const code = await atlasCli.dispatch(
+      ['open', '--project', root, '--no-open'],
+      io,
+    );
     assert.equal(code, 0);
-    assert.match(io.stdout_text, /resources\/project-architecture\/index\.html/);
-    assert.ok(fs.existsSync(path.join(root, 'resources', 'project-architecture', 'index.html')));
+    assert.match(
+      io.stdout_text,
+      /resources\/project-architecture\/index\.html/,
+    );
+    assert.ok(
+      fs.existsSync(
+        path.join(root, 'resources', 'project-architecture', 'index.html'),
+      ),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -186,19 +270,31 @@ test('diff classifies modified, added, removed using path alignment', async () =
   try {
     makeSpec(root, 'docs/plans/2026-05-11/invite-rotation', {
       afters: {
-        'features/invite-code-registration/registration-service.html': '<html><body>service after</body></html>',
-        'features/invite-code-registration/new-page.html': '<html><body>new</body></html>',
+        'features/invite-code-registration/registration-service.html':
+          '<html><body>service after</body></html>',
+        'features/invite-code-registration/new-page.html':
+          '<html><body>new</body></html>',
       },
       removed: ['features/invite-code-registration/legacy-page.html'],
     });
 
     const changes = await atlasCli.collectDiffChanges({ projectRoot: root });
     const byRel = Object.fromEntries(changes.map((c) => [c.rel, c]));
-    assert.equal(byRel['features/invite-code-registration/registration-service.html'].kind, 'modified');
-    assert.equal(byRel['features/invite-code-registration/new-page.html'].kind, 'added');
-    assert.equal(byRel['features/invite-code-registration/legacy-page.html'].kind, 'removed');
+    assert.equal(
+      byRel['features/invite-code-registration/registration-service.html'].kind,
+      'modified',
+    );
+    assert.equal(
+      byRel['features/invite-code-registration/new-page.html'].kind,
+      'added',
+    );
+    assert.equal(
+      byRel['features/invite-code-registration/legacy-page.html'].kind,
+      'removed',
+    );
 
-    const modified = byRel['features/invite-code-registration/registration-service.html'];
+    const modified =
+      byRel['features/invite-code-registration/registration-service.html'];
     assert.ok(modified.beforePath && modified.afterPath);
     const added = byRel['features/invite-code-registration/new-page.html'];
     assert.equal(added.beforePath, null);
@@ -229,7 +325,9 @@ test('diff handles batch specs by reading each member architecture_diff', async 
   const root = makeFixture();
   try {
     makeSpec(root, 'docs/plans/2026-05-11/batch/member-a', {
-      afters: { 'features/invite-code-registration/registration-service.html': '<x/>' },
+      afters: {
+        'features/invite-code-registration/registration-service.html': '<x/>',
+      },
     });
     makeSpec(root, 'docs/plans/2026-05-11/batch/member-b', {
       afters: { 'features/invite-code-registration/new-feature.html': '<y/>' },
@@ -248,14 +346,23 @@ test('diff writes viewer HTML with relative iframe paths', async () => {
   try {
     makeSpec(root, 'docs/plans/2026-05-11/invite-rotation', {
       afters: {
-        'features/invite-code-registration/registration-service.html': '<html><body>service after</body></html>',
+        'features/invite-code-registration/registration-service.html':
+          '<html><body>service after</body></html>',
       },
     });
 
     const io = makeIo();
-    const code = await atlasCli.dispatch(['diff', '--project', root, '--no-open'], io);
+    const code = await atlasCli.dispatch(
+      ['diff', '--project', root, '--no-open'],
+      io,
+    );
     assert.equal(code, 0);
-    const indexPath = path.join(root, '.apollo-toolkit', 'architecture-diff', 'index.html');
+    const indexPath = path.join(
+      root,
+      '.apollo-toolkit',
+      'architecture-diff',
+      'index.html',
+    );
     assert.ok(fs.existsSync(indexPath));
     const html = fs.readFileSync(indexPath, 'utf8');
     assert.match(html, /architecture diff/);
@@ -268,9 +375,15 @@ test('diff renders an empty-state viewer when no architecture_diff dirs exist', 
   const root = makeFixture();
   try {
     const io = makeIo();
-    const code = await atlasCli.dispatch(['diff', '--project', root, '--no-open'], io);
+    const code = await atlasCli.dispatch(
+      ['diff', '--project', root, '--no-open'],
+      io,
+    );
     assert.equal(code, 0);
-    const html = fs.readFileSync(path.join(root, '.apollo-toolkit', 'architecture-diff', 'index.html'), 'utf8');
+    const html = fs.readFileSync(
+      path.join(root, '.apollo-toolkit', 'architecture-diff', 'index.html'),
+      'utf8',
+    );
     assert.match(html, /No architecture diffs found/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

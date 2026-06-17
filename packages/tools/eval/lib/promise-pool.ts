@@ -15,7 +15,9 @@ export async function promisePool<T, R>(
   concurrency: number,
 ): Promise<R[]> {
   if (concurrency <= 0) {
-    throw new Error(`promisePool: concurrency must be > 0, got ${concurrency}`);
+    throw new Error(
+      `promisePool: concurrency must be > 0, got ${String(concurrency)}`,
+    );
   }
   const results: R[] = new Array<R>(items.length);
   /**
@@ -28,7 +30,7 @@ export async function promisePool<T, R>(
   async function worker(): Promise<void> {
     while (index < items.length) {
       const i = index++;
-      results[i] = await fn(items[i], i);
+      results[i] = await fn(items[i] as T, i);
     }
   }
 

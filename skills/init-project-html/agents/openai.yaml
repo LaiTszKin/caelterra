@@ -1,6 +1,6 @@
 interface:
-  display_name: "init-project-html"
-  short_description: "Declare the project HTML architecture atlas through `apltk architecture` CLI verbs"
+  display_name: 'init-project-html'
+  short_description: 'Declare the project HTML architecture atlas through `apltk architecture` CLI verbs'
   default_prompt: >-
     Use $init-project-html. Semantic rules + acceptance criteria live in its SKILL.md; field/enum cheat sheet in references/TEMPLATE_SPEC.md; **exact verb/subverb/flag spelling MUST come from `apltk architecture --help`** — never memorize commands from prose.
     Map output to C4 model layers: feature = Container level, submodule = Component level. Start with System Context (actors, system boundary, cross-system edges), then drill down.

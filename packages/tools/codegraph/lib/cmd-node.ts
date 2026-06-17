@@ -1,4 +1,9 @@
-import { getCodeGraphModule, closeIndex } from './cg-instance.js';
+import {
+  getCodeGraphModule,
+  closeIndex,
+  type CodeGraphNode,
+  type CodeGraphSearchResult,
+} from './cg-instance.js';
 import { formatOutput } from './formatter.js';
 import { serializeNode } from './graph-output.js';
 
@@ -6,26 +11,39 @@ export interface NodeOptions {
   json?: boolean;
 }
 
-export async function handleNode(projectRoot: string, symbolOrId: string, options: NodeOptions = {}): Promise<number> {
+interface NodeReport {
+  node: Record<string, unknown>;
+  code: string | null;
+}
+
+export async function handleNode(
+  projectRoot: string,
+  symbolOrId: string,
+  options: NodeOptions = {},
+): Promise<number> {
   const { CodeGraph } = getCodeGraphModule();
   if (!CodeGraph.isInitialized(projectRoot)) {
-    process.stderr.write('CodeGraph is not initialized. Run `apltk codegraph init` first.\n');
+    process.stderr.write(
+      'CodeGraph is not initialized. Run `apltk codegraph init` first.\n',
+    );
     return 1;
   }
 
   const cg = await CodeGraph.open(projectRoot, { sync: false, readOnly: true });
-  let nodes = [];
+  let nodes: CodeGraphNode[] = [];
   const direct = cg.getNode(symbolOrId);
   if (direct) {
     nodes = [direct];
   } else {
     nodes = cg.getNodesByName(symbolOrId);
     if (nodes.length === 0) {
-      nodes = cg.searchNodes(symbolOrId, { limit: 5 }).map((result: any) => result.node);
+      nodes = cg
+        .searchNodes(symbolOrId, { limit: 5 })
+        .map((result: CodeGraphSearchResult) => result.node);
     }
   }
 
-  const reports = [];
+  const reports: NodeReport[] = [];
   for (const node of nodes) {
     reports.push({
       node: serializeNode(node),
@@ -45,11 +63,13 @@ export async function handleNode(projectRoot: string, symbolOrId: string, option
   }
 
   for (const report of reports) {
-    const node = report.node as any;
-    process.stdout.write(`\n${node.name} [${node.kind}] ${node.filePath}:${node.startLine}-${node.endLine}\n`);
-    if (node.signature) process.stdout.write(`Signature: ${node.signature}\n`);
+    const node = report.node;
+    process.stdout.write(
+      `\n${String(node['name'])} [${String(node['kind'])}] ${String(node['filePath'])}:${String(node['startLine'])}-${String(node['endLine'])}\n`,
+    );
+    const sig = node['signature'] as string | undefined;
+    if (sig) process.stdout.write(`Signature: ${sig}\n`);
     if (report.code) process.stdout.write(`\n${report.code}\n`);
   }
   return 0;
 }
-

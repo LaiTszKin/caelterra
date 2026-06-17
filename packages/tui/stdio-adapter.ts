@@ -30,7 +30,9 @@ export class StdioWriterImpl implements StdioWriter {
 
   info(msg: string): void {
     if (this._mode === 'json') {
-      this.stdout.write(JSON.stringify({ severity: 'info', message: msg }) + '\n');
+      this.stdout.write(
+        JSON.stringify({ severity: 'info', message: msg }) + '\n',
+      );
     } else {
       this.stdout.write(msg + '\n');
     }
@@ -38,7 +40,9 @@ export class StdioWriterImpl implements StdioWriter {
 
   warn(msg: string): void {
     if (this._mode === 'json') {
-      this.stderr.write(JSON.stringify({ severity: 'warn', message: msg }) + '\n');
+      this.stderr.write(
+        JSON.stringify({ severity: 'warn', message: msg }) + '\n',
+      );
     } else {
       this.stderr.write(color(msg, '1;33', this._colorEnabled) + '\n');
     }
@@ -46,7 +50,9 @@ export class StdioWriterImpl implements StdioWriter {
 
   error(msg: string): void {
     if (this._mode === 'json') {
-      this.stderr.write(JSON.stringify({ severity: 'error', message: msg }) + '\n');
+      this.stderr.write(
+        JSON.stringify({ severity: 'error', message: msg }) + '\n',
+      );
     } else {
       this.stderr.write(color(msg, '1;31', this._colorEnabled) + '\n');
     }
@@ -55,7 +61,9 @@ export class StdioWriterImpl implements StdioWriter {
   verbose(msg: string): void {
     if (!this._verbose) return;
     if (this._mode === 'json') {
-      this.stdout.write(JSON.stringify({ severity: 'verbose', message: msg }) + '\n');
+      this.stdout.write(
+        JSON.stringify({ severity: 'verbose', message: msg }) + '\n',
+      );
     } else {
       this.stdout.write(msg + '\n');
     }

@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import { run, parseArguments } from '@laitszkin/cli';
 
 function mockStd() {
-  return { write() { return true; } };
+  return {
+    write() {
+      return true;
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -142,7 +146,13 @@ test('parseArguments defaults to install command with no arguments', () => {
 });
 
 test('parseArguments uninstall with --home', () => {
-  const result = parseArguments(['uninstall', 'codex', '--yes', '--home', '/tmp/alt-home']);
+  const result = parseArguments([
+    'uninstall',
+    'codex',
+    '--yes',
+    '--home',
+    '/tmp/alt-home',
+  ]);
   assert.equal(result.command, 'uninstall');
   assert.equal(result.assumeYes, true);
   assert.equal(result.toolkitHome, '/tmp/alt-home');
@@ -178,7 +188,12 @@ test('run dispatches --help (overview) and returns 0', async () => {
 
 test('run writes help text to stdout for --help', async () => {
   let stdoutText = '';
-  const stdout = { write(chunk) { stdoutText += chunk; return true; } };
+  const stdout = {
+    write(chunk) {
+      stdoutText += chunk;
+      return true;
+    },
+  };
   await run(['--help'], { stdout, stderr: mockStd(), env: {} });
   assert.match(stdoutText, /Usage:/);
   assert.match(stdoutText, /Common goals:/);
@@ -195,7 +210,12 @@ test('run dispatches install --help and returns 0', async () => {
 
 test('run writes install help text for install --help', async () => {
   let stdoutText = '';
-  const stdout = { write(chunk) { stdoutText += chunk; return true; } };
+  const stdout = {
+    write(chunk) {
+      stdoutText += chunk;
+      return true;
+    },
+  };
   await run(['install', '--help'], { stdout, stderr: mockStd(), env: {} });
   assert.match(stdoutText, /Supported targets:/);
   assert.match(stdoutText, /Use this when:/);
@@ -212,7 +232,12 @@ test('run dispatches uninstall --help and returns 0', async () => {
 
 test('run writes uninstall help text for uninstall --help', async () => {
   let stdoutText = '';
-  const stdout = { write(chunk) { stdoutText += chunk; return true; } };
+  const stdout = {
+    write(chunk) {
+      stdoutText += chunk;
+      return true;
+    },
+  };
   await run(['uninstall', '--help'], { stdout, stderr: mockStd(), env: {} });
   assert.match(stdoutText, /Behavior notes:/);
   assert.match(stdoutText, /Use this when:/);
@@ -229,7 +254,12 @@ test('run dispatches tools command and returns 0', async () => {
 
 test('run writes tools help text for tools command', async () => {
   let stdoutText = '';
-  const stdout = { write(chunk) { stdoutText += chunk; return true; } };
+  const stdout = {
+    write(chunk) {
+      stdoutText += chunk;
+      return true;
+    },
+  };
   await run(['tools'], { stdout, stderr: mockStd(), env: {} });
   assert.match(stdoutText, /Bundled tools:/);
   assert.match(stdoutText, /Common goals:/);
@@ -259,7 +289,12 @@ test('run dispatches known tool and passes sourceRoot, stdout, stderr, env to ru
     stderr: mockStd(),
     env: { CUSTOM_VAR: 'yes' },
     runTool: async (name, args, ctx) => {
-      calls.push({ name, hasStdout: !!ctx.stdout, hasStderr: !!ctx.stderr, hasEnv: !!ctx.env });
+      calls.push({
+        name,
+        hasStdout: !!ctx.stdout,
+        hasStderr: !!ctx.stderr,
+        hasEnv: !!ctx.env,
+      });
       return 0;
     },
   });
@@ -282,7 +317,12 @@ test('run returns 1 when runTool returns non-zero exit code', async () => {
 
 test('run returns 1 and writes error to stderr for unknown tool via mock runTool', async () => {
   let stderrText = '';
-  const stderr = { write(chunk) { stderrText += chunk; return true; } };
+  const stderr = {
+    write(chunk) {
+      stderrText += chunk;
+      return true;
+    },
+  };
   const exitCode = await run(['codegraph'], {
     stdout: mockStd(),
     stderr,
@@ -328,10 +368,28 @@ test('dispatch table correctly dispatches all command types', () => {
 test('run distinguishes overview help from install help dispatch', async () => {
   // --help without install keyword → overview help
   let text1 = '';
-  await run(['--help'], { stdout: { write(c) { text1 += c; return true; } }, stderr: mockStd(), env: {} });
+  await run(['--help'], {
+    stdout: {
+      write(c) {
+        text1 += c;
+        return true;
+      },
+    },
+    stderr: mockStd(),
+    env: {},
+  });
   // install --help → install help
   let text2 = '';
-  await run(['install', '--help'], { stdout: { write(c) { text2 += c; return true; } }, stderr: mockStd(), env: {} });
+  await run(['install', '--help'], {
+    stdout: {
+      write(c) {
+        text2 += c;
+        return true;
+      },
+    },
+    stderr: mockStd(),
+    env: {},
+  });
   // Overview should contain "Bundled tools:" but NOT "Use this when:"
   assert.match(text1, /Bundled tools:/);
   // Install help should contain "Use this when:" but overview text should NOT
@@ -343,8 +401,20 @@ test('dispatch table processes uninstall --help successfully', async () => {
   // return expected command types. The error boundary path (formatAppError)
   // is tested in handler-error-propagation.test.js.
 
-  const stderr = { data: '', write(chunk) { this.data += chunk; return true; } };
-  const stdout = { data: '', write(chunk) { this.data += chunk; return true; } };
+  const stderr = {
+    data: '',
+    write(chunk) {
+      this.data += chunk;
+      return true;
+    },
+  };
+  const stdout = {
+    data: '',
+    write(chunk) {
+      this.data += chunk;
+      return true;
+    },
+  };
 
   const exitCode = await run(['uninstall', '--help'], {
     stdout,
@@ -363,26 +433,48 @@ test('dispatch table processes uninstall --help successfully', async () => {
 test('REGTEST-02: parseArguments backward compatibility — all command types', () => {
   const scenarios = [
     // Fallback to install (no dispatch match, not a known tool name)
-    { argv: ['--help'],            command: 'install',    props: { showHelp: true, helpTopic: 'overview' } },
+    {
+      argv: ['--help'],
+      command: 'install',
+      props: { showHelp: true, helpTopic: 'overview' },
+    },
     // Dispatch table 'install' entry
-    { argv: ['install', '--help'], command: 'install',    props: { showHelp: true, helpTopic: 'install' } },
+    {
+      argv: ['install', '--help'],
+      command: 'install',
+      props: { showHelp: true, helpTopic: 'install' },
+    },
     // Dispatch table 'uninstall' entry
-    { argv: ['uninstall', '--help'], command: 'uninstall', props: { showHelp: true, helpTopic: 'uninstall' } },
+    {
+      argv: ['uninstall', '--help'],
+      command: 'uninstall',
+      props: { showHelp: true, helpTopic: 'uninstall' },
+    },
     // Dispatch table 'tools' entry → tools-help
-    { argv: ['tools'],             command: 'tools-help', props: { showToolsHelp: true, showHelp: false } },
+    {
+      argv: ['tools'],
+      command: 'tools-help',
+      props: { showToolsHelp: true, showHelp: false },
+    },
     // isKnownToolName fallback → 'tool' command
-    { argv: ['architecture'],       command: 'tool',       props: { toolName: 'architecture' } },
+    {
+      argv: ['architecture'],
+      command: 'tool',
+      props: { toolName: 'architecture' },
+    },
   ];
 
   for (const { argv, command, props } of scenarios) {
     const result = parseArguments(argv);
     assert.equal(
-      result.command, command,
+      result.command,
+      command,
       `parseArguments(${JSON.stringify(argv)}).command !== '${command}'`,
     );
     for (const [key, value] of Object.entries(props)) {
       assert.equal(
-        result[key], value,
+        result[key],
+        value,
         `parseArguments(${JSON.stringify(argv)}).${key} !== ${JSON.stringify(value)}`,
       );
     }
@@ -397,7 +489,7 @@ test('REGTEST-02: architectural — dispatch table supports independent command 
       return { type: 'mock', data: argv[0] };
     }
 
-    toParsedArguments(result) {
+    toParsedArguments(_result) {
       return {
         command: 'install',
         modes: [],
@@ -462,15 +554,23 @@ test('REGTEST-02: architectural — dispatch table supports independent command 
 // ---------------------------------------------------------------------------
 
 test('REGTEST-04: Known tool names route through tool command', () => {
-  const knownTools = ['architecture', 'codegraph', 'create-review-report', 'create-specs', 'eval'];
+  const knownTools = [
+    'architecture',
+    'codegraph',
+    'create-review-report',
+    'create-specs',
+    'eval',
+  ];
   for (const toolName of knownTools) {
     const result = parseArguments([toolName]);
     assert.equal(
-      result.command, 'tool',
+      result.command,
+      'tool',
       `parseArguments(['${toolName}']).command should be 'tool'`,
     );
     assert.equal(
-      result.toolName, toolName,
+      result.toolName,
+      toolName,
       `parseArguments(['${toolName}']).toolName should be '${toolName}'`,
     );
   }

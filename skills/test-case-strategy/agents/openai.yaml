@@ -1,4 +1,4 @@
 interface:
-  display_name: "Test Case Strategy"
-  short_description: "Select risk-driven tests and unit drift checks"
-  default_prompt: "Use $test-case-strategy to choose the smallest useful test level for each changed behavior, starting from requirement IDs, risk class, dependency shape, and existing coverage. Define oracles before implementation, prefer focused unit drift checks for atomic tasks, escalate to property-based, integration, E2E, adversarial, or mock/fake scenario coverage only when the risk requires it, and return concrete test IDs, target unit or flow, fixture strategy, verification hook, and any N/A reason."
+  display_name: 'Test Case Strategy'
+  short_description: 'Select risk-driven tests and unit drift checks'
+  default_prompt: 'Use $test-case-strategy to choose the smallest useful test level for each changed behavior, starting from requirement IDs, risk class, dependency shape, and existing coverage. Define oracles before implementation, prefer focused unit drift checks for atomic tasks, escalate to property-based, integration, E2E, adversarial, or mock/fake scenario coverage only when the risk requires it, and return concrete test IDs, target unit or flow, fixture strategy, verification hook, and any N/A reason.'

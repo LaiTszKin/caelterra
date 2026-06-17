@@ -37,11 +37,11 @@ Complete three passes before designing. Do deep research to obtain required info
 
 **⚠️ Decision gate — STOP if blocking issues found:**
 
-| Assessment | Action |
-|---|---|
-| ✅ All feasible | Continue |
-| ⚠️ Partial validation needed | Continue; mark uncertain items as Exploratory; suggest spike/prototype where warranted |
-| 🛑 Blocking issues found | **STOP.** Document infeasibility with evidence (API limits, licensing, platform gaps). Request SPEC.md revision. |
+| Assessment                   | Action                                                                                                           |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| ✅ All feasible              | Continue                                                                                                         |
+| ⚠️ Partial validation needed | Continue; mark uncertain items as Exploratory; suggest spike/prototype where warranted                           |
+| 🛑 Blocking issues found     | **STOP.** Document infeasibility with evidence (API limits, licensing, platform gaps). Request SPEC.md revision. |
 
 This gate is critical: the spec phase validates against existing code only — it does not check external feasibility. This is the pipeline's only chance to catch real-world constraints before design.
 
@@ -59,11 +59,11 @@ See `references/codegraph.md` for all flags and subcommands.
 
 **3c. Code Health Assessment** — While reading code, identify smells, dead code, legacy patterns. Classify using the T1–T3 framework (see `references/code-smells.md` for patterns):
 
-| Tier | Scope | Validate with |
-|------|-------|---------------|
-| T1 | Single function/file; no API change | Existing unit tests |
-| T2 | Crosses files within same module | Existing integration tests |
-| T3 | Crosses module boundaries | New test coverage (define in CHECKLIST.md) |
+| Tier | Scope                               | Validate with                              |
+| ---- | ----------------------------------- | ------------------------------------------ |
+| T1   | Single function/file; no API change | Existing unit tests                        |
+| T2   | Crosses files within same module    | Existing integration tests                 |
+| T3   | Crosses module boundaries           | New test coverage (define in CHECKLIST.md) |
 
 T1 items are safe to refactor inline. T2 and T3 feed into the design and task plan.
 
@@ -121,6 +121,7 @@ Run two passes before delivering:
 **Completeness**: Research recorded as evidence in DESIGN.md. Every architecture decision has a trade-off record. External API facts traceable to official docs. CHECKLIST.md covers all BDD requirements. Architecture Diff covers full scope. T1–T3 findings dispositioned. `references/` populated. References sections cite code file paths.
 
 **Design quality**:
+
 - Every BDD behavior traces to a module, interaction, data flow, or invariant
 - Modules in architecture appear as callers/callees in interaction design
 - No unnecessary module, abstraction, or dependency

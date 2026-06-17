@@ -36,6 +36,7 @@ Ask questions across four dimensions in priority order. **Limit: 1-3 questions p
 **Dimension 4: Business Value** — Problem solved, beneficiaries, why existing solutions aren't enough, success metrics.
 
 **Per-round rules:**
+
 - Each question must include **2-4 concrete options + a recommendation + rationale**. Let the user choose or confirm, not answer from scratch.
 - Skip dimensions already sufficiently clear.
 - Only ask what's directly relevant to the current dimension.
@@ -58,6 +59,7 @@ This becomes the **Requirement Summary** section of PROPOSAL.md, consumed by the
 ### 5. Ensure Dedicated Branch (Before File Creation)
 
 Before generating the file, check the current git branch. If on `main`, `master`, `develop`, or any non-dedicated branch:
+
 1. Derive the branch type prefix from the work's nature (e.g., `feature` for new capabilities, `refactor` for restructuring, `fix` for bug fixes, `chore` for maintenance)
 2. Derive a kebab-case name from the converged topic
 3. Run `git checkout -b <type>/<kebab-case-name>`

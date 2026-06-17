@@ -4,7 +4,15 @@ import { createToolRunner, AppError } from '@laitszkin/tool-utils';
 
 function createMemoryStream() {
   let data = '';
-  return { write(chunk) { data += chunk; return true; }, toString() { return data; } };
+  return {
+    write(chunk) {
+      data += chunk;
+      return true;
+    },
+    toString() {
+      return data;
+    },
+  };
 }
 
 describe('SchemaOption multiple support', () => {
@@ -52,7 +60,9 @@ describe('createToolRunner catch with AppError base class', () => {
   it('returns exit code 1 and formats AppError with "Error:" prefix', async () => {
     const schema = {
       options: {},
-      handler: async () => { throw new AppError('base app error'); },
+      handler: async () => {
+        throw new AppError('base app error');
+      },
     };
     const runner = createToolRunner(schema);
     const stderr = createMemoryStream();

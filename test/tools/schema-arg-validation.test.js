@@ -88,16 +88,16 @@ function classifyTools() {
 
     const source = fs.readFileSync(distPath, 'utf-8');
 
-    if (source.includes("createToolRunner")) {
+    if (source.includes('createToolRunner')) {
       // Converted to ToolSchema — check explicit strict setting.
       // Only match strict:false that appears before handler: to avoid
       // matching inner parseArgs re-parsing (e.g. _rawArgs hack for multiple).
-      const beforeHandler = source.slice(0, source.indexOf("handler:"));
+      const beforeHandler = source.slice(0, source.indexOf('handler:'));
       const strictMatch = beforeHandler.match(/strict:\s*(true|false)/);
-      if (strictMatch && strictMatch[1] === "false") {
-        classified.set(name, { mode: "non-strict", type: "createToolRunner" });
+      if (strictMatch && strictMatch[1] === 'false') {
+        classified.set(name, { mode: 'non-strict', type: 'createToolRunner' });
       } else {
-        classified.set(name, { mode: "strict", type: "createToolRunner" });
+        classified.set(name, { mode: 'strict', type: 'createToolRunner' });
       }
     } else if (source.includes('parseArgs')) {
       // Determine if the tool passes args/argv to parseArgs
@@ -139,7 +139,13 @@ async function loadHandler(toolName) {
 const tools = classifyTools();
 
 // Tools that mention createToolRunner in comments but don't actually use it
-const COMMENT_ONLY_TOOLS = new Set(['architecture', 'open-github-issue', 'find-github-issues', 'review-threads', 'eval']);
+const COMMENT_ONLY_TOOLS = new Set([
+  'architecture',
+  'open-github-issue',
+  'find-github-issues',
+  'review-threads',
+  'eval',
+]);
 
 const strictTools = [];
 const nonStrictTools = [];
@@ -275,9 +281,7 @@ test('all converted tools reject --nonexistent uniformly', async (t) => {
       });
 
       if (code !== 1) {
-        errors.push(
-          `${name}: expected exit code 1, got ${code}`,
-        );
+        errors.push(`${name}: expected exit code 1, got ${code}`);
         return;
       }
 
@@ -335,7 +339,9 @@ test('tool classification summary', () => {
     lines.push(`non-strict (raw parseArgs): ${nonStrictParseArgs.join(', ')}`);
   }
   if (nonStrictConverted.length) {
-    lines.push(`non-strict (createToolRunner): ${nonStrictConverted.join(', ')}`);
+    lines.push(
+      `non-strict (createToolRunner): ${nonStrictConverted.join(', ')}`,
+    );
   }
   if (skipped.length) {
     lines.push(`skipped: ${skipped.join(', ')}`);

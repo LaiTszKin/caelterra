@@ -3,8 +3,12 @@
 ## Common Development Commands
 
 - Before using any `apltk` or `node dist/bin/apollo-toolkit.js` command, run the corresponding `--help` command first and follow the live CLI guidance rather than memorized flags.
-- `npm test` - Run Node test suite (`node --test`).
-- `npm run build` - Full build of all packages.
+- `pnpm test` - Run Node test suite (`node --test`).
+- `pnpm run build` - Full build of all packages (tsc --build).
+- `pnpm lint` - Run ESLint strict-type-checked across all packages.
+- `pnpm lint:fix` - Run ESLint with autofix.
+- `pnpm format` - Format all files with Prettier.
+- `pnpm format:check` - Check formatting without writing.
 - `node dist/bin/apollo-toolkit.js [mode...]` - Start CLI, install skills to targets (codex/openclaw/trae/agents/claude-code/all).
 - `node dist/bin/apollo-toolkit.js uninstall [mode...]` - Remove Apollo Toolkit skills from targets.
 - `node dist/bin/apollo-toolkit.js tools` - List all built-in CLI tools and their categories.

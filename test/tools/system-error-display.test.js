@@ -36,18 +36,26 @@ test('SystemError instance has a non-empty stack property', () => {
   assert.equal(err.statusCode, 1);
   assert.equal(err.isOperational, false);
   // SystemError inherits AppError's captureStackTrace, so stack should exist
-  assert.ok(typeof err.stack === 'string', `.stack should be a string, got ${typeof err.stack}`);
+  assert.ok(
+    typeof err.stack === 'string',
+    `.stack should be a string, got ${typeof err.stack}`,
+  );
   assert.ok(err.stack.length > 0, '.stack should not be empty');
   // Verify the stack trace contains the error message on the first line
-  assert.ok(err.stack.startsWith('SystemError: something went wrong'),
-    `stack first line should start with "SystemError: something went wrong", got: ${err.stack.split('\n')[0]}`);
+  assert.ok(
+    err.stack.startsWith('SystemError: something went wrong'),
+    `stack first line should start with "SystemError: something went wrong", got: ${err.stack.split('\n')[0]}`,
+  );
   // Verify there is at least one "at" frame in the stack
-  assert.ok(err.stack.includes('at '), '.stack should contain at least one "at" frame');
+  assert.ok(
+    err.stack.includes('at '),
+    '.stack should contain at least one "at" frame',
+  );
 });
 
 test('SystemError catch block outputs both message and stack to stderr', async () => {
   const stderr = createMemoryStream();
-  const stdout = createMemoryStream();
+  const _stdout = createMemoryStream();
 
   // Simulate the exact catch block pattern used in the tool files
   async function handlerThatThrowsSystemError() {
@@ -70,21 +78,30 @@ test('SystemError catch block outputs both message and stack to stderr', async (
   assert.equal(code, 1);
 
   const output = stderr.toString();
-  assert.ok(output.includes('disk write failed'),
-    `stderr should contain the message "disk write failed", got: ${output}`);
-  assert.ok(output.includes('at '),
-    `stderr should contain stack frames ("at ..."), got: ${output}`);
+  assert.ok(
+    output.includes('disk write failed'),
+    `stderr should contain the message "disk write failed", got: ${output}`,
+  );
+  assert.ok(
+    output.includes('at '),
+    `stderr should contain stack frames ("at ..."), got: ${output}`,
+  );
   // The output should contain a multi-line stack trace (message line + at least one frame line)
   const lines = output.trim().split('\n');
-  assert.ok(lines.length >= 2,
-    `stderr should have at least 2 lines (message + stack), got ${lines.length} lines`);
-  assert.equal(lines[0], 'disk write failed',
-    `first line should be the message, got: ${lines[0]}`);
+  assert.ok(
+    lines.length >= 2,
+    `stderr should have at least 2 lines (message + stack), got ${lines.length} lines`,
+  );
+  assert.equal(
+    lines[0],
+    'disk write failed',
+    `first line should be the message, got: ${lines[0]}`,
+  );
 });
 
 test('generic Error catch block does NOT include stack (regression baseline)', async () => {
   const stderr = createMemoryStream();
-  const stdout = createMemoryStream();
+  const _stdout = createMemoryStream();
 
   async function handlerWithGenericCatch() {
     try {
@@ -102,8 +119,10 @@ test('generic Error catch block does NOT include stack (regression baseline)', a
   const output = stderr.toString();
   assert.ok(output.includes('Error: something broke'));
   // The generic pattern should NOT output the stack
-  assert.ok(!output.includes('at '),
-    'generic catch should not output stack, but got "at" in: ' + output);
+  assert.ok(
+    !output.includes('at '),
+    'generic catch should not output stack, but got "at" in: ' + output,
+  );
 });
 
 test('UserInputError is handled correctly (SystemError instanceof branch is not triggered)', async () => {

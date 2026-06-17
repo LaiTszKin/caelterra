@@ -1,4 +1,4 @@
 interface:
-  display_name: "Optimise Skill"
-  short_description: "Rewrite a SKILL.md into a leaner, higher-signal prompt"
-  default_prompt: "Use $optimise-skill to read the target skill and its supporting files, derive the intended deliverable plus acceptance criteria, then rewrite the skill into a tighter goal / acceptance criteria / workflow / examples / references structure without changing the final outcome."
+  display_name: 'Optimise Skill'
+  short_description: 'Rewrite a SKILL.md into a leaner, higher-signal prompt'
+  default_prompt: 'Use $optimise-skill to read the target skill and its supporting files, derive the intended deliverable plus acceptance criteria, then rewrite the skill into a tighter goal / acceptance criteria / workflow / examples / references structure without changing the final outcome.'

@@ -41,6 +41,7 @@ Before deciding the update scope, compare the atlas against the current code:
 - Quantify drift: count of added + removed + modified entries / total entries
 
 Determine the update strategy based on drift severity:
+
 - **Low drift (< 20%)**: Update only the features affected by the diff
 - **High drift (≥ 20%)**: Flag as significant divergence, notify the user and recommend a full re-initialization via `init-project-html`
 
@@ -69,6 +70,7 @@ Consult `references/architecture.md` for CLI flag details (parameter reference, 
 3. Define intra-submodule functions, variables, data flows, and error handling.
 
 When inferring components from a diff hunk, use `--evidence inferred` with a `file:line` source. For example:
+
 ```
 apltk architecture add module <slug> --part-of <feature> \
   --evidence inferred:src/auth/controller.ts:42

@@ -29,7 +29,6 @@ export interface PlatformAdapter {
    * Useful for cross-platform file writes where line-ending convention matters.
    */
   readonly EOL: string;
-
 }
 
 /**
@@ -41,9 +40,7 @@ export class WindowsAdapter implements PlatformAdapter {
   }
 
   homeDir(env: Record<string, string | undefined> = process.env): string {
-    return env.USERPROFILE
-      ?? env.HOME
-      ?? os.homedir();
+    return env['USERPROFILE'] ?? env['HOME'] ?? os.homedir();
   }
 
   resolveCommand(command: string): string {
@@ -73,9 +70,7 @@ export class PosixAdapter implements PlatformAdapter {
   }
 
   homeDir(env: Record<string, string | undefined> = process.env): string {
-    return env.HOME
-      ?? env.USERPROFILE
-      ?? os.homedir();
+    return env['HOME'] ?? env['USERPROFILE'] ?? os.homedir();
   }
 
   resolveCommand(command: string): string {
@@ -101,7 +96,8 @@ let _adapter: PlatformAdapter | undefined;
 
 export function createPlatformAdapter(): PlatformAdapter {
   if (!_adapter) {
-    _adapter = process.platform === 'win32' ? new WindowsAdapter() : new PosixAdapter();
+    _adapter =
+      process.platform === 'win32' ? new WindowsAdapter() : new PosixAdapter();
   }
   return _adapter;
 }

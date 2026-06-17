@@ -6,7 +6,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tool as createSpecsTool } from '@laitszkin/tool-create-specs';
 
-const createSpecsHandler = /** @type {import('@laitszkin/tool-registry').ToolDefinition['handler']} */ (createSpecsTool.handler);
+const createSpecsHandler =
+  /** @type {import('@laitszkin/tool-registry').ToolDefinition['handler']} */ (
+    createSpecsTool.handler
+  );
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function createMemoryStream() {
@@ -35,7 +38,10 @@ function withFixedDate(isoString, fn) {
 const FIXED_DATE = '2026-05-16';
 const FIXED_ISO = `${FIXED_DATE}T00:00:00.000Z`;
 
-const TEMPLATE_DIR = path.resolve(__dirname, '../../skills/spec/assets/templates');
+const TEMPLATE_DIR = path.resolve(
+  __dirname,
+  '../../skills/spec/assets/templates',
+);
 
 function testHandler(args) {
   const stdout = createMemoryStream();
@@ -48,13 +54,15 @@ function testHandler(args) {
 
 test('createSpecsHandler creates correct directory structure (default)', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apltk-create-specs-'));
-  const { code, stdout, stderr } = await testHandler(
+  const { code, stderr } = await testHandler(
     ['My Feature', '--output-dir', tmpDir],
     tmpDir,
   );
 
   assert.equal(code, 0, stderr.toString());
-  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-feature', 'SPEC.md')));
+  assert.ok(
+    fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-feature', 'SPEC.md')),
+  );
   assert.ok(!fs.existsSync(path.join(tmpDir, FIXED_DATE, FIXED_DATE)));
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -62,13 +70,25 @@ test('createSpecsHandler creates correct directory structure (default)', async (
 
 test('createSpecsHandler with --batch-name creates batch structure', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apltk-create-specs-'));
-  const { code, stdout, stderr } = await testHandler(
-    ['Batch Feature', '--batch-name', 'my-batch', '--change-name', 'feat-1', '--output-dir', tmpDir],
+  const { code, stderr } = await testHandler(
+    [
+      'Batch Feature',
+      '--batch-name',
+      'my-batch',
+      '--change-name',
+      'feat-1',
+      '--output-dir',
+      tmpDir,
+    ],
     tmpDir,
   );
 
   assert.equal(code, 0, stderr.toString());
-  assert.ok(fs.existsSync(path.join(tmpDir, FIXED_DATE, 'my-batch', 'feat-1', 'SPEC.md')));
+  assert.ok(
+    fs.existsSync(
+      path.join(tmpDir, FIXED_DATE, 'my-batch', 'feat-1', 'SPEC.md'),
+    ),
+  );
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
@@ -78,13 +98,15 @@ test('createSpecsHandler prevents double-nesting when output-dir points to exist
   const existingDateDir = path.join(tmpDir, FIXED_DATE);
   fs.mkdirSync(existingDateDir, { recursive: true });
 
-  const { code, stdout, stderr } = await testHandler(
+  const { code, stderr } = await testHandler(
     ['Another Feature', '--output-dir', existingDateDir],
     tmpDir,
   );
 
   assert.equal(code, 0, stderr.toString());
-  assert.ok(fs.existsSync(path.join(existingDateDir, 'another-feature', 'SPEC.md')));
+  assert.ok(
+    fs.existsSync(path.join(existingDateDir, 'another-feature', 'SPEC.md')),
+  );
   assert.ok(!fs.existsSync(path.join(existingDateDir, FIXED_DATE)));
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -92,7 +114,7 @@ test('createSpecsHandler prevents double-nesting when output-dir points to exist
 
 test('createSpecsHandler uses correct today output in templates', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apltk-create-specs-'));
-  const { code, stdout, stderr } = await testHandler(
+  const { code, stderr } = await testHandler(
     ['Dated Feature', '--output-dir', tmpDir],
     tmpDir,
   );

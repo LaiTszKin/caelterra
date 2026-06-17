@@ -1,7 +1,7 @@
 {
   "name": "@laitszkin/cli",
   "version": "5.0.0",
-  "description": "Apollo Toolkit \u2014 CLI command management (install, uninstall, tool routing)",
+  "description": "Apollo Toolkit — CLI command management (install, uninstall, tool routing)",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,20 +17,20 @@
     "test": "node --test dist/"
   },
   "dependencies": {
-    "@laitszkin/tui": "*",
-    "@laitszkin/tool-registry": "*",
-    "@laitszkin/tool-utils": "*",
-    "@laitszkin/tool-validate-skill-frontmatter": "*",
-    "@laitszkin/tool-validate-openai-agent-config": "*",
-    "@laitszkin/tool-open-github-issue": "*",
-    "@laitszkin/tool-find-github-issues": "*",
-    "@laitszkin/tool-read-github-issue": "*",
-    "@laitszkin/tool-review-threads": "*",
-    "@laitszkin/tool-architecture": "*",
-    "@laitszkin/tool-codegraph": "*",
-    "@laitszkin/tool-create-specs": "*",
-    "@laitszkin/tool-create-review-report": "*",
-    "@laitszkin/tool-eval": "*"
+    "@laitszkin/tui": "workspace:*",
+    "@laitszkin/tool-registry": "workspace:*",
+    "@laitszkin/tool-utils": "workspace:*",
+    "@laitszkin/tool-validate-skill-frontmatter": "workspace:*",
+    "@laitszkin/tool-validate-openai-agent-config": "workspace:*",
+    "@laitszkin/tool-open-github-issue": "workspace:*",
+    "@laitszkin/tool-find-github-issues": "workspace:*",
+    "@laitszkin/tool-read-github-issue": "workspace:*",
+    "@laitszkin/tool-review-threads": "workspace:*",
+    "@laitszkin/tool-architecture": "workspace:*",
+    "@laitszkin/tool-codegraph": "workspace:*",
+    "@laitszkin/tool-create-specs": "workspace:*",
+    "@laitszkin/tool-create-review-report": "workspace:*",
+    "@laitszkin/tool-eval": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

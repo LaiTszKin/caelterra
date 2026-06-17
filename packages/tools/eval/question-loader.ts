@@ -24,7 +24,9 @@ function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    const temp = arr[i] as T;
+    arr[i] = arr[j] as T;
+    arr[j] = temp;
   }
   return arr;
 }
@@ -47,7 +49,7 @@ export function loadQuestions(filePath: string): Question[] {
   if (!fs.existsSync(resolved)) {
     throw new Error(
       `題目檔案不存在: "${resolved}"\n` +
-      '請確認題庫檔案存在於 assets/spec/{date}/test-questions.json，或使用 \'apltk eval <skill>\' 自動載入。需先建立題庫。',
+        "請確認題庫檔案存在於 assets/spec/{date}/test-questions.json，或使用 'apltk eval <skill>' 自動載入。需先建立題庫。",
     );
   }
 
@@ -76,9 +78,13 @@ export function sampleQuestions(
     throw new Error('題目陣列為空，無法抽樣。需先建立題庫。');
   }
 
-  const byDifficulty: Record<string, Question[]> = { basic: [], advanced: [], edge: [] };
+  const byDifficulty: Record<string, Question[]> = {
+    basic: [],
+    advanced: [],
+    edge: [],
+  };
   for (const q of questions) {
-    byDifficulty[q.difficulty].push(q);
+    (byDifficulty[q.difficulty] as Question[]).push(q);
   }
 
   if (mode === 'fast') {
@@ -96,18 +102,21 @@ export function sampleQuestions(
 
     // Pick 1 from each difficulty (mandatory)
     for (const pool of Object.values(byDifficulty)) {
-      selected.push(shuffleArray(pool)[0]);
+      selected.push(shuffleArray(pool)[0] as Question);
     }
 
     // Fill remaining slots from all leftover questions
-    const usedIds = new Set(selected.map(q => q.id));
+    const usedIds = new Set(selected.map((q) => q.id));
     const remaining: Question[] = [];
     for (const q of questions) {
       if (!usedIds.has(q.id)) remaining.push(q);
     }
     const extraNeeded = targetCount - selected.length;
     selected.push(
-      ...shuffleArray(remaining).slice(0, Math.min(extraNeeded, remaining.length)),
+      ...shuffleArray(remaining).slice(
+        0,
+        Math.min(extraNeeded, remaining.length),
+      ),
     );
 
     return shuffleArray(selected);
@@ -123,9 +132,9 @@ export function sampleQuestions(
     shuffleArray(pool).slice(0, Math.min(n, pool.length));
 
   const selected: Question[] = [
-    ...pickN(byDifficulty.basic, basicTarget),
-    ...pickN(byDifficulty.advanced, advancedTarget),
-    ...pickN(byDifficulty.edge, edgeTarget),
+    ...pickN(byDifficulty['basic'] as Question[], basicTarget),
+    ...pickN(byDifficulty['advanced'] as Question[], advancedTarget),
+    ...pickN(byDifficulty['edge'] as Question[], edgeTarget),
   ];
 
   if (selected.length === 0) {
@@ -134,5 +143,3 @@ export function sampleQuestions(
 
   return shuffleArray(selected);
 }
-
-

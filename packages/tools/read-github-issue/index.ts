@@ -1,6 +1,10 @@
 import { execFile } from 'node:child_process';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, SystemError, createToolRunner } from '@laitszkin/tool-utils';
+import {
+  UserInputError,
+  SystemError,
+  createToolRunner,
+} from '@laitszkin/tool-utils';
 const ISSUE_FIELDS =
   'number,title,body,state,author,labels,assignees,comments,createdAt,updatedAt,closedAt,url';
 
@@ -28,7 +32,9 @@ function runGh(cmdArgs: string[]): Promise<CommandResult> {
           resolve({
             stdout: stdout || '',
             stderr: stderr || '',
-            exitCode: (error as NodeJS.ErrnoException & { status?: number }).status ?? 1,
+            exitCode:
+              (error as NodeJS.ErrnoException & { status?: number }).status ??
+              1,
           });
         } else {
           resolve({ stdout: stdout || '', stderr: stderr || '', exitCode: 0 });
@@ -58,7 +64,7 @@ function joinNames(
 ): string {
   if (!items) return '-';
   const values = items
-    .map((item) => String(item[key] || ''))
+    .map((item) => (typeof item[key] === 'string' ? item[key] : ''))
     .filter(Boolean);
   return values.length > 0 ? values.join(', ') : '-';
 }
@@ -68,39 +74,66 @@ function printSummary(
   includeComments: boolean,
   context: ToolContext,
 ): void {
-  const { stdout } = context;
+  const stdout = context.stdout ?? process.stdout;
 
-  stdout!.write(`Number: #${issue.number ?? ''}\n`);
-  stdout!.write(`Title: ${issue.title ?? ''}\n`);
-  stdout!.write(`State: ${issue.state ?? ''}\n`);
-  stdout!.write(`URL: ${issue.url ?? ''}\n`);
+  const issueNumber =
+    typeof issue['number'] === 'string' ? issue['number'] : '';
+  const issueTitle = typeof issue['title'] === 'string' ? issue['title'] : '';
+  const issueState = typeof issue['state'] === 'string' ? issue['state'] : '';
+  const issueUrl = typeof issue['url'] === 'string' ? issue['url'] : '';
+  stdout.write(`Number: #${issueNumber}\n`);
+  stdout.write(`Title: ${issueTitle}\n`);
+  stdout.write(`State: ${issueState}\n`);
+  stdout.write(`URL: ${issueUrl}\n`);
 
-  const author = (issue.author as Record<string, unknown> | undefined)?.login ?? '-';
-  stdout!.write(`Author: ${author}\n`);
-  stdout!.write(`Labels: ${joinNames(issue.labels as Array<Record<string, unknown>> | undefined, 'name')}\n`);
-  stdout!.write(`Assignees: ${joinNames(issue.assignees as Array<Record<string, unknown>> | undefined, 'login')}\n`);
-  stdout!.write(`Created: ${issue.createdAt ?? ''}\n`);
-  stdout!.write(`Updated: ${issue.updatedAt ?? ''}\n`);
-  stdout!.write(`Closed: ${issue.closedAt ?? '-'}\n`);
-  stdout!.write('\n');
-  stdout!.write('Body:\n');
-  stdout!.write(`${(issue.body as string) || '-'}\n`);
+  const authorObj = issue['author'] as Record<string, unknown> | undefined;
+  const author =
+    typeof authorObj?.['login'] === 'string' ? authorObj['login'] : '-';
+  stdout.write(`Author: ${author}\n`);
+  stdout.write(
+    `Labels: ${joinNames(issue['labels'] as Array<Record<string, unknown>> | undefined, 'name')}\n`,
+  );
+  stdout.write(
+    `Assignees: ${joinNames(issue['assignees'] as Array<Record<string, unknown>> | undefined, 'login')}\n`,
+  );
+
+  const created =
+    typeof issue['createdAt'] === 'string' ? issue['createdAt'] : '';
+  const updated =
+    typeof issue['updatedAt'] === 'string' ? issue['updatedAt'] : '';
+  const closed =
+    typeof issue['closedAt'] === 'string' ? issue['closedAt'] : '-';
+  stdout.write(`Created: ${created}\n`);
+  stdout.write(`Updated: ${updated}\n`);
+  stdout.write(`Closed: ${closed}\n`);
+  stdout.write('\n');
+  stdout.write('Body:\n');
+  stdout.write(`${(issue['body'] as string) || '-'}\n`);
 
   if (includeComments) {
-    const comments = issue.comments as Array<Record<string, unknown>> | undefined;
-    stdout!.write('\n');
-    stdout!.write(`Comments (${comments?.length ?? 0}):\n`);
+    const comments = issue['comments'] as
+      | Array<Record<string, unknown>>
+      | undefined;
+    stdout.write('\n');
+    stdout.write(`Comments (${String(comments?.length ?? 0)}):\n`);
 
     if (!comments || comments.length === 0) {
-      stdout!.write('-\n');
+      stdout.write('-\n');
       return;
     }
 
     for (const comment of comments) {
-      const commentAuthor = (comment.author as Record<string, unknown> | undefined)?.login ?? '-';
-      const created = comment.createdAt ?? '';
-      const body = (comment.body as string) || '-';
-      stdout!.write(`- [${created}] ${commentAuthor}: ${body}\n`);
+      const commentAuthorObj = comment['author'] as
+        | Record<string, unknown>
+        | undefined;
+      const commentAuthor =
+        typeof commentAuthorObj?.['login'] === 'string'
+          ? commentAuthorObj['login']
+          : '-';
+      const commentCreated =
+        typeof comment['createdAt'] === 'string' ? comment['createdAt'] : '';
+      const body = (comment['body'] as string) || '-';
+      stdout.write(`- [${commentCreated}] ${commentAuthor}: ${body}\n`);
     }
   }
 }
@@ -117,7 +150,7 @@ export async function readGitHubIssueHandler(
   args: ReadIssueArgs,
   context: ToolContext,
 ): Promise<number> {
-  const { stdout, stderr } = context;
+  const stdout = context.stdout ?? process.stdout;
 
   if (!args.issue) {
     throw new UserInputError('Issue number or URL is required.');
@@ -132,13 +165,13 @@ export async function readGitHubIssueHandler(
 
   let issue: Record<string, unknown>;
   try {
-    issue = JSON.parse(result.stdout);
+    issue = JSON.parse(result.stdout) as Record<string, unknown>;
   } catch {
     throw new SystemError('Unable to parse gh output as JSON');
   }
 
   if (args.json) {
-    stdout!.write(JSON.stringify(issue, null, 2) + '\n');
+    stdout.write(JSON.stringify(issue, null, 2) + '\n');
     return 0;
   }
 
@@ -161,12 +194,12 @@ export const tool: ToolDefinition = {
     allowPositionals: true,
     usage: 'apltk read-github-issue [options] <issue>',
     description: 'Read GitHub issue details through gh.',
-    handler: async (values, positionals, context) => {
+    handler: (values, positionals, context) => {
       const args: ReadIssueArgs = {
-        issue: positionals[0] ?? null,
-        repo: (values.repo as string) ?? null,
-        comments: values.comments === true,
-        json: values.json === true,
+        issue: positionals[0] || null,
+        repo: (values['repo'] as string) || null,
+        comments: values['comments'] === true,
+        json: values['json'] === true,
       };
       return readGitHubIssueHandler(args, context);
     },

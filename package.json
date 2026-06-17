@@ -13,10 +13,7 @@
     "url": "https://github.com/LaiTszKin/apollo-toolkit/issues"
   },
   "type": "module",
-  "workspaces": [
-    "packages/*",
-    "packages/tools/*"
-  ],
+  "packageManager": "pnpm@11.6.0",
   "main": "dist/bin/apollo-toolkit.js",
   "bin": {
     "apollo-toolkit": "dist/bin/apollo-toolkit.js",
@@ -29,7 +26,13 @@
     "watch": "tsc --build --watch",
     "test": "scripts/test.sh",
     "test:coverage": "COVERAGE=true npm test",
-    "test:ts": "node --test dist/test/"
+    "test:ts": "node --test dist/test/",
+    "lint": "eslint . --cache",
+    "lint:fix": "eslint . --fix --cache",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint-staged": "lint-staged",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=22.5.0"
@@ -55,8 +58,15 @@
     "@colbymchenry/codegraph": "^0.9.9"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.9.1",
-    "typescript": "^6.0.3"
+    "eslint": "^9.0.0",
+    "globals": "^17.6.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.0.0"
   }
 }

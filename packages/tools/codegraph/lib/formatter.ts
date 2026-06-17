@@ -14,13 +14,16 @@ export interface FormatOptions {
 function isTTY(options: FormatOptions): boolean {
   if (options.json) return false;
   if (options.tty !== undefined) return options.tty;
-  return !!process.stdout.isTTY;
+  return process.stdout.isTTY;
 }
 
 /**
  * Format generic data for output.
  */
-export function formatOutput(data: unknown, options: FormatOptions = {}): string {
+export function formatOutput(
+  data: unknown,
+  options: FormatOptions = {},
+): string {
   if (!isTTY(options)) {
     return JSON.stringify(data, null, 2);
   }
@@ -40,7 +43,7 @@ export function formatOutput(data: unknown, options: FormatOptions = {}): string
 export function formatSummary(rows: [string, string | number][]): string {
   const width = rows.reduce((max, [key]) => Math.max(max, key.length + 1), 0);
   return rows
-    .map(([key, val]) => `${key.padEnd(width, ' ')} ${val}`)
+    .map(([key, val]) => `${key.padEnd(width, ' ')} ${String(val)}`)
     .join('\n');
 }
 
@@ -48,12 +51,15 @@ export function formatSummary(rows: [string, string | number][]): string {
  * Format a list of search results as a human-readable table.
  */
 export function formatSearchResults(
-  results: Array<{ node: { name: string; kind: string; filePath: string; startLine: number }; score: number }>,
+  results: Array<{
+    node: { name: string; kind: string; filePath: string; startLine: number };
+    score: number;
+  }>,
 ): string {
   if (results.length === 0) return 'No results found.';
   const lines = results.map((r, i) => {
     const score = (r.score * 100).toFixed(0);
-    return `  ${i + 1}. ${r.node.name}  [${r.node.kind}]  ${r.node.filePath}:${r.node.startLine}  (${score}%)`;
+    return `  ${String(i + 1)}. ${r.node.name}  [${r.node.kind}]  ${r.node.filePath}:${String(r.node.startLine)}  (${score}%)`;
   });
-  return `Results (${results.length}):\n${lines.join('\n')}`;
+  return `Results (${String(results.length)}):\n${lines.join('\n')}`;
 }

@@ -1577,9 +1577,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -1998,9 +1996,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -2411,9 +2407,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -2828,9 +2822,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -3249,9 +3241,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -3670,9 +3660,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -4102,9 +4090,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -4545,9 +4531,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -4966,9 +4950,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -5395,9 +5377,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -5831,9 +5811,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -6274,9 +6252,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -6725,9 +6701,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -7184,9 +7158,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -7651,9 +7623,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -8126,9 +8096,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -8609,9 +8577,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -9100,9 +9066,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -9599,9 +9563,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -10106,9 +10068,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -10621,9 +10581,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -11144,9 +11102,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -11674,9 +11630,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -12212,9 +12166,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -12763,9 +12715,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -13327,9 +13277,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -13904,9 +13852,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -14481,9 +14427,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -15069,9 +15013,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",
@@ -15668,9 +15610,7 @@
           "slug": "codegraph",
           "title": "CodeGraph Integration",
           "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
-          "dependsOn": [
-            "eval-cli"
-          ],
+          "dependsOn": ["eval-cli"],
           "submodules": [
             {
               "slug": "cg-lifecycle",

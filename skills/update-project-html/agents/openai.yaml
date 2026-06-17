@@ -1,6 +1,6 @@
 interface:
-  display_name: "update-project-html"
-  short_description: "Refresh the project HTML architecture atlas to reflect the latest code changes via `apltk architecture`"
+  display_name: 'update-project-html'
+  short_description: 'Refresh the project HTML architecture atlas to reflect the latest code changes via `apltk architecture`'
   default_prompt: >-
     Use $update-project-html. Semantic rules + acceptance criteria live in $init-project-html SKILL.md; **exact verb/subverb/flag spelling MUST come from `apltk architecture --help`** — never memorize commands from prose.
     NEVER hand-edit `resources/project-architecture/**/*.html`. State is YAML under `resources/project-architecture/atlas/`; every mutation goes through the CLI; the renderer owns layout, CSS, ARIA, pan/zoom on macro + sub-module dataflow SVGs.

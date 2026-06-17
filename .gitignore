@@ -22,9 +22,11 @@ results/
 # Coverage reports (generated from c8 / --experimental-test-coverage)
 coverage/
 
-# Node — after clone or `npm install -g`, dependencies live here locally only.
-# Root package-lock.json MUST stay committed (not ignored) so `npm ci` and npm
-# installs resolve the same tree as published versions (e.g. elkjs, js-yaml for
-# `apltk architecture`).
+# ESLint cache (auto-generated)
+.eslintcache
+
+# Node — after clone or `pnpm install`, dependencies live here locally only.
+# Root pnpm-lock.yaml MUST stay committed so `pnpm install --frozen-lockfile`
+# resolves the same tree across environments.
 node_modules/
 assets/spec/rg*-*/

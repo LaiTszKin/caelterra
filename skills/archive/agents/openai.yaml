@@ -1,4 +1,4 @@
 interface:
-  display_name: "archive"
-  short_description: "Convert completed specs into standardized project docs and archive the consumed plans"
+  display_name: 'archive'
+  short_description: 'Convert completed specs into standardized project docs and archive the consumed plans'
   default_prompt: "Use $archive to inventory the project's spec.md/tasks.md/checklist.md/contract.md/design.md files plus any batch-level coordination.md, reconcile them with the current repository, use coordination.md to understand shared preparation and legacy-replacement direction across parallel plan sets, delegate documentation generation to docs-project which produces standardized docs under docs/features/ (BDD user-facing features), docs/architecture/ (macro-level design principles), and docs/principles/ (code conventions and constraints), then delegate AGENTS.md/CLAUDE.md refresh to maintain-project-constraints which writes business goals, common commands, and the project documentation index. Archive the consumed source plans after successful conversion, deleting them only when the repository clearly does not need historical retention and keeping coordination.md active while any spec set still depends on it."

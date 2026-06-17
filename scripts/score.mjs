@@ -15,7 +15,15 @@
  * 僅使用 Node.js 內建模組。
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync, watch } from 'fs';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  watch,
+} from 'fs';
 import { resolve, join } from 'path';
 
 const __dirname = new URL('.', import.meta.url).pathname;
@@ -62,20 +70,27 @@ function readTrace(tracePath) {
  * 建構 Judge 模型的評分提示詞。
  */
 function buildJudgePrompt(trace, scoringCriteria, testId) {
-  const thinkingEvent = trace.find(e => e.type === 'thinking');
-  const responseEvent = trace.find(e => e.type === 'response');
-  const endEvent = trace.find(e => e.type === 'end');
-  const errorEvents = trace.filter(e => e.type === 'error');
+  const thinkingEvent = trace.find((e) => e.type === 'thinking');
+  const responseEvent = trace.find((e) => e.type === 'response');
+  const endEvent = trace.find((e) => e.type === 'end');
+  const errorEvents = trace.filter((e) => e.type === 'error');
 
-  const systemPrompt = thinkingEvent?.data?.systemPrompt || '(未記錄)';
+  const _systemPrompt = thinkingEvent?.data?.systemPrompt || '(未記錄)';
   const userPrompt = thinkingEvent?.data?.userPrompt || '(未記錄)';
   const assistantResponse = responseEvent?.data?.message?.content || '(無回應)';
   const duration = endEvent?.data?.duration_ms || 0;
   const status = endEvent?.data?.status || 'unknown';
-  const errors = errorEvents.map(e => e.data?.error || e.data?.message || 'unknown error');
+  const errors = errorEvents.map(
+    (e) => e.data?.error || e.data?.message || 'unknown error',
+  );
 
   const dimensions = ['outcome', 'process', 'style', 'efficiency'];
-  const dimNames = { outcome: '任務完成', process: '流程遵循', style: '輸出格式', efficiency: '效率' };
+  const dimNames = {
+    outcome: '任務完成',
+    process: '流程遵循',
+    style: '輸出格式',
+    efficiency: '效率',
+  };
 
   let criteriaText = '';
   for (const dim of dimensions) {
@@ -88,9 +103,10 @@ function buildJudgePrompt(trace, scoringCriteria, testId) {
     }
   }
 
-  const truncatedResponse = assistantResponse.length > 8000
-    ? assistantResponse.substring(0, 8000) + '\n\n... (內容被截斷)'
-    : assistantResponse;
+  const truncatedResponse =
+    assistantResponse.length > 8000
+      ? assistantResponse.substring(0, 8000) + '\n\n... (內容被截斷)'
+      : assistantResponse;
 
   const prompt = [
     '你是一個專業的 AI agent 評審。請根據以下資訊對 agent 的測試表現進行四維度評分。',
@@ -158,7 +174,13 @@ function buildJudgePrompt(trace, scoringCriteria, testId) {
  */
 async function scoreSingleTest(testNo, date, env, options = {}) {
   const rootDir = resolve(__dirname, '..');
-  const resultsDir = resolve(rootDir, 'results', 'spec', date, `test_${testNo}`);
+  const resultsDir = resolve(
+    rootDir,
+    'results',
+    'spec',
+    date,
+    `test_${testNo}`,
+  );
   const tracePath = join(resultsDir, 'trace.jsonl');
   const scorePath = join(resultsDir, 'score.json');
   const scoredPath = join(resultsDir, '.scored');
@@ -171,10 +193,17 @@ async function scoreSingleTest(testNo, date, env, options = {}) {
   if (options.questionMap && options.questionMap[testNo]) {
     scoringCriteria = options.questionMap[testNo].scoringCriteria;
   } else {
-    const { loadQuestions, getScoringCriteria } = await import('./question-utils.mjs');
-    const questionsPath = resolve(rootDir, 'assets', 'spec', date, 'test-questions.json');
+    const { loadQuestions, getScoringCriteria } =
+      await import('./question-utils.mjs');
+    const questionsPath = resolve(
+      rootDir,
+      'assets',
+      'spec',
+      date,
+      'test-questions.json',
+    );
     const questions = loadQuestions(questionsPath);
-    const question = questions.find(q => q.id === testNo);
+    const question = questions.find((q) => q.id === testNo);
     if (!question) {
       throw new Error(`找不到題目: ${testNo}`);
     }
@@ -192,14 +221,14 @@ async function scoreSingleTest(testNo, date, env, options = {}) {
   const score = {
     testId: testNo,
     overallScore: judgment.overallScore ?? 0,
-    dimensions: (judgment.dimensions || []).map(dim => ({
+    dimensions: (judgment.dimensions || []).map((dim) => ({
       name: dim.name,
       score: dim.score ?? 0,
       maxScore: dim.maxScore ?? 100,
       weight: dim.weight ?? 0,
       comments: dim.comments || '',
     })),
-    issues: (judgment.issues || []).map(issue => ({
+    issues: (judgment.issues || []).map((issue) => ({
       severity: issue.severity || 'P1',
       category: issue.category || 'other',
       description: issue.description || '',
@@ -232,7 +261,11 @@ async function scoreSingleTest(testNo, date, env, options = {}) {
     writeFileSync(scorePath, JSON.stringify(score, null, 2), 'utf-8');
   } finally {
     // Release lock
-    try { rmSync(lockDir, { recursive: true }); } catch (_) { /* ignore */ }
+    try {
+      rmSync(lockDir, { recursive: true });
+    } catch (_) {
+      /* ignore */
+    }
   }
 
   return { testId: testNo, score };
@@ -263,10 +296,13 @@ async function watchMode(date, env, questionMap) {
       activeWorkers++;
       scored.add(testNo);
       scoreSingleTest(testNo, date, env, { questionMap })
-        .then(result => {
-          if (result.score) console.log(`${testNo} 評分完成 (總分: ${result.score.overallScore})`);
+        .then((result) => {
+          if (result.score)
+            console.log(
+              `${testNo} 評分完成 (總分: ${result.score.overallScore})`,
+            );
         })
-        .catch(err => {
+        .catch((err) => {
           console.error(`${testNo} 評分失敗: ${err.message}`);
           scored.delete(testNo);
         })
@@ -289,7 +325,9 @@ async function watchMode(date, env, questionMap) {
       for (const testNo of scanForDone(resultsBase)) {
         if (!isAlreadyScored(resultsBase, testNo)) enqueue(testNo);
       }
-    } catch (_) { /* dir may not exist yet */ }
+    } catch (_) {
+      /* dir may not exist yet */
+    }
   }
 
   // Initial scan
@@ -368,7 +406,7 @@ async function main() {
 
   const args = process.argv.slice(2);
   const watchFlag = args.includes('--watch');
-  const date = args.filter(a => !a.startsWith('--'))[0] || '2026-05-28';
+  const date = args.filter((a) => !a.startsWith('--'))[0] || '2026-05-28';
   const rootDir = resolve(__dirname, '..');
 
   console.log('=== score.mjs ===');
@@ -386,7 +424,13 @@ async function main() {
   console.log(`Judge 模型: ${env.JUDGE_MODEL} @ ${env.JUDGE_BASE_URL}`);
   console.log(`並發上限: ${env.JUDGE_CONCURRENCY}\n`);
 
-  const questionsPath = resolve(rootDir, 'assets', 'spec', date, 'test-questions.json');
+  const questionsPath = resolve(
+    rootDir,
+    'assets',
+    'spec',
+    date,
+    'test-questions.json',
+  );
   const questions = loadQuestions(questionsPath);
   const questionMap = {};
   for (const q of questions) {
@@ -402,36 +446,48 @@ async function main() {
 
     if (doneTests.length === 0) {
       console.log('沒有找到已完成的測試 (.done 檔案)。');
-      console.log('請先執行 run-evals.mjs 產生測試結果，或使用 --watch 模式等待。');
+      console.log(
+        '請先執行 run-evals.mjs 產生測試結果，或使用 --watch 模式等待。',
+      );
       process.exit(0);
     }
 
-    const unscoredTests = doneTests.filter(t => !isAlreadyScored(resultsBase, t));
+    const unscoredTests = doneTests.filter(
+      (t) => !isAlreadyScored(resultsBase, t),
+    );
 
     if (unscoredTests.length === 0) {
       console.log('所有測試皆已評分完畢。');
       process.exit(0);
     }
 
-    console.log(`找到 ${doneTests.length} 個已完成測試，其中 ${unscoredTests.length} 個尚未評分\n`);
+    console.log(
+      `找到 ${doneTests.length} 個已完成測試，其中 ${unscoredTests.length} 個尚未評分\n`,
+    );
 
     const startTime = Date.now();
     let successCount = 0;
     let failCount = 0;
 
-    await promisePool(unscoredTests, async (testNo, i) => {
-      const label = `[${i + 1}/${unscoredTests.length}] ${testNo}`;
-      try {
-        const result = await scoreSingleTest(testNo, date, env, { questionMap });
-        successCount++;
-        console.log(`${label} 評分完成 (總分: ${result.score.overallScore})`);
-        return result;
-      } catch (err) {
-        failCount++;
-        console.error(`${label} 評分失敗: ${err.message}`);
-        return { testId: testNo, error: err.message };
-      }
-    }, env.JUDGE_CONCURRENCY);
+    await promisePool(
+      unscoredTests,
+      async (testNo, i) => {
+        const label = `[${i + 1}/${unscoredTests.length}] ${testNo}`;
+        try {
+          const result = await scoreSingleTest(testNo, date, env, {
+            questionMap,
+          });
+          successCount++;
+          console.log(`${label} 評分完成 (總分: ${result.score.overallScore})`);
+          return result;
+        } catch (err) {
+          failCount++;
+          console.error(`${label} 評分失敗: ${err.message}`);
+          return { testId: testNo, error: err.message };
+        }
+      },
+      env.JUDGE_CONCURRENCY,
+    );
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`\n=== 評分完成 ===`);
@@ -444,13 +500,12 @@ async function main() {
 }
 
 // 直接執行
-const isDirectRun = process.argv[1] && (
-  process.argv[1].endsWith('score.mjs') ||
-  process.argv[1].endsWith('score')
-);
+const isDirectRun =
+  process.argv[1] &&
+  (process.argv[1].endsWith('score.mjs') || process.argv[1].endsWith('score'));
 
 if (isDirectRun) {
-  main().catch(err => {
+  main().catch((err) => {
     console.error(`Fatal error: ${err.message}`);
     process.exit(1);
   });

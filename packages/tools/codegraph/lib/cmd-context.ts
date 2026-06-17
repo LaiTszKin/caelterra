@@ -7,10 +7,16 @@ export interface ContextOptions {
   json?: boolean;
 }
 
-export async function handleContext(projectRoot: string, query: string, options: ContextOptions = {}): Promise<number> {
+export async function handleContext(
+  projectRoot: string,
+  query: string,
+  options: ContextOptions = {},
+): Promise<number> {
   const { CodeGraph } = getCodeGraphModule();
   if (!CodeGraph.isInitialized(projectRoot)) {
-    process.stderr.write('CodeGraph is not initialized. Run `apltk codegraph init` first.\n');
+    process.stderr.write(
+      'CodeGraph is not initialized. Run `apltk codegraph init` first.\n',
+    );
     return 1;
   }
 
@@ -29,4 +35,3 @@ export async function handleContext(projectRoot: string, query: string, options:
   }
   return 0;
 }
-

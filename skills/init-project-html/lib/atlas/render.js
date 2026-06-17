@@ -17,7 +17,9 @@ const { layoutMacro, measureSubmodule } = require('./layout');
 const { EVIDENCE_LEVELS, KIND_LABEL } = require('./schema');
 const { REMOVED_TXT } = require('./state');
 
-const EVI_LABEL = Object.fromEntries(EVIDENCE_LEVELS.map((l) => [l, l.slice(0, 3)]));
+const EVI_LABEL = Object.fromEntries(
+  EVIDENCE_LEVELS.map((l) => [l, l.slice(0, 3)]),
+);
 
 function htmlEscape(value) {
   return String(value == null ? '' : value)
@@ -37,7 +39,8 @@ function relAssetPath(fromPagePath, outDir) {
 function pagePathFor(kind, { featureSlug, submoduleSlug } = {}) {
   if (kind === 'macro') return 'index.html';
   if (kind === 'feature') return `features/${featureSlug}/index.html`;
-  if (kind === 'submodule') return `features/${featureSlug}/${submoduleSlug}.html`;
+  if (kind === 'submodule')
+    return `features/${featureSlug}/${submoduleSlug}.html`;
   throw new Error(`unknown page kind: ${kind}`);
 }
 
@@ -61,9 +64,19 @@ function head({ title, assetRel, pageKind }) {
 function renderEdgePath(edge) {
   const segments = [];
   for (const section of edge.sections || []) {
-    const pts = [section.startPoint, ...(section.bendPoints || []), section.endPoint];
+    const pts = [
+      section.startPoint,
+      ...(section.bendPoints || []),
+      section.endPoint,
+    ];
     if (pts.length === 0) continue;
-    segments.push(pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' '));
+    segments.push(
+      pts
+        .map(
+          (p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)},${p.y.toFixed(2)}`,
+        )
+        .join(' '),
+    );
   }
   return segments.join(' ');
 }
@@ -92,28 +105,50 @@ function renderMacroSvg(layout, state, featureMap, edgeMetaMap) {
   const vbW = Math.max(320, Math.ceil(layout.width + pad * 2));
   const vbH = Math.max(160, Math.ceil(layout.height + pad * 2));
   const parts = [];
-  parts.push(`<svg class="atlas-svg" viewBox="0 0 ${vbW} ${vbH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Project architecture atlas" data-atlas-svg="macro">`);
+  parts.push(
+    `<svg class="atlas-svg" viewBox="0 0 ${vbW} ${vbH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Project architecture atlas" data-atlas-svg="macro">`,
+  );
   parts.push('  <defs>');
-  const svgEdgeKinds = ['call', 'return', 'data-row', 'failure', 'dependency', 'implements', 'deployed-on'];
+  const svgEdgeKinds = [
+    'call',
+    'return',
+    'data-row',
+    'failure',
+    'dependency',
+    'implements',
+    'deployed-on',
+  ];
   for (const kind of svgEdgeKinds) {
-    parts.push(`    <marker id="arrow-${kind}" class="m-arrow m-arrow--${kind}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>`);
+    parts.push(
+      `    <marker id="arrow-${kind}" class="m-arrow m-arrow--${kind}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>`,
+    );
   }
   parts.push('  </defs>');
   parts.push(`  <g transform="translate(${pad},${pad})">`);
 
   for (const feat of layout.features) {
-    parts.push(`    <g class="m-cluster" data-feature="${htmlEscape(feat.slug)}">`);
-    parts.push(`      <rect class="m-cluster__bg" x="${feat.x.toFixed(2)}" y="${feat.y.toFixed(2)}" width="${feat.width.toFixed(2)}" height="${feat.height.toFixed(2)}" rx="14" ry="14" />`);
+    parts.push(
+      `    <g class="m-cluster" data-feature="${htmlEscape(feat.slug)}">`,
+    );
+    parts.push(
+      `      <rect class="m-cluster__bg" x="${feat.x.toFixed(2)}" y="${feat.y.toFixed(2)}" width="${feat.width.toFixed(2)}" height="${feat.height.toFixed(2)}" rx="14" ry="14" />`,
+    );
     const titleX = feat.x + feat.width / 2;
     const titleY = feat.y + 26;
-    const featureState = featureMap?.get(feat.slug) ?? (state.features || []).find((f) => f.slug === feat.slug);
+    const featureState =
+      featureMap?.get(feat.slug) ??
+      (state.features || []).find((f) => f.slug === feat.slug);
     const title = (featureState && featureState.title) || feat.slug;
-    parts.push(`      <text class="m-cluster__title" x="${titleX.toFixed(2)}" y="${titleY.toFixed(2)}" text-anchor="middle">${htmlEscape(title)}</text>`);
+    parts.push(
+      `      <text class="m-cluster__title" x="${titleX.toFixed(2)}" y="${titleY.toFixed(2)}" text-anchor="middle">${htmlEscape(title)}</text>`,
+    );
     parts.push('    </g>');
   }
 
   for (const sub of layout.submodules) {
-    const parent = featureMap?.get(sub.featureSlug) ?? (state.features || []).find((f) => f.slug === sub.featureSlug);
+    const parent =
+      featureMap?.get(sub.featureSlug) ??
+      (state.features || []).find((f) => f.slug === sub.featureSlug);
     const subState = (parent || {}).submodules || [];
     const meta = subState.find((s) => s.slug === sub.slug) || {};
     const kind = meta.kind || 'service';
@@ -127,39 +162,61 @@ function renderMacroSvg(layout, state, featureMap, edgeMetaMap) {
 
     const href = `features/${sub.featureSlug}/${sub.slug}.html`;
     const tooltip = role ? `${sub.slug} — ${role}` : sub.slug;
-    parts.push(`    <a class="m-node m-node--${kind}" href="${htmlEscape(href)}" data-feature="${htmlEscape(sub.featureSlug)}" data-submodule="${htmlEscape(sub.slug)}" tabindex="0" aria-label="${htmlEscape(tooltip)} — open sub-module page">`);
+    parts.push(
+      `    <a class="m-node m-node--${kind}" href="${htmlEscape(href)}" data-feature="${htmlEscape(sub.featureSlug)}" data-submodule="${htmlEscape(sub.slug)}" tabindex="0" aria-label="${htmlEscape(tooltip)} — open sub-module page">`,
+    );
     parts.push(`      <title>${htmlEscape(tooltip)}</title>`);
-    parts.push(`      <rect x="${sub.x.toFixed(2)}" y="${sub.y.toFixed(2)}" width="${sub.width.toFixed(2)}" height="${sub.height.toFixed(2)}" rx="10" ry="10" />`);
-    parts.push(`      <text class="m-node__title" x="${cx.toFixed(2)}" y="${titleY.toFixed(2)}" text-anchor="middle">${htmlEscape(sub.slug)}</text>`);
-    parts.push(`      <text class="m-node__kind" x="${cx.toFixed(2)}" y="${kindY.toFixed(2)}" text-anchor="middle">${htmlEscape(measured.kindLabel || KIND_LABEL[kind] || kind)}</text>`);
+    parts.push(
+      `      <rect x="${sub.x.toFixed(2)}" y="${sub.y.toFixed(2)}" width="${sub.width.toFixed(2)}" height="${sub.height.toFixed(2)}" rx="10" ry="10" />`,
+    );
+    parts.push(
+      `      <text class="m-node__title" x="${cx.toFixed(2)}" y="${titleY.toFixed(2)}" text-anchor="middle">${htmlEscape(sub.slug)}</text>`,
+    );
+    parts.push(
+      `      <text class="m-node__kind" x="${cx.toFixed(2)}" y="${kindY.toFixed(2)}" text-anchor="middle">${htmlEscape(measured.kindLabel || KIND_LABEL[kind] || kind)}</text>`,
+    );
     measured.roleLines.forEach((line, idx) => {
       const ly = roleStartY + idx * 16;
-      parts.push(`      <text class="m-node__role" x="${cx.toFixed(2)}" y="${ly.toFixed(2)}" text-anchor="middle">${htmlEscape(line)}</text>`);
+      parts.push(
+        `      <text class="m-node__role" x="${cx.toFixed(2)}" y="${ly.toFixed(2)}" text-anchor="middle">${htmlEscape(line)}</text>`,
+      );
     });
     parts.push('    </a>');
   }
 
   for (const edge of layout.edges) {
-    const { edge: meta, scope } = edgeMetaMap?.get(edge.id) ?? findEdgeMeta(state, edge.id);
+    const { edge: meta, scope } =
+      edgeMetaMap?.get(edge.id) ?? findEdgeMeta(state, edge.id);
     const kind = edgeKindFor(meta);
     const d = renderEdgePath(edge);
     if (!d) continue;
     const scopeClass = scope === 'root' ? ' m-edge--cross' : '';
-    parts.push(`    <g class="m-edge m-edge--${kind}${scopeClass}" data-edge="${htmlEscape(edge.id)}">`);
-    parts.push(`      <path d="${d}" fill="none" marker-end="url(#arrow-${kind})" />`);
+    parts.push(
+      `    <g class="m-edge m-edge--${kind}${scopeClass}" data-edge="${htmlEscape(edge.id)}">`,
+    );
+    parts.push(
+      `      <path d="${d}" fill="none" marker-end="url(#arrow-${kind})" />`,
+    );
     for (const label of edge.labels || []) {
       if (!label.text) continue;
       const lines = String(label.text).split('\n');
       const cx = label.x + (label.width || 0) / 2;
       const lineH = 14; // matches EDGE_LABEL_LINE_PX in layout.js
       const blockH = lines.length * lineH;
-      const firstBaseline = label.y + ((label.height || 0) - blockH) / 2 + (lineH - 3);
-      parts.push(`      <text class="m-edge__label" x="${cx.toFixed(2)}" y="${firstBaseline.toFixed(2)}" text-anchor="middle">`);
+      const firstBaseline =
+        label.y + ((label.height || 0) - blockH) / 2 + (lineH - 3);
+      parts.push(
+        `      <text class="m-edge__label" x="${cx.toFixed(2)}" y="${firstBaseline.toFixed(2)}" text-anchor="middle">`,
+      );
       lines.forEach((line, idx) => {
         if (idx === 0) {
-          parts.push(`        <tspan x="${cx.toFixed(2)}">${htmlEscape(line)}</tspan>`);
+          parts.push(
+            `        <tspan x="${cx.toFixed(2)}">${htmlEscape(line)}</tspan>`,
+          );
         } else {
-          parts.push(`        <tspan x="${cx.toFixed(2)}" dy="${lineH}">${htmlEscape(line)}</tspan>`);
+          parts.push(
+            `        <tspan x="${cx.toFixed(2)}" dy="${lineH}">${htmlEscape(line)}</tspan>`,
+          );
         }
       });
       parts.push('      </text>');
@@ -186,14 +243,18 @@ function renderAtlasSubmoduleIndex(state) {
     }
   }
   if (items.length === 0) return '';
-  const rows = items.map((it) => `        <li class="atlas-submodule-index__item">
+  const rows = items
+    .map(
+      (it) => `        <li class="atlas-submodule-index__item">
           <a href="features/${htmlEscape(it.feature)}/${htmlEscape(it.sub)}.html">
             <span class="atlas-submodule-index__feature">${htmlEscape(it.featureTitle)}</span>
             <span class="atlas-submodule-index__sub">${htmlEscape(it.sub)}</span>
             <span class="atlas-submodule-index__kind">${htmlEscape(KIND_LABEL[it.kind] || it.kind)}</span>
           </a>
           ${it.role ? `<p class="atlas-submodule-index__role">${htmlEscape(it.role)}</p>` : ''}
-        </li>`).join('\n');
+        </li>`,
+    )
+    .join('\n');
   return `      <ul class="atlas-submodule-index">
 ${rows}
       </ul>`;
@@ -270,11 +331,14 @@ function renderFeaturePage({ feature, outDir }) {
   const pageRel = pagePathFor('feature', { featureSlug: feature.slug });
   const assetRel = relAssetPath(path.join(outDir, pageRel), outDir);
   const title = feature.title || feature.slug;
-  const subNav = (feature.submodules || []).map((s) => renderSubmoduleCard(feature.slug, s)).join('\n');
+  const subNav = (feature.submodules || [])
+    .map((s) => renderSubmoduleCard(feature.slug, s))
+    .join('\n');
   const dependsOn = Array.isArray(feature.dependsOn) ? feature.dependsOn : [];
-  const dependsList = dependsOn.length > 0
-    ? `<p class="feature-depends">Depends on: ${dependsOn.map((d) => `<a href="../${htmlEscape(d)}/index.html">${htmlEscape(d)}</a>`).join(', ')}</p>`
-    : '';
+  const dependsList =
+    dependsOn.length > 0
+      ? `<p class="feature-depends">Depends on: ${dependsOn.map((d) => `<a href="../${htmlEscape(d)}/index.html">${htmlEscape(d)}</a>`).join(', ')}</p>`
+      : '';
   const intraEdges = (feature.edges || []).filter((e) => e.kind && e.label);
 
   const body = `<body>
@@ -291,16 +355,23 @@ function renderFeaturePage({ feature, outDir }) {
 ${subNav}
       </ul>
     </section>
-    ${intraEdges.length > 0 ? `<section class="feature-edges" aria-label="Intra-feature edges">
+    ${
+      intraEdges.length > 0
+        ? `<section class="feature-edges" aria-label="Intra-feature edges">
       <h2>Intra-feature edges</h2>
       <ul class="feature-edges__list">
-${intraEdges.map((e) => {
-  const from = typeof e.from === 'string' ? e.from : (e.from && e.from.submodule);
-  const to = typeof e.to === 'string' ? e.to : (e.to && e.to.submodule);
-  return `        <li class="feature-edges__item feature-edges__item--${htmlEscape(e.kind)}"><span class="feature-edges__endpoints">${htmlEscape(from)} → ${htmlEscape(to)}</span><span class="feature-edges__kind">${htmlEscape(e.kind)}</span><span class="feature-edges__label">${htmlEscape(e.label || '')}</span></li>`;
-}).join('\n')}
+${intraEdges
+  .map((e) => {
+    const from =
+      typeof e.from === 'string' ? e.from : e.from && e.from.submodule;
+    const to = typeof e.to === 'string' ? e.to : e.to && e.to.submodule;
+    return `        <li class="feature-edges__item feature-edges__item--${htmlEscape(e.kind)}"><span class="feature-edges__endpoints">${htmlEscape(from)} → ${htmlEscape(to)}</span><span class="feature-edges__kind">${htmlEscape(e.kind)}</span><span class="feature-edges__label">${htmlEscape(e.label || '')}</span></li>`;
+  })
+  .join('\n')}
       </ul>
-    </section>` : ''}
+    </section>`
+        : ''
+    }
   </main>
 </body>
 </html>`;
@@ -316,7 +387,11 @@ function renderEvidenceBadge(ev) {
 
   // Append source location when structured file:line data is available
   let locHtml = '';
-  if (ev.sourceFile && ev.sourceFile !== ev.source && /[/\\]|\.[a-zA-Z0-9]+$/.test(ev.sourceFile)) {
+  if (
+    ev.sourceFile &&
+    ev.sourceFile !== ev.source &&
+    /[/\\]|\.[a-zA-Z0-9]+$/.test(ev.sourceFile)
+  ) {
     const loc = ev.sourceLine
       ? `${htmlEscape(ev.sourceFile)}:${ev.sourceLine}`
       : htmlEscape(ev.sourceFile);
@@ -327,28 +402,41 @@ function renderEvidenceBadge(ev) {
 }
 
 function renderSubmoduleTable(headers, rows, evidences) {
-  const hasEvCol = Array.isArray(evidences) && evidences.some((ev) => ev && ev.level);
+  const hasEvCol =
+    Array.isArray(evidences) && evidences.some((ev) => ev && ev.level);
   const allHeaders = hasEvCol ? [...headers, 'Evidence'] : headers;
   return `<table class="sub-table">
         <thead><tr>${allHeaders.map((h) => `<th scope="col">${htmlEscape(h)}</th>`).join('')}</tr></thead>
         <tbody>
-${rows.map((r, ri) => {
-  const baseCells = r.map((c) => `<td>${htmlEscape(c == null ? '' : c)}</td>`);
-  const cells = hasEvCol ? [...baseCells, `<td>${renderEvidenceBadge(evidences[ri])}</td>`] : baseCells;
-  return `          <tr>${cells.join('')}</tr>`;
-}).join('\n')}
+${rows
+  .map((r, ri) => {
+    const baseCells = r.map(
+      (c) => `<td>${htmlEscape(c == null ? '' : c)}</td>`,
+    );
+    const cells = hasEvCol
+      ? [...baseCells, `<td>${renderEvidenceBadge(evidences[ri])}</td>`]
+      : baseCells;
+    return `          <tr>${cells.join('')}</tr>`;
+  })
+  .join('\n')}
         </tbody>
       </table>`;
 }
 
 function normalizeDataflowStep(item) {
-  if (typeof item === 'string') return { step: item, fn: '', reads: [], writes: [] };
-  if (!item || typeof item !== 'object') return { step: '', fn: '', reads: [], writes: [] };
+  if (typeof item === 'string')
+    return { step: item, fn: '', reads: [], writes: [] };
+  if (!item || typeof item !== 'object')
+    return { step: '', fn: '', reads: [], writes: [] };
   return {
     step: typeof item.step === 'string' ? item.step : '',
     fn: typeof item.fn === 'string' ? item.fn.trim() : '',
-    reads: Array.isArray(item.reads) ? item.reads.filter((v) => typeof v === 'string' && v.trim()) : [],
-    writes: Array.isArray(item.writes) ? item.writes.filter((v) => typeof v === 'string' && v.trim()) : [],
+    reads: Array.isArray(item.reads)
+      ? item.reads.filter((v) => typeof v === 'string' && v.trim())
+      : [],
+    writes: Array.isArray(item.writes)
+      ? item.writes.filter((v) => typeof v === 'string' && v.trim())
+      : [],
   };
 }
 
@@ -365,11 +453,11 @@ function renderInternalDataflowSvg(steps) {
   const boxW = 520;
   const lineHeight = 20;
   const innerPadY = 18;
-  const fnRowH = 32;       // fn pill + spacing
-  const chipsRowH = 26;    // chips row + spacing
+  const fnRowH = 32; // fn pill + spacing
+  const chipsRowH = 26; // chips row + spacing
   const minBoxH = 72;
   const gap = 44;
-  const padLeft = 80;      // room for the left-side step-number badge
+  const padLeft = 80; // room for the left-side step-number badge
   const padTop = 32;
   const padBottom = 32;
   const padRight = 28;
@@ -380,17 +468,31 @@ function renderInternalDataflowSvg(steps) {
     const hasFn = s.fn.length > 0;
     const hasChips = s.reads.length > 0 || s.writes.length > 0;
     const textBlockH = lines.length * lineHeight;
-    const boxH = Math.max(minBoxH, innerPadY * 2 + (hasFn ? fnRowH : 0) + textBlockH + (hasChips ? chipsRowH : 0));
+    const boxH = Math.max(
+      minBoxH,
+      innerPadY * 2 +
+        (hasFn ? fnRowH : 0) +
+        textBlockH +
+        (hasChips ? chipsRowH : 0),
+    );
     return { lines, hasFn, hasChips, boxH };
   });
 
-  const totalH = padTop + layouts.reduce((a, l) => a + l.boxH, 0) + (normalized.length - 1) * gap + padBottom;
+  const totalH =
+    padTop +
+    layouts.reduce((a, l) => a + l.boxH, 0) +
+    (normalized.length - 1) * gap +
+    padBottom;
   const totalW = padLeft + boxW + padRight;
 
   const parts = [];
-  parts.push(`<svg class="sub-dataflow__svg" data-atlas-svg="sub-dataflow" viewBox="0 0 ${totalW} ${totalH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Internal dataflow">`);
+  parts.push(
+    `<svg class="sub-dataflow__svg" data-atlas-svg="sub-dataflow" viewBox="0 0 ${totalW} ${totalH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Internal dataflow">`,
+  );
   parts.push('  <defs>');
-  parts.push('    <marker id="sub-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>');
+  parts.push(
+    '    <marker id="sub-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" /></marker>',
+  );
   parts.push('  </defs>');
 
   let cursorY = padTop;
@@ -403,37 +505,54 @@ function renderInternalDataflowSvg(steps) {
     const badgeCy = boxY + boxH / 2;
 
     parts.push('  <g class="sub-dataflow__step">');
-    parts.push(`    <circle class="sub-dataflow__badge" cx="${badgeCx}" cy="${badgeCy}" r="18" />`);
-    parts.push(`    <text class="sub-dataflow__badge-text" x="${badgeCx}" y="${badgeCy + 5}" text-anchor="middle">${i + 1}</text>`);
-    parts.push(`    <rect class="sub-dataflow__box" x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="14" ry="14" />`);
+    parts.push(
+      `    <circle class="sub-dataflow__badge" cx="${badgeCx}" cy="${badgeCy}" r="18" />`,
+    );
+    parts.push(
+      `    <text class="sub-dataflow__badge-text" x="${badgeCx}" y="${badgeCy + 5}" text-anchor="middle">${i + 1}</text>`,
+    );
+    parts.push(
+      `    <rect class="sub-dataflow__box" x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="14" ry="14" />`,
+    );
 
     if (layout.hasFn) {
       const fnLabel = `fn ${s.fn}`;
       const pillX = boxX + 14;
       const pillY = boxY + 14;
       const pillW = Math.max(72, fnLabel.length * 7.4 + 20);
-      parts.push(`    <rect class="sub-dataflow__fn-bg" x="${pillX}" y="${pillY}" width="${pillW}" height="20" rx="10" ry="10" />`);
-      parts.push(`    <text class="sub-dataflow__fn-text" x="${pillX + 10}" y="${pillY + 14}">${htmlEscape(fnLabel)}</text>`);
+      parts.push(
+        `    <rect class="sub-dataflow__fn-bg" x="${pillX}" y="${pillY}" width="${pillW}" height="20" rx="10" ry="10" />`,
+      );
+      parts.push(
+        `    <text class="sub-dataflow__fn-text" x="${pillX + 10}" y="${pillY + 14}">${htmlEscape(fnLabel)}</text>`,
+      );
     }
 
     const topUsed = layout.hasFn ? fnRowH : 0;
     const bottomUsed = layout.hasChips ? chipsRowH : 0;
     const textZoneH = boxH - topUsed - bottomUsed;
     const textBlockH = layout.lines.length * lineHeight;
-    const textStartY = boxY + topUsed + (textZoneH - textBlockH) / 2 + lineHeight - 4;
+    const textStartY =
+      boxY + topUsed + (textZoneH - textBlockH) / 2 + lineHeight - 4;
     layout.lines.forEach((line, idx) => {
-      parts.push(`    <text class="sub-dataflow__text" x="${boxX + boxW / 2}" y="${textStartY + idx * lineHeight}" text-anchor="middle">${htmlEscape(line)}</text>`);
+      parts.push(
+        `    <text class="sub-dataflow__text" x="${boxX + boxW / 2}" y="${textStartY + idx * lineHeight}" text-anchor="middle">${htmlEscape(line)}</text>`,
+      );
     });
 
     if (layout.hasChips) {
       const chipY = boxY + boxH - 12;
       if (s.reads.length > 0) {
         const text = `← reads: ${s.reads.join(', ')}`;
-        parts.push(`    <text class="sub-dataflow__chip sub-dataflow__chip--reads" x="${boxX + 14}" y="${chipY}">${htmlEscape(text)}</text>`);
+        parts.push(
+          `    <text class="sub-dataflow__chip sub-dataflow__chip--reads" x="${boxX + 14}" y="${chipY}">${htmlEscape(text)}</text>`,
+        );
       }
       if (s.writes.length > 0) {
         const text = `→ writes: ${s.writes.join(', ')}`;
-        parts.push(`    <text class="sub-dataflow__chip sub-dataflow__chip--writes" x="${boxX + boxW - 14}" y="${chipY}" text-anchor="end">${htmlEscape(text)}</text>`);
+        parts.push(
+          `    <text class="sub-dataflow__chip sub-dataflow__chip--writes" x="${boxX + boxW - 14}" y="${chipY}" text-anchor="end">${htmlEscape(text)}</text>`,
+        );
       }
     }
 
@@ -443,7 +562,9 @@ function renderInternalDataflowSvg(steps) {
       const aY = boxY + boxH + 6;
       const bY = aY + gap - 14;
       const x = boxX + boxW / 2;
-      parts.push(`  <line class="sub-dataflow__arrow" x1="${x}" y1="${aY}" x2="${x}" y2="${bY}" marker-end="url(#sub-arrow)" />`);
+      parts.push(
+        `  <line class="sub-dataflow__arrow" x1="${x}" y1="${aY}" x2="${x}" y2="${bY}" marker-end="url(#sub-arrow)" />`,
+      );
     }
     cursorY += boxH + gap;
   });
@@ -457,9 +578,16 @@ function wrapText(text, maxChars) {
   const lines = [];
   let current = '';
   for (const word of words) {
-    if (!current) { current = word; continue; }
-    if ((current.length + 1 + word.length) <= maxChars) current = `${current} ${word}`;
-    else { lines.push(current); current = word; }
+    if (!current) {
+      current = word;
+      continue;
+    }
+    if (current.length + 1 + word.length <= maxChars)
+      current = `${current} ${word}`;
+    else {
+      lines.push(current);
+      current = word;
+    }
   }
   if (current) lines.push(current);
   // Allow up to 4 lines so long error/rollback notes stay readable; the
@@ -468,7 +596,10 @@ function wrapText(text, maxChars) {
 }
 
 function renderSubmodulePage({ feature, sub, outDir }) {
-  const pageRel = pagePathFor('submodule', { featureSlug: feature.slug, submoduleSlug: sub.slug });
+  const pageRel = pagePathFor('submodule', {
+    featureSlug: feature.slug,
+    submoduleSlug: sub.slug,
+  });
   const assetRel = relAssetPath(path.join(outDir, pageRel), outDir);
   const title = `${feature.title || feature.slug} · ${sub.slug}`;
 
@@ -478,23 +609,48 @@ function renderSubmodulePage({ feature, sub, outDir }) {
   const errEvidences = (sub.errors || []).map((e) => e.evidence || null);
 
   // Evidence summary
-  const allComponents = [...(sub.functions || []), ...(sub.variables || []), ...(sub.errors || [])];
+  const allComponents = [
+    ...(sub.functions || []),
+    ...(sub.variables || []),
+    ...(sub.errors || []),
+  ];
   const eviCounts = Object.fromEntries(EVIDENCE_LEVELS.map((l) => [l, 0]));
   let hasAnyEvidence = false;
   for (const c of allComponents) {
-    if (c.evidence && c.evidence.level && eviCounts[c.evidence.level] !== undefined) {
+    if (
+      c.evidence &&
+      c.evidence.level &&
+      eviCounts[c.evidence.level] !== undefined
+    ) {
       eviCounts[c.evidence.level]++;
       hasAnyEvidence = true;
     }
   }
-  const eviSummaryParts = EVIDENCE_LEVELS.filter((l) => eviCounts[l] > 0).map((l) => `${eviCounts[l]} ${l}`);
+  const eviSummaryParts = EVIDENCE_LEVELS.filter((l) => eviCounts[l] > 0).map(
+    (l) => `${eviCounts[l]} ${l}`,
+  );
   const evidenceSummaryHtml = hasAnyEvidence
     ? `<p class="submodule-evidence-summary">Evidence: ${eviSummaryParts.join(', ')}</p>`
     : '';
 
-  const ioRows = (sub.functions || []).map((fn) => [fn.name, fn.in || '', fn.out || '', fn.side || '', fn.purpose || '']);
-  const varRows = (sub.variables || []).map((v) => [v.name, v.type || '', v.scope || '', v.purpose || '']);
-  const errRows = (sub.errors || []).map((e) => [e.name, e.when || '', e.means || '']);
+  const ioRows = (sub.functions || []).map((fn) => [
+    fn.name,
+    fn.in || '',
+    fn.out || '',
+    fn.side || '',
+    fn.purpose || '',
+  ]);
+  const varRows = (sub.variables || []).map((v) => [
+    v.name,
+    v.type || '',
+    v.scope || '',
+    v.purpose || '',
+  ]);
+  const errRows = (sub.errors || []).map((e) => [
+    e.name,
+    e.when || '',
+    e.means || '',
+  ]);
 
   const body = `<body>
   <header class="submodule-header">
@@ -506,20 +662,33 @@ function renderSubmodulePage({ feature, sub, outDir }) {
   <main class="submodule-main">
     <section aria-label="Function I/O">
       <h2>Function I/O</h2>
-      ${ioRows.length > 0
-        ? renderSubmoduleTable(['Name', 'In', 'Out', 'Side', 'Purpose'], ioRows, fnEvidences)
-        : '<p class="sub-section__empty">No functions recorded.</p>'}
+      ${
+        ioRows.length > 0
+          ? renderSubmoduleTable(
+              ['Name', 'In', 'Out', 'Side', 'Purpose'],
+              ioRows,
+              fnEvidences,
+            )
+          : '<p class="sub-section__empty">No functions recorded.</p>'
+      }
     </section>
     <section aria-label="Variables">
       <h2>Variables</h2>
-      ${varRows.length > 0
-        ? renderSubmoduleTable(['Name', 'Type', 'Scope', 'Purpose'], varRows, varEvidences)
-        : '<p class="sub-section__empty">No variables recorded.</p>'}
+      ${
+        varRows.length > 0
+          ? renderSubmoduleTable(
+              ['Name', 'Type', 'Scope', 'Purpose'],
+              varRows,
+              varEvidences,
+            )
+          : '<p class="sub-section__empty">No variables recorded.</p>'
+      }
     </section>
     <section aria-label="Internal data flow">
       <h2>Internal data flow</h2>
-      ${(sub.dataflow && sub.dataflow.length > 0)
-        ? `<div class="sub-dataflow__canvas" data-pan-zoom-container>
+      ${
+        sub.dataflow && sub.dataflow.length > 0
+          ? `<div class="sub-dataflow__canvas" data-pan-zoom-container>
         <div class="sub-dataflow__toolbar" role="toolbar" aria-label="Diagram controls">
           <button type="button" data-pan-zoom="zoom-in" aria-label="Zoom in">+</button>
           <button type="button" data-pan-zoom="zoom-out" aria-label="Zoom out">−</button>
@@ -529,13 +698,20 @@ function renderSubmodulePage({ feature, sub, outDir }) {
           ${renderInternalDataflowSvg(sub.dataflow)}
         </div>
       </div>`
-        : renderInternalDataflowSvg(sub.dataflow)}
+          : renderInternalDataflowSvg(sub.dataflow)
+      }
     </section>
     <section aria-label="Errors">
       <h2>Errors</h2>
-      ${errRows.length > 0
-        ? renderSubmoduleTable(['Name', 'When', 'Means'], errRows, errEvidences)
-        : '<p class="sub-section__empty">No errors recorded.</p>'}
+      ${
+        errRows.length > 0
+          ? renderSubmoduleTable(
+              ['Name', 'When', 'Means'],
+              errRows,
+              errEvidences,
+            )
+          : '<p class="sub-section__empty">No errors recorded.</p>'
+      }
     </section>
   </main>
   <script src="${assetRel}/viewer.client.js" defer></script>
@@ -554,12 +730,18 @@ function copyAssets(outDir) {
   const dstJs = path.join(assetsDir, 'viewer.client.js');
   try {
     const existingCss = fs.readFileSync(dstCss);
-    if (!existingCss.equals(fs.readFileSync(srcCss))) fs.copyFileSync(srcCss, dstCss);
-  } catch (_e) { fs.copyFileSync(srcCss, dstCss); }
+    if (!existingCss.equals(fs.readFileSync(srcCss)))
+      fs.copyFileSync(srcCss, dstCss);
+  } catch (_e) {
+    fs.copyFileSync(srcCss, dstCss);
+  }
   try {
     const existingJs = fs.readFileSync(dstJs);
-    if (!existingJs.equals(fs.readFileSync(srcJs))) fs.copyFileSync(srcJs, dstJs);
-  } catch (_e) { fs.copyFileSync(srcJs, dstJs); }
+    if (!existingJs.equals(fs.readFileSync(srcJs)))
+      fs.copyFileSync(srcJs, dstJs);
+  } catch (_e) {
+    fs.copyFileSync(srcJs, dstJs);
+  }
 }
 
 // renderAll({outDir, state, scope?}) writes every page for the
@@ -569,7 +751,9 @@ async function renderAll({ outDir, state, scope = null, removedPaths = [] }) {
   try {
     fs.mkdirSync(outDir, { recursive: true });
   } catch (err) {
-    process.stderr.write(`render: cannot create output directory — ${err.message}\n`);
+    process.stderr.write(
+      `render: cannot create output directory — ${err.message}\n`,
+    );
     return { written: [], layout: null };
   }
   copyAssets(outDir);
@@ -579,7 +763,9 @@ async function renderAll({ outDir, state, scope = null, removedPaths = [] }) {
     if (kind === 'macro') return scope.macro === true;
     if (kind === 'feature') return scope.features && scope.features.has(slug);
     if (kind === 'submodule') {
-      return (scope.submodules || []).some((s) => s.feature === slug && s.submodule === subSlug);
+      return (scope.submodules || []).some(
+        (s) => s.feature === slug && s.submodule === subSlug,
+      );
     }
     return false;
   };
@@ -594,28 +780,69 @@ async function renderAll({ outDir, state, scope = null, removedPaths = [] }) {
   if (shouldEmit('macro')) {
     const html = renderMacro({ state, layout, outDir });
     const file = path.join(outDir, pagePathFor('macro'));
-    try { fs.mkdirSync(path.dirname(file), { recursive: true }); } catch (_e) { /* parent dir exists */ }
-    try { fs.writeFileSync(file, html, 'utf8'); written.push(pagePathFor('macro')); } catch (err) {
-      process.stderr.write(`render: failed to write macro page — ${err.message}\n`);
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+    } catch (_e) {
+      /* parent dir exists */
+    }
+    try {
+      fs.writeFileSync(file, html, 'utf8');
+      written.push(pagePathFor('macro'));
+    } catch (err) {
+      process.stderr.write(
+        `render: failed to write macro page — ${err.message}\n`,
+      );
     }
   }
 
   for (const feature of state.features || []) {
     if (shouldEmit('feature', feature.slug)) {
       const html = renderFeaturePage({ feature, outDir });
-      const file = path.join(outDir, pagePathFor('feature', { featureSlug: feature.slug }));
-      try { fs.mkdirSync(path.dirname(file), { recursive: true }); } catch (_e) { /* parent dir exists */ }
-      try { fs.writeFileSync(file, html, 'utf8'); written.push(pagePathFor('feature', { featureSlug: feature.slug })); } catch (err) {
-        process.stderr.write(`render: failed to write feature page "${feature.slug}" — ${err.message}\n`);
+      const file = path.join(
+        outDir,
+        pagePathFor('feature', { featureSlug: feature.slug }),
+      );
+      try {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+      } catch (_e) {
+        /* parent dir exists */
+      }
+      try {
+        fs.writeFileSync(file, html, 'utf8');
+        written.push(pagePathFor('feature', { featureSlug: feature.slug }));
+      } catch (err) {
+        process.stderr.write(
+          `render: failed to write feature page "${feature.slug}" — ${err.message}\n`,
+        );
       }
     }
     for (const sub of feature.submodules || []) {
       if (shouldEmit('submodule', feature.slug, sub.slug)) {
         const html = renderSubmodulePage({ feature, sub, outDir });
-        const file = path.join(outDir, pagePathFor('submodule', { featureSlug: feature.slug, submoduleSlug: sub.slug }));
-        try { fs.mkdirSync(path.dirname(file), { recursive: true }); } catch (_e) { /* parent dir exists */ }
-        try { fs.writeFileSync(file, html, 'utf8'); written.push(pagePathFor('submodule', { featureSlug: feature.slug, submoduleSlug: sub.slug })); } catch (err) {
-          process.stderr.write(`render: failed to write submodule page "${feature.slug}/${sub.slug}" — ${err.message}\n`);
+        const file = path.join(
+          outDir,
+          pagePathFor('submodule', {
+            featureSlug: feature.slug,
+            submoduleSlug: sub.slug,
+          }),
+        );
+        try {
+          fs.mkdirSync(path.dirname(file), { recursive: true });
+        } catch (_e) {
+          /* parent dir exists */
+        }
+        try {
+          fs.writeFileSync(file, html, 'utf8');
+          written.push(
+            pagePathFor('submodule', {
+              featureSlug: feature.slug,
+              submoduleSlug: sub.slug,
+            }),
+          );
+        } catch (err) {
+          process.stderr.write(
+            `render: failed to write submodule page "${feature.slug}/${sub.slug}" — ${err.message}\n`,
+          );
         }
       }
     }
@@ -623,14 +850,23 @@ async function renderAll({ outDir, state, scope = null, removedPaths = [] }) {
 
   try {
     if (removedPaths && removedPaths.length > 0) {
-      const lines = ['# Pages removed by this spec. Used by `apltk architecture diff`.', ...removedPaths];
-      fs.writeFileSync(path.join(outDir, REMOVED_TXT), `${lines.join('\n')}\n`, 'utf8');
+      const lines = [
+        '# Pages removed by this spec. Used by `apltk architecture diff`.',
+        ...removedPaths,
+      ];
+      fs.writeFileSync(
+        path.join(outDir, REMOVED_TXT),
+        `${lines.join('\n')}\n`,
+        'utf8',
+      );
     } else {
       const file = path.join(outDir, REMOVED_TXT);
       if (fs.existsSync(file)) fs.rmSync(file);
     }
   } catch (err) {
-    process.stderr.write(`render: failed to update removed-pages manifest — ${err.message}\n`);
+    process.stderr.write(
+      `render: failed to update removed-pages manifest — ${err.message}\n`,
+    );
   }
 
   // Full base render (no scope): sweep stale HTML so `apltk architecture
@@ -640,7 +876,10 @@ async function renderAll({ outDir, state, scope = null, removedPaths = [] }) {
     if (!scope) {
       sweepOrphanFeaturePages(outDir, state);
     } else {
-      sweepScopedHtml(outDir, new Set(written.map((file) => file.split(path.sep).join('/'))));
+      sweepScopedHtml(
+        outDir,
+        new Set(written.map((file) => file.split(path.sep).join('/'))),
+      );
     }
   } catch (err) {
     process.stderr.write(`render: page sweep failed — ${err.message}\n`);
@@ -652,20 +891,34 @@ async function renderAll({ outDir, state, scope = null, removedPaths = [] }) {
 function sweepScopedHtml(outDir, keepPaths) {
   function recurse(dir) {
     let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_e) { return; }
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (_e) {
+      return;
+    }
     for (const entry of entries) {
-      if (entry.name === 'assets' || entry.name === 'atlas' || entry.name.startsWith('.')) continue;
+      if (
+        entry.name === 'assets' ||
+        entry.name === 'atlas' ||
+        entry.name.startsWith('.')
+      )
+        continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         recurse(full);
         let remaining;
-        try { remaining = fs.readdirSync(full); } catch (_e) { remaining = null; }
+        try {
+          remaining = fs.readdirSync(full);
+        } catch (_e) {
+          remaining = null;
+        }
         if (remaining && remaining.length === 0) {
           fs.rmSync(full, { recursive: true, force: true });
         }
         continue;
       }
-      if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.html')) continue;
+      if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.html'))
+        continue;
       const rel = path.relative(outDir, full).split(path.sep).join('/');
       if (!keepPaths.has(rel)) {
         fs.rmSync(full, { force: true });
@@ -684,7 +937,11 @@ function sweepOrphanFeaturePages(outDir, state) {
     validFeatures.set(f.slug, new Set((f.submodules || []).map((s) => s.slug)));
   }
   let entries;
-  try { entries = fs.readdirSync(featuresRoot, { withFileTypes: true }); } catch (_e) { return; }
+  try {
+    entries = fs.readdirSync(featuresRoot, { withFileTypes: true });
+  } catch (_e) {
+    return;
+  }
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const featDir = path.join(featuresRoot, entry.name);
@@ -694,7 +951,11 @@ function sweepOrphanFeaturePages(outDir, state) {
     }
     const wantedSubs = validFeatures.get(entry.name);
     let files;
-    try { files = fs.readdirSync(featDir); } catch (_e) { continue; }
+    try {
+      files = fs.readdirSync(featDir);
+    } catch (_e) {
+      continue;
+    }
     for (const file of files) {
       if (!file.toLowerCase().endsWith('.html')) continue;
       if (file === 'index.html') continue;
@@ -710,7 +971,10 @@ function scopeFromDiff(diff) {
   const submodules = [];
   for (const item of diff.modifiedSubmodules || []) submodules.push(item);
   for (const item of diff.addedSubmodules || []) submodules.push(item);
-  const features = new Set([...(diff.modifiedFeatures || []), ...(diff.addedFeatures || [])]);
+  const features = new Set([
+    ...(diff.modifiedFeatures || []),
+    ...(diff.addedFeatures || []),
+  ]);
   // If only a submodule changed but its feature isn't otherwise modified,
   // the feature index page does not need to re-emit. The submodule page
   // itself still needs the feature title/role for breadcrumb, which is
@@ -728,7 +992,12 @@ function removedPagePathsFromDiff(diff) {
     paths.push(pagePathFor('feature', { featureSlug: slug }));
   }
   for (const item of diff.removedSubmodules || []) {
-    paths.push(pagePathFor('submodule', { featureSlug: item.feature, submoduleSlug: item.submodule }));
+    paths.push(
+      pagePathFor('submodule', {
+        featureSlug: item.feature,
+        submoduleSlug: item.submodule,
+      }),
+    );
   }
   return paths;
 }

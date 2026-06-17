@@ -24,10 +24,34 @@ function sampleState() {
         story: 'Account creation',
         dependsOn: [],
         submodules: [
-          { slug: 'ui', kind: 'ui', role: 'Form', functions: [], variables: [], dataflow: [], errors: [] },
-          { slug: 'api', kind: 'api', role: 'HTTP', functions: [], variables: [], dataflow: [], errors: [] },
+          {
+            slug: 'ui',
+            kind: 'ui',
+            role: 'Form',
+            functions: [],
+            variables: [],
+            dataflow: [],
+            errors: [],
+          },
+          {
+            slug: 'api',
+            kind: 'api',
+            role: 'HTTP',
+            functions: [],
+            variables: [],
+            dataflow: [],
+            errors: [],
+          },
         ],
-        edges: [{ id: 'e1', from: 'ui', to: 'api', kind: 'call', label: 'POST /register' }],
+        edges: [
+          {
+            id: 'e1',
+            from: 'ui',
+            to: 'api',
+            kind: 'call',
+            label: 'POST /register',
+          },
+        ],
       },
     ],
     edges: [],
@@ -54,17 +78,33 @@ test('schema.validate rejects unknown kind / scope / side enums', () => {
 
 test('schema.validate flags duplicate feature/submodule slugs', () => {
   const state = sampleState();
-  state.features.push({ slug: 'register', title: 'dup', submodules: [], edges: [] });
+  state.features.push({
+    slug: 'register',
+    title: 'dup',
+    submodules: [],
+    edges: [],
+  });
   state.features[0].submodules.push({ slug: 'ui', kind: 'ui', role: '' });
   const result = schema.validate(state);
   assert.equal(result.valid, false);
-  assert.ok(result.errors.some((e) => e.message.includes('duplicate feature slug')));
-  assert.ok(result.errors.some((e) => e.message.includes('duplicate submodule slug')));
+  assert.ok(
+    result.errors.some((e) => e.message.includes('duplicate feature slug')),
+  );
+  assert.ok(
+    result.errors.some((e) => e.message.includes('duplicate submodule slug')),
+  );
 });
 
 test('schema.validate detects unknown edge endpoints', () => {
   const state = sampleState();
-  state.edges = [{ id: 'x', from: { feature: 'ghost' }, to: { feature: 'register', submodule: 'ui' }, kind: 'call' }];
+  state.edges = [
+    {
+      id: 'x',
+      from: { feature: 'ghost' },
+      to: { feature: 'register', submodule: 'ui' },
+      kind: 'call',
+    },
+  ];
   const result = schema.validate(state);
   assert.equal(result.valid, false);
   assert.ok(result.errors.some((e) => e.message.includes('unknown feature')));
@@ -80,7 +120,12 @@ test('schema.validate accepts enriched dataflow steps referencing declared fn + 
   ];
   api.dataflow = [
     'Receive request',
-    { step: 'Validate body and emit token', fn: 'handlePost', reads: ['body'], writes: ['token'] },
+    {
+      step: 'Validate body and emit token',
+      fn: 'handlePost',
+      reads: ['body'],
+      writes: ['token'],
+    },
   ];
   const result = schema.validate(state);
   assert.equal(result.valid, true);
@@ -100,10 +145,22 @@ test('schema.validate rejects dataflow fn/reads/writes referencing undeclared sy
   ];
   const result = schema.validate(state);
   assert.equal(result.valid, false);
-  assert.ok(result.errors.some((e) => e.message.includes('unknown function "nope"')), 'flags unknown fn');
-  assert.ok(result.errors.some((e) => e.message.includes('unknown variable "ghost"')), 'flags unknown reads');
-  assert.ok(result.errors.some((e) => e.message.includes('unknown variable "phantom"')), 'flags unknown writes');
-  assert.ok(result.errors.some((e) => e.message.includes('"reads" must be an array')), 'flags wrong shape');
+  assert.ok(
+    result.errors.some((e) => e.message.includes('unknown function "nope"')),
+    'flags unknown fn',
+  );
+  assert.ok(
+    result.errors.some((e) => e.message.includes('unknown variable "ghost"')),
+    'flags unknown reads',
+  );
+  assert.ok(
+    result.errors.some((e) => e.message.includes('unknown variable "phantom"')),
+    'flags unknown writes',
+  );
+  assert.ok(
+    result.errors.some((e) => e.message.includes('"reads" must be an array')),
+    'flags wrong shape',
+  );
 });
 
 test('state.save then state.load round-trips', () => {
@@ -128,9 +185,15 @@ test('state.save drops orphan feature YAML files', () => {
   try {
     const atlasDir = path.join(dir, 'atlas');
     stateLib.save(atlasDir, sampleState());
-    fs.writeFileSync(path.join(atlasDir, 'features', 'ghost.yaml'), 'slug: ghost\n');
+    fs.writeFileSync(
+      path.join(atlasDir, 'features', 'ghost.yaml'),
+      'slug: ghost\n',
+    );
     stateLib.save(atlasDir, sampleState());
-    assert.equal(fs.existsSync(path.join(atlasDir, 'features', 'ghost.yaml')), false);
+    assert.equal(
+      fs.existsSync(path.join(atlasDir, 'features', 'ghost.yaml')),
+      false,
+    );
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -150,9 +213,33 @@ test('mergeOverlay applies feature overrides and removals', () => {
         story: 'Account creation v2',
         dependsOn: [],
         submodules: [
-          { slug: 'ui', kind: 'ui', role: 'Form', functions: [], variables: [], dataflow: [], errors: [] },
-          { slug: 'api', kind: 'api', role: 'HTTP', functions: [], variables: [], dataflow: [], errors: [] },
-          { slug: '2fa', kind: 'service', role: 'TOTP', functions: [], variables: [], dataflow: [], errors: [] },
+          {
+            slug: 'ui',
+            kind: 'ui',
+            role: 'Form',
+            functions: [],
+            variables: [],
+            dataflow: [],
+            errors: [],
+          },
+          {
+            slug: 'api',
+            kind: 'api',
+            role: 'HTTP',
+            functions: [],
+            variables: [],
+            dataflow: [],
+            errors: [],
+          },
+          {
+            slug: '2fa',
+            kind: 'service',
+            role: 'TOTP',
+            functions: [],
+            variables: [],
+            dataflow: [],
+            errors: [],
+          },
         ],
         edges: [],
       },
@@ -166,10 +253,22 @@ test('mergeOverlay applies feature overrides and removals', () => {
 
 test('mergeOverlay removes features and submodules listed in _removed', () => {
   const base = sampleState();
-  base.features.push({ slug: 'get-codes', title: 'Codes', submodules: [{ slug: 'svc', kind: 'service', role: '' }], edges: [] });
+  base.features.push({
+    slug: 'get-codes',
+    title: 'Codes',
+    submodules: [{ slug: 'svc', kind: 'service', role: '' }],
+    edges: [],
+  });
   const overlay = {
-    meta: null, actors: null, edges: null, featureOrder: null, features: {},
-    removed: { features: ['get-codes'], submodules: [{ feature: 'register', submodule: 'ui' }] },
+    meta: null,
+    actors: null,
+    edges: null,
+    featureOrder: null,
+    features: {},
+    removed: {
+      features: ['get-codes'],
+      submodules: [{ feature: 'register', submodule: 'ui' }],
+    },
   };
   const merged = stateLib.mergeOverlay(base, overlay);
   assert.equal(merged.features.length, 1);
@@ -181,16 +280,37 @@ test('mergeOverlay removes features and submodules listed in _removed', () => {
 test('diffPages classifies modified/added/removed correctly', () => {
   const base = sampleState();
   const merged = JSON.parse(JSON.stringify(base));
-  merged.features[0].submodules.push({ slug: '2fa', kind: 'service', role: 'TOTP', functions: [], variables: [], dataflow: [], errors: [] });
+  merged.features[0].submodules.push({
+    slug: '2fa',
+    kind: 'service',
+    role: 'TOTP',
+    functions: [],
+    variables: [],
+    dataflow: [],
+    errors: [],
+  });
   merged.features[0].submodules[1].role = 'HTTP v2';
-  merged.features.push({ slug: 'admin', title: 'Admin', submodules: [{ slug: 'ui', kind: 'ui', role: '' }], edges: [], dependsOn: [], story: '' });
+  merged.features.push({
+    slug: 'admin',
+    title: 'Admin',
+    submodules: [{ slug: 'ui', kind: 'ui', role: '' }],
+    edges: [],
+    dependsOn: [],
+    story: '',
+  });
 
   const diff = stateLib.diffPages(base, merged);
   assert.deepEqual([...diff.addedFeatures], ['admin']);
   assert.deepEqual([...diff.modifiedFeatures], ['register']);
   assert.deepEqual(diff.removedFeatures.size, 0);
-  assert.deepEqual(diff.modifiedSubmodules.map((s) => `${s.feature}/${s.submodule}`), ['register/api']);
-  assert.deepEqual(diff.addedSubmodules.map((s) => `${s.feature}/${s.submodule}`).sort(), ['admin/ui', 'register/2fa']);
+  assert.deepEqual(
+    diff.modifiedSubmodules.map((s) => `${s.feature}/${s.submodule}`),
+    ['register/api'],
+  );
+  assert.deepEqual(
+    diff.addedSubmodules.map((s) => `${s.feature}/${s.submodule}`).sort(),
+    ['admin/ui', 'register/2fa'],
+  );
   assert.equal(diff.macroChanged, true);
 });
 
@@ -204,18 +324,27 @@ test('loadOverlay / saveOverlay round-trip', () => {
       featureOrder: null,
       features: {
         register: {
-          slug: 'register', title: 'Register', story: '', dependsOn: [],
-          submodules: [{ slug: 'ui', kind: 'ui', role: 'Form' }], edges: [],
+          slug: 'register',
+          title: 'Register',
+          story: '',
+          dependsOn: [],
+          submodules: [{ slug: 'ui', kind: 'ui', role: 'Form' }],
+          edges: [],
         },
       },
-      removed: { features: ['legacy'], submodules: [{ feature: 'register', submodule: 'old' }] },
+      removed: {
+        features: ['legacy'],
+        submodules: [{ feature: 'register', submodule: 'old' }],
+      },
     };
     stateLib.saveOverlay(dir, overlay);
     const loaded = stateLib.loadOverlay(dir);
     assert.deepEqual(loaded.meta, { title: 'next' });
     assert.equal(Object.keys(loaded.features).length, 1);
     assert.deepEqual(loaded.removed.features, ['legacy']);
-    assert.deepEqual(loaded.removed.submodules, [{ feature: 'register', submodule: 'old' }]);
+    assert.deepEqual(loaded.removed.submodules, [
+      { feature: 'register', submodule: 'old' },
+    ]);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

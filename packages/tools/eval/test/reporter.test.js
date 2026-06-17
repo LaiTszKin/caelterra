@@ -21,9 +21,27 @@ describe('REGTEST-15: 大量 scores 報告生成', () => {
         testId,
         overallScore: 30 + (i % 70),
         dimensions: [
-          { name: 'instruction_adherence', score: 30 + (i % 70), maxScore: 100, weight: 0.33, comments: 'comment' },
-          { name: 'tool_calling', score: 30 + (i % 70), maxScore: 100, weight: 0.33, comments: 'comment' },
-          { name: 'result_quality', score: 30 + (i % 70), maxScore: 100, weight: 0.34, comments: 'comment' },
+          {
+            name: 'instruction_adherence',
+            score: 30 + (i % 70),
+            maxScore: 100,
+            weight: 0.33,
+            comments: 'comment',
+          },
+          {
+            name: 'tool_calling',
+            score: 30 + (i % 70),
+            maxScore: 100,
+            weight: 0.33,
+            comments: 'comment',
+          },
+          {
+            name: 'result_quality',
+            score: 30 + (i % 70),
+            maxScore: 100,
+            weight: 0.34,
+            comments: 'comment',
+          },
         ],
         issues,
         summary: `Summary for test ${testId}`,
@@ -35,7 +53,10 @@ describe('REGTEST-15: 大量 scores 報告生成', () => {
     const report = generateReport(scores, '2026-05-29', 'test-skill');
     const elapsed = Date.now() - start;
 
-    assert.ok(elapsed < 1000, `Report generation took ${elapsed}ms, expected < 1000ms`);
+    assert.ok(
+      elapsed < 1000,
+      `Report generation took ${elapsed}ms, expected < 1000ms`,
+    );
     assert.ok(report.length > 0, 'Report should not be empty');
     assert.ok(report.includes('Q001'), 'Report should include Q001');
     assert.ok(report.includes('Q100'), 'Report should include Q100');

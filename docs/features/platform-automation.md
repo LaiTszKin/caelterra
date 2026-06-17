@@ -9,4 +9,3 @@
 - **Given** 使用者知道 issue 編號
 - **When** 使用 `read-github-issue` 技能
 - **Then** 顯示 issue 完整內容與討論串
-

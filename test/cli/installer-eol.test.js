@@ -10,12 +10,17 @@ describe('installer EOL usage', () => {
     // The manifest write should use adapter.EOL or platformAdapter.EOL
     const manifestLines = source
       .split('\n')
-      .filter(line => line.includes('MANIFEST_FILENAME') && line.includes('writeFile'));
+      .filter(
+        (line) =>
+          line.includes('MANIFEST_FILENAME') && line.includes('writeFile'),
+      );
 
     for (const line of manifestLines) {
       assert.ok(
-        line.includes('adapter.EOL') || line.includes('platformAdapter.EOL') || line.includes('adapter.EOL'),
-        `Manifest write should use adapter.EOL, got: ${line.trim()}`
+        line.includes('adapter.EOL') ||
+          line.includes('platformAdapter.EOL') ||
+          line.includes('adapter.EOL'),
+        `Manifest write should use adapter.EOL, got: ${line.trim()}`,
       );
     }
   });

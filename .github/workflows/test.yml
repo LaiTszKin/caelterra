@@ -12,12 +12,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - name: Lint check
+        run: pnpm lint --cache
+      - name: Format check
+        run: pnpm format:check
       # Runs bash scripts/test.sh with COVERAGE=true for coverage reporting.
       # Uses shell:bash for Windows compatibility (Git Bash from Git for Windows).
       # Coverage thresholds enforced via run_coverage_group in scripts/test.sh.

@@ -51,11 +51,7 @@ interface ToolDispatcher {
  * 需要在 workspace 內真實執行的工具集合。
  * 當 workspaceDir 存在時，這些工具會實際讀取工作目錄中的檔案。
  */
-const WORKSPACE_TOOLS: ReadonlySet<string> = new Set([
-  'Read',
-  'Grep',
-  'Glob',
-]);
+const WORKSPACE_TOOLS: ReadonlySet<string> = new Set(['Read', 'Grep', 'Glob']);
 
 /**
  * 維持模擬回傳的工具集合。
@@ -83,10 +79,10 @@ const WRITE_TOOLS: ReadonlySet<string> = new Set([
  */
 function buildReadResponse(params: Record<string, unknown>): string {
   const path =
-    typeof params.path === 'string'
-      ? params.path
-      : typeof params.file_path === 'string'
-        ? params.file_path
+    typeof params['path'] === 'string'
+      ? params['path']
+      : typeof params['file_path'] === 'string'
+        ? params['file_path']
         : '(unknown)';
   return `Content of ${path}`;
 }
@@ -96,14 +92,14 @@ function buildReadResponse(params: Record<string, unknown>): string {
  */
 function buildWriteResponse(params: Record<string, unknown>): string {
   const path =
-    typeof params.path === 'string'
-      ? params.path
-      : typeof params.file_path === 'string'
-        ? params.file_path
+    typeof params['path'] === 'string'
+      ? params['path']
+      : typeof params['file_path'] === 'string'
+        ? params['file_path']
         : '(unknown)';
-  const content = params.content ?? '';
+  const content = params['content'] ?? '';
   const length = typeof content === 'string' ? content.length : 0;
-  return `Written ${path} (${length} bytes)`;
+  return `Written ${path} (${String(length)} bytes)`;
 }
 
 const UNKNOWN_RESPONSE = 'Passthrough: not intercepted';
@@ -124,10 +120,10 @@ async function executeRead(
   params: Record<string, unknown>,
 ): Promise<MockToolResult> {
   const filePath =
-    typeof params.path === 'string'
-      ? params.path
-      : typeof params.file_path === 'string'
-        ? params.file_path
+    typeof params['path'] === 'string'
+      ? params['path']
+      : typeof params['file_path'] === 'string'
+        ? params['file_path']
         : '';
 
   if (!filePath) {
@@ -151,7 +147,9 @@ async function executeRead(
     };
   }
 
-  const fileExists = await access(fullPath).then(() => true).catch(() => false);
+  const fileExists = await access(fullPath)
+    .then(() => true)
+    .catch(() => false);
   if (!fileExists) {
     return {
       success: false,
@@ -238,7 +236,8 @@ async function executeGrep(
   workspaceDir: string,
   params: Record<string, unknown>,
 ): Promise<MockToolResult> {
-  const pattern = typeof params.pattern === 'string' ? params.pattern : '';
+  const pattern =
+    typeof params['pattern'] === 'string' ? params['pattern'] : '';
 
   if (!pattern) {
     return {
@@ -258,14 +257,17 @@ async function executeGrep(
         // 檔案大小檢查：超過 1MB 跳過 (避免將大型檔案載入記憶體)
         const fileStat = await stat(fullPath);
         if (fileStat.size > 1024 * 1024) {
-          results.push(`[isolation] Skipped large file: ${relPath} (${(fileStat.size / 1024 / 1024).toFixed(1)}MB)`);
+          results.push(
+            `[isolation] Skipped large file: ${relPath} (${(fileStat.size / 1024 / 1024).toFixed(1)}MB)`,
+          );
           return;
         }
         const content = await readFile(fullPath, 'utf-8');
         const lines = content.split('\n');
         for (let i = 0; i < lines.length; i++) {
-          if (lines[i].includes(pattern)) {
-            results.push(`${relPath}:${i + 1}:${lines[i]}`);
+          const line = lines[i] ?? '';
+          if (line.includes(pattern)) {
+            results.push(`${relPath}:${String(i + 1)}:${line}`);
           }
         }
       } catch {
@@ -275,7 +277,9 @@ async function executeGrep(
   );
 
   if (skippedCount > 0) {
-    results.push(`[isolation] Warning: ${skippedCount} path(s) could not be read`);
+    results.push(
+      `[isolation] Warning: ${String(skippedCount)} path(s) could not be read`,
+    );
   }
 
   if (results.length === 0) {
@@ -303,7 +307,8 @@ async function executeGlob(
   workspaceDir: string,
   params: Record<string, unknown>,
 ): Promise<MockToolResult> {
-  const pattern = typeof params.pattern === 'string' ? params.pattern : '';
+  const pattern =
+    typeof params['pattern'] === 'string' ? params['pattern'] : '';
 
   if (!pattern) {
     return {
@@ -337,15 +342,18 @@ async function executeGlob(
   const skippedCount = await walkDir(
     workspaceDir,
     workspaceDir,
-    async (_fullPath, relPath, entry) => {
+    (_fullPath, relPath, entry) => {
       if (entry.isFile() && regex.test(relPath)) {
         matches.push(relPath);
       }
+      return Promise.resolve();
     },
   );
 
   if (skippedCount > 0) {
-    matches.push(`[isolation] Warning: ${skippedCount} path(s) could not be read`);
+    matches.push(
+      `[isolation] Warning: ${String(skippedCount)} path(s) could not be read`,
+    );
   }
 
   if (matches.length === 0) {
@@ -365,14 +373,17 @@ async function executeGlob(
  * 將命令字串拆分為基底命令與引數陣列，
  * 正確處理單引號和雙引號內的空白字元。
  */
-function parseCommandArgs(command: string): { baseCmd: string; args: string[] } {
+function parseCommandArgs(command: string): {
+  baseCmd: string;
+  args: string[];
+} {
   const tokens: string[] = [];
   let current = '';
   let inSingle = false;
   let inDouble = false;
 
   for (let i = 0; i < command.length; i++) {
-    const ch = command[i];
+    const ch = command[i] ?? '';
 
     if (inSingle) {
       if (ch === "'") {
@@ -407,14 +418,27 @@ function parseCommandArgs(command: string): { baseCmd: string; args: string[] } 
   }
 
   return {
-    baseCmd: tokens.length > 0 ? tokens[0] : '',
+    baseCmd: tokens.length > 0 ? (tokens[0] ?? '') : '',
     args: tokens.slice(1),
   };
 }
 
 const SAFE_BASH_COMMANDS = new Set([
-  'ls', 'cat', 'pwd', 'echo', 'head', 'tail', 'wc', 'find',
-  'grep', 'sort', 'uniq', 'which', 'date', 'printf', 'tree',
+  'ls',
+  'cat',
+  'pwd',
+  'echo',
+  'head',
+  'tail',
+  'wc',
+  'find',
+  'grep',
+  'sort',
+  'uniq',
+  'which',
+  'date',
+  'printf',
+  'tree',
 ]);
 
 const FIND_DANGEROUS_FLAGS = new Set(['-exec', '-execdir', '-delete']);
@@ -423,23 +447,36 @@ async function executeBash(
   workspaceDir: string,
   params: Record<string, unknown>,
 ): Promise<MockToolResult> {
-  const command = typeof params.command === 'string' ? params.command.trim() : '';
+  const command =
+    typeof params['command'] === 'string' ? params['command'].trim() : '';
   if (!command) {
-    return { success: false, data: 'Error: No command provided for Bash', tool: 'Bash' };
+    return {
+      success: false,
+      data: 'Error: No command provided for Bash',
+      tool: 'Bash',
+    };
   }
 
   const { baseCmd, args } = parseCommandArgs(command);
 
   if (!SAFE_BASH_COMMANDS.has(baseCmd)) {
     console.warn(`[isolation] Unsafe Bash command intercepted: ${baseCmd}`);
-    return { success: true, data: `${command}: completed (read-only mode).`, tool: 'Bash' };
+    return {
+      success: true,
+      data: `${command}: completed (read-only mode).`,
+      tool: 'Bash',
+    };
   }
 
   // 修正 1: find -exec 危險旗標攔截
   if (baseCmd === 'find') {
-    if (args.some(a => FIND_DANGEROUS_FLAGS.has(a))) {
+    if (args.some((a) => FIND_DANGEROUS_FLAGS.has(a))) {
       console.warn(`[isolation] Dangerous find flag intercepted: ${command}`);
-      return { success: true, data: `find: completed (dangerous flags disabled).`, tool: 'Bash' };
+      return {
+        success: true,
+        data: `find: completed (dangerous flags disabled).`,
+        tool: 'Bash',
+      };
     }
   }
 
@@ -450,7 +487,11 @@ async function executeBash(
     const rel = relative(normalizedWorkspace, fullPath);
     if (rel.startsWith('..')) {
       console.warn(`[isolation] Path escape attempt intercepted: ${command}`);
-      return { success: true, data: `Error: Access denied — paths outside workspace are restricted.`, tool: 'Bash' };
+      return {
+        success: true,
+        data: `Error: Access denied — paths outside workspace are restricted.`,
+        tool: 'Bash',
+      };
     }
   }
 

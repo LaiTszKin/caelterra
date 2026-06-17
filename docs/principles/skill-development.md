@@ -6,7 +6,8 @@
 
 **理由**: 最小化 frontmatter 降低維護成本，所有技能中繼資料可由檔案系統結構推導。
 
-**範例**: 
+**範例**:
+
 ```yaml
 ---
 name: systematic-debug

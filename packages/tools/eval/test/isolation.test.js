@@ -30,7 +30,10 @@ describe('FIX-01: isolation.ts dispatch() 真實執行 Read 工具', () => {
 
     assert.equal(result.success, true);
     assert.equal(result.tool, 'Read');
-    assert.ok(result.data.includes('# Test Spec'), `Expected data to contain "# Test Spec", got "${result.data}"`);
+    assert.ok(
+      result.data.includes('# Test Spec'),
+      `Expected data to contain "# Test Spec", got "${result.data}"`,
+    );
   });
 
   it('讀取不存在的檔案應回傳失敗', async () => {
@@ -127,8 +130,10 @@ describe('FIX-A: Bash 讀寫分離', () => {
       params: { command: 'ls' },
     });
     assert.ok(lsResult.success);
-    assert.ok(lsResult.data.includes('hello.txt'),
-      `ls output should include hello.txt, got: "${lsResult.data}"`);
+    assert.ok(
+      lsResult.data.includes('hello.txt'),
+      `ls output should include hello.txt, got: "${lsResult.data}"`,
+    );
 
     // "cat" should also execute for real
     const catResult = await dispatcher.dispatch({
@@ -136,8 +141,10 @@ describe('FIX-A: Bash 讀寫分離', () => {
       params: { command: 'cat hello.txt' },
     });
     assert.ok(catResult.success);
-    assert.ok(catResult.data.includes('world'),
-      `cat output should include "world", got: "${catResult.data}"`);
+    assert.ok(
+      catResult.data.includes('world'),
+      `cat output should include "world", got: "${catResult.data}"`,
+    );
 
     // Cleanup
     fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -164,7 +171,7 @@ describe('Round 6: FIX-B & FIX-C — Bash 安全防護', () => {
     // Should NOT contain actual file content (intercepted)
     assert.ok(
       !result.data.includes('hello'),
-      `find -exec result should be intercepted, got: "${result.data}"`
+      `find -exec result should be intercepted, got: "${result.data}"`,
     );
 
     // Regular find (without dangerous flags) should work
@@ -173,8 +180,10 @@ describe('Round 6: FIX-B & FIX-C — Bash 安全防護', () => {
       params: { command: 'find . -name "*.txt"' },
     });
     assert.ok(safeResult.success);
-    assert.ok(safeResult.data.includes('test.txt'),
-      `Safe find should list files, got: "${safeResult.data}"`);
+    assert.ok(
+      safeResult.data.includes('test.txt'),
+      `Safe find should list files, got: "${safeResult.data}"`,
+    );
 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -191,7 +200,7 @@ describe('Round 6: FIX-B & FIX-C — Bash 安全防護', () => {
     assert.ok(result1.success);
     assert.ok(
       !result1.data.includes('root:'),
-      `Absolute path cat should be blocked, got: "${result1.data}"`
+      `Absolute path cat should be blocked, got: "${result1.data}"`,
     );
 
     // cat ../../etc/passwd should also be blocked (parent traversal)
@@ -202,7 +211,7 @@ describe('Round 6: FIX-B & FIX-C — Bash 安全防護', () => {
     assert.ok(result2.success);
     assert.ok(
       !result2.data.includes('root:'),
-      `Parent traversal should be blocked, got: "${result2.data}"`
+      `Parent traversal should be blocked, got: "${result2.data}"`,
     );
 
     // cat ./local-file (relative path within workspace) should work
@@ -213,8 +222,10 @@ describe('Round 6: FIX-B & FIX-C — Bash 安全防護', () => {
       params: { command: 'cat local.txt' },
     });
     assert.ok(result3.success);
-    assert.ok(result3.data.includes('workspace content'),
-      `Relative path within workspace should work, got: "${result3.data}"`);
+    assert.ok(
+      result3.data.includes('workspace content'),
+      `Relative path within workspace should work, got: "${result3.data}"`,
+    );
 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -226,20 +237,22 @@ describe('Round 6: FIX-B & FIX-C — Bash 安全防護', () => {
 describe('Round 6: FIX-D & FIX-E — 透明度與 async I/O', () => {
   it('REGTEST-04: unsafe Bash commands should not leak [Simulated] marker', () => {
     const source = fs.readFileSync(
-      new URL('../isolation.ts', import.meta.url), 'utf-8'
+      new URL('../isolation.ts', import.meta.url),
+      'utf-8',
     );
 
     // Verify no [Simulated] string in the source
     const simulatedMatches = source.match(/\[Simulated\]/g);
     assert.ok(
       !simulatedMatches || simulatedMatches.length === 0,
-      'Source should not contain [Simulated] marker (violates R4.1 transparency)'
+      'Source should not contain [Simulated] marker (violates R4.1 transparency)',
     );
   });
 
   it('REGTEST-05: executeGrep/executeGlob should not use sync I/O', () => {
     const source = fs.readFileSync(
-      new URL('../isolation.ts', import.meta.url), 'utf-8'
+      new URL('../isolation.ts', import.meta.url),
+      'utf-8',
     );
 
     // Find executeGrep function body
@@ -249,11 +262,11 @@ describe('Round 6: FIX-D & FIX-E — 透明度與 async I/O', () => {
 
     assert.ok(
       !grepBody.includes('readdirSync'),
-      'executeGrep should not use readdirSync (use async readdir)'
+      'executeGrep should not use readdirSync (use async readdir)',
     );
     assert.ok(
       !grepBody.includes('readFileSync'),
-      'executeGrep should not use readFileSync (use async readFile)'
+      'executeGrep should not use readFileSync (use async readFile)',
     );
 
     // Find executeGlob function body
@@ -263,7 +276,7 @@ describe('Round 6: FIX-D & FIX-E — 透明度與 async I/O', () => {
 
     assert.ok(
       !globBody.includes('readdirSync'),
-      'executeGlob should not use readdirSync (use async readdir)'
+      'executeGlob should not use readdirSync (use async readdir)',
     );
   });
 });

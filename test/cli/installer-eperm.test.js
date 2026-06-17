@@ -53,9 +53,8 @@ describe('installer EPERM fallback', () => {
     };
 
     try {
-      const { installLinks } = await import(
-        '../../packages/cli/dist/installer.js'
-      );
+      const { installLinks } =
+        await import('../../packages/cli/dist/installer.js');
 
       await installLinks({
         toolkitHome,

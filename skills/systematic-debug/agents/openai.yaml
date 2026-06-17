@@ -1,4 +1,4 @@
 interface:
-  display_name: "Systematic Debug"
-  short_description: "Diagnose bugs with reproduction tests before fixing"
-  default_prompt: "Use $systematic-debug to understand expected vs observed behavior, inspect relevant code paths, write or extend tests for every plausible cause, confirm the true root cause from reproduction evidence, and classify each symptom as toolchain/platform, harness interference, stale test contract, or real product bug before fixing. When the issue involves a bounded runtime, stress profile, or chaos harness, anchor on one canonical run root, map failures to concrete lifecycle stages, preserve a minimally executable path while tuning the profile, and rerun the same bounded scenario to prove the target stage still executes under pressure."
+  display_name: 'Systematic Debug'
+  short_description: 'Diagnose bugs with reproduction tests before fixing'
+  default_prompt: 'Use $systematic-debug to understand expected vs observed behavior, inspect relevant code paths, write or extend tests for every plausible cause, confirm the true root cause from reproduction evidence, and classify each symptom as toolchain/platform, harness interference, stale test contract, or real product bug before fixing. When the issue involves a bounded runtime, stress profile, or chaos harness, anchor on one canonical run root, map failures to concrete lifecycle stages, preserve a minimally executable path while tuning the profile, and rerun the same bounded scenario to prove the target stage still executes under pressure.'

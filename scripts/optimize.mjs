@@ -20,7 +20,14 @@
  * 僅使用 Node.js 內建模組。
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, copyFileSync } from 'fs';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  copyFileSync,
+} from 'fs';
 import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 
@@ -32,22 +39,130 @@ const SEVERITY_RANK = { P0: 0, P1: 1, P2: 2 };
 
 // --- Common words to filter out in keyword extraction ---
 const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'can', 'shall', 'to', 'of', 'in', 'for',
-  'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during',
-  'before', 'after', 'above', 'below', 'between', 'and', 'but', 'or',
-  'nor', 'not', 'so', 'yet', 'both', 'either', 'neither', 'each',
-  'every', 'all', 'any', 'few', 'more', 'most', 'other', 'some', 'such',
-  'no', 'only', 'own', 'same', 'than', 'too', 'very', 'just',
-  'that', 'this', 'these', 'those', 'it', 'its', 'they', 'them',
-  'their', 'what', 'which', 'who', 'whom', 'when', 'where', 'why',
-  'how', 'if', 'then', 'else',
-  'agent', 'model', 'file', 'files', 'issue', 'issues',
-  '描述', '問題', '沒有', '無法', '未能', '需要', '應該', '可以',
-  '進行', '使用', '處理', '檢查', '確認', '提供', '包含', '存在',
-  '因為', '所以', '但是', '而且', '或者', '以及', '關於', '這個',
-  '一個', '一些', '所有', '每個',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'can',
+  'shall',
+  'to',
+  'of',
+  'in',
+  'for',
+  'on',
+  'with',
+  'at',
+  'by',
+  'from',
+  'as',
+  'into',
+  'through',
+  'during',
+  'before',
+  'after',
+  'above',
+  'below',
+  'between',
+  'and',
+  'but',
+  'or',
+  'nor',
+  'not',
+  'so',
+  'yet',
+  'both',
+  'either',
+  'neither',
+  'each',
+  'every',
+  'all',
+  'any',
+  'few',
+  'more',
+  'most',
+  'other',
+  'some',
+  'such',
+  'no',
+  'only',
+  'own',
+  'same',
+  'than',
+  'too',
+  'very',
+  'just',
+  'that',
+  'this',
+  'these',
+  'those',
+  'it',
+  'its',
+  'they',
+  'them',
+  'their',
+  'what',
+  'which',
+  'who',
+  'whom',
+  'when',
+  'where',
+  'why',
+  'how',
+  'if',
+  'then',
+  'else',
+  'agent',
+  'model',
+  'file',
+  'files',
+  'issue',
+  'issues',
+  '描述',
+  '問題',
+  '沒有',
+  '無法',
+  '未能',
+  '需要',
+  '應該',
+  '可以',
+  '進行',
+  '使用',
+  '處理',
+  '檢查',
+  '確認',
+  '提供',
+  '包含',
+  '存在',
+  '因為',
+  '所以',
+  '但是',
+  '而且',
+  '或者',
+  '以及',
+  '關於',
+  '這個',
+  '一個',
+  '一些',
+  '所有',
+  '每個',
 ]);
 
 /**
@@ -72,18 +187,29 @@ function simpleStem(word) {
   if (word.endsWith('es') && word.length > 5) {
     const stem = word.slice(0, -2);
     const lastChars = stem.slice(-2);
-    if ((/[sxz]$/.test(stem) || lastChars === 'sh' || lastChars === 'ch') && stem.length >= 4) {
+    if (
+      (/[sxz]$/.test(stem) || lastChars === 'sh' || lastChars === 'ch') &&
+      stem.length >= 4
+    ) {
       return stem;
     }
     // -es preceded by consonant+vowel: also a valid -es suffix (e.g., "tomatoes")
-    if (stem.length >= 4 && /[bcdfghjklmnpqrstvwxyz][aeiou][bcdfghjklmnpqrstvwxyz]o$/.test(stem)) {
+    if (
+      stem.length >= 4 &&
+      /[bcdfghjklmnpqrstvwxyz][aeiou][bcdfghjklmnpqrstvwxyz]o$/.test(stem)
+    ) {
       return stem;
     }
     // Fall through to -s check
   }
 
   // Step 3: -s (plural) - only if result looks like a valid word
-  if (word.endsWith('s') && !word.endsWith('ss') && !word.endsWith('us') && word.length > 5) {
+  if (
+    word.endsWith('s') &&
+    !word.endsWith('ss') &&
+    !word.endsWith('us') &&
+    word.length > 5
+  ) {
     const stem = word.slice(0, -1);
     if (stem.length >= 4) return stem;
   }
@@ -130,10 +256,10 @@ function extractKeywords(text) {
     .toLowerCase()
     .replace(/[^a-z0-9一-鿿]+/g, ' ')
     .split(/\s+/)
-    .filter(t => t.length >= 2 && !STOP_WORDS.has(t));
+    .filter((t) => t.length >= 2 && !STOP_WORDS.has(t));
 
   // Apply stemming normalization
-  const stemmed = tokens.map(t => {
+  const stemmed = tokens.map((t) => {
     // Don't stem short words or Chinese characters
     if (t.length <= 3 || /[一-鿿]/.test(t)) return t;
     return simpleStem(t);
@@ -192,13 +318,15 @@ async function callJudgeModelWithRaw(messages, env) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${env.JUDGE_API_KEY}`,
+      Authorization: `Bearer ${env.JUDGE_API_KEY}`,
     },
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '(unable to read error body)');
+    const errorText = await response
+      .text()
+      .catch(() => '(unable to read error body)');
     throw new Error(`Judge API error ${response.status}: ${errorText}`);
   }
 
@@ -228,7 +356,9 @@ function loadAllScores(date) {
 
   if (!existsSync(resultsBase)) {
     console.warn(`Results directory not found: ${resultsBase}`);
-    console.warn('Skipping score loading. Run run-evals.mjs and score.mjs first.');
+    console.warn(
+      'Skipping score loading. Run run-evals.mjs and score.mjs first.',
+    );
     return [];
   }
 
@@ -251,7 +381,9 @@ function loadAllScores(date) {
       const score = JSON.parse(raw);
       allScores.push({ testNo, score });
     } catch (err) {
-      console.warn(`Warning: Corrupt score.json for ${testNo}: ${err.message} -- skipped`);
+      console.warn(
+        `Warning: Corrupt score.json for ${testNo}: ${err.message} -- skipped`,
+      );
     }
   }
 
@@ -297,7 +429,7 @@ async function deduplicateIssues(issues, env, judgeAvailable) {
   if (issues.length === 0) return [];
 
   // Pre-compute keyword sets for each issue
-  const issueKeys = issues.map(issue => {
+  const issueKeys = issues.map((issue) => {
     const descWords = extractKeywords(issue.description);
     const evidWords = extractKeywords(issue.evidence);
     return {
@@ -339,14 +471,23 @@ async function deduplicateIssues(issues, env, judgeAvailable) {
         const candidate = groupIssues[j];
 
         // Check description similarity
-        const descSim = jaccardSimilarity(base._descKeywords, candidate._descKeywords);
+        const descSim = jaccardSimilarity(
+          base._descKeywords,
+          candidate._descKeywords,
+        );
 
         // Check evidence similarity (same trace reference)
-        const evidSim = jaccardSimilarity(base._evidKeywords, candidate._evidKeywords);
+        const evidSim = jaccardSimilarity(
+          base._evidKeywords,
+          candidate._evidKeywords,
+        );
 
         // Merge if description similarity > 0.35 OR they share trace evidence
         // (threshold accounts for stemming normalization and synonym variation)
-        if (descSim > 0.35 || (base.evidence && candidate.evidence && evidSim > 0.4)) {
+        if (
+          descSim > 0.35 ||
+          (base.evidence && candidate.evidence && evidSim > 0.4)
+        ) {
           cluster.push(candidate);
           used.add(j);
         }
@@ -354,18 +495,20 @@ async function deduplicateIssues(issues, env, judgeAvailable) {
 
       // Merge cluster into a single deduped issue
       const maxSeverity = cluster
-        .map(i => i.severity)
+        .map((i) => i.severity)
         .reduce((max, s) => {
           const rank = SEVERITY_RANK;
           return (rank[s] ?? 2) < (rank[max] ?? 2) ? s : max;
         }, 'P2');
 
-      const affectedTests = [...new Set(cluster.map(i => i.testNo))].sort();
-      const allEvidence = [...new Set(cluster.map(i => i.evidence).filter(Boolean))];
+      const affectedTests = [...new Set(cluster.map((i) => i.testNo))].sort();
+      const allEvidence = [
+        ...new Set(cluster.map((i) => i.evidence).filter(Boolean)),
+      ];
 
       // Use the longest/most descriptive description from the cluster
       const bestDescription = cluster
-        .map(i => i.description)
+        .map((i) => i.description)
         .reduce((best, d) => (d.length > best.length ? d : best), '');
 
       optIdCounter++;
@@ -420,7 +563,7 @@ async function refineDedupWithJudge(deduped, env) {
     byCategory[cat].push(issue);
   }
 
-  for (const [category, group] of Object.entries(byCategory)) {
+  for (const [, group] of Object.entries(byCategory)) {
     if (group.length <= 1) continue;
     for (let i = 0; i < group.length; i++) {
       for (let j = i + 1; j < group.length; j++) {
@@ -433,41 +576,49 @@ async function refineDedupWithJudge(deduped, env) {
 
   // Send to judge model for pair comparison (parallelized with promise pool)
   const { promisePool } = await import('./lib/promise-pool.mjs');
-  const judgeConcurrency = env.JUDGE_CONCURRENCY ? parseInt(env.JUDGE_CONCURRENCY, 10) : 5;
+  const judgeConcurrency = env.JUDGE_CONCURRENCY
+    ? parseInt(env.JUDGE_CONCURRENCY, 10)
+    : 5;
 
-  const comparisonResults = await promisePool(pairs, async ({ a, b }) => {
-    // Quick pre-filter: compute keyword similarity on-the-fly, skip if too different
-    const aKeys = extractKeywords(a.description);
-    const bKeys = extractKeywords(b.description);
-    const descSim = jaccardSimilarity(aKeys, bKeys);
-    if (descSim < 0.25) return null;
+  const comparisonResults = await promisePool(
+    pairs,
+    async ({ a, b }) => {
+      // Quick pre-filter: compute keyword similarity on-the-fly, skip if too different
+      const aKeys = extractKeywords(a.description);
+      const bKeys = extractKeywords(b.description);
+      const descSim = jaccardSimilarity(aKeys, bKeys);
+      if (descSim < 0.25) return null;
 
-    const prompt = [
-      'You are comparing two optimization issues to determine if they describe the same underlying problem.',
-      '',
-      'Issue A:',
-      `  Description: ${a.description}`,
-      `  Evidence: ${a.evidence?.join?.('; ') || '(none)'}`,
-      '',
-      'Issue B:',
-      `  Description: ${b.description}`,
-      `  Evidence: ${b.evidence?.join?.('; ') || '(none)'}`,
-      '',
-      'Reply with exactly one word: "YES" if they describe the same issue, "NO" otherwise.',
-    ].join('\n');
+      const prompt = [
+        'You are comparing two optimization issues to determine if they describe the same underlying problem.',
+        '',
+        'Issue A:',
+        `  Description: ${a.description}`,
+        `  Evidence: ${a.evidence?.join?.('; ') || '(none)'}`,
+        '',
+        'Issue B:',
+        `  Description: ${b.description}`,
+        `  Evidence: ${b.evidence?.join?.('; ') || '(none)'}`,
+        '',
+        'Reply with exactly one word: "YES" if they describe the same issue, "NO" otherwise.',
+      ].join('\n');
 
-    try {
-      const { content } = await callJudgeModelWithRaw(
-        [{ role: 'user', content: prompt }],
-        env
-      );
-      const trimmed = content.trim().toUpperCase();
-      return { a, b, shouldMerge: trimmed.startsWith('YES') };
-    } catch (err) {
-      console.warn(`Judge comparison failed for pair: ${err.message.split('\n')[0]}`);
-      return null;
-    }
-  }, judgeConcurrency);
+      try {
+        const { content } = await callJudgeModelWithRaw(
+          [{ role: 'user', content: prompt }],
+          env,
+        );
+        const trimmed = content.trim().toUpperCase();
+        return { a, b, shouldMerge: trimmed.startsWith('YES') };
+      } catch (err) {
+        console.warn(
+          `Judge comparison failed for pair: ${err.message.split('\n')[0]}`,
+        );
+        return null;
+      }
+    },
+    judgeConcurrency,
+  );
 
   const comparisons = comparisonResults.filter(Boolean);
 
@@ -504,14 +655,18 @@ async function refineDedupWithJudge(deduped, env) {
   const result = [];
   for (const [, group] of groups) {
     const maxSeverity = group
-      .map(i => i.severity)
+      .map((i) => i.severity)
       .reduce((max, s) => {
         const rank = { P0: 0, P1: 1, P2: 2 };
         return (rank[s] ?? 2) < (rank[max] ?? 2) ? s : max;
       }, 'P2');
 
-    const affectedTests = [...new Set(group.flatMap(i => i.affectedTests))].sort();
-    const allEvidence = [...new Set(group.flatMap(i => i.evidence).filter(Boolean))];
+    const affectedTests = [
+      ...new Set(group.flatMap((i) => i.affectedTests)),
+    ].sort();
+    const allEvidence = [
+      ...new Set(group.flatMap((i) => i.evidence).filter(Boolean)),
+    ];
     const totalFrequency = group.reduce((sum, i) => sum + i.frequency, 0);
 
     const merged = {
@@ -565,12 +720,14 @@ async function generateSuggestedFix(issue, env, judgeAvailable) {
 
       const { content } = await callJudgeModelWithRaw(
         [{ role: 'user', content: prompt }],
-        env
+        env,
       );
 
       return content.trim();
     } catch (err) {
-      console.warn(`Judge model fix suggestion failed: ${err.message.split('\n')[0]}`);
+      console.warn(
+        `Judge model fix suggestion failed: ${err.message.split('\n')[0]}`,
+      );
       // Fall through to template
     }
   }
@@ -589,19 +746,39 @@ function generateTemplateSuggestion(issue) {
   const desc = issue.description.toLowerCase();
 
   if (issue.category === 'skill') {
-    if (desc.includes('流程') || desc.includes('process') || desc.includes('workflow')) {
+    if (
+      desc.includes('流程') ||
+      desc.includes('process') ||
+      desc.includes('workflow')
+    ) {
       return 'Review the skill workflow steps and add explicit decision points where the agent should stop and verify. Consider adding guard clauses for scenarios described in the failing test cases.';
     }
-    if (desc.includes('格式') || desc.includes('format') || desc.includes('template')) {
+    if (
+      desc.includes('格式') ||
+      desc.includes('format') ||
+      desc.includes('template')
+    ) {
       return 'Add explicit format requirements in the skill definition. Include concrete examples of expected output format. Strengthen the validation checklist with format-specific checks.';
     }
-    if (desc.includes('architecture') || desc.includes('架構') || desc.includes('atlas')) {
+    if (
+      desc.includes('architecture') ||
+      desc.includes('架構') ||
+      desc.includes('atlas')
+    ) {
       return 'Add clearer instructions for architecture diff generation. Include fallback behavior when atlas data is missing or stale. Strengthen the drift detection threshold guidance.';
     }
-    if (desc.includes('scope') || desc.includes('範圍') || desc.includes('邊界')) {
+    if (
+      desc.includes('scope') ||
+      desc.includes('範圍') ||
+      desc.includes('邊界')
+    ) {
       return 'Clarify the scope boundaries in the skill definition. Add explicit criteria for when this skill should vs. should not be used. Add negative examples to the skill description.';
     }
-    if (desc.includes('驗收') || desc.includes('checklist') || desc.includes('verify')) {
+    if (
+      desc.includes('驗收') ||
+      desc.includes('checklist') ||
+      desc.includes('verify')
+    ) {
       return 'Strengthen the verification checklist with concrete pass/fail criteria. Require the agent to explicitly check each item before delivering. Add self-review prompts.';
     }
     return 'Review the relevant section of the skill definition. Ensure instructions are specific and unambiguous. Add concrete examples showing both correct and incorrect behavior.';
@@ -611,13 +788,25 @@ function generateTemplateSuggestion(issue) {
     if (desc.includes('template') || desc.includes('模板')) {
       return 'Update the template rendering logic to handle edge cases. Review the placeholder substitution code for completeness. Ensure all placeholder patterns are matched.';
     }
-    if (desc.includes('error') || desc.includes('錯誤') || desc.includes('message')) {
+    if (
+      desc.includes('error') ||
+      desc.includes('錯誤') ||
+      desc.includes('message')
+    ) {
       return 'Improve error messages to be more specific and actionable. Include contextual information in error output. Add guidance for common failure modes.';
     }
-    if (desc.includes('cli') || desc.includes('參數') || desc.includes('flag')) {
+    if (
+      desc.includes('cli') ||
+      desc.includes('參數') ||
+      desc.includes('flag')
+    ) {
       return 'Review the CLI argument parsing logic. Ensure all documented options work correctly. Add validation for mutually exclusive or dependent flags.';
     }
-    if (desc.includes('path') || desc.includes('路徑') || desc.includes('directory')) {
+    if (
+      desc.includes('path') ||
+      desc.includes('路徑') ||
+      desc.includes('directory')
+    ) {
       return 'Review path resolution logic. Ensure relative paths are resolved correctly relative to the expected base directory. Add path normalization.';
     }
     return 'Review the relevant apltk tool implementation. Check input validation, error handling, and edge cases. Ensure consistent behavior across all code paths.';
@@ -627,7 +816,11 @@ function generateTemplateSuggestion(issue) {
   if (desc.includes('超時') || desc.includes('timeout')) {
     return 'Investigate whether the issue is a resource limitation or a code inefficiency. Consider adding timeouts or breaking the task into smaller sub-tasks.';
   }
-  if (desc.includes('parse') || desc.includes('解析') || desc.includes('json')) {
+  if (
+    desc.includes('parse') ||
+    desc.includes('解析') ||
+    desc.includes('json')
+  ) {
     return 'Add robust parsing with fallback handlers. Handle common JSON format variations. Add validation before processing.';
   }
 
@@ -646,7 +839,8 @@ function generateOptimizationPlan(dedupedIssues, date, allScores) {
   // Sort: P0 first, then P1, then P2. Within same severity, sort by frequency descending.
   const severityRank = { P0: 0, P1: 1, P2: 2 };
   const sortedIssues = [...dedupedIssues].sort((a, b) => {
-    const rankDiff = (severityRank[a.severity] ?? 9) - (severityRank[b.severity] ?? 9);
+    const rankDiff =
+      (severityRank[a.severity] ?? 9) - (severityRank[b.severity] ?? 9);
     if (rankDiff !== 0) return rankDiff;
     return b.frequency - a.frequency;
   });
@@ -722,11 +916,21 @@ function resolveSkillMdPath(sourceRoot) {
  * @param {boolean} judgeAvailable
  * @returns {Promise<{success: boolean, message: string}>}
  */
-async function optimizeSkillMd(plan, skillMdPath, env, dryRun, date, judgeAvailable) {
-  const skillIssues = plan.issues.filter(i => i.category === 'skill');
+async function optimizeSkillMd(
+  plan,
+  skillMdPath,
+  env,
+  dryRun,
+  date,
+  judgeAvailable,
+) {
+  const skillIssues = plan.issues.filter((i) => i.category === 'skill');
 
   if (skillIssues.length === 0) {
-    return { success: true, message: 'No skill issues found. Skipping SKILL.md optimization.' };
+    return {
+      success: true,
+      message: 'No skill issues found. Skipping SKILL.md optimization.',
+    };
   }
 
   console.log(`\n=== Optimizing SKILL.md (${skillIssues.length} issues) ===`);
@@ -736,7 +940,10 @@ async function optimizeSkillMd(plan, skillMdPath, env, dryRun, date, judgeAvaila
   try {
     currentContent = readFileSync(skillMdPath, 'utf-8');
   } catch (err) {
-    return { success: false, message: `Cannot read SKILL.md at ${skillMdPath}: ${err.message}` };
+    return {
+      success: false,
+      message: `Cannot read SKILL.md at ${skillMdPath}: ${err.message}`,
+    };
   }
 
   // Extract frontmatter bounds
@@ -760,11 +967,17 @@ async function optimizeSkillMd(plan, skillMdPath, env, dryRun, date, judgeAvaila
     ];
 
     for (const issue of skillIssues) {
-      patchLines.push(`### ${issue.id}: ${issue.severity} - ${issue.description.substring(0, 120)}`);
+      patchLines.push(
+        `### ${issue.id}: ${issue.severity} - ${issue.description.substring(0, 120)}`,
+      );
       patchLines.push('');
       patchLines.push(`- **Frequency**: ${issue.frequency} tests affected`);
-      patchLines.push(`- **Affected Tests**: ${issue.affectedTests.join(', ')}`);
-      patchLines.push(`- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`);
+      patchLines.push(
+        `- **Affected Tests**: ${issue.affectedTests.join(', ')}`,
+      );
+      patchLines.push(
+        `- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`,
+      );
       patchLines.push(`- **Suggested Fix**: ${issue.suggestedFix || '(none)'}`);
       patchLines.push('');
     }
@@ -777,10 +990,13 @@ async function optimizeSkillMd(plan, skillMdPath, env, dryRun, date, judgeAvaila
         patchLines.push('## Judge Model Suggested Changes');
         patchLines.push('');
 
-        const judgePrompt = buildSkillOptimizationPrompt(skillIssues, currentContent);
+        const judgePrompt = buildSkillOptimizationPrompt(
+          skillIssues,
+          currentContent,
+        );
         const { content } = await callJudgeModelWithRaw(
           [{ role: 'user', content: judgePrompt }],
-          env
+          env,
         );
 
         patchLines.push(content);
@@ -789,14 +1005,18 @@ async function optimizeSkillMd(plan, skillMdPath, env, dryRun, date, judgeAvaila
         patchLines.push('');
         patchLines.push('## Template-Based Suggestions');
         patchLines.push('');
-        patchLines.push(generateSkillTemplateChanges(skillIssues, currentContent));
+        patchLines.push(
+          generateSkillTemplateChanges(skillIssues, currentContent),
+        );
       }
     } else {
       patchLines.push('---');
       patchLines.push('');
       patchLines.push('## Template-Based Suggestions');
       patchLines.push('');
-      patchLines.push(generateSkillTemplateChanges(skillIssues, currentContent));
+      patchLines.push(
+        generateSkillTemplateChanges(skillIssues, currentContent),
+      );
     }
 
     const resultsDir = resolve(ROOT_DIR, 'results', 'spec', date);
@@ -819,14 +1039,22 @@ async function optimizeSkillMd(plan, skillMdPath, env, dryRun, date, judgeAvaila
 
   // 2. Get judge model suggestions
   try {
-    const judgePrompt = buildSkillOptimizationPrompt(skillIssues, currentContent);
+    const judgePrompt = buildSkillOptimizationPrompt(
+      skillIssues,
+      currentContent,
+    );
     const { content } = await callJudgeModelWithRaw(
       [{ role: 'user', content: judgePrompt }],
-      env
+      env,
     );
 
     // Parse the judge's suggested changes
-    const newContent = applySkillChanges(currentContent, content, hasFrontmatter, frontmatterEnd);
+    const newContent = applySkillChanges(
+      currentContent,
+      content,
+      hasFrontmatter,
+      frontmatterEnd,
+    );
 
     // 3. Write updated SKILL.md
     writeFileSync(skillMdPath, newContent, 'utf-8');
@@ -849,14 +1077,19 @@ async function optimizeSkillMd(plan, skillMdPath, env, dryRun, date, judgeAvaila
       };
     }
 
-    return { success: true, message: `SKILL.md optimized successfully. Backup: ${bakPath}` };
-
+    return {
+      success: true,
+      message: `SKILL.md optimized successfully. Backup: ${bakPath}`,
+    };
   } catch (err) {
     console.error(`SKILL.md optimization failed: ${err.message}`);
     // Restore backup
     copyFileSync(bakPath, skillMdPath);
     console.log(`Backup restored from ${bakPath}`);
-    return { success: false, message: `Optimization failed: ${err.message}. Backup restored.` };
+    return {
+      success: false,
+      message: `Optimization failed: ${err.message}. Backup restored.`,
+    };
   }
 }
 
@@ -864,9 +1097,12 @@ async function optimizeSkillMd(plan, skillMdPath, env, dryRun, date, judgeAvaila
  * Build the prompt for SKILL.md optimization.
  */
 function buildSkillOptimizationPrompt(skillIssues, currentContent) {
-  const issuesText = skillIssues.map(i =>
-    `- [${i.severity}] ${i.description}\n  Evidence: ${i.evidence.join('; ') || '(none)'}\n  Suggested: ${i.suggestedFix || '(none)'}`
-  ).join('\n\n');
+  const issuesText = skillIssues
+    .map(
+      (i) =>
+        `- [${i.severity}] ${i.description}\n  Evidence: ${i.evidence.join('; ') || '(none)'}\n  Suggested: ${i.suggestedFix || '(none)'}`,
+    )
+    .join('\n\n');
 
   return [
     'You are an expert at improving AI agent skill definitions. A spec-writing skill has been tested',
@@ -907,10 +1143,16 @@ function buildSkillOptimizationPrompt(skillIssues, currentContent) {
  * Simple approach: attempt to parse structured edit instructions from the judge output,
  * falling back to appending suggestions as comments if parsing fails.
  */
-function applySkillChanges(currentContent, judgeOutput, hasFrontmatter, frontmatterEnd) {
+function applySkillChanges(
+  currentContent,
+  judgeOutput,
+  _hasFrontmatter,
+  _frontmatterEnd,
+) {
   // Attempt to extract structured edits from judge output
   // Look for patterns like "FIND: ... REPLACE WITH: ..." or "AFTER: ... INSERT: ..."
-  const findReplacePattern = /(?:FIND|查找|搜尋)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```\s*\n(?:REPLACE WITH|替換為|取代為)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```/gi;
+  const findReplacePattern =
+    /(?:FIND|查找|搜尋)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```\s*\n(?:REPLACE WITH|替換為|取代為)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```/gi;
 
   let modifiedContent = currentContent;
   let appliedCount = 0;
@@ -933,7 +1175,9 @@ function applySkillChanges(currentContent, judgeOutput, hasFrontmatter, frontmat
 
   // If no structured edits found, try parsing markdown code blocks
   // Look for a complete replacement (should be rare and explicit)
-  const fullReplacement = judgeOutput.match(/```markdown\n([\s\S]*?)\n```\n*(?:END|$)/);
+  const fullReplacement = judgeOutput.match(
+    /```markdown\n([\s\S]*?)\n```\n*(?:END|$)/,
+  );
   if (fullReplacement) {
     const newContent = fullReplacement[1].trim();
     const newHasFrontmatter = newContent.startsWith('---');
@@ -945,7 +1189,9 @@ function applySkillChanges(currentContent, judgeOutput, hasFrontmatter, frontmat
 
   // Fallback: prepend the judge suggestions as a comment at the top of the file
   // (after frontmatter) -- this is a conservative fallback for manual review
-  console.warn('Could not parse structured edits from judge output. No changes applied.');
+  console.warn(
+    'Could not parse structured edits from judge output. No changes applied.',
+  );
   console.warn('Review the patch file for manual application.');
 
   return currentContent;
@@ -954,9 +1200,11 @@ function applySkillChanges(currentContent, judgeOutput, hasFrontmatter, frontmat
 /**
  * Generate template-based SKILL.md change suggestions.
  */
-function generateSkillTemplateChanges(skillIssues, currentContent) {
+function generateSkillTemplateChanges(skillIssues, _currentContent) {
   const lines = [];
-  lines.push('The following sections may need attention based on identified issues:');
+  lines.push(
+    'The following sections may need attention based on identified issues:',
+  );
   lines.push('');
 
   for (const issue of skillIssues) {
@@ -966,25 +1214,55 @@ function generateSkillTemplateChanges(skillIssues, currentContent) {
     // Map issue descriptions to likely SKILL.md sections
     const desc = issue.description.toLowerCase();
 
-    if (desc.includes('流程') || desc.includes('process') || desc.includes('步驟')) {
+    if (
+      desc.includes('流程') ||
+      desc.includes('process') ||
+      desc.includes('步驟')
+    ) {
       lines.push('**Likely affected section**: "工作流程" (Workflow)');
-      lines.push('Consider adding decision points, guard clauses, or explicit verification steps.');
+      lines.push(
+        'Consider adding decision points, guard clauses, or explicit verification steps.',
+      );
       lines.push('Add clear "when to do X vs. when to skip X" guidance.');
-    } else if (desc.includes('格式') || desc.includes('format') || desc.includes('輸出')) {
-      lines.push('**Likely affected section**: "驗收條件" (Acceptance Criteria)');
-      lines.push('Specify exact output format expectations. Add format validation steps.');
-    } else if (desc.includes('architecture') || desc.includes('架構') || desc.includes('diff')) {
+    } else if (
+      desc.includes('格式') ||
+      desc.includes('format') ||
+      desc.includes('輸出')
+    ) {
+      lines.push(
+        '**Likely affected section**: "驗收條件" (Acceptance Criteria)',
+      );
+      lines.push(
+        'Specify exact output format expectations. Add format validation steps.',
+      );
+    } else if (
+      desc.includes('architecture') ||
+      desc.includes('架構') ||
+      desc.includes('diff')
+    ) {
       lines.push('**Likely affected section**: Step 7 (architecture diff)');
       lines.push('Add instructions for handling missing/stale atlas data.');
-    } else if (desc.includes('scope') || desc.includes('範圍') || desc.includes('邊界')) {
-      lines.push('**Likely affected section**: "目標" (Goal) and description frontmatter');
-      lines.push('Add explicit scoping rules. Clarify when the skill should NOT be used.');
+    } else if (
+      desc.includes('scope') ||
+      desc.includes('範圍') ||
+      desc.includes('邊界')
+    ) {
+      lines.push(
+        '**Likely affected section**: "目標" (Goal) and description frontmatter',
+      );
+      lines.push(
+        'Add explicit scoping rules. Clarify when the skill should NOT be used.',
+      );
     } else {
-      lines.push('Review the full SKILL.md for sections related to this issue.');
+      lines.push(
+        'Review the full SKILL.md for sections related to this issue.',
+      );
     }
 
     lines.push('');
-    lines.push(`**Suggested Fix**: ${issue.suggestedFix || 'Review and adjust based on test evidence.'}`);
+    lines.push(
+      `**Suggested Fix**: ${issue.suggestedFix || 'Review and adjust based on test evidence.'}`,
+    );
     lines.push('');
   }
 
@@ -1013,12 +1291,25 @@ function mapIssuesToFiles(apltkIssues) {
     // Heuristic mapping based on keywords in description
     let targetFile = null;
 
-    if (desc.includes('create-specs') || desc.includes('template') || desc.includes('模板') ||
-        desc.includes('spec.md') || desc.includes('tasks.md') || desc.includes('slug') ||
-        desc.includes('change-name') || desc.includes('batch')) {
+    if (
+      desc.includes('create-specs') ||
+      desc.includes('template') ||
+      desc.includes('模板') ||
+      desc.includes('spec.md') ||
+      desc.includes('tasks.md') ||
+      desc.includes('slug') ||
+      desc.includes('change-name') ||
+      desc.includes('batch')
+    ) {
       targetFile = 'lib/tools/create-specs.ts';
-    } else if (desc.includes('architecture') || desc.includes('架構') || desc.includes('atlas') ||
-               desc.includes('diff') || desc.includes('merge') || desc.includes('render')) {
+    } else if (
+      desc.includes('architecture') ||
+      desc.includes('架構') ||
+      desc.includes('atlas') ||
+      desc.includes('diff') ||
+      desc.includes('merge') ||
+      desc.includes('render')
+    ) {
       targetFile = 'lib/tools/architecture.ts';
     }
 
@@ -1047,14 +1338,26 @@ function mapIssuesToFiles(apltkIssues) {
  * @param {boolean} judgeAvailable
  * @returns {Promise<{success: boolean, message: string}>}
  */
-async function optimizeApltkTools(plan, sourceRoot, env, dryRun, date, judgeAvailable) {
-  const apltkIssues = plan.issues.filter(i => i.category === 'apltk');
+async function optimizeApltkTools(
+  plan,
+  sourceRoot,
+  env,
+  dryRun,
+  date,
+  judgeAvailable,
+) {
+  const apltkIssues = plan.issues.filter((i) => i.category === 'apltk');
 
   if (apltkIssues.length === 0) {
-    return { success: true, message: 'No apltk issues found. Skipping apltk tool optimization.' };
+    return {
+      success: true,
+      message: 'No apltk issues found. Skipping apltk tool optimization.',
+    };
   }
 
-  console.log(`\n=== Optimizing apltk tools (${apltkIssues.length} issues) ===`);
+  console.log(
+    `\n=== Optimizing apltk tools (${apltkIssues.length} issues) ===`,
+  );
 
   const fileMap = mapIssuesToFiles(apltkIssues);
   const allPatches = [];
@@ -1068,7 +1371,9 @@ async function optimizeApltkTools(plan, sourceRoot, env, dryRun, date, judgeAvai
       continue;
     }
 
-    console.log(`\n--- Processing: ${relativePath} (${issues.length} issues) ---`);
+    console.log(
+      `\n--- Processing: ${relativePath} (${issues.length} issues) ---`,
+    );
 
     let currentCode;
     try {
@@ -1093,17 +1398,23 @@ async function optimizeApltkTools(plan, sourceRoot, env, dryRun, date, judgeAvai
       patchLines.push(`### ${issue.id}: ${issue.severity}`);
       patchLines.push(`- **Description**: ${issue.description}`);
       patchLines.push(`- **Frequency**: ${issue.frequency} tests affected`);
-      patchLines.push(`- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`);
+      patchLines.push(
+        `- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`,
+      );
       patchLines.push(`- **Suggested Fix**: ${issue.suggestedFix || '(none)'}`);
       patchLines.push('');
     }
 
     if (judgeAvailable) {
       try {
-        const judgePrompt = buildApltkOptimizationPrompt(issues, currentCode, relativePath);
+        const judgePrompt = buildApltkOptimizationPrompt(
+          issues,
+          currentCode,
+          relativePath,
+        );
         const { content } = await callJudgeModelWithRaw(
           [{ role: 'user', content: judgePrompt }],
-          env
+          env,
         );
 
         patchLines.push('---');
@@ -1121,25 +1432,33 @@ async function optimizeApltkTools(plan, sourceRoot, env, dryRun, date, judgeAvai
             patchLines.push('');
             patchLines.push('---');
             patchLines.push('');
-            patchLines.push('**Status: APPLIED** - Changes have been applied to the source file.');
+            patchLines.push(
+              '**Status: APPLIED** - Changes have been applied to the source file.',
+            );
           } else {
             patchLines.push('');
             patchLines.push('---');
             patchLines.push('');
-            patchLines.push('**Status: NOT APPLIED** - Could not parse structured edits. Manual review required.');
+            patchLines.push(
+              '**Status: NOT APPLIED** - Could not parse structured edits. Manual review required.',
+            );
           }
         }
       } catch (err) {
         patchLines.push(`Judge model call failed: ${err.message}`);
         patchLines.push('');
-        patchLines.push(generateApltkTemplateChanges(issues, currentCode, relativePath));
+        patchLines.push(
+          generateApltkTemplateChanges(issues, currentCode, relativePath),
+        );
       }
     } else {
       patchLines.push('---');
       patchLines.push('');
       patchLines.push('## Template-Based Suggestions');
       patchLines.push('');
-      patchLines.push(generateApltkTemplateChanges(issues, currentCode, relativePath));
+      patchLines.push(
+        generateApltkTemplateChanges(issues, currentCode, relativePath),
+      );
     }
 
     allPatches.push({ relativePath, content: patchLines.join('\n') });
@@ -1150,7 +1469,7 @@ async function optimizeApltkTools(plan, sourceRoot, env, dryRun, date, judgeAvai
   mkdirSync(resultsDir, { recursive: true });
 
   const unifiedPatch = allPatches
-    .map(p => p.content)
+    .map((p) => p.content)
     .join('\n\n' + '='.repeat(80) + '\n\n');
 
   const patchPath = join(resultsDir, 'apltk-optimization-patch.md');
@@ -1170,11 +1489,14 @@ async function optimizeApltkTools(plan, sourceRoot, env, dryRun, date, judgeAvai
 
       // Check CLI interface
       console.log('\nVerifying CLI interface...');
-      const helpResult = execSync('node dist/bin/apollo-toolkit.js create-specs --help', {
-        cwd: sourceRoot,
-        encoding: 'utf-8',
-        timeout: 30000,
-      });
+      const helpResult = execSync(
+        'node dist/bin/apollo-toolkit.js create-specs --help',
+        {
+          cwd: sourceRoot,
+          encoding: 'utf-8',
+          timeout: 30000,
+        },
+      );
       console.log('CLI interface: OK');
       console.log(helpResult.split('\n').slice(0, 3).join('\n'));
     } catch (valErr) {
@@ -1195,9 +1517,12 @@ async function optimizeApltkTools(plan, sourceRoot, env, dryRun, date, judgeAvai
  * Build judge model prompt for apltk optimization.
  */
 function buildApltkOptimizationPrompt(issues, currentCode, filePath) {
-  const issuesText = issues.map(i =>
-    `- [${i.severity}] ${i.description}\n  Evidence: ${i.evidence.join('; ') || '(none)'}`
-  ).join('\n\n');
+  const issuesText = issues
+    .map(
+      (i) =>
+        `- [${i.severity}] ${i.description}\n  Evidence: ${i.evidence.join('; ') || '(none)'}`,
+    )
+    .join('\n\n');
 
   return [
     'You are an expert TypeScript code reviewer. An apltk CLI tool has been tested and',
@@ -1237,7 +1562,8 @@ function buildApltkOptimizationPrompt(issues, currentCode, filePath) {
  */
 function applyApltkChanges(filePath, currentCode, judgeOutput) {
   // Try structured FIND/REPLACE patterns
-  const blockPattern = /FIND:\s*\n?```(?:typescript|ts)?\n([\s\S]*?)\n```\s*\nREPLACE WITH:\s*\n?```(?:typescript|ts)?\n([\s\S]*?)\n```/gi;
+  const blockPattern =
+    /FIND:\s*\n?```(?:typescript|ts)?\n([\s\S]*?)\n```\s*\nREPLACE WITH:\s*\n?```(?:typescript|ts)?\n([\s\S]*?)\n```/gi;
 
   let modifiedCode = currentCode;
   let appliedCount = 0;
@@ -1300,30 +1626,52 @@ function generateApltkTemplateChanges(issues, currentCode, filePath) {
   for (const issue of issues) {
     lines.push(`### ${issue.severity}: ${issue.description}`);
     lines.push('');
-    lines.push(`**Suggested Fix**: ${issue.suggestedFix || 'Manual investigation required.'}`);
+    lines.push(
+      `**Suggested Fix**: ${issue.suggestedFix || 'Manual investigation required.'}`,
+    );
 
     // Add file-specific guidance
     if (filePath.includes('create-specs')) {
-      if (issue.description.toLowerCase().includes('template') ||
-          issue.description.includes('模板')) {
+      if (
+        issue.description.toLowerCase().includes('template') ||
+        issue.description.includes('模板')
+      ) {
         lines.push('');
-        lines.push('Check `renderContent()` function for missing placeholder patterns.');
-        lines.push('Ensure all TEMPLATE_FILENAMES entries have corresponding template files.');
-        lines.push('Verify `slugify()` handles edge cases (numbers, special chars, CJK).');
+        lines.push(
+          'Check `renderContent()` function for missing placeholder patterns.',
+        );
+        lines.push(
+          'Ensure all TEMPLATE_FILENAMES entries have corresponding template files.',
+        );
+        lines.push(
+          'Verify `slugify()` handles edge cases (numbers, special chars, CJK).',
+        );
       }
-      if (issue.description.toLowerCase().includes('error') ||
-          issue.description.includes('錯誤')) {
+      if (
+        issue.description.toLowerCase().includes('error') ||
+        issue.description.includes('錯誤')
+      ) {
         lines.push('');
-        lines.push('Review error messages for clarity. Each `stderr.write()` should include');
-        lines.push('actionable guidance (expected format, example valid input).');
+        lines.push(
+          'Review error messages for clarity. Each `stderr.write()` should include',
+        );
+        lines.push(
+          'actionable guidance (expected format, example valid input).',
+        );
       }
     }
 
     if (filePath.includes('architecture')) {
       lines.push('');
-      lines.push('The architecture handler is a thin delegate to the atlas CLI.');
-      lines.push('Issues may originate in `skills/init-project-html/lib/atlas/cli.js`.');
-      lines.push('Check if the delegate needs additional error context or validation.');
+      lines.push(
+        'The architecture handler is a thin delegate to the atlas CLI.',
+      );
+      lines.push(
+        'Issues may originate in `skills/init-project-html/lib/atlas/cli.js`.',
+      );
+      lines.push(
+        'Check if the delegate needs additional error context or validation.',
+      );
     }
 
     lines.push('');
@@ -1341,8 +1689,8 @@ function generateApltkTemplateChanges(issues, currentCode, filePath) {
  * @returns {{ date: string, dryRun: boolean, planOnly: boolean }}
  */
 function parseArgs(args) {
-  const flags = args.filter(a => a.startsWith('--'));
-  const positionals = args.filter(a => !a.startsWith('--'));
+  const flags = args.filter((a) => a.startsWith('--'));
+  const positionals = args.filter((a) => !a.startsWith('--'));
 
   const date = positionals[0] || '2026-05-28';
   const dryRun = flags.includes('--dry-run');
@@ -1365,11 +1713,17 @@ async function main() {
   try {
     const { loadEnv } = await import('./env-utils.mjs');
     env = loadEnv();
-    judgeAvailable = Boolean(env.JUDGE_API_KEY && env.JUDGE_BASE_URL && env.JUDGE_MODEL);
-    console.log(`Judge model: ${judgeAvailable ? `${env.JUDGE_MODEL} @ ${env.JUDGE_BASE_URL}` : 'NOT AVAILABLE (will use template-based suggestions)'}`);
+    judgeAvailable = Boolean(
+      env.JUDGE_API_KEY && env.JUDGE_BASE_URL && env.JUDGE_MODEL,
+    );
+    console.log(
+      `Judge model: ${judgeAvailable ? `${env.JUDGE_MODEL} @ ${env.JUDGE_BASE_URL}` : 'NOT AVAILABLE (will use template-based suggestions)'}`,
+    );
   } catch (err) {
     console.warn(`Environment variables not loaded: ${err.message}`);
-    console.warn('Running without judge model. Template-based suggestions only.');
+    console.warn(
+      'Running without judge model. Template-based suggestions only.',
+    );
     env = {};
     judgeAvailable = false;
   }
@@ -1381,7 +1735,9 @@ async function main() {
 
   if (allScores.length === 0) {
     console.log('\nNo scores found. Nothing to optimize.');
-    console.log('Run run-evals.mjs and score.mjs first to generate test results.');
+    console.log(
+      'Run run-evals.mjs and score.mjs first to generate test results.',
+    );
     // Still generate an empty plan for consistency
     const resultsDir = resolve(ROOT_DIR, 'results', 'spec', date);
     mkdirSync(resultsDir, { recursive: true });
@@ -1394,7 +1750,7 @@ async function main() {
     writeFileSync(
       join(resultsDir, 'optimization-plan.json'),
       JSON.stringify(emptyPlan, null, 2),
-      'utf-8'
+      'utf-8',
     );
     console.log(`Empty optimization plan written.`);
     return;
@@ -1407,8 +1763,8 @@ async function main() {
 
   if (rawIssues.length === 0) {
     console.log('No issues found in scores. All tests passed cleanly!');
-    // Generate a clean plan
-    const cleanPlan = generateOptimizationPlan([], date, allScores);
+    // Generate a clean plan (return value intentionally discarded)
+    generateOptimizationPlan([], date, allScores);
     return;
   }
 
@@ -1422,7 +1778,9 @@ async function main() {
   // 4. Deduplicate
   console.log('\n--- Phase 3: Deduplication ---');
   const dedupedIssues = await deduplicateIssues(rawIssues, env, judgeAvailable);
-  console.log(`Deduped: ${rawIssues.length} raw => ${dedupedIssues.length} unique issue(s).`);
+  console.log(
+    `Deduped: ${rawIssues.length} raw => ${dedupedIssues.length} unique issue(s).`,
+  );
 
   // 5. Generate suggested fixes
   console.log('\n--- Phase 4: Generating Fix Suggestions ---');
@@ -1430,7 +1788,9 @@ async function main() {
     const fix = await generateSuggestedFix(issue, env, judgeAvailable);
     issue._suggestedFix = fix;
   }
-  console.log(`Generated fix suggestions for ${dedupedIssues.length} issue(s).`);
+  console.log(
+    `Generated fix suggestions for ${dedupedIssues.length} issue(s).`,
+  );
 
   // 6. Generate optimization plan
   console.log('\n--- Phase 5: Optimization Plan ---');
@@ -1445,13 +1805,16 @@ async function main() {
 
   if (plan.issues.length > 0) {
     const sevCounts = { P0: 0, P1: 0, P2: 0 };
-    plan.issues.forEach(i => sevCounts[i.severity]++);
+    plan.issues.forEach((i) => sevCounts[i.severity]++);
     console.log(`  P0 (critical): ${sevCounts.P0}`);
     console.log(`  P1 (important): ${sevCounts.P1}`);
     console.log(`  P2 (minor): ${sevCounts.P2}`);
 
     const catCountsDedup = {};
-    plan.issues.forEach(i => catCountsDedup[i.category] = (catCountsDedup[i.category] || 0) + 1);
+    plan.issues.forEach(
+      (i) =>
+        (catCountsDedup[i.category] = (catCountsDedup[i.category] || 0) + 1),
+    );
     for (const [cat, count] of Object.entries(catCountsDedup)) {
       console.log(`  ${cat}: ${count}`);
     }
@@ -1459,7 +1822,9 @@ async function main() {
     // Print top 5 issues
     console.log('\nTop issues:');
     for (const issue of plan.issues.slice(0, 5)) {
-      console.log(`  ${issue.id} [${issue.severity}] (${issue.frequency}x) ${issue.description.substring(0, 80)}...`);
+      console.log(
+        `  ${issue.id} [${issue.severity}] (${issue.frequency}x) ${issue.description.substring(0, 80)}...`,
+      );
     }
   }
 
@@ -1474,17 +1839,33 @@ async function main() {
   console.log('\n--- Phase 6: SKILL.md Optimization ---');
   const skillMdPath = resolveSkillMdPath(ROOT_DIR);
   if (!skillMdPath) {
-    console.warn('SKILL.md not found. Checked: skills/spec/SKILL.md, spec/SKILL.md');
+    console.warn(
+      'SKILL.md not found. Checked: skills/spec/SKILL.md, spec/SKILL.md',
+    );
     console.warn('Skipping SKILL.md optimization.');
   } else {
     console.log(`Found SKILL.md at: ${skillMdPath}`);
-    const skillResult = await optimizeSkillMd(plan, skillMdPath, env, dryRun, date, judgeAvailable);
+    const skillResult = await optimizeSkillMd(
+      plan,
+      skillMdPath,
+      env,
+      dryRun,
+      date,
+      judgeAvailable,
+    );
     console.log(`SKILL.md optimization: ${skillResult.message}`);
   }
 
   // 9. Optimize apltk tools
   console.log('\n--- Phase 7: apltk Tool Optimization ---');
-  const apltkResult = await optimizeApltkTools(plan, ROOT_DIR, env, dryRun, date, judgeAvailable);
+  const apltkResult = await optimizeApltkTools(
+    plan,
+    ROOT_DIR,
+    env,
+    dryRun,
+    date,
+    judgeAvailable,
+  );
   console.log(`apltk optimization: ${apltkResult.message}`);
 
   // 10. Final summary
@@ -1492,9 +1873,15 @@ async function main() {
   console.log(`Plan: results/spec/${date}/optimization-plan.json`);
   if (dryRun) {
     console.log('Mode: DRY-RUN (no source files modified)');
-    console.log(`Skill patch: results/spec/${date}/skill-optimization-patch.md`);
-    console.log(`apltk patch: results/spec/${date}/apltk-optimization-patch.md`);
-    console.log('Review patches and re-run without --dry-run to apply changes.');
+    console.log(
+      `Skill patch: results/spec/${date}/skill-optimization-patch.md`,
+    );
+    console.log(
+      `apltk patch: results/spec/${date}/apltk-optimization-patch.md`,
+    );
+    console.log(
+      'Review patches and re-run without --dry-run to apply changes.',
+    );
   } else {
     console.log('Mode: APPLY (source files may have been modified)');
     console.log('Backups saved as .bak files alongside originals.');
@@ -1502,13 +1889,13 @@ async function main() {
 }
 
 // Run
-const isDirectRun = process.argv[1] && (
-  process.argv[1].endsWith('optimize.mjs') ||
-  process.argv[1].endsWith('optimize')
-);
+const isDirectRun =
+  process.argv[1] &&
+  (process.argv[1].endsWith('optimize.mjs') ||
+    process.argv[1].endsWith('optimize'));
 
 if (isDirectRun) {
-  main().catch(err => {
+  main().catch((err) => {
     console.error(`Fatal error: ${err.message}`);
     console.error(err.stack);
     process.exit(1);

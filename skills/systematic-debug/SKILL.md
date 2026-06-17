@@ -20,14 +20,14 @@ Fix the root cause, then establish a regression test to prevent recurrence.
 
 **Classify the error type** to select the right approach:
 
-| Type | Characteristics | Approach |
-|------|----------------|----------|
-| Syntax / type | Compiler or linter points directly at it | Fix the indicated location directly |
-| Logic | Wrong output, test failure | Hypothesis-driven debugging + binary search |
-| State | Intermittent, order-dependent | Track state transitions, identify mutation points |
-| Integration | Works in isolation, fails when connected | Check boundaries, contracts, formats |
-| Environment | Works in some environments, fails in others | Compare environment differences, check config |
-| Performance | Correct result but slow or resource-heavy | Profile, find hotspots, check complexity |
+| Type          | Characteristics                             | Approach                                          |
+| ------------- | ------------------------------------------- | ------------------------------------------------- |
+| Syntax / type | Compiler or linter points directly at it    | Fix the indicated location directly               |
+| Logic         | Wrong output, test failure                  | Hypothesis-driven debugging + binary search       |
+| State         | Intermittent, order-dependent               | Track state transitions, identify mutation points |
+| Integration   | Works in isolation, fails when connected    | Check boundaries, contracts, formats              |
+| Environment   | Works in some environments, fails in others | Compare environment differences, check config     |
+| Performance   | Correct result but slow or resource-heavy   | Profile, find hotspots, check complexity          |
 
 Read the relevant code based on the user's report. Collect evidence from error messages, recent changes, and logs.
 
@@ -61,30 +61,35 @@ Before delivering, verify:
 Choose the method that best fits the error type and context:
 
 ### Hypothesis-Driven Debugging
+
 Best for **production incidents**, **logic errors**. Test hypotheses in cheapest-first order.
+
 1. Form a falsifiable hypothesis: "I believe X is the root cause because Y"
 2. Predict: "If correct, I will observe Z"
 3. Test: Verify with the smallest possible change
 4. Converge: Prediction matches → found it; doesn't match → new hypothesis
-Reference: Google SRE, Zeller's "Why Programs Fail"
+   Reference: Google SRE, Zeller's "Why Programs Fail"
 
 ### Five Whys
+
 Best for **simple, linear failures**. Repeatedly ask "why" along a single causal chain.
 Caution: When multiple causes interact, Five Whys may miss branching causes.
 
 ### Fault Tree Analysis (FTA)
+
 Best for **multi-cause interaction**, **architecture-level prevention**. Start from the top-level failure, decompose all contributing causes downward to observable, testable leaf nodes. Identify minimal cut sets — address single-point failures first.
 Reference: NASA SW Handbook, Chaos Engineering
 
 ### Kepner-Tregoe IS / IS NOT
+
 Best for **cross-team, cross-service complex problems**. Force structured analysis through four dimensions:
 
 | Dimension | IS (problem is here) | IS NOT (problem is not here) | Difference (cause lies here) |
-|-----------|---------------------|-----------------------------|------------------------------|
-| What | | | |
-| Where | | | |
-| When | | | |
-| Extent | | | |
+| --------- | -------------------- | ---------------------------- | ---------------------------- |
+| What      |                      |                              |                              |
+| Where     |                      |                              |                              |
+| When      |                      |                              |                              |
+| Extent    |                      |                              |                              |
 
 A valid root cause must explain all IS and all IS NOT. Best for stable environments with clear boundaries; not for cascading disasters.
 Reference: Kepner-Tregoe Problem Solving

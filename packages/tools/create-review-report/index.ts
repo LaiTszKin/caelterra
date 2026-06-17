@@ -48,7 +48,9 @@ function resolveTargetDir(inputPath: string): string {
     return parentDir;
   }
 
-  throw new UserInputError(`${dir} is not a valid spec directory (no SPEC.md found).`);
+  throw new UserInputError(
+    `${dir} is not a valid spec directory (no SPEC.md found).`,
+  );
 }
 
 function findLatestDateDir(baseDir: string): string | null {
@@ -60,18 +62,22 @@ function findLatestDateDir(baseDir: string): string | null {
     .sort()
     .reverse();
 
-  return dateDirs.length > 0 ? dateDirs[0] : null;
+  return dateDirs.length > 0 ? (dateDirs[0] ?? null) : null;
 }
 
 function autoDetectTargetDir(): string {
   const plansDir = path.resolve(PLANS_DIR);
   if (!fs.existsSync(plansDir)) {
-    throw new UserInputError(`No ${PLANS_DIR}/ directory found. Specify the spec path manually.`);
+    throw new UserInputError(
+      `No ${PLANS_DIR}/ directory found. Specify the spec path manually.`,
+    );
   }
 
   const latestDate = findLatestDateDir(plansDir);
   if (!latestDate) {
-    throw new UserInputError(`No dated spec directories found in ${PLANS_DIR}/. Specify the spec path manually.`);
+    throw new UserInputError(
+      `No dated spec directories found in ${PLANS_DIR}/. Specify the spec path manually.`,
+    );
   }
 
   const datePath = path.join(plansDir, latestDate);
@@ -100,7 +106,7 @@ function autoDetectTargetDir(): string {
     }
   }
 
-  if (batchDirs.length === 1) {
+  if (batchDirs.length === 1 && batchDirs[0]) {
     return batchDirs[0].path;
   }
 
@@ -112,7 +118,7 @@ function autoDetectTargetDir(): string {
     throw new UserInputError(msg);
   }
 
-  if (singleSpecs.length === 1) {
+  if (singleSpecs.length === 1 && singleSpecs[0]) {
     return singleSpecs[0].path;
   }
 
@@ -133,32 +139,46 @@ const schema = {
   },
   allowPositionals: true,
   usage: 'apltk create-review-report [options] [<spec-path>]',
-  description: 'Copy the code review report template (REPORT.md) to the spec directory.',
-  handler: async (
+  description:
+    'Copy the code review report template (REPORT.md) to the spec directory.',
+  handler: (
     values: Record<string, unknown>,
     positionals: string[],
     context: ToolContext,
-  ): Promise<number> => {
+  ): number => {
     const stdout = context.stdout || process.stdout;
-    const sourceRoot = context.sourceRoot || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
+    const sourceRoot =
+      context.sourceRoot ||
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        '..',
+        '..',
+      );
 
-    const force = values.force === true;
+    const force = values['force'] === true;
 
     // Resolve template path
     const templatePath = path.join(sourceRoot, TEMPLATE_RELATIVE_PATH);
     if (!fs.existsSync(templatePath)) {
-      throw new UserInputError(`Review report template not found: ${templatePath}`);
+      throw new UserInputError(
+        `Review report template not found: ${templatePath}`,
+      );
     }
 
     // Resolve target directory
-    const targetDir = positionals.length > 0
-      ? resolveTargetDir(path.resolve(positionals[0]))
-      : autoDetectTargetDir();
+    const targetDir =
+      positionals.length > 0
+        ? resolveTargetDir(path.resolve(positionals[0] ?? ''))
+        : autoDetectTargetDir();
 
     // Copy template
     const outputPath = path.join(targetDir, OUTPUT_FILENAME);
     if (fs.existsSync(outputPath) && !force) {
-      throw new UserInputError(`${outputPath} already exists. Use --force to overwrite.`);
+      throw new UserInputError(
+        `${outputPath} already exists. Use --force to overwrite.`,
+      );
     }
 
     fs.copyFileSync(templatePath, outputPath);
@@ -170,6 +190,7 @@ const schema = {
 export const tool: ToolDefinition = {
   name: 'create-review-report',
   category: 'Planning & architecture',
-  description: 'Copy the code review report template (REPORT.md) to the spec directory.',
+  description:
+    'Copy the code review report template (REPORT.md) to the spec directory.',
   handler: createToolRunner(schema),
 };

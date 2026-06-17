@@ -10,7 +10,10 @@ describe('REGTEST-03: getProjectRoot 路徑解析', () => {
     const root = getProjectRoot();
 
     assert.ok(root, 'getProjectRoot() should return a truthy string');
-    assert.ok(path.isAbsolute(root), 'getProjectRoot() should return an absolute path');
+    assert.ok(
+      path.isAbsolute(root),
+      'getProjectRoot() should return an absolute path',
+    );
     assert.ok(fs.existsSync(root), 'Returned path should exist on disk');
 
     const specDir = path.join(root, 'assets', 'spec');
@@ -24,7 +27,11 @@ describe('REGTEST-03: getProjectRoot 路徑解析', () => {
     const root1 = getProjectRoot();
     const root2 = getProjectRoot();
 
-    assert.equal(root1, root2, 'getProjectRoot() should return the same value on repeated calls');
+    assert.equal(
+      root1,
+      root2,
+      'getProjectRoot() should return the same value on repeated calls',
+    );
     assert.ok(root1.length > 0, 'Returned path should not be empty');
   });
 });

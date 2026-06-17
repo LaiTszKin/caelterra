@@ -104,7 +104,7 @@ function parseArgs(args: string[]): ParsedArgs {
   const positional: string[] = [];
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+    const arg = args[i] ?? '';
 
     if (arg === '--help' || arg === '-h') {
       result.help = true;
@@ -132,7 +132,10 @@ function parseArgs(args: string[]): ParsedArgs {
 
       switch (key) {
         case 'mode':
-          result.mode = typeof value === 'string' && value === 'standard' ? 'standard' : 'fast';
+          result.mode =
+            typeof value === 'string' && value === 'standard'
+              ? 'standard'
+              : 'fast';
           break;
         case 'optimize':
           result.optimize = true;
@@ -201,7 +204,9 @@ async function evalHandler(
   try {
     projectRoot = resolveProjectRoot(context);
   } catch (err) {
-    stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}\n`);
+    stderr.write(
+      `Error: ${err instanceof Error ? err.message : String(err)}\n`,
+    );
     return 1;
   }
 
@@ -232,7 +237,9 @@ async function evalHandler(
     const skills = listSkillNames(projectRoot);
     if (skills.length > 0) {
       stderr.write('\nAvailable skills:\n');
-      for (const sk of skills) { stderr.write(`  ${sk}\n`); }
+      for (const sk of skills) {
+        stderr.write(`  ${sk}\n`);
+      }
     }
     stderr.write('\n');
     return 1;
@@ -257,7 +264,9 @@ async function evalHandler(
     stderr.write('[1/7] OK\n');
 
     const now = new Date();
-    const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
 
     // 2. Load question bank
     const questionsPath = path.join(
@@ -269,20 +278,20 @@ async function evalHandler(
     );
     stderr.write(`[2/7] Loading question bank: ${questionsPath}...\n`);
     const allQuestions = loadQuestions(questionsPath);
-    stderr.write(`[2/7] Loaded ${allQuestions.length} questions\n`);
+    stderr.write(`[2/7] Loaded ${String(allQuestions.length)} questions\n`);
 
     // 3. Stratified sampling
     stderr.write(`[3/7] Sampling questions (mode: ${mode})...\n`);
     const sampled = sampleQuestions(allQuestions, mode);
     stderr.write(
-      `[3/7] Sampled ${sampled.length} questions ` +
-        `(${sampled.filter((q) => q.difficulty === 'basic').length} basic, ` +
-        `${sampled.filter((q) => q.difficulty === 'advanced').length} advanced, ` +
-        `${sampled.filter((q) => q.difficulty === 'edge').length} edge)\n`,
+      `[3/7] Sampled ${String(sampled.length)} questions ` +
+        `(${String(sampled.filter((q) => q.difficulty === 'basic').length)} basic, ` +
+        `${String(sampled.filter((q) => q.difficulty === 'advanced').length)} advanced, ` +
+        `${String(sampled.filter((q) => q.difficulty === 'edge').length)} edge)\n`,
     );
 
     // 4. Run tests
-    stderr.write(`[4/7] Running ${sampled.length} tests...\n`);
+    stderr.write(`[4/7] Running ${String(sampled.length)} tests...\n`);
     const testResults: TestResult[] = await runAllTests(
       sampled,
       env,
@@ -291,12 +300,14 @@ async function evalHandler(
     );
     const passed = testResults.filter((r) => r.success).length;
     const failed = testResults.filter((r) => !r.success).length;
-    stderr.write(`[4/7] Tests complete: ${passed} passed, ${failed} failed\n`);
+    stderr.write(
+      `[4/7] Tests complete: ${String(passed)} passed, ${String(failed)} failed\n`,
+    );
 
     // 5. Score tests
     stderr.write('[5/7] Scoring tests...\n');
     const scores: ScoreResult[] = await scoreAllTests(today, env);
-    stderr.write(`[5/7] Scored ${scores.length} tests\n`);
+    stderr.write(`[5/7] Scored ${String(scores.length)} tests\n`);
 
     // 6. Generate and persist report
     stderr.write('[6/7] Generating report...\n');
@@ -327,19 +338,23 @@ async function evalHandler(
     if (optimize) {
       if (dryRun) {
         // Dry-run: load actual scores, extract issues, but skip judge API calls
-        stderr.write('[7/7] Dry-run mode: loading scores for optimization preview...\n');
+        stderr.write(
+          '[7/7] Dry-run mode: loading scores for optimization preview...\n',
+        );
         const allScores = await loadAllScores(today);
         const rawIssues = extractIssues(allScores);
-        stderr.write(`[7/7] Extracted ${rawIssues.length} raw issues\n`);
+        stderr.write(
+          `[7/7] Extracted ${String(rawIssues.length)} raw issues\n`,
+        );
         // Build DedupedIssue[] from raw scores (no API)
-        const dedupedLike: DedupedIssue[] = rawIssues.map(r => ({
+        const dedupedLike: DedupedIssue[] = rawIssues.map((r) => ({
           category: r.category,
           severity: r.severity,
           frequency: 1,
           affectedTests: [r.testNo],
           description: r.description,
           evidence: [r.evidence],
-          suggestedFix: `[${r.severity}] ${r.category}: ${r.description} — ${r.evidence.slice(0,120)}`,
+          suggestedFix: `[${r.severity}] ${r.category}: ${r.description} — ${r.evidence.slice(0, 120)}`,
         }));
         const plan = generateOptimizationPlan(dedupedLike, today, allScores);
         stderr.write('[7/7] Generating dry-run optimization patch...\n');
@@ -347,20 +362,28 @@ async function evalHandler(
           plan,
           skillMdPath,
           env,
-          true,   // dryRun
+          true, // dryRun
           today,
-          false,  // judgeAvailable = false to skip API
+          false, // judgeAvailable = false to skip API
         );
         stderr.write(`[7/7] ${optResult.message}\n`);
       } else {
         stderr.write('[7/7] Generating optimisation plan...\n');
         const allScores = await loadAllScores(today);
         const rawIssues = extractIssues(allScores);
-        const deduped: DedupedIssue[] = await deduplicateIssues(rawIssues, env, true);
-        stderr.write(`[7/7] Generating suggested fixes for ${deduped.length} issues...\n`);
+        const deduped: DedupedIssue[] = await deduplicateIssues(
+          rawIssues,
+          env,
+          true,
+        );
+        stderr.write(
+          `[7/7] Generating suggested fixes for ${String(deduped.length)} issues...\n`,
+        );
         await promisePool(
           deduped,
-          async (issue) => { issue.suggestedFix = await generateSuggestedFix(issue, env, true); },
+          async (issue) => {
+            issue.suggestedFix = await generateSuggestedFix(issue, env, true);
+          },
           env.JUDGE_CONCURRENCY,
         );
         const plan = generateOptimizationPlan(deduped, today, allScores);
@@ -369,9 +392,9 @@ async function evalHandler(
           plan,
           skillMdPath,
           env,
-          false,  // dryRun
+          false, // dryRun
           today,
-          true,   // judgeAvailable
+          true, // judgeAvailable
         );
         stderr.write(`[7/7] ${optResult.message}\n`);
       }
@@ -384,7 +407,9 @@ async function evalHandler(
     stdout.write(`Skill:   ${skillName}\n`);
     stdout.write(`Mode:    ${mode}\n`);
     stdout.write(`Date:    ${today}\n`);
-    stdout.write(`Tests:   ${passed} passed, ${failed} failed out of ${testResults.length}\n`);
+    stdout.write(
+      `Tests:   ${String(passed)} passed, ${String(failed)} failed out of ${String(testResults.length)}\n`,
+    );
     stdout.write(`Report:  ${reportPath}\n`);
     if (optimize) {
       stdout.write(`Optim.:  ${dryRun ? 'dry-run (patch only)' : 'applied'}\n`);
@@ -393,23 +418,38 @@ async function evalHandler(
 
     // FIX-18: Handle empty scores before gate checks
     if (scores.length === 0) {
-      const hasFailures = testResults.some(r => !r.success);
+      const hasFailures = testResults.some((r) => !r.success);
       if (hasFailures) {
-        stderr.write(`[FAIL] All ${testResults.length} tests failed or could not be scored. No scores available for gate check.\n`);
+        stderr.write(
+          `[FAIL] All ${String(testResults.length)} tests failed or could not be scored. No scores available for gate check.\n`,
+        );
         return 1;
       }
-      stderr.write('[WARN] No scores available for gate check (all tests were skipped).\n');
+      stderr.write(
+        '[WARN] No scores available for gate check (all tests were skipped).\n',
+      );
     }
 
-    const avgScore = scores.length > 0 ? scores.reduce((sum, s) => sum + s.overallScore, 0) / scores.length : 0;
-    const p0Count = scores.reduce((sum, s) => sum + (s.issues?.filter(i => i.severity === 'P0').length || 0), 0);
+    const avgScore =
+      scores.length > 0
+        ? scores.reduce((sum, s) => sum + s.overallScore, 0) / scores.length
+        : 0;
+    const p0Count = scores.reduce(
+      (sum, s) =>
+        sum + (s.issues.filter((i) => i.severity === 'P0').length || 0),
+      0,
+    );
 
     if (avgScore < env.EVAL_MIN_SCORE && scores.length > 0) {
-      stderr.write(`[FAIL] Average overall score ${avgScore.toFixed(1)}% is below threshold ${env.EVAL_MIN_SCORE}.\n`);
+      stderr.write(
+        `[FAIL] Average overall score ${avgScore.toFixed(1)}% is below threshold ${String(env.EVAL_MIN_SCORE)}.\n`,
+      );
       return 1;
     }
     if (env.EVAL_MAX_P0 > 0 && p0Count > env.EVAL_MAX_P0) {
-      stderr.write(`[FAIL] P0 issue count ${p0Count} exceeds limit ${env.EVAL_MAX_P0}.\n`);
+      stderr.write(
+        `[FAIL] P0 issue count ${String(p0Count)} exceeds limit ${String(env.EVAL_MAX_P0)}.\n`,
+      );
       return 1;
     }
     return failed > 0 ? 1 : 0;
@@ -421,6 +461,7 @@ async function evalHandler(
     return 1;
   } finally {
     process.off('SIGINT', sigintHandler);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (sigintReceived) {
       process.exit(1);
     }

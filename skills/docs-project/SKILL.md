@@ -1,8 +1,8 @@
 ---
 name: docs-project
 description: >-
-    以 repo 程式碼為唯一依據，維護標準化的 docs/features/、docs/architecture/、docs/principles/ 文檔，
-    並清理已失效或重複的舊文檔。每條文檔記述必須可追溯至實際程式碼證據。
+  以 repo 程式碼為唯一依據，維護標準化的 docs/features/、docs/architecture/、docs/principles/ 文檔，
+  並清理已失效或重複的舊文檔。每條文檔記述必須可追溯至實際程式碼證據。
 ---
 
 ## 目標
@@ -41,6 +41,7 @@ description: >-
 按照上一步建立的閱讀策略，通過並行調度 subagents 全面搜索整個 repo，驗證並確保現有項目文檔的描述正確、無遺漏。
 
 使用 subagents 深入閱讀關鍵程式碼片段：
+
 - 每個 subagent 負責一個模組或檔案群組
 - Subagent 閱讀原始碼後回報：模組職責、關鍵函式、資料流程、外部整合點
 - 將 subagent 發現與現有文檔比對，標記差異
@@ -61,4 +62,5 @@ description: >-
 - **定期 drift detection**（建議）：定期（每月或每季）比對文檔與實際程式碼，確認無重大偏離。發現 drift 時只修補受影響章節，不全面重寫。
 
 ## 參考資料
+
 - `assets/templates/standardized-docs-template.md` - 三類文檔的目標結構、分類規則與清理檢查表。

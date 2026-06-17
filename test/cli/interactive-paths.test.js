@@ -20,29 +20,63 @@ function createMemoryStream() {
 }
 
 async function createFixtureSource(rootDir) {
-  await fs.mkdir(path.join(rootDir, 'skills', 'alpha-skill'), { recursive: true });
-  await fs.writeFile(path.join(rootDir, 'skills', 'alpha-skill', 'SKILL.md'), '# alpha\n', 'utf8');
-  await fs.mkdir(path.join(rootDir, 'skills', 'beta-skill'), { recursive: true });
-  await fs.writeFile(path.join(rootDir, 'skills', 'beta-skill', 'SKILL.md'), '# beta\n', 'utf8');
+  await fs.mkdir(path.join(rootDir, 'skills', 'alpha-skill'), {
+    recursive: true,
+  });
+  await fs.writeFile(
+    path.join(rootDir, 'skills', 'alpha-skill', 'SKILL.md'),
+    '# alpha\n',
+    'utf8',
+  );
+  await fs.mkdir(path.join(rootDir, 'skills', 'beta-skill'), {
+    recursive: true,
+  });
+  await fs.writeFile(
+    path.join(rootDir, 'skills', 'beta-skill', 'SKILL.md'),
+    '# beta\n',
+    'utf8',
+  );
   await fs.mkdir(path.join(rootDir, 'scripts'), { recursive: true });
-  await fs.writeFile(path.join(rootDir, 'scripts', 'install_skills.sh'), '#!/usr/bin/env bash\n', 'utf8');
-  await fs.writeFile(path.join(rootDir, 'README.md'), '# Apollo Toolkit\n', 'utf8');
-  await fs.writeFile(path.join(rootDir, 'CHANGELOG.md'), '# Changelog\n', 'utf8');
+  await fs.writeFile(
+    path.join(rootDir, 'scripts', 'install_skills.sh'),
+    '#!/usr/bin/env bash\n',
+    'utf8',
+  );
+  await fs.writeFile(
+    path.join(rootDir, 'README.md'),
+    '# Apollo Toolkit\n',
+    'utf8',
+  );
+  await fs.writeFile(
+    path.join(rootDir, 'CHANGELOG.md'),
+    '# Changelog\n',
+    'utf8',
+  );
   await fs.writeFile(path.join(rootDir, 'LICENSE'), 'MIT\n', 'utf8');
   await fs.writeFile(path.join(rootDir, 'AGENTS.md'), '# Agents\n', 'utf8');
   await fs.writeFile(
     path.join(rootDir, 'package.json'),
-    JSON.stringify({ name: '@laitszkin/apollo-toolkit', version: '4.1.4' }, null, 2),
+    JSON.stringify(
+      { name: '@laitszkin/apollo-toolkit', version: '4.1.4' },
+      null,
+      2,
+    ),
     'utf8',
   );
   await fs.mkdir(path.join(rootDir, '.github'), { recursive: true });
-  await fs.writeFile(path.join(rootDir, '.github', 'ignored.txt'), 'nope\n', 'utf8');
+  await fs.writeFile(
+    path.join(rootDir, '.github', 'ignored.txt'),
+    'nope\n',
+    'utf8',
+  );
 }
 
 // ---- printUninstallSummary (empty result) ----
 
 test('printUninstallSummary shows empty message when no installations found (via run uninstall)', async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'interactive-empty-uninstall-'));
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'interactive-empty-uninstall-'),
+  );
   try {
     const sourceRoot = path.join(tempDir, 'source');
     const homeDir = path.join(tempDir, 'home');
@@ -52,7 +86,11 @@ test('printUninstallSummary shows empty message when no installations found (via
     await fs.mkdir(sourceRoot, { recursive: true });
     await fs.writeFile(
       path.join(sourceRoot, 'package.json'),
-      JSON.stringify({ name: '@laitszkin/apollo-toolkit', version: '4.1.4' }, null, 2),
+      JSON.stringify(
+        { name: '@laitszkin/apollo-toolkit', version: '4.1.4' },
+        null,
+        2,
+      ),
       'utf8',
     );
 
@@ -75,7 +113,9 @@ test('printUninstallSummary shows empty message when no installations found (via
 // ---- promptIncludeExclusiveSkills (no codex skills) ----
 
 test('promptIncludeExclusiveSkills returns false when no codex skills exist (via run install)', async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'interactive-no-codex-skills-'));
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'interactive-no-codex-skills-'),
+  );
   try {
     const sourceRoot = path.join(tempDir, 'source');
     const homeDir = path.join(tempDir, 'home');
@@ -115,7 +155,9 @@ test('promptIncludeExclusiveSkills returns false when no codex skills exist (via
 // ---- buildSymlinkInfo + promptSymlinkChoice output format ----
 
 test('buildSymlinkInfo and promptSymlinkChoice output correct format (via run install, no linkMode flag)', async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'interactive-symlink-info-'));
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'interactive-symlink-info-'),
+  );
   try {
     const sourceRoot = path.join(tempDir, 'source');
     const homeDir = path.join(tempDir, 'home');

@@ -42,12 +42,12 @@ State of the same concept spread across multiple files in the module.
 
 A single file has grown to contain multiple concerns; split along cohesion lines.
 
-| Symptom | Split Strategy |
-|---|---|
-| File has "// validation" and "// formatting" section blocks | One file per concern |
-| File exports 8+ unrelated functions | Group by what they operate on |
-| File contains both types and logic | Types → `types.ts`, logic → `logic.ts` |
-| File has >300 lines and covers >3 distinct error scenarios | Split by failure mode |
+| Symptom                                                     | Split Strategy                         |
+| ----------------------------------------------------------- | -------------------------------------- |
+| File has "// validation" and "// formatting" section blocks | One file per concern                   |
+| File exports 8+ unrelated functions                         | Group by what they operate on          |
+| File contains both types and logic                          | Types → `types.ts`, logic → `logic.ts` |
+| File has >300 lines and covers >3 distinct error scenarios  | Split by failure mode                  |
 
 **Naming convention**: `{concern}.ts`, not `{concern}Utils.ts` — the file is the home, not a utility drawer.
 
@@ -75,12 +75,20 @@ A → B → C → D where each is a single-caller delegation.
 
 ```typescript
 // Before
-function handleRequest(req) { return validate(parse(req)); }
-function validate(data) { return checkSchema(data); }
-function checkSchema(data) { return schema.parse(data); }
+function handleRequest(req) {
+  return validate(parse(req));
+}
+function validate(data) {
+  return checkSchema(data);
+}
+function checkSchema(data) {
+  return schema.parse(data);
+}
 
 // After
-function handleRequest(req) { return schema.parse(req); }
+function handleRequest(req) {
+  return schema.parse(req);
+}
 ```
 
 **Skip if** the chain exists for testability (each function individually mockable) — that's a valid reason.
@@ -92,14 +100,14 @@ Input validation scattered across processing steps → consolidated at the modul
 ```typescript
 // Before
 function process(data) {
-  const parsed = parse(data);           // validates format
-  const enriched = enrich(parsed);      // validates completeness
-  const saved = save(enriched);         // validates constraints
+  const parsed = parse(data); // validates format
+  const enriched = enrich(parsed); // validates completeness
+  const saved = save(enriched); // validates constraints
 }
 
 // After
 function process(data) {
-  const validated = validate(data);     // single validation pass
+  const validated = validate(data); // single validation pass
   return save(parse(enrich(validated)));
 }
 ```
@@ -108,11 +116,11 @@ function process(data) {
 
 Mixed error patterns (throwing, returning `null`, returning `Result` types) unified within the module.
 
-| Inconsistent | Standardized |
-|---|---|
-| Some functions throw, some return null | All return `Result<T, E>` or all throw |
-| Some validate with `assert`, some with `if...throw` | Uniform validation pattern |
-| Callers don't know which errors to handle | Documented error types per function group |
+| Inconsistent                                        | Standardized                              |
+| --------------------------------------------------- | ----------------------------------------- |
+| Some functions throw, some return null              | All return `Result<T, E>` or all throw    |
+| Some validate with `assert`, some with `if...throw` | Uniform validation pattern                |
+| Callers don't know which errors to handle           | Documented error types per function group |
 
 ## Remove Implicit Module Coupling
 

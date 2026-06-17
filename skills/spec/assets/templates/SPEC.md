@@ -4,19 +4,23 @@
 - **Feature**: [Feature Name]
 
 ## Goal
+
 [One sentence describing the business goal and user value.]
 
 ## Scope
 
 ### In Scope
+
 [What is included in this change.]
 
 ### Out of Scope
+
 [What is explicitly excluded.]
 
 ## Functional Behaviors (BDD)
 
 ### Requirement 1: [Title]
+
 **GIVEN** [Precondition]
 **AND** [Additional precondition]
 **WHEN** [Trigger action]
@@ -26,6 +30,7 @@
 **Uncertainty Level**: [Known / Exploratory]
 
 ### Requirement 2: [Title]
+
 **GIVEN** [Precondition]
 **WHEN** [Trigger action]
 **THEN** [Verifiable outcome]
@@ -40,6 +45,7 @@
 ## Clarification Questions
 
 ### [Question title — e.g., "Pagination Strategy for Search Results"]
+
 - **Background**: [Why this question exists — uncertain area, code constraint, context the user may lack]
 - **Impact**: [How the choice affects requirements scope, design decisions, or implementation complexity]
 - **Recommendation**: [Agent's suggested option, determined through self-questioning]

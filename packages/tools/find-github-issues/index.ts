@@ -42,25 +42,25 @@ function parseArgs(argv: string[]): FindIssuesArgs {
     const arg = argv[i];
     switch (arg) {
       case '--repo':
-        if (i + 1 < argv.length) args.repo = argv[++i];
+        if (i + 1 < argv.length) args.repo = argv[++i] ?? null;
         break;
       case '--state':
         if (i + 1 < argv.length) {
-          const val = argv[++i];
+          const val = argv[++i] ?? '';
           if (['open', 'closed', 'all'].includes(val)) args.state = val;
         }
         break;
       case '--limit':
         if (i + 1 < argv.length) {
-          const n = parseInt(argv[++i], 10);
+          const n = parseInt(argv[++i] ?? '', 10);
           if (n > 0) args.limit = n;
         }
         break;
       case '--label':
-        if (i + 1 < argv.length) args.label.push(argv[++i]);
+        if (i + 1 < argv.length) args.label.push(argv[++i] ?? '');
         break;
       case '--search':
-        if (i + 1 < argv.length) args.search = argv[++i];
+        if (i + 1 < argv.length) args.search = argv[++i] ?? null;
         break;
       case '--output':
         if (i + 1 < argv.length) {
@@ -98,7 +98,9 @@ function runGh(cmdArgs: string[]): Promise<CommandResult> {
           resolve({
             stdout: stdout || '',
             stderr: stderr || '',
-            exitCode: (error as NodeJS.ErrnoException & { status?: number }).status ?? 1,
+            exitCode:
+              (error as NodeJS.ErrnoException & { status?: number }).status ??
+              1,
           });
         } else {
           resolve({ stdout: stdout || '', stderr: stderr || '', exitCode: 0 });
@@ -140,19 +142,21 @@ function truncate(text: string, width: number): string {
 }
 
 function formatLabels(issue: Record<string, unknown>): string {
-  const labels = issue.labels as Array<Record<string, unknown>> | undefined;
+  const labels = issue['labels'] as Array<Record<string, unknown>> | undefined;
   if (!labels) return '';
   const names = labels
-    .map((item) => String(item.name || ''))
+    .map((item) => (typeof item['name'] === 'string' ? item['name'] : ''))
     .filter(Boolean);
   return names.join(',');
 }
 
 function formatAssignees(issue: Record<string, unknown>): string {
-  const assignees = issue.assignees as Array<Record<string, unknown>> | undefined;
+  const assignees = issue['assignees'] as
+    | Array<Record<string, unknown>>
+    | undefined;
   if (!assignees) return '-';
   const logins = assignees
-    .map((item) => String(item.login || ''))
+    .map((item) => (typeof item['login'] === 'string' ? item['login'] : ''))
     .filter(Boolean);
   return logins.length > 0 ? logins.join(',') : '-';
 }
@@ -161,7 +165,7 @@ function printTable(
   issues: Array<Record<string, unknown>>,
   context: ToolContext,
 ): void {
-  const { stdout } = context;
+  const stdout = context.stdout ?? process.stdout;
   const columns = {
     number: 7,
     title: 54,
@@ -175,24 +179,30 @@ function printTable(
     `${'TITLE'.padEnd(columns.title)} ` +
     `${'LABELS'.padEnd(columns.labels)} ` +
     `${'ASSIGNEES'.padEnd(columns.assignees)} ` +
-    `${'UPDATED'.padEnd(columns.updated)}`;
-  stdout!.write(header + '\n');
-  stdout!.write('-'.repeat(header.length) + '\n');
+    'UPDATED'.padEnd(columns.updated);
+  stdout.write(header + '\n');
+  stdout.write('-'.repeat(header.length) + '\n');
 
   for (const issue of issues) {
-    const number = `#${issue.number ?? ''}`;
-    const title = truncate(String(issue.title ?? ''), columns.title);
+    const number = `#${typeof issue['number'] === 'string' ? issue['number'] : ''}`;
+    const title = truncate(
+      typeof issue['title'] === 'string' ? issue['title'] : '',
+      columns.title,
+    );
     const labels = truncate(formatLabels(issue), columns.labels);
     const assignees = truncate(formatAssignees(issue), columns.assignees);
-    const updated = truncate(String(issue.updatedAt ?? ''), columns.updated);
+    const updated = truncate(
+      typeof issue['updatedAt'] === 'string' ? issue['updatedAt'] : '',
+      columns.updated,
+    );
 
     const row =
       `${number.padEnd(columns.number)} ` +
       `${title.padEnd(columns.title)} ` +
       `${labels.padEnd(columns.labels)} ` +
       `${assignees.padEnd(columns.assignees)} ` +
-      `${updated.padEnd(columns.updated)}`;
-    stdout!.write(row + '\n');
+      updated.padEnd(columns.updated);
+    stdout.write(row + '\n');
   }
 }
 
@@ -210,11 +220,11 @@ export async function findGitHubIssuesHandler(
   argv: string[],
   context: ToolContext,
 ): Promise<number> {
-  const { stdout } = context;
+  const stdout = context.stdout ?? process.stdout;
   const args = parseArgs(argv);
 
   if (args.helpRequested) {
-    stdout!.write(HELP_TEXT + '\n');
+    stdout.write(HELP_TEXT + '\n');
     return 0;
   }
 
@@ -227,13 +237,13 @@ export async function findGitHubIssuesHandler(
 
   let issues: Array<Record<string, unknown>>;
   try {
-    issues = JSON.parse(result.stdout);
+    issues = JSON.parse(result.stdout) as Array<Record<string, unknown>>;
   } catch {
     throw new SystemError('Unable to parse gh output as JSON');
   }
 
   if (args.output === 'json') {
-    stdout!.write(JSON.stringify(issues, null, 2) + '\n');
+    stdout.write(JSON.stringify(issues, null, 2) + '\n');
     return 0;
   }
 

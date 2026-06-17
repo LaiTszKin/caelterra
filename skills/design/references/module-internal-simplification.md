@@ -37,14 +37,18 @@ Remove unused exports, unreachable branches, and commented-out blocks.
 
 ```typescript
 // Before
-export function legacyFormatter(data) { /* no callers found */ }
+export function legacyFormatter(data) {
+  /* no callers found */
+}
 function process() {
   // if (experimental) { ... }  // commented out 6 months ago
 }
 
 // After
 // Remove legacyFormatter entirely
-function process() { /* clean body */ }
+function process() {
+  /* clean body */
+}
 ```
 
 **Verify**: `grep -r "legacyFormatter" src/` confirms zero callers; tests still pass.
@@ -84,10 +88,14 @@ Replace long switch statements with lookup maps.
 // Before
 function format(type, value) {
   switch (type) {
-    case 'date': return formatDate(value);
-    case 'currency': return formatCurrency(value);
-    case 'percent': return formatPercent(value);
-    default: return String(value);
+    case 'date':
+      return formatDate(value);
+    case 'currency':
+      return formatCurrency(value);
+    case 'percent':
+      return formatPercent(value);
+    default:
+      return String(value);
   }
 }
 
@@ -145,20 +153,20 @@ Two sequential loops or filter-map chains over the same collection.
 
 ```typescript
 // Before
-const active = users.filter(u => u.active);
-const names = active.map(u => u.name);
+const active = users.filter((u) => u.active);
+const names = active.map((u) => u.name);
 
 // After
-const names = users.filter(u => u.active).map(u => u.name);
+const names = users.filter((u) => u.active).map((u) => u.name);
 ```
 
 ## Remove Accidental Complexity
 
 Extraneous indirection introduced by premature abstraction or framework boilerplate.
 
-| Anti-pattern | Refactored |
-|---|---|
-| Single-function class that holds no state | Convert to plain function |
-| Wrapper function that only adds logging | Inline logging at call site |
-| Factory that always produces the same concrete type | Use constructor directly |
-| Interface with exactly one implementation | Remove interface, keep implementation |
+| Anti-pattern                                        | Refactored                            |
+| --------------------------------------------------- | ------------------------------------- |
+| Single-function class that holds no state           | Convert to plain function             |
+| Wrapper function that only adds logging             | Inline logging at call site           |
+| Factory that always produces the same concrete type | Use constructor directly              |
+| Interface with exactly one implementation           | Remove interface, keep implementation |

@@ -21,6 +21,7 @@ Read FIX.md in full — issue inventory, fix worker paths, regression test paths
 ### 2. Execute Fix Batches
 
 For each fix batch in order:
+
 - **Parallel fixes**: Dispatch workers concurrently using their pre-written prompts. Collect all results before proceeding.
 - **Sequential fixes**: Run workers one at a time.
 - **Simple fixes merged in one prompt**: Run as a single worker.
@@ -30,6 +31,7 @@ After each batch, run its verification gate (fix does not break existing tests).
 ### 3. Execute Regression Test Batches
 
 After all fix batches pass, execute regression test batches. For each test:
+
 - Confirm the test fails on unfixed code (or confirm equivalent by reading the test logic if the fix is already applied)
 - Run the test on the fixed code — confirm it passes
 - If multiple tests have no file overlap, dispatch them in parallel

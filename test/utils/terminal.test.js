@@ -6,7 +6,7 @@ test('color() wraps text with ANSI codes when enabled', () => {
   const result = color('hello', '1;32', true);
   assert.ok(result !== 'hello');
   assert.ok(result.includes('hello'));
-  assert.match(result, /\x1b\[\d+/);  // contains ANSI escape
+  assert.match(result, /\x1b\[\d+/); // contains ANSI escape
 });
 
 test('color() returns plain text when disabled', () => {
@@ -31,39 +31,21 @@ test('color() handles empty strings', () => {
 });
 
 test('supportsColor() returns true for TTY streams without NO_COLOR', () => {
-  assert.equal(
-    supportsColor({ isTTY: true }, { NO_COLOR: '' }),
-    true,
-  );
-  assert.equal(
-    supportsColor({ isTTY: true }, {}),
-    true,
-  );
+  assert.equal(supportsColor({ isTTY: true }, { NO_COLOR: '' }), true);
+  assert.equal(supportsColor({ isTTY: true }, {}), true);
 });
 
 test('supportsColor() returns false for non-TTY streams', () => {
-  assert.equal(
-    supportsColor({ isTTY: false }, {}),
-    false,
-  );
-  assert.equal(
-    supportsColor(null, {}),
-    false,
-  );
+  assert.equal(supportsColor({ isTTY: false }, {}), false);
+  assert.equal(supportsColor(null, {}), false);
 });
 
 test('supportsColor() returns false when NO_COLOR is set', () => {
-  assert.equal(
-    supportsColor({ isTTY: true }, { NO_COLOR: '1' }),
-    false,
-  );
+  assert.equal(supportsColor({ isTTY: true }, { NO_COLOR: '1' }), false);
 });
 
 test('supportsColor() returns false when NO_COLOR is any truthy value', () => {
-  assert.equal(
-    supportsColor({ isTTY: true }, { NO_COLOR: 'true' }),
-    false,
-  );
+  assert.equal(supportsColor({ isTTY: true }, { NO_COLOR: 'true' }), false);
 });
 
 test('sleep() resolves after the given delay', async () => {

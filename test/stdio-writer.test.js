@@ -5,8 +5,13 @@ import { createStdioWriter } from '@laitszkin/tui';
 function memoryStream() {
   let data = '';
   return {
-    write(chunk) { data += chunk; return true; },
-    toString() { return data; },
+    write(chunk) {
+      data += chunk;
+      return true;
+    },
+    toString() {
+      return data;
+    },
   };
 }
 
@@ -23,7 +28,11 @@ test('createStdioWriter returns an object with info, warn, error, verbose, json 
 
 test('info writes to stdout in pretty mode', () => {
   const stdout = memoryStream();
-  const w = createStdioWriter({ stdout, stderr: memoryStream(), mode: 'pretty' });
+  const w = createStdioWriter({
+    stdout,
+    stderr: memoryStream(),
+    mode: 'pretty',
+  });
   w.info('hello world');
   assert.equal(stdout.toString().trim(), 'hello world');
 });
@@ -39,7 +48,11 @@ test('info writes JSON to stdout in json mode', () => {
 
 test('warn writes to stderr in pretty mode', () => {
   const stderr = memoryStream();
-  const w = createStdioWriter({ stdout: memoryStream(), stderr, mode: 'pretty' });
+  const w = createStdioWriter({
+    stdout: memoryStream(),
+    stderr,
+    mode: 'pretty',
+  });
   w.warn('warning message');
   assert.ok(stderr.toString().includes('warning message'));
 });
@@ -55,7 +68,11 @@ test('warn writes JSON to stderr in json mode', () => {
 
 test('error writes to stderr in pretty mode', () => {
   const stderr = memoryStream();
-  const w = createStdioWriter({ stdout: memoryStream(), stderr, mode: 'pretty' });
+  const w = createStdioWriter({
+    stdout: memoryStream(),
+    stderr,
+    mode: 'pretty',
+  });
   w.error('error message');
   assert.ok(stderr.toString().includes('error message'));
 });
@@ -71,21 +88,36 @@ test('error writes JSON to stderr in json mode', () => {
 
 test('verbose does not write when verbose is false', () => {
   const stdout = memoryStream();
-  const w = createStdioWriter({ stdout, stderr: memoryStream(), verbose: false, mode: 'pretty' });
+  const w = createStdioWriter({
+    stdout,
+    stderr: memoryStream(),
+    verbose: false,
+    mode: 'pretty',
+  });
   w.verbose('should not appear');
   assert.equal(stdout.toString(), '');
 });
 
 test('verbose writes to stdout when verbose is true in pretty mode', () => {
   const stdout = memoryStream();
-  const w = createStdioWriter({ stdout, stderr: memoryStream(), verbose: true, mode: 'pretty' });
+  const w = createStdioWriter({
+    stdout,
+    stderr: memoryStream(),
+    verbose: true,
+    mode: 'pretty',
+  });
   w.verbose('verbose detail');
   assert.equal(stdout.toString().trim(), 'verbose detail');
 });
 
 test('verbose writes JSON when verbose is true in json mode', () => {
   const stdout = memoryStream();
-  const w = createStdioWriter({ stdout, stderr: memoryStream(), verbose: true, mode: 'json' });
+  const w = createStdioWriter({
+    stdout,
+    stderr: memoryStream(),
+    verbose: true,
+    mode: 'json',
+  });
   w.verbose('verbose json');
   const parsed = JSON.parse(stdout.toString());
   assert.equal(parsed.severity, 'verbose');
@@ -118,7 +150,11 @@ test('setMode changes output format', () => {
 
 test('setVerbose toggles verbose output', () => {
   const stdout = memoryStream();
-  const w = createStdioWriter({ stdout, stderr: memoryStream(), verbose: false });
+  const w = createStdioWriter({
+    stdout,
+    stderr: memoryStream(),
+    verbose: false,
+  });
   w.verbose('silent');
   assert.equal(stdout.toString(), '');
   w.setVerbose(true);

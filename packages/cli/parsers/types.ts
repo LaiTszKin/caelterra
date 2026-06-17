@@ -45,7 +45,11 @@ export interface ToolsHelpCommand {
 /**
  * Union of all parsed commands returned by the CLI arg parsers.
  */
-export type ParsedCommand = InstallCommand | UninstallCommand | ToolCommand | ToolsHelpCommand;
+export type ParsedCommand =
+  | InstallCommand
+  | UninstallCommand
+  | ToolCommand
+  | ToolsHelpCommand;
 
 /**
  * Parser interface for turning raw argv arrays into strongly-typed command objects.

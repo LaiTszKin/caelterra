@@ -32,9 +32,9 @@ const SUB_HEIGHT_MAX = 360;
 const SUB_SIDE_PAD = 16;
 const SUB_TOP_PAD = 14;
 const SUB_BOTTOM_PAD = 14;
-const TITLE_LINE = 22;     // slug line
-const KIND_LINE = 16;      // kind chip line
-const ROLE_LINE = 16;      // each role line
+const TITLE_LINE = 22; // slug line
+const KIND_LINE = 16; // kind chip line
+const ROLE_LINE = 16; // each role line
 const KIND_GAP = 4;
 const ROLE_GAP = 8;
 const MAX_ROLE_LINES = 6;
@@ -61,23 +61,23 @@ const EDGE_LABEL_PAD_Y = 8;
 function isWideChar(ch) {
   const code = ch.codePointAt(0);
   return (
-    (code >= 0x1100 && code <= 0x115F) ||
-    (code >= 0x2E80 && code <= 0x9FFF) ||
-    (code >= 0xA000 && code <= 0xA4CF) ||
-    (code >= 0xAC00 && code <= 0xD7A3) ||
-    (code >= 0xF900 && code <= 0xFAFF) ||
-    (code >= 0xFE30 && code <= 0xFE4F) ||
-    (code >= 0xFF00 && code <= 0xFF60) ||
-    (code >= 0xFFE0 && code <= 0xFFE6) ||
-    (code >= 0x20000 && code <= 0x2FFFD)
+    (code >= 0x1100 && code <= 0x115f) ||
+    (code >= 0x2e80 && code <= 0x9fff) ||
+    (code >= 0xa000 && code <= 0xa4cf) ||
+    (code >= 0xac00 && code <= 0xd7a3) ||
+    (code >= 0xf900 && code <= 0xfaff) ||
+    (code >= 0xfe30 && code <= 0xfe4f) ||
+    (code >= 0xff00 && code <= 0xff60) ||
+    (code >= 0xffe0 && code <= 0xffe6) ||
+    (code >= 0x20000 && code <= 0x2fffd)
   );
 }
 
 function charWidthFactor(ch) {
   if (isWideChar(ch)) return 1.0;
-  if (ch === ' ') return 0.30;
+  if (ch === ' ') return 0.3;
   if (/[A-Za-z0-9]/.test(ch)) return 0.55;
-  return 0.50;
+  return 0.5;
 }
 
 function approxTextWidth(text, fontPx) {
@@ -118,10 +118,13 @@ function wrapByVisualWidth(text, maxWidthPx, fontPx) {
       lineW += w;
       i += advance;
     } else if (/\s/.test(ch)) {
-      const w = fontPx * 0.30;
+      const w = fontPx * 0.3;
       if (line) {
         if (lineW + w > maxWidthPx) flush();
-        else { line += ch; lineW += w; }
+        else {
+          line += ch;
+          lineW += w;
+        }
       }
       i += advance;
     } else {
@@ -168,8 +171,15 @@ function measureEdgeLabel(text) {
       height: EDGE_LABEL_LINE_PX + EDGE_LABEL_PAD_Y,
     };
   }
-  const lines = wrapByVisualWidth(raw, EDGE_LABEL_LINE_WIDTH_MAX, EDGE_LABEL_FONT_PX);
-  const widestLine = lines.reduce((m, l) => Math.max(m, approxTextWidth(l, EDGE_LABEL_FONT_PX)), 0);
+  const lines = wrapByVisualWidth(
+    raw,
+    EDGE_LABEL_LINE_WIDTH_MAX,
+    EDGE_LABEL_FONT_PX,
+  );
+  const widestLine = lines.reduce(
+    (m, l) => Math.max(m, approxTextWidth(l, EDGE_LABEL_FONT_PX)),
+    0,
+  );
   return {
     text: lines.join('\n'),
     lines,
@@ -185,7 +195,8 @@ function measureEdgeLabel(text) {
 // outside the rectangle the layout engine reserved.
 function measureSubmodule(sub) {
   const slug = (sub && sub.slug) || '';
-  const kindLabel = KIND_LABEL[sub && sub.kind] || (sub && sub.kind) || 'Service';
+  const kindLabel =
+    KIND_LABEL[sub && sub.kind] || (sub && sub.kind) || 'Service';
   const role = (sub && sub.role) || '';
 
   const slugW = approxTextWidth(slug, SLUG_FONT_PX);
@@ -206,11 +217,15 @@ function measureSubmodule(sub) {
   } else {
     let target;
     if (roleVisualW <= maxInner) target = roleVisualW;
-    else if (Math.ceil(roleVisualW / 2) <= maxInner) target = Math.ceil(roleVisualW / 2);
+    else if (Math.ceil(roleVisualW / 2) <= maxInner)
+      target = Math.ceil(roleVisualW / 2);
     else target = Math.ceil(roleVisualW / 3);
     chosenInner = Math.max(baseInner, Math.max(180, target));
   }
-  const width = Math.max(SUB_WIDTH_MIN, Math.min(SUB_WIDTH_MAX, Math.ceil(chosenInner + SUB_SIDE_PAD * 2)));
+  const width = Math.max(
+    SUB_WIDTH_MIN,
+    Math.min(SUB_WIDTH_MAX, Math.ceil(chosenInner + SUB_SIDE_PAD * 2)),
+  );
 
   // With the chosen width fixed, wrap the role for real and count lines.
   const innerW = width - SUB_SIDE_PAD * 2;
@@ -218,12 +233,23 @@ function measureSubmodule(sub) {
   if (roleLines.length > MAX_ROLE_LINES) {
     roleLines = roleLines.slice(0, MAX_ROLE_LINES);
     const last = roleLines[MAX_ROLE_LINES - 1];
-    roleLines[MAX_ROLE_LINES - 1] = last.length > 3 ? `${last.slice(0, -1)}…` : `${last}…`;
+    roleLines[MAX_ROLE_LINES - 1] =
+      last.length > 3 ? `${last.slice(0, -1)}…` : `${last}…`;
   }
 
-  const roleBlock = roleLines.length > 0 ? ROLE_GAP + roleLines.length * ROLE_LINE : 0;
-  const intrinsicH = SUB_TOP_PAD + TITLE_LINE + KIND_GAP + KIND_LINE + roleBlock + SUB_BOTTOM_PAD;
-  const height = Math.max(SUB_HEIGHT_MIN, Math.min(SUB_HEIGHT_MAX, Math.ceil(intrinsicH)));
+  const roleBlock =
+    roleLines.length > 0 ? ROLE_GAP + roleLines.length * ROLE_LINE : 0;
+  const intrinsicH =
+    SUB_TOP_PAD +
+    TITLE_LINE +
+    KIND_GAP +
+    KIND_LINE +
+    roleBlock +
+    SUB_BOTTOM_PAD;
+  const height = Math.max(
+    SUB_HEIGHT_MIN,
+    Math.min(SUB_HEIGHT_MAX, Math.ceil(intrinsicH)),
+  );
 
   return { width, height, roleLines, kindLabel };
 }
@@ -251,7 +277,8 @@ function clusterLayoutOptions(feature, isCrossEdgeEndpoint) {
   // Otherwise (truly isolated leaf cluster) pack sub-modules into a
   // roughly square grid so a 10-sub-module feature does not become a
   // tall column that wastes the rest of the viewport.
-  const hasInternalEdges = Array.isArray(feature.edges) && feature.edges.length > 0;
+  const hasInternalEdges =
+    Array.isArray(feature.edges) && feature.edges.length > 0;
   const common = {
     'elk.padding': `[top=${CLUSTER_PAD_TOP},left=${CLUSTER_PAD_SIDE},bottom=${CLUSTER_PAD_BOTTOM},right=${CLUSTER_PAD_SIDE}]`,
     'elk.spacing.nodeNode': '16',
@@ -277,7 +304,8 @@ function clusterLayoutOptions(feature, isCrossEdgeEndpoint) {
 function collectCrossEdgeFeatures(state) {
   const set = new Set();
   function note(endpoint) {
-    if (endpoint && typeof endpoint === 'object' && endpoint.feature) set.add(endpoint.feature);
+    if (endpoint && typeof endpoint === 'object' && endpoint.feature)
+      set.add(endpoint.feature);
   }
   for (const edge of state.edges || []) {
     note(edge.from);
@@ -290,25 +318,32 @@ function buildGraph(state) {
   const crossEndpoints = collectCrossEdgeFeatures(state);
   const children = (state.features || []).map((feature) => ({
     id: `feature::${feature.slug}`,
-    labels: [{
-      id: `feature::${feature.slug}::label`,
-      text: feature.title || feature.slug,
-      width: estimateLabelWidth(feature.title || feature.slug),
-      height: 24,
-    }],
-    layoutOptions: clusterLayoutOptions(feature, crossEndpoints.has(feature.slug)),
+    labels: [
+      {
+        id: `feature::${feature.slug}::label`,
+        text: feature.title || feature.slug,
+        width: estimateLabelWidth(feature.title || feature.slug),
+        height: 24,
+      },
+    ],
+    layoutOptions: clusterLayoutOptions(
+      feature,
+      crossEndpoints.has(feature.slug),
+    ),
     children: (feature.submodules || []).map((sub) => {
       const box = measureSubmodule(sub);
       return {
         id: `submodule::${feature.slug}::${sub.slug}`,
         width: box.width,
         height: box.height,
-        labels: [{
-          id: `submodule::${feature.slug}::${sub.slug}::label`,
-          text: sub.slug,
-          width: estimateLabelWidth(sub.slug),
-          height: 18,
-        }],
+        labels: [
+          {
+            id: `submodule::${feature.slug}::${sub.slug}::label`,
+            text: sub.slug,
+            width: estimateLabelWidth(sub.slug),
+            height: 18,
+          },
+        ],
       };
     }),
   }));
@@ -323,12 +358,14 @@ function buildGraph(state) {
     let labels = [];
     if (raw.label) {
       const m = measureEdgeLabel(raw.label);
-      labels = [{
-        id: `${id}::label`,
-        text: m.text,
-        width: m.width,
-        height: m.height,
-      }];
+      labels = [
+        {
+          id: `${id}::label`,
+          text: m.text,
+          width: m.width,
+          height: m.height,
+        },
+      ];
     }
     list.push({ id, sources: [sourceId], targets: [targetId], labels });
   }
@@ -336,7 +373,12 @@ function buildGraph(state) {
   for (const feature of state.features || []) {
     const list = [];
     for (const edge of feature.edges || []) {
-      pushEdge(list, edge, endpointId(edge.from, feature.slug), endpointId(edge.to, feature.slug));
+      pushEdge(
+        list,
+        edge,
+        endpointId(edge.from, feature.slug),
+        endpointId(edge.to, feature.slug),
+      );
     }
     if (list.length > 0) nestedEdges.set(feature.slug, list);
   }
@@ -418,9 +460,15 @@ function collectAbsolute(node, offsetX, offsetY, acc) {
 
   for (const edge of node.edges || []) {
     const sections = (edge.sections || []).map((section) => ({
-      startPoint: { x: section.startPoint.x + absX, y: section.startPoint.y + absY },
+      startPoint: {
+        x: section.startPoint.x + absX,
+        y: section.startPoint.y + absY,
+      },
       endPoint: { x: section.endPoint.x + absX, y: section.endPoint.y + absY },
-      bendPoints: (section.bendPoints || []).map((p) => ({ x: p.x + absX, y: p.y + absY })),
+      bendPoints: (section.bendPoints || []).map((p) => ({
+        x: p.x + absX,
+        y: p.y + absY,
+      })),
     }));
     const labels = (edge.labels || []).map((label) => ({
       text: label.text,
@@ -449,7 +497,9 @@ function assertNoOverlap(layout) {
       const overlapX = a.x < b.x + b.w && b.x < a.x + a.w;
       const overlapY = a.y < b.y + b.h && b.y < a.y + a.h;
       if (overlapX && overlapY) {
-        throw new Error(`atlas layout: submodule rectangles overlap: ${a.id} vs ${b.id}`);
+        throw new Error(
+          `atlas layout: submodule rectangles overlap: ${a.id} vs ${b.id}`,
+        );
       }
     }
   }
@@ -457,7 +507,14 @@ function assertNoOverlap(layout) {
 
 async function layoutMacro(state) {
   if (!state.features || state.features.length === 0) {
-    return { width: 320, height: 160, features: [], submodules: [], edges: [], empty: true };
+    return {
+      width: 320,
+      height: 160,
+      features: [],
+      submodules: [],
+      edges: [],
+      empty: true,
+    };
   }
   const graph = buildGraph(state);
   const laidOut = await _elk.layout(graph);

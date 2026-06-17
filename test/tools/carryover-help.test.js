@@ -15,15 +15,25 @@ describe('carryover tools --help', () => {
       const stderr = [];
       const exitCode = await run([name, ...args], {
         sourceRoot: process.cwd(),
-        stdout: { write(s) { stdout.push(s); } },
-        stderr: { write(s) { stderr.push(s); } },
+        stdout: {
+          write(s) {
+            stdout.push(s);
+          },
+        },
+        stderr: {
+          write(s) {
+            stderr.push(s);
+          },
+        },
       });
       assert.strictEqual(exitCode, 0, `${name} --help should exit 0`);
       const output = stdout.join('');
       assert.ok(output.length > 0, `${name} --help should produce stdout`);
       assert.ok(
-        output.includes('Usage') || output.includes('usage') || output.includes('Options'),
-        `${name} --help should include usage or options text`
+        output.includes('Usage') ||
+          output.includes('usage') ||
+          output.includes('Options'),
+        `${name} --help should include usage or options text`,
       );
     });
   }

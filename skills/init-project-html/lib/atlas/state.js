@@ -39,7 +39,11 @@ function readYaml(file) {
 
 function writeYaml(file, data) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const text = yaml.dump(data, { sortKeys: false, lineWidth: 100, noRefs: true });
+  const text = yaml.dump(data, {
+    sortKeys: false,
+    lineWidth: 100,
+    noRefs: true,
+  });
   fs.writeFileSync(file, text, 'utf8');
 }
 
@@ -73,12 +77,28 @@ function load(atlasDir) {
         const featureFile = path.join(atlasDir, FEATURES_DIR, `${slug}.yaml`);
         const feature = readYaml(featureFile);
         if (!feature) {
-          return { slug, title: slug, story: '', dependsOn: [], submodules: [], edges: [] };
+          return {
+            slug,
+            title: slug,
+            story: '',
+            dependsOn: [],
+            submodules: [],
+            edges: [],
+          };
         }
         return normalizeFeature({ ...feature, slug: feature.slug || slug });
       } catch (e) {
-        console.error(`state: skipping corrupted feature ${slug}: ${e.message}`);
-        return { slug, title: slug, story: '', dependsOn: [], submodules: [], edges: [] };
+        console.error(
+          `state: skipping corrupted feature ${slug}: ${e.message}`,
+        );
+        return {
+          slug,
+          title: slug,
+          story: '',
+          dependsOn: [],
+          submodules: [],
+          edges: [],
+        };
       }
     })
     .filter(Boolean);
@@ -92,7 +112,9 @@ function normalizeFeature(feature) {
     title: feature.title || feature.slug,
     story: feature.story || '',
     dependsOn: Array.isArray(feature.dependsOn) ? feature.dependsOn : [],
-    submodules: Array.isArray(feature.submodules) ? feature.submodules.map(normalizeSubmodule) : [],
+    submodules: Array.isArray(feature.submodules)
+      ? feature.submodules.map(normalizeSubmodule)
+      : [],
     edges: Array.isArray(feature.edges) ? feature.edges : [],
     ...(feature.evidence ? { evidence: feature.evidence } : {}),
   };
@@ -161,7 +183,11 @@ function loadOverlay(overlayDir) {
     if (index.actors !== undefined) overlay.actors = index.actors;
     if (index.edges !== undefined) overlay.edges = index.edges;
     if (Array.isArray(index.features) && index.features.length > 0) {
-      overlay.featureOrder = index.features.map((entry) => (typeof entry === 'string' ? entry : entry && entry.slug)).filter(Boolean);
+      overlay.featureOrder = index.features
+        .map((entry) =>
+          typeof entry === 'string' ? entry : entry && entry.slug,
+        )
+        .filter(Boolean);
     }
   }
 
@@ -170,14 +196,17 @@ function loadOverlay(overlayDir) {
     for (const entry of fs.readdirSync(featuresDir)) {
       if (!entry.endsWith('.yaml')) continue;
       const data = readYaml(path.join(featuresDir, entry));
-      if (data && data.slug) overlay.features[data.slug] = normalizeFeature(data);
+      if (data && data.slug)
+        overlay.features[data.slug] = normalizeFeature(data);
     }
   }
 
   const removed = readYaml(path.join(overlayDir, REMOVED_FILE));
   if (removed) {
-    if (Array.isArray(removed.features)) overlay.removed.features = removed.features;
-    if (Array.isArray(removed.submodules)) overlay.removed.submodules = removed.submodules;
+    if (Array.isArray(removed.features))
+      overlay.removed.features = removed.features;
+    if (Array.isArray(removed.submodules))
+      overlay.removed.submodules = removed.submodules;
   }
 
   return overlay;
@@ -192,9 +221,12 @@ function saveOverlay(overlayDir, overlay) {
   fs.mkdirSync(overlayDir, { recursive: true });
 
   const indexPayload = {};
-  if (overlay.meta !== null && overlay.meta !== undefined) indexPayload.meta = overlay.meta;
-  if (overlay.actors !== null && overlay.actors !== undefined) indexPayload.actors = overlay.actors;
-  if (overlay.edges !== null && overlay.edges !== undefined) indexPayload.edges = overlay.edges;
+  if (overlay.meta !== null && overlay.meta !== undefined)
+    indexPayload.meta = overlay.meta;
+  if (overlay.actors !== null && overlay.actors !== undefined)
+    indexPayload.actors = overlay.actors;
+  if (overlay.edges !== null && overlay.edges !== undefined)
+    indexPayload.edges = overlay.edges;
   if (overlay.featureOrder) indexPayload.features = overlay.featureOrder;
   if (Object.keys(indexPayload).length > 0) {
     writeYaml(path.join(overlayDir, INDEX_FILE), indexPayload);
@@ -204,7 +236,9 @@ function saveOverlay(overlayDir, overlay) {
 
   const featuresDir = path.join(overlayDir, FEATURES_DIR);
   fs.mkdirSync(featuresDir, { recursive: true });
-  const wanted = new Set(Object.keys(overlay.features || {}).map((slug) => `${slug}.yaml`));
+  const wanted = new Set(
+    Object.keys(overlay.features || {}).map((slug) => `${slug}.yaml`),
+  );
   for (const entry of fs.readdirSync(featuresDir)) {
     if (entry.endsWith('.yaml') && !wanted.has(entry)) {
       fs.rmSync(path.join(featuresDir, entry));
@@ -215,8 +249,9 @@ function saveOverlay(overlayDir, overlay) {
   }
 
   const removedFile = path.join(overlayDir, REMOVED_FILE);
-  const hasRemoved = (overlay.removed.features && overlay.removed.features.length > 0)
-    || (overlay.removed.submodules && overlay.removed.submodules.length > 0);
+  const hasRemoved =
+    (overlay.removed.features && overlay.removed.features.length > 0) ||
+    (overlay.removed.submodules && overlay.removed.submodules.length > 0);
   if (hasRemoved) {
     writeYaml(removedFile, overlay.removed);
   } else if (fs.existsSync(removedFile)) {
@@ -233,8 +268,10 @@ function saveOverlay(overlayDir, overlay) {
 function mergeOverlay(base, overlay) {
   const merged = JSON.parse(JSON.stringify(base));
   if (overlay.meta) merged.meta = { ...merged.meta, ...overlay.meta };
-  if (overlay.actors !== null && overlay.actors !== undefined) merged.actors = overlay.actors || [];
-  if (overlay.edges !== null && overlay.edges !== undefined) merged.edges = overlay.edges || [];
+  if (overlay.actors !== null && overlay.actors !== undefined)
+    merged.actors = overlay.actors || [];
+  if (overlay.edges !== null && overlay.edges !== undefined)
+    merged.edges = overlay.edges || [];
 
   const featureMap = new Map((merged.features || []).map((f) => [f.slug, f]));
   for (const [slug, feature] of Object.entries(overlay.features || {})) {
@@ -245,9 +282,11 @@ function mergeOverlay(base, overlay) {
     for (const slug of overlay.removed.features) featureMap.delete(slug);
   }
   if (overlay.removed && Array.isArray(overlay.removed.submodules)) {
-    for (const { feature: fslug, submodule: sslug } of overlay.removed.submodules) {
+    for (const { feature: fslug, submodule: sslug } of overlay.removed
+      .submodules) {
       const f = featureMap.get(fslug);
-      if (f) f.submodules = (f.submodules || []).filter((s) => s.slug !== sslug);
+      if (f)
+        f.submodules = (f.submodules || []).filter((s) => s.slug !== sslug);
     }
   }
 
@@ -285,7 +324,9 @@ function deriveOverlay(base, merged) {
   if (JSON.stringify(merged.meta || {}) !== JSON.stringify(base.meta || {})) {
     overlay.meta = merged.meta || {};
   }
-  if (JSON.stringify(merged.actors || []) !== JSON.stringify(base.actors || [])) {
+  if (
+    JSON.stringify(merged.actors || []) !== JSON.stringify(base.actors || [])
+  ) {
     overlay.actors = merged.actors || [];
   }
   if (JSON.stringify(merged.edges || []) !== JSON.stringify(base.edges || [])) {
@@ -298,12 +339,19 @@ function deriveOverlay(base, merged) {
     overlay.featureOrder = mergedOrder;
   }
 
-  const baseFeatures = new Map((base.features || []).map((feature) => [feature.slug, feature]));
-  const mergedFeatures = new Map((merged.features || []).map((feature) => [feature.slug, feature]));
+  const baseFeatures = new Map(
+    (base.features || []).map((feature) => [feature.slug, feature]),
+  );
+  const mergedFeatures = new Map(
+    (merged.features || []).map((feature) => [feature.slug, feature]),
+  );
 
   for (const [slug, feature] of mergedFeatures) {
     const baseFeature = baseFeatures.get(slug);
-    if (!baseFeature || JSON.stringify(feature) !== JSON.stringify(baseFeature)) {
+    if (
+      !baseFeature ||
+      JSON.stringify(feature) !== JSON.stringify(baseFeature)
+    ) {
       overlay.features[slug] = feature;
     }
   }
@@ -316,11 +364,18 @@ function deriveOverlay(base, merged) {
       const baseFeat = baseFeatures.get(slug);
       const mergedFeat = mergedFeatures.get(slug);
       if (baseFeat && mergedFeat) {
-        const baseSubs = new Set((baseFeat.submodules || []).map(s => s.slug));
-        const mergedSubs = new Set((mergedFeat.submodules || []).map(s => s.slug));
+        const baseSubs = new Set(
+          (baseFeat.submodules || []).map((s) => s.slug),
+        );
+        const mergedSubs = new Set(
+          (mergedFeat.submodules || []).map((s) => s.slug),
+        );
         for (const subSlug of baseSubs) {
           if (!mergedSubs.has(subSlug)) {
-            overlay.removed.submodules.push({ feature: slug, submodule: subSlug });
+            overlay.removed.submodules.push({
+              feature: slug,
+              submodule: subSlug,
+            });
           }
         }
       }
@@ -335,7 +390,9 @@ function deriveOverlay(base, merged) {
 // emitted fresh (added) versus listed in _removed.txt (removed).
 function diffPages(base, merged) {
   const baseFeatures = new Map((base.features || []).map((f) => [f.slug, f]));
-  const mergedFeatures = new Map((merged.features || []).map((f) => [f.slug, f]));
+  const mergedFeatures = new Map(
+    (merged.features || []).map((f) => [f.slug, f]),
+  );
 
   const addedFeatures = new Set();
   const modifiedFeatures = new Set();
@@ -353,11 +410,18 @@ function diffPages(base, merged) {
       }
       continue;
     }
-    if (JSON.stringify(featureVisualOf(baseFeat)) !== JSON.stringify(featureVisualOf(mergedFeat))) {
+    if (
+      JSON.stringify(featureVisualOf(baseFeat)) !==
+      JSON.stringify(featureVisualOf(mergedFeat))
+    ) {
       modifiedFeatures.add(slug);
     }
-    const baseSubMap = new Map((baseFeat.submodules || []).map((s) => [s.slug, s]));
-    const mergedSubMap = new Map((mergedFeat.submodules || []).map((s) => [s.slug, s]));
+    const baseSubMap = new Map(
+      (baseFeat.submodules || []).map((s) => [s.slug, s]),
+    );
+    const mergedSubMap = new Map(
+      (mergedFeat.submodules || []).map((s) => [s.slug, s]),
+    );
     for (const [subSlug, mergedSub] of mergedSubMap) {
       const baseSub = baseSubMap.get(subSlug);
       if (!baseSub) addedSubmodules.push({ feature: slug, submodule: subSlug });
@@ -366,7 +430,8 @@ function diffPages(base, merged) {
       }
     }
     for (const subSlug of baseSubMap.keys()) {
-      if (!mergedSubMap.has(subSlug)) removedSubmodules.push({ feature: slug, submodule: subSlug });
+      if (!mergedSubMap.has(subSlug))
+        removedSubmodules.push({ feature: slug, submodule: subSlug });
     }
   }
   for (const slug of baseFeatures.keys()) {
@@ -378,9 +443,9 @@ function diffPages(base, merged) {
     }
   }
 
-  const macroChanged = (
-    JSON.stringify(macroVisualOf(base)) !== JSON.stringify(macroVisualOf(merged))
-  );
+  const macroChanged =
+    JSON.stringify(macroVisualOf(base)) !==
+    JSON.stringify(macroVisualOf(merged));
 
   return {
     addedFeatures,
@@ -432,7 +497,9 @@ function summarize(state) {
 // computeDiff compares two atlas states and returns a JSON-serializable
 // summary of feature-level changes (features added, modified, or removed).
 function computeDiff(before, after) {
-  const beforeFeatures = new Map((before.features || []).map((f) => [f.slug, f]));
+  const beforeFeatures = new Map(
+    (before.features || []).map((f) => [f.slug, f]),
+  );
   const afterFeatures = new Map((after.features || []).map((f) => [f.slug, f]));
 
   const addedFeatures = [];
@@ -442,7 +509,9 @@ function computeDiff(before, after) {
   for (const [slug, feature] of afterFeatures) {
     if (!beforeFeatures.has(slug)) {
       addedFeatures.push(slug);
-    } else if (JSON.stringify(feature) !== JSON.stringify(beforeFeatures.get(slug))) {
+    } else if (
+      JSON.stringify(feature) !== JSON.stringify(beforeFeatures.get(slug))
+    ) {
       modifiedFeatures.push(slug);
     }
   }
@@ -454,9 +523,10 @@ function computeDiff(before, after) {
   }
 
   // Detect non-feature changes (meta, actors, cross-feature edges)
-  const metaChanged = after.meta && before.meta
-    ? JSON.stringify(after.meta) !== JSON.stringify(before.meta)
-    : after.meta !== before.meta;
+  const metaChanged =
+    after.meta && before.meta
+      ? JSON.stringify(after.meta) !== JSON.stringify(before.meta)
+      : after.meta !== before.meta;
 
   const beforeActors = new Map((before.actors || []).map((a) => [a.id, a]));
   const afterActors = new Map((after.actors || []).map((a) => [a.id, a]));
@@ -488,7 +558,16 @@ function computeDiff(before, after) {
     }
   }
 
-  return { addedFeatures, modifiedFeatures, removedFeatures, metaChanged, addedActors, removedActors, addedEdges, removedEdges };
+  return {
+    addedFeatures,
+    modifiedFeatures,
+    removedFeatures,
+    metaChanged,
+    addedActors,
+    removedActors,
+    addedEdges,
+    removedEdges,
+  };
 }
 
 function featureVisualOf(feature) {
@@ -496,7 +575,11 @@ function featureVisualOf(feature) {
     title: feature.title,
     story: feature.story,
     dependsOn: feature.dependsOn || [],
-    submodules: (feature.submodules || []).map((s) => ({ slug: s.slug, kind: s.kind, role: s.role })),
+    submodules: (feature.submodules || []).map((s) => ({
+      slug: s.slug,
+      kind: s.kind,
+      role: s.role,
+    })),
     edges: feature.edges || [],
   };
 }
@@ -515,7 +598,11 @@ function macroVisualOf(state) {
       slug: f.slug,
       title: f.title,
       dependsOn: f.dependsOn || [],
-      submodules: (f.submodules || []).map((s) => ({ slug: s.slug, kind: s.kind, role: s.role })),
+      submodules: (f.submodules || []).map((s) => ({
+        slug: s.slug,
+        kind: s.kind,
+        role: s.role,
+      })),
       edges: f.edges || [],
     })),
   };
@@ -524,7 +611,11 @@ function macroVisualOf(state) {
 function appendHistory(atlasDir, entry) {
   fs.mkdirSync(atlasDir, { recursive: true });
   const file = path.join(atlasDir, HISTORY_FILE);
-  fs.appendFileSync(file, `${JSON.stringify({ ts: new Date().toISOString(), ...entry })}\n`, 'utf8');
+  fs.appendFileSync(
+    file,
+    `${JSON.stringify({ ts: new Date().toISOString(), ...entry })}\n`,
+    'utf8',
+  );
 }
 
 function writeUndoSnapshot(atlasDir, state) {
@@ -577,7 +668,11 @@ function writeUndoStack(atlasDir, stack) {
   }
   fs.mkdirSync(atlasDir, { recursive: true });
   fs.writeFileSync(stackFile, JSON.stringify(stack, null, 2), 'utf8');
-  fs.writeFileSync(latestFile, JSON.stringify(stack[stack.length - 1], null, 2), 'utf8');
+  fs.writeFileSync(
+    latestFile,
+    JSON.stringify(stack[stack.length - 1], null, 2),
+    'utf8',
+  );
 }
 
 module.exports = {

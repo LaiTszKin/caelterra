@@ -6,36 +6,39 @@ test('promptForModes throws when not in a TTY', async () => {
   const input = { isTTY: false };
   const output = { isTTY: false };
   await assert.rejects(
-    () => promptForModes({
-      input,
-      output,
-      message: 'test',
-      choices: [{ name: 'opt', value: 'opt', description: 'desc' }],
-    }),
+    () =>
+      promptForModes({
+        input,
+        output,
+        message: 'test',
+        choices: [{ name: 'opt', value: 'opt', description: 'desc' }],
+      }),
     /Interactive selection requires a TTY/,
   );
 });
 
 test('promptForModes throws when input is null', async () => {
   await assert.rejects(
-    () => promptForModes({
-      input: null,
-      output: { isTTY: true },
-      message: 'test',
-      choices: [{ name: 'opt', value: 'opt', description: 'desc' }],
-    }),
+    () =>
+      promptForModes({
+        input: null,
+        output: { isTTY: true },
+        message: 'test',
+        choices: [{ name: 'opt', value: 'opt', description: 'desc' }],
+      }),
     /Interactive selection requires a TTY/,
   );
 });
 
 test('promptForModes throws when output is null', async () => {
   await assert.rejects(
-    () => promptForModes({
-      input: { isTTY: true },
-      output: null,
-      message: 'test',
-      choices: [{ name: 'opt', value: 'opt', description: 'desc' }],
-    }),
+    () =>
+      promptForModes({
+        input: { isTTY: true },
+        output: null,
+        message: 'test',
+        choices: [{ name: 'opt', value: 'opt', description: 'desc' }],
+      }),
     /Interactive selection requires a TTY/,
   );
 });

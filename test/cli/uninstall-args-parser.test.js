@@ -65,7 +65,13 @@ test('UninstallArgsParser: --home with path sets toolkitHome', () => {
 
 test('UninstallArgsParser: --home with --yes parses both correctly', () => {
   const parser = new UninstallArgsParser();
-  const result = parser.parse(['uninstall', 'codex', '--yes', '--home', '/tmp/alt-home']);
+  const result = parser.parse([
+    'uninstall',
+    'codex',
+    '--yes',
+    '--home',
+    '/tmp/alt-home',
+  ]);
   assert.equal(result.assumeYes, true);
   assert.equal(result.toolkitHome, '/tmp/alt-home');
   assert.deepEqual(result.modes, ['codex']);

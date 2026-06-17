@@ -13,16 +13,32 @@ export interface ToolContext {
   stdout?: NodeJS.WriteStream;
   stderr?: NodeJS.WriteStream;
   env?: NodeJS.ProcessEnv;
-  spawnCommand?: Function;
+  spawnCommand?: (...args: unknown[]) => unknown;
   cwd?: string;
   /** Structured output adapter — created by createStdioWriter(@laitszkin/tui). */
-  stdioWriter?: { info?(msg: string): void; warn?(msg: string): void; error?(msg: string): void };
+  stdioWriter?: {
+    info?(msg: string): void;
+    warn?(msg: string): void;
+    error?(msg: string): void;
+  };
 }
 
 /** Option definition for parseArgs schema. */
 export type SchemaOption =
-  | { type: 'string'; default?: string; short?: string; multiple?: boolean; description?: string }
-  | { type: 'boolean'; default?: boolean; short?: string; multiple?: boolean; description?: string };
+  | {
+      type: 'string';
+      default?: string;
+      short?: string;
+      multiple?: boolean;
+      description?: string;
+    }
+  | {
+      type: 'boolean';
+      default?: boolean;
+      short?: string;
+      multiple?: boolean;
+      description?: string;
+    };
 
 /**
  * Complete tool schema — single source of truth for args, help, and validation.
@@ -70,7 +86,8 @@ function buildHelpText(schema: ToolSchema): string {
     const short = opt.short ? `, -${opt.short}` : '';
     const typeLabel = opt.type === 'string' ? ' <value>' : '';
     const multiLabel = opt.multiple ? ' [...]' : '';
-    const def = opt.default !== undefined ? ` (default: ${opt.default})` : '';
+    const def =
+      opt.default !== undefined ? ` (default: ${String(opt.default)})` : '';
     const desc = opt.description ? `  ${opt.description}` : '';
     lines.push(`  --${key}${short}${typeLabel}${multiLabel}${def}${desc}`);
   }
@@ -88,13 +105,18 @@ function buildHelpText(schema: ToolSchema): string {
 export function createToolRunner(schema: ToolSchema) {
   const options: ParseArgsOptionsConfig = {};
   for (const [key, opt] of Object.entries(schema.options)) {
-    const entry: { type: 'string' | 'boolean'; default?: string | boolean; short?: string; multiple?: boolean } = { type: opt.type };
+    const entry: {
+      type: 'string' | 'boolean';
+      default?: string | boolean;
+      short?: string;
+      multiple?: boolean;
+    } = { type: opt.type };
     if (opt.default !== undefined) entry.default = opt.default;
     if (opt.short) entry.short = opt.short;
     if (opt.multiple) entry.multiple = true;
     options[key] = entry;
   }
-  options.help = { type: 'boolean', short: 'h' };
+  options['help'] = { type: 'boolean', short: 'h' };
 
   return async (args: string[], context: ToolContext): Promise<number> => {
     const stdout = context.stdout ?? process.stdout;
@@ -108,12 +130,12 @@ export function createToolRunner(schema: ToolSchema) {
         strict: schema.strict ?? true,
       });
 
-      if (values.help) {
+      if (values['help']) {
         stdout.write(buildHelpText(schema) + '\n');
         return 0;
       }
 
-      return await schema.handler(values as Record<string, unknown>, positionals, context);
+      return await schema.handler(values, positionals, context);
     } catch (err) {
       formatAppError(stderr, err);
       return 1;

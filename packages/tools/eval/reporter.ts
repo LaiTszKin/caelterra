@@ -75,11 +75,13 @@ export function generateReport(
       '',
       '> 無測試結果可供報告。',
       '',
-    ].filter(line => line !== '').join('\n');
+    ]
+      .filter((line) => line !== '')
+      .join('\n');
   }
 
   // --- Overall statistics ---
-  const overallScores = scores.map(s => s.overallScore);
+  const overallScores = scores.map((s) => s.overallScore);
   const overallAvg = average(overallScores);
   const overallMin = Math.min(...overallScores);
   const overallMax = Math.max(...overallScores);
@@ -98,10 +100,13 @@ export function generateReport(
     }
   }
 
-  const dimStats = dimNames.map(name => {
+  const dimStats = dimNames.map((name) => {
     const dimScores = scores
-      .filter(s => s.dimensions.some(d => d.name === name))
-      .map(s => { const d = s.dimensions.find(dim => dim.name === name); return d ? d.score : 0; });
+      .filter((s) => s.dimensions.some((d) => d.name === name))
+      .map((s) => {
+        const d = s.dimensions.find((dim) => dim.name === name);
+        return d ? d.score : 0;
+      });
 
     return {
       name,
@@ -109,7 +114,11 @@ export function generateReport(
       min: dimScores.length > 0 ? Math.min(...dimScores) : 0,
       max: dimScores.length > 0 ? Math.max(...dimScores) : 0,
       count: dimScores.length,
-      weight: scores.length > 0 ? (scores[0].dimensions.find(d => d.name === name)?.weight ?? 0) : 0,
+      weight:
+        scores.length > 0
+          ? ((scores[0] as ScoreResult).dimensions.find((d) => d.name === name)
+              ?.weight ?? 0)
+          : 0,
     };
   });
 
@@ -123,7 +132,8 @@ export function generateReport(
 
   // Sort: P0 first, then P1, then P2; within each severity, by category
   const sortedIssues = [...allIssues].sort((a, b) => {
-    const sevDiff = (SEVERITY_RANK[a.severity] ?? 99) - (SEVERITY_RANK[b.severity] ?? 99);
+    const sevDiff =
+      (SEVERITY_RANK[a.severity] ?? 99) - (SEVERITY_RANK[b.severity] ?? 99);
     if (sevDiff !== 0) return sevDiff;
     return a.category.localeCompare(b.category);
   });
@@ -133,10 +143,11 @@ export function generateReport(
   for (const s of scores) {
     for (const issue of s.issues) {
       const key = `${issue.severity}:${issue.category}:${issue.description}`;
-      if (!issueToTestMap.has(key)) {
-        issueToTestMap.set(key, new Set<string>());
+      let testIds = issueToTestMap.get(key);
+      if (!testIds) {
+        testIds = new Set<string>();
+        issueToTestMap.set(key, testIds);
       }
-      const testIds = issueToTestMap.get(key)!;
       testIds.add(s.testId);
     }
   }
@@ -147,7 +158,9 @@ export function generateReport(
   // Pattern: low-scoring dimensions
   for (const ds of dimStats) {
     if (ds.avg < 60 && ds.count > 0) {
-      patterns.push(`- **${ds.name}** 維度平均分數偏低 (${fmtScore(ds.avg)})，需要關注`);
+      patterns.push(
+        `- **${ds.name}** 維度平均分數偏低 (${fmtScore(ds.avg)})，需要關注`,
+      );
     }
   }
 
@@ -160,7 +173,9 @@ export function generateReport(
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
   if (topCategory.length > 0) {
-    const catSummary = topCategory.map(([cat, count]) => `${cat} (${count} 項)`).join(', ');
+    const catSummary = topCategory
+      .map(([cat, count]) => `${cat} (${String(count)} 項)`)
+      .join(', ');
     patterns.push(`- 主要問題類別: ${catSummary}`);
   }
 
@@ -170,23 +185,27 @@ export function generateReport(
     severityCount[issue.severity] = (severityCount[issue.severity] ?? 0) + 1;
   }
   const sevSummary = ['P0', 'P1', 'P2']
-    .filter(sev => severityCount[sev] > 0)
-    .map(sev => `${sev}: ${severityCount[sev]} 項`)
+    .filter((sev) => (severityCount[sev] ?? 0) > 0)
+    .map((sev) => `${sev}: ${String(severityCount[sev])} 項`)
     .join(', ');
   if (sevSummary) {
     patterns.push(`- 問題嚴重度分佈: ${sevSummary}`);
   }
 
   // Pattern: tests with extremely low scores
-  const lowScoreTests = scores.filter(s => s.overallScore < 30);
+  const lowScoreTests = scores.filter((s) => s.overallScore < 30);
   if (lowScoreTests.length > 0) {
-    patterns.push(`- ${lowScoreTests.length} 個測試總分低於 30: ${lowScoreTests.map(s => s.testId).join(', ')}`);
+    patterns.push(
+      `- ${String(lowScoreTests.length)} 個測試總分低於 30: ${lowScoreTests.map((s) => s.testId).join(', ')}`,
+    );
   }
 
   // Pattern: tests with extremely high scores
-  const highScoreTests = scores.filter(s => s.overallScore >= 90);
+  const highScoreTests = scores.filter((s) => s.overallScore >= 90);
   if (highScoreTests.length > 0) {
-    patterns.push(`- ${highScoreTests.length} 個測試總分達到 90 以上: ${highScoreTests.map(s => s.testId).join(', ')}`);
+    patterns.push(
+      `- ${String(highScoreTests.length)} 個測試總分達到 90 以上: ${highScoreTests.map((s) => s.testId).join(', ')}`,
+    );
   }
 
   if (patterns.length === 0) {
@@ -204,7 +223,7 @@ export function generateReport(
     `**日期**: ${date}`,
     `**產生時間**: ${now}`,
     skillName ? `**技能**: ${skillName}` : '',
-    `**測試總數**: ${totalTests}`,
+    `**測試總數**: ${String(totalTests)}`,
     '',
   );
 
@@ -218,7 +237,7 @@ export function generateReport(
     `| 最低總分 | ${fmtScore(overallMin)} |`,
     `| 最高總分 | ${fmtScore(overallMax)} |`,
     `| 標準差 | ${fmtScore(Math.sqrt(overallScores.reduce((sq, s) => sq + (s - overallAvg) ** 2, 0) / overallScores.length))} |`,
-    `| 總問題數 | ${allIssues.length} |`,
+    `| 總問題數 | ${String(allIssues.length)} |`,
     '',
   );
 
@@ -231,7 +250,7 @@ export function generateReport(
   );
   for (const ds of dimStats) {
     sections.push(
-      `| ${ds.name} | ${fmtScore(ds.avg)} | ${ds.weight.toFixed(2)} | ${fmtScore(ds.min)} | ${fmtScore(ds.max)} | ${ds.count} |`,
+      `| ${ds.name} | ${fmtScore(ds.avg)} | ${ds.weight.toFixed(2)} | ${fmtScore(ds.min)} | ${fmtScore(ds.max)} | ${String(ds.count)} |`,
     );
   }
   sections.push('');
@@ -245,9 +264,14 @@ export function generateReport(
   );
 
   for (const s of scores) {
-    const dimParts = s.dimensions.map(d => `${d.name}: ${fmtScore(d.score)}`).join(', ');
-    const summary = s.summary.length > 50 ? s.summary.substring(0, 50) + '...' : s.summary;
-    sections.push(`| ${s.testId} | ${fmtScore(s.overallScore)} | ${dimParts} | ${summary} |`);
+    const dimParts = s.dimensions
+      .map((d) => `${d.name}: ${fmtScore(d.score)}`)
+      .join(', ');
+    const summary =
+      s.summary.length > 50 ? s.summary.substring(0, 50) + '...' : s.summary;
+    sections.push(
+      `| ${s.testId} | ${fmtScore(s.overallScore)} | ${dimParts} | ${summary} |`,
+    );
   }
   sections.push('');
 
@@ -265,23 +289,26 @@ export function generateReport(
       const key = `${issue.severity}:${issue.category}:${issue.description}`;
       const affectedTests = [...(issueToTestMap.get(key) || [])].join(', ');
 
-      const ev = issue.evidence.length > 200 ? issue.evidence.substring(0, 200) + '...' : issue.evidence;
-      const desc = issue.description.length > 120 ? issue.description.substring(0, 120) + '...' : issue.description;
-      sections.push(`| ${issue.severity} | ${issue.category} | ${affectedTests || '(多個)'} | ${desc} | ${ev} |`);
+      const ev =
+        issue.evidence.length > 200
+          ? issue.evidence.substring(0, 200) + '...'
+          : issue.evidence;
+      const desc =
+        issue.description.length > 120
+          ? issue.description.substring(0, 120) + '...'
+          : issue.description;
+      sections.push(
+        `| ${issue.severity} | ${issue.category} | ${affectedTests || '(多個)'} | ${desc} | ${ev} |`,
+      );
     }
     sections.push('');
   }
 
   // 6. Common patterns
-  sections.push(
-    '## 常見問題模式',
-    '',
-    ...patterns,
-    '',
-  );
+  sections.push('## 常見問題模式', '', ...patterns, '');
 
   // 7. Unscorable tests section
-  const unscorableScores = scores.filter(s => s.scorable === false);
+  const unscorableScores = scores.filter((s) => s.scorable === false);
   if (unscorableScores.length > 0) {
     sections.push(
       '## 無法評分',

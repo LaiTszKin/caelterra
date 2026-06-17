@@ -17,7 +17,9 @@ const PROJECT_ROOT = path.resolve(
 function createMockStream() {
   let output = '';
   return {
-    write: (s) => { output += String(s); },
+    write: (s) => {
+      output += String(s);
+    },
     getOutput: () => output,
     isTTY: false,
   };
@@ -35,7 +37,10 @@ test('run: successful help handler returns exit code 0 with stdout output', asyn
   });
   assert.equal(result, 0);
   const out = stdout.getOutput();
-  assert.ok(out.includes('Usage'), `stdout should contain help text, got: ${out.slice(0, 200)}`);
+  assert.ok(
+    out.includes('Usage'),
+    `stdout should contain help text, got: ${out.slice(0, 200)}`,
+  );
 });
 
 // ---- Generic error from parser (parseArgs throws) ---------------------------
@@ -50,7 +55,10 @@ test('run: --home without value causes UserInputError on stderr and exit code 1'
   });
   assert.equal(result, 1);
   const err = stderr.getOutput();
-  assert.ok(!err.includes('Error:'), `stderr should NOT contain "Error:" for UserInputError, got: ${err}`);
+  assert.ok(
+    !err.includes('Error:'),
+    `stderr should NOT contain "Error:" for UserInputError, got: ${err}`,
+  );
   assert.ok(err.includes('Missing value for --home'));
 });
 
@@ -66,7 +74,10 @@ test('run: invalid mode causes error on stderr and exit code 1', async () => {
   });
   assert.equal(result, 1);
   const err = stderr.getOutput();
-  assert.ok(err.includes('Error:'), `stderr should contain "Error:", got: ${err}`);
+  assert.ok(
+    err.includes('Error:'),
+    `stderr should contain "Error:", got: ${err}`,
+  );
   assert.ok(err.includes('Invalid mode'));
 });
 
@@ -95,12 +106,17 @@ test('run: handler throwing UserInputError writes message without "Error:" prefi
     stderr,
     env: {},
     // Synchronous throw — caught by try/catch in run()
-    runTool: () => { throw new UserInputError('user typed something wrong'); },
+    runTool: () => {
+      throw new UserInputError('user typed something wrong');
+    },
   });
   assert.equal(result, 1);
   const err = stderr.getOutput();
   assert.equal(err, 'user typed something wrong\n');
-  assert.ok(!err.includes('Error:'), 'stderr should NOT contain "Error:" for UserInputError');
+  assert.ok(
+    !err.includes('Error:'),
+    'stderr should NOT contain "Error:" for UserInputError',
+  );
 });
 
 // ---- Error boundary: SystemError branch -------------------------------------
@@ -114,13 +130,21 @@ test('run: handler throwing SystemError writes message and stack trace', async (
     stderr,
     env: {},
     // Synchronous throw — caught by try/catch in run()
-    runTool: () => { throw new SystemError('system failure'); },
+    runTool: () => {
+      throw new SystemError('system failure');
+    },
   });
   assert.equal(result, 1);
   const err = stderr.getOutput();
-  assert.ok(err.includes('system failure'), 'stderr should contain error message');
+  assert.ok(
+    err.includes('system failure'),
+    'stderr should contain error message',
+  );
   // SystemError writes message + stack (stack starts with "SystemError: <message>")
-  assert.ok(err.includes('SystemError: system failure'), 'stderr should contain the constructor-name prefix from stack trace');
+  assert.ok(
+    err.includes('SystemError: system failure'),
+    'stderr should contain the constructor-name prefix from stack trace',
+  );
 });
 
 // ---- Error boundary: AppError (ToolNotFoundError) branch --------------------
@@ -136,10 +160,18 @@ test('run: handler throwing ToolNotFoundError writes message without prefix', as
     stderr,
     env: {},
     // Synchronous throw — caught by try/catch in run()
-    runTool: () => { throw new ToolNotFoundError('unknown-tool is not a valid tool'); },
+    runTool: () => {
+      throw new ToolNotFoundError('unknown-tool is not a valid tool');
+    },
   });
   assert.equal(result, 1);
   const err = stderr.getOutput();
-  assert.ok(err.includes('unknown-tool is not a valid tool'), 'stderr should contain the error message');
-  assert.ok(!err.includes('Error:'), 'stderr should NOT contain "Error:" prefix for ToolNotFoundError');
+  assert.ok(
+    err.includes('unknown-tool is not a valid tool'),
+    'stderr should contain the error message',
+  );
+  assert.ok(
+    !err.includes('Error:'),
+    'stderr should NOT contain "Error:" prefix for ToolNotFoundError',
+  );
 });

@@ -6,7 +6,9 @@ let initialized = true;
 let fakeCg: any;
 
 const require = createRequire(import.meta.url);
-const { CodeGraph } = require('@colbymchenry/codegraph') as { CodeGraph: { isInitialized: Function; open: Function } };
+const { CodeGraph } = require('@colbymchenry/codegraph') as {
+  CodeGraph: { isInitialized: Function; open: Function };
+};
 
 const initMock = mock.method(CodeGraph, 'isInitialized', () => initialized);
 const openMock = mock.method(CodeGraph, 'open', async () => fakeCg);
@@ -16,7 +18,9 @@ after(() => {
   openMock.mock.restore();
 });
 
-async function captureStdout(fn: () => Promise<number>): Promise<{ code: number; output: string }> {
+async function captureStdout(
+  fn: () => Promise<number>,
+): Promise<{ code: number; output: string }> {
   const writes: string[] = [];
   const originalWrite = process.stdout.write.bind(process.stdout);
   process.stdout.write = (chunk: unknown): boolean => {
@@ -32,7 +36,9 @@ async function captureStdout(fn: () => Promise<number>): Promise<{ code: number;
   }
 }
 
-async function captureStderr(fn: () => Promise<number>): Promise<{ code: number; output: string }> {
+async function captureStderr(
+  fn: () => Promise<number>,
+): Promise<{ code: number; output: string }> {
   const writes: string[] = [];
   const originalWrite = process.stderr.write.bind(process.stderr);
   process.stderr.write = (chunk: unknown): boolean => {
@@ -76,14 +82,19 @@ describe('CodeGraph exploration handlers', () => {
     };
 
     const { handleQuery } = await import('./cmd-query.js');
-    const { code, output } = await captureStdout(() => handleQuery('/repo', 'login', {
-      kind: 'function',
-      limit: 7,
-      json: true,
-    }));
+    const { code, output } = await captureStdout(() =>
+      handleQuery('/repo', 'login', {
+        kind: 'function',
+        limit: 7,
+        json: true,
+      }),
+    );
 
     assert.strictEqual(code, 0);
-    assert.deepStrictEqual(searchArgs, ['login', { limit: 7, kinds: ['function'] }]);
+    assert.deepStrictEqual(searchArgs, [
+      'login',
+      { limit: 7, kinds: ['function'] },
+    ]);
     assert.ok(output.includes('"handleLogin"'));
   });
 
@@ -97,31 +108,46 @@ describe('CodeGraph exploration handlers', () => {
     };
 
     const { handleFiles } = await import('./cmd-files.js');
-    const { code, output } = await captureStdout(() => handleFiles('/repo', {
-      filter: '/src/auth/',
-      json: true,
-    }));
+    const { code, output } = await captureStdout(() =>
+      handleFiles('/repo', {
+        filter: '/src/auth/',
+        json: true,
+      }),
+    );
 
     assert.strictEqual(code, 0);
     const files = JSON.parse(output);
-    assert.deepStrictEqual(files.map((file: any) => file.path), ['src/auth/login.ts']);
+    assert.deepStrictEqual(
+      files.map((file: any) => file.path),
+      ['src/auth/login.ts'],
+    );
   });
 
   it('handleRelations limits caller rows and serializes edge data', async () => {
     fakeCg = {
-      searchNodes: () => [{ node: makeNode({ id: 'target', name: 'saveUser' }) }],
+      searchNodes: () => [
+        { node: makeNode({ id: 'target', name: 'saveUser' }) },
+      ],
       getCallers: () => [
-        { node: makeNode({ id: 'caller-1', name: 'handleLogin' }), edge: { source: 'caller-1', target: 'target', kind: 'calls' } },
-        { node: makeNode({ id: 'caller-2', name: 'handleSignup' }), edge: { source: 'caller-2', target: 'target', kind: 'calls' } },
+        {
+          node: makeNode({ id: 'caller-1', name: 'handleLogin' }),
+          edge: { source: 'caller-1', target: 'target', kind: 'calls' },
+        },
+        {
+          node: makeNode({ id: 'caller-2', name: 'handleSignup' }),
+          edge: { source: 'caller-2', target: 'target', kind: 'calls' },
+        },
       ],
       close: () => {},
     };
 
     const { handleRelations } = await import('./cmd-relations.js');
-    const { code, output } = await captureStdout(() => handleRelations('/repo', 'callers', 'saveUser', {
-      limit: 1,
-      json: true,
-    }));
+    const { code, output } = await captureStdout(() =>
+      handleRelations('/repo', 'callers', 'saveUser', {
+        limit: 1,
+        json: true,
+      }),
+    );
 
     assert.strictEqual(code, 0);
     const report = JSON.parse(output);
@@ -150,15 +176,20 @@ describe('CodeGraph exploration handlers', () => {
     };
 
     const { handleImpact } = await import('./cmd-impact.js');
-    const { code, output } = await captureStdout(() => handleImpact('/repo', 'UserService', {
-      depth: 3,
-      json: true,
-    }));
+    const { code, output } = await captureStdout(() =>
+      handleImpact('/repo', 'UserService', {
+        depth: 3,
+        json: true,
+      }),
+    );
 
     assert.strictEqual(code, 0);
     assert.strictEqual(capturedDepth, 3);
     const report = JSON.parse(output);
-    assert.deepStrictEqual(report.impact.nodes.map((node: any) => node.name), ['UserService', 'UserRepository']);
+    assert.deepStrictEqual(
+      report.impact.nodes.map((node: any) => node.name),
+      ['UserService', 'UserRepository'],
+    );
     assert.strictEqual(report.impact.edges[0].sourceName, 'UserService');
   });
 
@@ -172,7 +203,9 @@ describe('CodeGraph exploration handlers', () => {
     };
 
     const { handleNode } = await import('./cmd-node.js');
-    const { code, output } = await captureStdout(() => handleNode('/repo', 'direct', { json: true }));
+    const { code, output } = await captureStdout(() =>
+      handleNode('/repo', 'direct', { json: true }),
+    );
 
     assert.strictEqual(code, 0);
     const report = JSON.parse(output);
@@ -183,7 +216,10 @@ describe('CodeGraph exploration handlers', () => {
   it('handleContext forwards maxNodes, includeCode, and output format', async () => {
     let buildOptions: Record<string, unknown> | undefined;
     fakeCg = {
-      buildContext: async (_query: string, options: Record<string, unknown>) => {
+      buildContext: async (
+        _query: string,
+        options: Record<string, unknown>,
+      ) => {
         buildOptions = options;
         return 'context markdown';
       },
@@ -191,14 +227,20 @@ describe('CodeGraph exploration handlers', () => {
     };
 
     const { handleContext } = await import('./cmd-context.js');
-    const { code, output } = await captureStdout(() => handleContext('/repo', 'login flow', {
-      maxNodes: 12,
-      includeCode: false,
-      json: false,
-    }));
+    const { code, output } = await captureStdout(() =>
+      handleContext('/repo', 'login flow', {
+        maxNodes: 12,
+        includeCode: false,
+        json: false,
+      }),
+    );
 
     assert.strictEqual(code, 0);
-    assert.deepStrictEqual(buildOptions, { maxNodes: 12, includeCode: false, format: 'markdown' });
+    assert.deepStrictEqual(buildOptions, {
+      maxNodes: 12,
+      includeCode: false,
+      format: 'markdown',
+    });
     assert.strictEqual(output, 'context markdown\n');
   });
 
@@ -206,7 +248,12 @@ describe('CodeGraph exploration handlers', () => {
     let progressSeen = false;
     fakeCg = {
       indexAll: async ({ onProgress }: any) => {
-        onProgress({ phase: 'parse', current: 1, total: 2, currentFile: 'src/auth/login.ts' });
+        onProgress({
+          phase: 'parse',
+          current: 1,
+          total: 2,
+          currentFile: 'src/auth/login.ts',
+        });
         progressSeen = true;
         return { filesIndexed: 2 };
       },
@@ -215,7 +262,9 @@ describe('CodeGraph exploration handlers', () => {
     };
 
     const { handleIndex } = await import('./cmd-index.js');
-    const { code, output } = await captureStdout(() => handleIndex('/repo', { json: true }));
+    const { code, output } = await captureStdout(() =>
+      handleIndex('/repo', { json: true }),
+    );
 
     assert.strictEqual(code, 0);
     assert.strictEqual(progressSeen, true);

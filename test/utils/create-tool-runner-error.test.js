@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createToolRunner, UserInputError, SystemError } from '@laitszkin/tool-utils';
+import {
+  createToolRunner,
+  UserInputError,
+  SystemError,
+} from '@laitszkin/tool-utils';
 
 function createMemoryStream() {
   let data = '';

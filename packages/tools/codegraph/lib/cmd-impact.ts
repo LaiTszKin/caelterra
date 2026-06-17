@@ -1,4 +1,8 @@
-import { getCodeGraphModule, closeIndex } from './cg-instance.js';
+import {
+  getCodeGraphModule,
+  closeIndex,
+  type CodeGraphNode,
+} from './cg-instance.js';
 import { formatOutput } from './formatter.js';
 import { serializeSubgraph } from './graph-output.js';
 
@@ -7,10 +11,16 @@ export interface ImpactOptions {
   json?: boolean;
 }
 
-export async function handleImpact(projectRoot: string, symbol: string, options: ImpactOptions = {}): Promise<number> {
+export async function handleImpact(
+  projectRoot: string,
+  symbol: string,
+  options: ImpactOptions = {},
+): Promise<number> {
   const { CodeGraph } = getCodeGraphModule();
   if (!CodeGraph.isInitialized(projectRoot)) {
-    process.stderr.write('CodeGraph is not initialized. Run `apltk codegraph init` first.\n');
+    process.stderr.write(
+      'CodeGraph is not initialized. Run `apltk codegraph init` first.\n',
+    );
     return 1;
   }
 
@@ -22,19 +32,26 @@ export async function handleImpact(projectRoot: string, symbol: string, options:
     return 0;
   }
 
-  const impact = serializeSubgraph(cg.getImpactRadius(match.id, options.depth ?? 2));
+  const impact = serializeSubgraph(
+    cg.getImpactRadius(match.id, options.depth ?? 2),
+  );
   closeIndex(cg);
 
   if (options.json) {
-    process.stdout.write(formatOutput({ symbol: match, impact }, { json: true }) + '\n');
+    process.stdout.write(
+      formatOutput({ symbol: match, impact }, { json: true }) + '\n',
+    );
     return 0;
   }
 
-  const nodes = impact.nodes as any[];
-  process.stdout.write(`Impact for ${match.name} (${nodes.length} symbols):\n`);
+  const nodes = impact['nodes'] as CodeGraphNode[];
+  process.stdout.write(
+    `Impact for ${match.name} (${String(nodes.length)} symbols):\n`,
+  );
   for (const node of nodes) {
-    process.stdout.write(`  ${node.name} [${node.kind}] ${node.filePath}:${node.startLine}\n`);
+    process.stdout.write(
+      `  ${node.name} [${node.kind}] ${node.filePath}:${String(node.startLine)}\n`,
+    );
   }
   return 0;
 }
-

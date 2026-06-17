@@ -1,5 +1,9 @@
 import { buildBanner, buildSupportedTargetLines } from '@laitszkin/tui';
-import { formatToolList, buildToolDiscoveryHelp, formatExamples } from '@laitszkin/tool-registry';
+import {
+  formatToolList,
+  buildToolDiscoveryHelp,
+  formatExamples,
+} from '@laitszkin/tool-registry';
 import { TARGET_DEFINITIONS, VALID_MODES } from './installer.js';
 
 /**
@@ -11,7 +15,13 @@ export class HelpTextBuilder {
   private version: string;
   private colorEnabled: boolean;
 
-  constructor({ version, colorEnabled }: { version: string; colorEnabled: boolean }) {
+  constructor({
+    version,
+    colorEnabled,
+  }: {
+    version: string;
+    colorEnabled: boolean;
+  }) {
     this.version = version;
     this.colorEnabled = colorEnabled;
   }
@@ -31,11 +41,31 @@ export class HelpTextBuilder {
   /** Replaces  buildHelpText  –  top-level overview help. */
   overview(): string {
     const examples = [
-      { command: 'apltk --help', result: 'Shows the top-level Apollo Toolkit guide, including install modes and bundled task-tool discovery.' },
-      { command: 'apltk tools --help', result: 'Lists bundled tools by task so you can decide which CLI helper to inspect next.' },
-      { command: 'apltk architecture --help', result: 'Shows the architecture atlas command tree, task guidance, and action-specific follow-up help paths.' },
-      { command: 'apltk tools architecture --help', result: 'Shows what the architecture atlas tool is for, then prints its native command tree and examples.' },
-      { command: 'apltk codegraph status --json', result: 'Prints CodeGraph index status in JSON format for programmatic use.' },
+      {
+        command: 'apltk --help',
+        result:
+          'Shows the top-level Apollo Toolkit guide, including install modes and bundled task-tool discovery.',
+      },
+      {
+        command: 'apltk tools --help',
+        result:
+          'Lists bundled tools by task so you can decide which CLI helper to inspect next.',
+      },
+      {
+        command: 'apltk architecture --help',
+        result:
+          'Shows the architecture atlas command tree, task guidance, and action-specific follow-up help paths.',
+      },
+      {
+        command: 'apltk tools architecture --help',
+        result:
+          'Shows what the architecture atlas tool is for, then prints its native command tree and examples.',
+      },
+      {
+        command: 'apltk codegraph status --json',
+        result:
+          'Prints CodeGraph index status in JSON format for programmatic use.',
+      },
     ];
 
     return this.joinLines([
@@ -77,9 +107,21 @@ export class HelpTextBuilder {
   /** Replaces  buildInstallHelpText  –  install-specific help. */
   install(): string {
     const examples = [
-      { command: 'apltk', result: 'Launches the interactive installer, opens the target selector, and then walks through link-mode confirmation.' },
-      { command: 'apltk codex openclaw --symlink', result: 'Performs a non-interactive install into `codex` and `openclaw` targets using symlinks.' },
-      { command: 'npx @laitszkin/apollo-toolkit all --copy', result: 'Installs a copied snapshot into every supported target instead of symlinking.' },
+      {
+        command: 'apltk',
+        result:
+          'Launches the interactive installer, opens the target selector, and then walks through link-mode confirmation.',
+      },
+      {
+        command: 'apltk codex openclaw --symlink',
+        result:
+          'Performs a non-interactive install into `codex` and `openclaw` targets using symlinks.',
+      },
+      {
+        command: 'npx @laitszkin/apollo-toolkit all --copy',
+        result:
+          'Installs a copied snapshot into every supported target instead of symlinking.',
+      },
     ];
 
     return this.joinLines([
@@ -94,7 +136,10 @@ export class HelpTextBuilder {
       '  - You need to choose between symlink mode (auto-updating) and copy mode (stable snapshot).',
       '',
       'Supported targets:',
-      buildSupportedTargetLines({ targets: [...TARGET_DEFINITIONS], colorEnabled: this.colorEnabled }),
+      buildSupportedTargetLines({
+        targets: [...TARGET_DEFINITIONS],
+        colorEnabled: this.colorEnabled,
+      }),
       '',
       'Behavior notes:',
       '  - Running `apltk` with no targets opens the interactive installer and target selector.',
@@ -116,9 +161,21 @@ export class HelpTextBuilder {
   /** Replaces  buildUninstallHelpText  –  uninstall-specific help. */
   uninstall(): string {
     const examples = [
-      { command: 'apltk uninstall', result: 'Opens the interactive uninstall selector when running in a TTY and then asks for confirmation before removal.' },
-      { command: 'apltk uninstall codex agents --yes', result: 'Removes Apollo Toolkit-managed installs from `codex` and `agents` without another confirmation prompt.' },
-      { command: 'apltk uninstall codex --home /tmp/custom-home', result: 'Uses the custom managed toolkit home while removing manifest-tracked installs from the selected target.' },
+      {
+        command: 'apltk uninstall',
+        result:
+          'Opens the interactive uninstall selector when running in a TTY and then asks for confirmation before removal.',
+      },
+      {
+        command: 'apltk uninstall codex agents --yes',
+        result:
+          'Removes Apollo Toolkit-managed installs from `codex` and `agents` without another confirmation prompt.',
+      },
+      {
+        command: 'apltk uninstall codex --home /tmp/custom-home',
+        result:
+          'Uses the custom managed toolkit home while removing manifest-tracked installs from the selected target.',
+      },
     ];
 
     return this.joinLines([
@@ -132,7 +189,10 @@ export class HelpTextBuilder {
       '  - You need to clean up manifest-tracked historical installs as well as the current installed skills.',
       '',
       'Supported targets:',
-      buildSupportedTargetLines({ targets: [...TARGET_DEFINITIONS], colorEnabled: this.colorEnabled }),
+      buildSupportedTargetLines({
+        targets: [...TARGET_DEFINITIONS],
+        colorEnabled: this.colorEnabled,
+      }),
       '',
       'Behavior notes:',
       '  - With no explicit targets, uninstall opens the interactive selector in a TTY and otherwise falls back to all targets.',
@@ -152,9 +212,21 @@ export class HelpTextBuilder {
   /** Replaces  buildToolsHelp  –  tools listing help screen. */
   toolsHelp(): string {
     const examples = [
-      { command: 'apltk tools', result: 'Lists all bundled tools plus the task-oriented discovery guide.' },
-      { command: 'apltk tools open-github-issue --help', result: 'Shows when to use the GitHub issue publisher, then prints its exact script flags and examples.' },
-      { command: 'apltk tools architecture --help', result: 'Shows when to use the architecture atlas CLI, then prints its native command tree.' },
+      {
+        command: 'apltk tools',
+        result:
+          'Lists all bundled tools plus the task-oriented discovery guide.',
+      },
+      {
+        command: 'apltk tools open-github-issue --help',
+        result:
+          'Shows when to use the GitHub issue publisher, then prints its exact script flags and examples.',
+      },
+      {
+        command: 'apltk tools architecture --help',
+        result:
+          'Shows when to use the architecture atlas CLI, then prints its native command tree.',
+      },
     ];
 
     return this.joinLines([

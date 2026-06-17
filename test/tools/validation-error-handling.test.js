@@ -3,12 +3,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { UserInputError } from '@laitszkin/tool-utils';
 import { tool as validateSkillFrontmatterTool } from '@laitszkin/tool-validate-skill-frontmatter';
 import { tool as validateOpenaiAgentConfigTool } from '@laitszkin/tool-validate-openai-agent-config';
 
-const validateSkillFrontmatterHandler = /** @type {import('@laitszkin/tool-registry').ToolDefinition['handler']} */ (validateSkillFrontmatterTool.handler);
-const validateOpenaiAgentConfigHandler = /** @type {import('@laitszkin/tool-registry').ToolDefinition['handler']} */ (validateOpenaiAgentConfigTool.handler);
+const validateSkillFrontmatterHandler =
+  /** @type {import('@laitszkin/tool-registry').ToolDefinition['handler']} */ (
+    validateSkillFrontmatterTool.handler
+  );
+const validateOpenaiAgentConfigHandler =
+  /** @type {import('@laitszkin/tool-registry').ToolDefinition['handler']} */ (
+    validateOpenaiAgentConfigTool.handler
+  );
 
 function createMemoryStream() {
   let data = '';
@@ -145,9 +150,20 @@ test('validate-skill-frontmatter validation errors are UserInputError', async ()
       'utf8',
     );
 
-    const mod = await import('../../packages/tools/validate-skill-frontmatter/dist/index.js');
-    const stdout = { data: '', write(c) { this.data += c; } };
-    const stderr = { data: '', write(c) { this.data += c; } };
+    const mod =
+      await import('../../packages/tools/validate-skill-frontmatter/dist/index.js');
+    const stdout = {
+      data: '',
+      write(c) {
+        this.data += c;
+      },
+    };
+    const stderr = {
+      data: '',
+      write(c) {
+        this.data += c;
+      },
+    };
     const code = await mod.tool.handler([], {
       sourceRoot: tmpDir,
       stdout,
@@ -177,9 +193,20 @@ test('validate-openai-agent-config validation errors are UserInputError', async 
       'utf8',
     );
 
-    const mod = await import('../../packages/tools/validate-openai-agent-config/dist/index.js');
-    const stdout = { data: '', write(c) { this.data += c; } };
-    const stderr = { data: '', write(c) { this.data += c; } };
+    const mod =
+      await import('../../packages/tools/validate-openai-agent-config/dist/index.js');
+    const stdout = {
+      data: '',
+      write(c) {
+        this.data += c;
+      },
+    };
+    const stderr = {
+      data: '',
+      write(c) {
+        this.data += c;
+      },
+    };
     const code = await mod.tool.handler([], {
       sourceRoot: tmpDir,
       stdout,
@@ -203,11 +230,26 @@ test('validate-skill-frontmatter: missing opening --- triggers UserInputError', 
   try {
     const skillDir = path.join(tmpDir, 'skills', 'test-skill');
     fs.mkdirSync(skillDir, { recursive: true });
-    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), 'no frontmatter here\n', 'utf8');
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      'no frontmatter here\n',
+      'utf8',
+    );
 
-    const mod = await import('../../packages/tools/validate-skill-frontmatter/dist/index.js');
-    const stdout = { data: '', write(c) { this.data += c; } };
-    const stderr = { data: '', write(c) { this.data += c; } };
+    const mod =
+      await import('../../packages/tools/validate-skill-frontmatter/dist/index.js');
+    const stdout = {
+      data: '',
+      write(c) {
+        this.data += c;
+      },
+    };
+    const stderr = {
+      data: '',
+      write(c) {
+        this.data += c;
+      },
+    };
     const code = await mod.tool.handler([], {
       sourceRoot: tmpDir,
       stdout,
@@ -218,7 +260,9 @@ test('validate-skill-frontmatter: missing opening --- triggers UserInputError', 
     assert.strictEqual(code, 1);
     // Validation errors are written to stdout
     const out = stdout.data;
-    assert.ok(out.includes("SKILL.md must start with YAML frontmatter delimiter"));
+    assert.ok(
+      out.includes('SKILL.md must start with YAML frontmatter delimiter'),
+    );
     assert.ok(!stderr.data.includes('Error:'));
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

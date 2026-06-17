@@ -1,6 +1,7 @@
 ## Feature
 
 A feature is a user-facing capability, such as:
+
 - Login
 - Registration
 - Invite code management

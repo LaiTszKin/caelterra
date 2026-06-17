@@ -12,14 +12,20 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync, realpathSync } from 'node:fs';
-import { readdir, readFile, mkdir, writeFile, copyFile, unlink } from 'node:fs/promises';
+import {
+  readdir,
+  readFile,
+  mkdir,
+  writeFile,
+  copyFile,
+  unlink,
+} from 'node:fs/promises';
 import { resolve, join, basename, dirname } from 'node:path';
 
 import type { ScoreResult } from './scorer.js';
 import { getProjectRoot } from './lib/project-root.js';
 import type { EnvConfig } from './lib/env-utils.js';
 import { callJudgeModelRaw } from './lib/judge-api.js';
-import type { Message } from './lib/judge-api.js';
 import { promisePool } from './lib/promise-pool.js';
 import { SEVERITY_RANK } from './lib/constants.js';
 
@@ -92,22 +98,130 @@ const MAX_PHASE1_PAIRS = 10000;
  * Preserves the full list from scripts/optimize.mjs.
  */
 const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'can', 'shall', 'to', 'of', 'in', 'for',
-  'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during',
-  'before', 'after', 'above', 'below', 'between', 'and', 'but', 'or',
-  'nor', 'not', 'so', 'yet', 'both', 'either', 'neither', 'each',
-  'every', 'all', 'any', 'few', 'more', 'most', 'other', 'some', 'such',
-  'no', 'only', 'own', 'same', 'than', 'too', 'very', 'just',
-  'that', 'this', 'these', 'those', 'it', 'its', 'they', 'them',
-  'their', 'what', 'which', 'who', 'whom', 'when', 'where', 'why',
-  'how', 'if', 'then', 'else',
-  'agent', 'model', 'file', 'files', 'issue', 'issues',
-  '描述', '問題', '沒有', '無法', '未能', '需要', '應該', '可以',
-  '進行', '使用', '處理', '檢查', '確認', '提供', '包含', '存在',
-  '因為', '所以', '但是', '而且', '或者', '以及', '關於', '這個',
-  '一個', '一些', '所有', '每個',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'can',
+  'shall',
+  'to',
+  'of',
+  'in',
+  'for',
+  'on',
+  'with',
+  'at',
+  'by',
+  'from',
+  'as',
+  'into',
+  'through',
+  'during',
+  'before',
+  'after',
+  'above',
+  'below',
+  'between',
+  'and',
+  'but',
+  'or',
+  'nor',
+  'not',
+  'so',
+  'yet',
+  'both',
+  'either',
+  'neither',
+  'each',
+  'every',
+  'all',
+  'any',
+  'few',
+  'more',
+  'most',
+  'other',
+  'some',
+  'such',
+  'no',
+  'only',
+  'own',
+  'same',
+  'than',
+  'too',
+  'very',
+  'just',
+  'that',
+  'this',
+  'these',
+  'those',
+  'it',
+  'its',
+  'they',
+  'them',
+  'their',
+  'what',
+  'which',
+  'who',
+  'whom',
+  'when',
+  'where',
+  'why',
+  'how',
+  'if',
+  'then',
+  'else',
+  'agent',
+  'model',
+  'file',
+  'files',
+  'issue',
+  'issues',
+  '描述',
+  '問題',
+  '沒有',
+  '無法',
+  '未能',
+  '需要',
+  '應該',
+  '可以',
+  '進行',
+  '使用',
+  '處理',
+  '檢查',
+  '確認',
+  '提供',
+  '包含',
+  '存在',
+  '因為',
+  '所以',
+  '但是',
+  '而且',
+  '或者',
+  '以及',
+  '關於',
+  '這個',
+  '一個',
+  '一些',
+  '所有',
+  '每個',
 ]);
 
 /** ALLOWED_FILES whitelist for optimization targets. */
@@ -144,18 +258,29 @@ function simpleStem(word: string): string {
   if (word.endsWith('es') && word.length > 5) {
     const stem = word.slice(0, -2);
     const lastChars = stem.slice(-2);
-    if ((/[sxz]$/.test(stem) || lastChars === 'sh' || lastChars === 'ch') && stem.length >= 4) {
+    if (
+      (/[sxz]$/.test(stem) || lastChars === 'sh' || lastChars === 'ch') &&
+      stem.length >= 4
+    ) {
       return stem;
     }
     // -es preceded by consonant+vowel: also a valid -es suffix (e.g., "tomatoes")
-    if (stem.length >= 4 && /[bcdfghjklmnpqrstvwxyz][aeiou][bcdfghjklmnpqrstvwxyz]o$/.test(stem)) {
+    if (
+      stem.length >= 4 &&
+      /[bcdfghjklmnpqrstvwxyz][aeiou][bcdfghjklmnpqrstvwxyz]o$/.test(stem)
+    ) {
       return stem;
     }
     // Fall through to -s check
   }
 
   // Step 3: -s (plural) - only if result looks like a valid word
-  if (word.endsWith('s') && !word.endsWith('ss') && !word.endsWith('us') && word.length > 5) {
+  if (
+    word.endsWith('s') &&
+    !word.endsWith('ss') &&
+    !word.endsWith('us') &&
+    word.length > 5
+  ) {
     const stem = word.slice(0, -1);
     if (stem.length >= 4) return stem;
   }
@@ -196,10 +321,10 @@ function simpleStem(word: string): string {
 function validateScoreResult(obj: unknown): ScoreResult | null {
   if (typeof obj !== 'object' || obj === null) return null;
   const o = obj as Record<string, unknown>;
-  if (typeof o.testId !== 'string') return null;
-  if (typeof o.overallScore !== 'number') return null;
-  if (!Array.isArray(o.dimensions)) return null;
-  if (!Array.isArray(o.issues)) return null;
+  if (typeof o['testId'] !== 'string') return null;
+  if (typeof o['overallScore'] !== 'number') return null;
+  if (!Array.isArray(o['dimensions'])) return null;
+  if (!Array.isArray(o['issues'])) return null;
   return obj as ScoreResult;
 }
 
@@ -211,13 +336,18 @@ function validateScoreResult(obj: unknown): ScoreResult | null {
  * @param sourceRoot - Optional project root directory; defaults to auto-detected root
  * @returns Array of ScoreResult objects
  */
-export async function loadAllScores(date: string, sourceRoot?: string): Promise<ScoreResult[]> {
+export async function loadAllScores(
+  date: string,
+  sourceRoot?: string,
+): Promise<ScoreResult[]> {
   const root = sourceRoot ?? getProjectRoot();
   const resultsBase = resolve(root, 'results', 'spec', date);
 
   if (!existsSync(resultsBase)) {
     console.warn(`Results directory not found: ${resultsBase}`);
-    console.warn('Skipping score loading. Run \'apltk eval <skill>\' to generate scores first.');
+    console.warn(
+      "Skipping score loading. Run 'apltk eval <skill>' to generate scores first.",
+    );
     return [];
   }
 
@@ -241,13 +371,17 @@ export async function loadAllScores(date: string, sourceRoot?: string): Promise<
           const raw = await readFile(scorePath, 'utf-8');
           const parsed = validateScoreResult(JSON.parse(raw));
           if (!parsed) {
-            console.warn(`Warning: Corrupt score.json for ${testNo}: validation failed -- skipped`);
+            console.warn(
+              `Warning: Corrupt score.json for ${testNo}: validation failed -- skipped`,
+            );
             return null;
           }
           return parsed;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`Warning: Corrupt score.json for ${testNo}: ${msg} -- skipped`);
+          console.warn(
+            `Warning: Corrupt score.json for ${testNo}: ${msg} -- skipped`,
+          );
           return null;
         }
       })(),
@@ -268,12 +402,10 @@ export function extractIssues(scores: ScoreResult[]): RawIssue[] {
   const allIssues: RawIssue[] = [];
 
   for (const score of scores) {
-    if (!score.issues || !Array.isArray(score.issues)) continue;
-
     for (const issue of score.issues) {
       allIssues.push({
-        severity: issue.severity || 'P2',
-        category: issue.category || 'other',
+        severity: issue.severity,
+        category: issue.category,
         description: issue.description || '',
         evidence: issue.evidence || '',
         testNo: score.testId,
@@ -301,10 +433,10 @@ function extractKeywords(text: string): Set<string> {
     .toLowerCase()
     .replace(/[^a-z0-9一-鿿]+/g, ' ')
     .split(/\s+/)
-    .filter(t => t.length >= 2 && !STOP_WORDS.has(t));
+    .filter((t) => t.length >= 2 && !STOP_WORDS.has(t));
 
   // Apply stemming normalization
-  const stemmed = tokens.map(t => {
+  const stemmed = tokens.map((t) => {
     // Don't stem short words or Chinese characters
     if (t.length <= 3 || /[一-鿿]/.test(t)) return t;
     return simpleStem(t);
@@ -313,7 +445,7 @@ function extractKeywords(text: string): Set<string> {
   // Also extract bigrams from stemmed tokens for better phrase matching
   const bigrams: string[] = [];
   for (let i = 0; i < stemmed.length - 1; i++) {
-    bigrams.push(`${stemmed[i]} ${stemmed[i + 1]}`);
+    bigrams.push(`${String(stemmed[i])} ${String(stemmed[i + 1])}`);
   }
 
   return new Set([...stemmed, ...bigrams]);
@@ -331,7 +463,8 @@ function jaccardSimilarity(setA: Set<string>, setB: Set<string>): number {
 
   let intersection = 0;
   const union = setA.size + setB.size;
-  const [smaller, larger] = setA.size <= setB.size ? [setA, setB] : [setB, setA];
+  const [smaller, larger] =
+    setA.size <= setB.size ? [setA, setB] : [setB, setA];
 
   for (const item of smaller) {
     if (larger.has(item)) {
@@ -368,7 +501,8 @@ export function isAllowedFile(filePath: string, skillName: string): boolean {
       if (normalized.includes(dirCheck)) return true;
     } else {
       // File pattern: exact suffix match (with leading /) or exact match
-      if (normalized.endsWith('/' + resolved) || normalized === resolved) return true;
+      if (normalized.endsWith('/' + resolved) || normalized === resolved)
+        return true;
     }
   }
   return false;
@@ -382,7 +516,10 @@ export function isAllowedFile(filePath: string, skillName: string): boolean {
  * @param content - File content to validate
  * @returns Object with valid flag and list of issues found
  */
-export function validateMarkdownStructure(content: string): { valid: boolean; issues: string[] } {
+export function validateMarkdownStructure(content: string): {
+  valid: boolean;
+  issues: string[];
+} {
   const issues: string[] = [];
 
   if (!content || content.trim().length === 0) {
@@ -392,7 +529,9 @@ export function validateMarkdownStructure(content: string): { valid: boolean; is
 
   // (a) At least one ## heading
   if (!/^## /m.test(content)) {
-    issues.push('No level-2 heading (## ) found. SKILL.md should have at least one ## section.');
+    issues.push(
+      'No level-2 heading (## ) found. SKILL.md should have at least one ## section.',
+    );
   }
 
   // (b) No unclosed fenced code blocks
@@ -449,9 +588,20 @@ async function refineDedupWithJudge(
 
     for (const [, sevGroup] of Object.entries(bySeverity)) {
       if (sevGroup.length <= 1) continue;
-      for (let i = 0; i < sevGroup.length && pairCount < MAX_PAIRS_PER_CATEGORY; i++) {
-        for (let j = i + 1; j < sevGroup.length && pairCount < MAX_PAIRS_PER_CATEGORY; j++) {
-          pairs.push({ a: sevGroup[i], b: sevGroup[j] });
+      for (
+        let i = 0;
+        i < sevGroup.length && pairCount < MAX_PAIRS_PER_CATEGORY;
+        i++
+      ) {
+        for (
+          let j = i + 1;
+          j < sevGroup.length && pairCount < MAX_PAIRS_PER_CATEGORY;
+          j++
+        ) {
+          pairs.push({
+            a: sevGroup[i] as DedupedIssueInternal,
+            b: sevGroup[j] as DedupedIssueInternal,
+          });
           pairCount++;
         }
       }
@@ -460,7 +610,8 @@ async function refineDedupWithJudge(
 
   if (pairs.length === 0) return deduped;
 
-  const judgeConcurrency = env.JUDGE_CONCURRENCY > 0 ? env.JUDGE_CONCURRENCY : 5;
+  const judgeConcurrency =
+    env.JUDGE_CONCURRENCY > 0 ? env.JUDGE_CONCURRENCY : 5;
 
   const comparisonResults = await promisePool(
     pairs,
@@ -476,18 +627,18 @@ async function refineDedupWithJudge(
         '',
         'Issue A:',
         `  Description: ${a.description}`,
-        `  Evidence: ${a.evidence.join?.('; ') || '(none)'}`,
+        `  Evidence: ${a.evidence.join('; ') || '(none)'}`,
         '',
         'Issue B:',
         `  Description: ${b.description}`,
-        `  Evidence: ${b.evidence.join?.('; ') || '(none)'}`,
+        `  Evidence: ${b.evidence.join('; ') || '(none)'}`,
         '',
         'Reply with exactly one word: "YES" if they describe the same issue, "NO" otherwise.',
       ].join('\n');
 
       try {
         const { content } = await callJudgeModelRaw(
-          [{ role: 'user', content: prompt } as Message],
+          [{ role: 'user', content: prompt }],
           env,
           { timeoutMs: 30_000 },
         );
@@ -495,7 +646,9 @@ async function refineDedupWithJudge(
         return { a, b, shouldMerge: trimmed.startsWith('YES') };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`Judge comparison failed for pair: ${msg.split('\n')[0]}`);
+        console.warn(
+          `Judge comparison failed for pair: ${String(msg.split('\n')[0])}`,
+        );
         return null;
       }
     },
@@ -512,11 +665,11 @@ async function refineDedupWithJudge(
   const parent = new Map<number, number>();
   const find = (x: number): number => {
     if (!parent.has(x)) parent.set(x, x);
-    const px = parent.get(x)!;
+    const px = parent.get(x) ?? x;
     if (px !== x) {
       parent.set(x, find(px));
     }
-    return parent.get(x)!;
+    return parent.get(x) ?? x;
   };
   const union = (x: number, y: number): void => {
     parent.set(find(x), find(y));
@@ -537,25 +690,30 @@ async function refineDedupWithJudge(
   for (const item of deduped) {
     const root = find(item._index);
     if (!groups.has(root)) groups.set(root, []);
-    groups.get(root)!.push(item);
+    const group = groups.get(root);
+    if (group) group.push(item);
   }
 
   // Merge each group
   const result: DedupedIssueInternal[] = [];
   for (const [, group] of groups) {
     const maxSeverity = group
-      .map(i => i.severity)
+      .map((i) => i.severity)
       .reduce((max, s) => {
         const rank = SEVERITY_RANK;
         return (rank[s] ?? 2) < (rank[max] ?? 2) ? s : max;
       }, 'P2');
 
-    const affectedTests = [...new Set(group.flatMap(i => i.affectedTests))].sort();
-    const allEvidence = [...new Set(group.flatMap(i => i.evidence).filter(Boolean))];
+    const affectedTests = [
+      ...new Set(group.flatMap((i) => i.affectedTests)),
+    ].sort();
+    const allEvidence = [
+      ...new Set(group.flatMap((i) => i.evidence).filter(Boolean)),
+    ];
     const totalFrequency = group.reduce((sum, i) => sum + i.frequency, 0);
 
     const merged: DedupedIssueInternal = {
-      ...group[0],
+      ...(group[0] as DedupedIssueInternal),
       severity: maxSeverity,
       frequency: totalFrequency,
       affectedTests,
@@ -583,23 +741,47 @@ async function refineDedupWithJudge(
  * @param issue - Issue with category and description
  * @returns Template-based fix suggestion string
  */
-function generateTemplateSuggestion(issue: { category: string; description: string; evidence: string[] }): string {
+function generateTemplateSuggestion(issue: {
+  category: string;
+  description: string;
+  evidence: string[];
+}): string {
   const desc = issue.description.toLowerCase();
 
   if (issue.category === 'skill') {
-    if (desc.includes('流程') || desc.includes('process') || desc.includes('workflow')) {
+    if (
+      desc.includes('流程') ||
+      desc.includes('process') ||
+      desc.includes('workflow')
+    ) {
       return 'Review the skill workflow steps and add explicit decision points where the agent should stop and verify. Consider adding guard clauses for scenarios described in the failing test cases.';
     }
-    if (desc.includes('格式') || desc.includes('format') || desc.includes('template')) {
+    if (
+      desc.includes('格式') ||
+      desc.includes('format') ||
+      desc.includes('template')
+    ) {
       return 'Add explicit format requirements in the skill definition. Include concrete examples of expected output format. Strengthen the validation checklist with format-specific checks.';
     }
-    if (desc.includes('architecture') || desc.includes('架構') || desc.includes('atlas')) {
+    if (
+      desc.includes('architecture') ||
+      desc.includes('架構') ||
+      desc.includes('atlas')
+    ) {
       return 'Add clearer instructions for architecture diff generation. Include fallback behavior when atlas data is missing or stale. Strengthen the drift detection threshold guidance.';
     }
-    if (desc.includes('scope') || desc.includes('範圍') || desc.includes('邊界')) {
+    if (
+      desc.includes('scope') ||
+      desc.includes('範圍') ||
+      desc.includes('邊界')
+    ) {
       return 'Clarify the scope boundaries in the skill definition. Add explicit criteria for when this skill should vs. should not be used. Add negative examples to the skill description.';
     }
-    if (desc.includes('驗收') || desc.includes('checklist') || desc.includes('verify')) {
+    if (
+      desc.includes('驗收') ||
+      desc.includes('checklist') ||
+      desc.includes('verify')
+    ) {
       return 'Strengthen the verification checklist with concrete pass/fail criteria. Require the agent to explicitly check each item before delivering. Add self-review prompts.';
     }
     return 'Review the relevant section of the skill definition. Ensure instructions are specific and unambiguous. Add concrete examples showing both correct and incorrect behavior.';
@@ -609,13 +791,25 @@ function generateTemplateSuggestion(issue: { category: string; description: stri
     if (desc.includes('template') || desc.includes('模板')) {
       return 'Update the template rendering logic to handle edge cases. Review the placeholder substitution code for completeness. Ensure all placeholder patterns are matched.';
     }
-    if (desc.includes('error') || desc.includes('錯誤') || desc.includes('message')) {
+    if (
+      desc.includes('error') ||
+      desc.includes('錯誤') ||
+      desc.includes('message')
+    ) {
       return 'Improve error messages to be more specific and actionable. Include contextual information in error output. Add guidance for common failure modes.';
     }
-    if (desc.includes('cli') || desc.includes('參數') || desc.includes('flag')) {
+    if (
+      desc.includes('cli') ||
+      desc.includes('參數') ||
+      desc.includes('flag')
+    ) {
       return 'Review the CLI argument parsing logic. Ensure all documented options work correctly. Add validation for mutually exclusive or dependent flags.';
     }
-    if (desc.includes('path') || desc.includes('路徑') || desc.includes('directory')) {
+    if (
+      desc.includes('path') ||
+      desc.includes('路徑') ||
+      desc.includes('directory')
+    ) {
       return 'Review path resolution logic. Ensure relative paths are resolved correctly relative to the expected base directory. Add path normalization.';
     }
     return 'Review the relevant apltk tool implementation. Check input validation, error handling, and edge cases. Ensure consistent behavior across all code paths.';
@@ -625,7 +819,11 @@ function generateTemplateSuggestion(issue: { category: string; description: stri
   if (desc.includes('超時') || desc.includes('timeout')) {
     return 'Investigate whether the issue is a resource limitation or a code inefficiency. Consider adding timeouts or breaking the task into smaller sub-tasks.';
   }
-  if (desc.includes('parse') || desc.includes('解析') || desc.includes('json')) {
+  if (
+    desc.includes('parse') ||
+    desc.includes('解析') ||
+    desc.includes('json')
+  ) {
     return 'Add robust parsing with fallback handlers. Handle common JSON format variations. Add validation before processing.';
   }
 
@@ -656,7 +854,7 @@ export async function deduplicateIssues(
   if (issues.length === 0) return [];
 
   // Pre-compute keyword sets for each issue
-  const issueKeys: RawIssueWithKeywords[] = issues.map(issue => ({
+  const issueKeys: RawIssueWithKeywords[] = issues.map((issue) => ({
     ...issue,
     _descKeywords: extractKeywords(issue.description),
     _evidKeywords: extractKeywords(issue.evidence),
@@ -685,7 +883,7 @@ export async function deduplicateIssues(
     outer: for (let i = 0; i < groupIssues.length; i++) {
       if (used.has(i)) continue;
 
-      const base = groupIssues[i];
+      const base = groupIssues[i] as RawIssueWithKeywords;
       const cluster: RawIssueWithKeywords[] = [base];
       used.add(i);
 
@@ -693,22 +891,33 @@ export async function deduplicateIssues(
       for (let j = i + 1; j < groupIssues.length; j++) {
         pairCount++;
         if (pairCount > MAX_PHASE1_PAIRS) {
-          console.warn(`[optimizer] Dedup Phase 1 pair limit (${MAX_PHASE1_PAIRS}) reached — truncating`);
+          console.warn(
+            `[optimizer] Dedup Phase 1 pair limit (${String(MAX_PHASE1_PAIRS)}) reached — truncating`,
+          );
           break outer;
         }
         if (used.has(j)) continue;
 
-        const candidate = groupIssues[j];
+        const candidate = groupIssues[j] as RawIssueWithKeywords;
 
         // Check description similarity
-        const descSim = jaccardSimilarity(base._descKeywords, candidate._descKeywords);
+        const descSim = jaccardSimilarity(
+          base._descKeywords,
+          candidate._descKeywords,
+        );
 
         // Check evidence similarity
-        const evidSim = jaccardSimilarity(base._evidKeywords, candidate._evidKeywords);
+        const evidSim = jaccardSimilarity(
+          base._evidKeywords,
+          candidate._evidKeywords,
+        );
 
         // Merge if description similarity > 0.15 OR they share trace evidence
         // (threshold accounts for stemming normalization and synonym variation)
-        if (descSim > 0.15 || (base.evidence && candidate.evidence && evidSim > 0.4)) {
+        if (
+          descSim > 0.15 ||
+          (base.evidence && candidate.evidence && evidSim > 0.4)
+        ) {
           cluster.push(candidate);
           used.add(j);
         }
@@ -716,27 +925,27 @@ export async function deduplicateIssues(
 
       // Merge cluster into a single deduped issue
       const maxSeverity = cluster
-        .map(i => i.severity)
+        .map((i) => i.severity)
         .reduce((max, s) => {
           const rank = SEVERITY_RANK;
           return (rank[s] ?? 2) < (rank[max] ?? 2) ? s : max;
         }, 'P2');
 
-      const affectedTests = [...new Set(cluster.map(i => i.testNo))].sort();
-      const allEvidence = [...new Set(cluster.map(i => i.evidence).filter(Boolean))];
+      const affectedTests = [...new Set(cluster.map((i) => i.testNo))].sort();
+      const allEvidence = [
+        ...new Set(cluster.map((i) => i.evidence).filter(Boolean)),
+      ];
 
       // Use the longest/most descriptive description from the cluster
       const bestDescription = cluster
-        .map(i => i.description)
+        .map((i) => i.description)
         .reduce((best, d) => (d.length > best.length ? d : best), '');
 
       optIdCounter++;
       merged.push({
         _index: optIdCounter,
         _descKeywords: extractKeywords(bestDescription),
-        _evidKeywords: new Set(
-          cluster.flatMap(i => [...i._evidKeywords]),
-        ),
+        _evidKeywords: new Set(cluster.flatMap((i) => [...i._evidKeywords])),
         category,
         severity: maxSeverity,
         frequency: cluster.length,
@@ -754,7 +963,7 @@ export async function deduplicateIssues(
     try {
       console.log('Using judge model for semantic similarity refinement...');
       const refined = await refineDedupWithJudge(deduped, env);
-      return refined.map(item => ({
+      return refined.map((item) => ({
         category: item.category,
         severity: item.severity,
         frequency: item.frequency,
@@ -770,7 +979,7 @@ export async function deduplicateIssues(
     }
   }
 
-  return deduped.map(item => ({
+  return deduped.map((item) => ({
     category: item.category,
     severity: item.severity,
     frequency: item.frequency,
@@ -809,7 +1018,7 @@ export async function generateSuggestedFix(
         `Severity: ${issue.severity}`,
         `Description: ${issue.description}`,
         `Evidence from test traces: ${issue.evidence.join('; ') || '(none)'}`,
-        `Affected tests (${issue.frequency} total): ${issue.affectedTests.slice(0, 10).join(', ')}`,
+        `Affected tests (${String(issue.frequency)} total): ${issue.affectedTests.slice(0, 10).join(', ')}`,
         '',
         'Provide a specific fix suggestion in 2-4 sentences. Focus on:',
         '1. What exactly needs to change',
@@ -820,7 +1029,7 @@ export async function generateSuggestedFix(
       ].join('\n');
 
       const { content } = await callJudgeModelRaw(
-        [{ role: 'user', content: prompt } as Message],
+        [{ role: 'user', content: prompt }],
         env,
         { timeoutMs: 30_000 },
       );
@@ -828,7 +1037,9 @@ export async function generateSuggestedFix(
       return content.trim();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`Judge model fix suggestion failed: ${msg.split('\n')[0]}`);
+      console.warn(
+        `Judge model fix suggestion failed: ${String(msg.split('\n')[0])}`,
+      );
       // Fall through to template
     }
   }
@@ -858,7 +1069,8 @@ export function generateOptimizationPlan(
 ): OptimizationPlan {
   // Sort: P0 first, then P1, then P2. Within same severity, sort by frequency descending.
   const sortedIssues = [...issues].sort((a, b) => {
-    const rankDiff = (SEVERITY_RANK[a.severity] ?? 9) - (SEVERITY_RANK[b.severity] ?? 9);
+    const rankDiff =
+      (SEVERITY_RANK[a.severity] ?? 9) - (SEVERITY_RANK[b.severity] ?? 9);
     if (rankDiff !== 0) return rankDiff;
     return b.frequency - a.frequency;
   });
@@ -918,8 +1130,9 @@ function buildSkillOptimizationPrompt(
   currentContent: string,
 ): string {
   const issuesText = skillIssues
-    .map(i =>
-      `- [${i.severity}] ${i.description}\n  Evidence: ${i.evidence.join('; ') || '(none)'}\n  Suggested: ${i.suggestedFix || '(none)'}`,
+    .map(
+      (i) =>
+        `- [${i.severity}] ${i.description}\n  Evidence: ${i.evidence.join('; ') || '(none)'}\n  Suggested: ${i.suggestedFix || '(none)'}`,
     )
     .join('\n\n');
 
@@ -978,22 +1191,26 @@ function escapeRegex(s: string): string {
 function applySkillChanges(
   currentContent: string,
   judgeOutput: string,
-): { content: string; conflicts: Array<{find: string; replace: string}> } {
+): { content: string; conflicts: Array<{ find: string; replace: string }> } {
   // Attempt to extract structured edits from judge output
   // Look for patterns like "FIND: ... REPLACE WITH: ..." or "AFTER: ... INSERT: ..."
-  const findReplacePattern = /(?:FIND|查找|搜尋)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```\s*\n(?:REPLACE WITH|替換為|取代為)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```/gi;
+  const findReplacePattern =
+    /(?:FIND|查找|搜尋)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```\s*\n(?:REPLACE WITH|替換為|取代為)[:\s]*\n?```(?:markdown)?\n([\s\S]*?)\n```/gi;
 
   let modifiedContent = currentContent;
   let appliedCount = 0;
-  const conflicts: Array<{find: string; replace: string}> = [];
+  const conflicts: Array<{ find: string; replace: string }> = [];
 
   let match: RegExpExecArray | null;
   while ((match = findReplacePattern.exec(judgeOutput)) !== null) {
-    const findText = match[1].trim();
-    const replaceText = match[2].trim();
+    const findText = (match[1] ?? '').trim();
+    const replaceText = (match[2] ?? '').trim();
 
     if (findText && modifiedContent.includes(findText)) {
-      modifiedContent = modifiedContent.replace(new RegExp(escapeRegex(findText), 'g'), replaceText);
+      modifiedContent = modifiedContent.replace(
+        new RegExp(escapeRegex(findText), 'g'),
+        replaceText,
+      );
       appliedCount++;
     } else if (findText) {
       // Track unmatched FIND patterns as conflicts
@@ -1002,18 +1219,24 @@ function applySkillChanges(
   }
 
   if (appliedCount > 0) {
-    console.log(`Applied ${appliedCount} structured edit(s) from judge model.`);
+    console.log(
+      `Applied ${String(appliedCount)} structured edit(s) from judge model.`,
+    );
     if (conflicts.length > 0) {
-      console.warn(`${conflicts.length} FIND pattern(s) had no match in the current content.`);
+      console.warn(
+        `${String(conflicts.length)} FIND pattern(s) had no match in the current content.`,
+      );
     }
     return { content: modifiedContent, conflicts };
   }
 
   // If no structured edits found, try parsing markdown code blocks
   // Look for a complete replacement (should be rare and explicit)
-  const fullReplacement = judgeOutput.match(/```markdown\n([\s\S]*?)\n```\n*(?:END|$)/);
+  const fullReplacement = judgeOutput.match(
+    /```markdown\n([\s\S]*?)\n```\n*(?:END|$)/,
+  );
   if (fullReplacement) {
-    const newContent = fullReplacement[1].trim();
+    const newContent = (fullReplacement[1] ?? '').trim();
     const newHasFrontmatter = newContent.startsWith('---');
     if (newHasFrontmatter) {
       console.log('Applied full content replacement from judge model.');
@@ -1023,7 +1246,9 @@ function applySkillChanges(
 
   // Fallback: prepend the judge suggestions as a comment at the top of the file
   // (after frontmatter) -- this is a conservative fallback for manual review
-  console.warn('Could not parse structured edits from judge output. No changes applied.');
+  console.warn(
+    'Could not parse structured edits from judge output. No changes applied.',
+  );
   console.warn('Review the patch file for manual application.');
 
   return { content: currentContent, conflicts };
@@ -1041,7 +1266,9 @@ function generateSkillTemplateChanges(
   skillIssues: OptimizationPlan['issues'],
 ): string {
   const lines: string[] = [];
-  lines.push('The following sections may need attention based on identified issues:');
+  lines.push(
+    'The following sections may need attention based on identified issues:',
+  );
   lines.push('');
 
   for (const issue of skillIssues) {
@@ -1051,25 +1278,55 @@ function generateSkillTemplateChanges(
     // Map issue descriptions to likely SKILL.md sections
     const desc = issue.description.toLowerCase();
 
-    if (desc.includes('流程') || desc.includes('process') || desc.includes('步驟')) {
+    if (
+      desc.includes('流程') ||
+      desc.includes('process') ||
+      desc.includes('步驟')
+    ) {
       lines.push('**Likely affected section**: "工作流程" (Workflow)');
-      lines.push('Consider adding decision points, guard clauses, or explicit verification steps.');
+      lines.push(
+        'Consider adding decision points, guard clauses, or explicit verification steps.',
+      );
       lines.push('Add clear "when to do X vs. when to skip X" guidance.');
-    } else if (desc.includes('格式') || desc.includes('format') || desc.includes('輸出')) {
-      lines.push('**Likely affected section**: "驗收條件" (Acceptance Criteria)');
-      lines.push('Specify exact output format expectations. Add format validation steps.');
-    } else if (desc.includes('architecture') || desc.includes('架構') || desc.includes('diff')) {
+    } else if (
+      desc.includes('格式') ||
+      desc.includes('format') ||
+      desc.includes('輸出')
+    ) {
+      lines.push(
+        '**Likely affected section**: "驗收條件" (Acceptance Criteria)',
+      );
+      lines.push(
+        'Specify exact output format expectations. Add format validation steps.',
+      );
+    } else if (
+      desc.includes('architecture') ||
+      desc.includes('架構') ||
+      desc.includes('diff')
+    ) {
       lines.push('**Likely affected section**: Step 7 (architecture diff)');
       lines.push('Add instructions for handling missing/stale atlas data.');
-    } else if (desc.includes('scope') || desc.includes('範圍') || desc.includes('邊界')) {
-      lines.push('**Likely affected section**: "目標" (Goal) and description frontmatter');
-      lines.push('Add explicit scoping rules. Clarify when the skill should NOT be used.');
+    } else if (
+      desc.includes('scope') ||
+      desc.includes('範圍') ||
+      desc.includes('邊界')
+    ) {
+      lines.push(
+        '**Likely affected section**: "目標" (Goal) and description frontmatter',
+      );
+      lines.push(
+        'Add explicit scoping rules. Clarify when the skill should NOT be used.',
+      );
     } else {
-      lines.push('Review the full SKILL.md for sections related to this issue.');
+      lines.push(
+        'Review the full SKILL.md for sections related to this issue.',
+      );
     }
 
     lines.push('');
-    lines.push(`**Suggested Fix**: ${issue.suggestedFix || 'Review and adjust based on test evidence.'}`);
+    lines.push(
+      `**Suggested Fix**: ${issue.suggestedFix || 'Review and adjust based on test evidence.'}`,
+    );
     lines.push('');
   }
 
@@ -1109,13 +1366,18 @@ export async function optimizeSkillMd(
   date: string,
   judgeAvailable: boolean,
 ): Promise<{ success: boolean; message: string }> {
-  const skillIssues = plan.issues.filter(i => i.category === 'skill');
+  const skillIssues = plan.issues.filter((i) => i.category === 'skill');
 
   if (skillIssues.length === 0) {
-    return { success: true, message: 'No skill issues found. Skipping SKILL.md optimization.' };
+    return {
+      success: true,
+      message: 'No skill issues found. Skipping SKILL.md optimization.',
+    };
   }
 
-  console.log(`\n=== Optimizing SKILL.md (${skillIssues.length} issues) ===`);
+  console.log(
+    `\n=== Optimizing SKILL.md (${String(skillIssues.length)} issues) ===`,
+  );
 
   // ALLOWED_FILES check (FIX-09): verify the target path is within allowed ranges
   const resolvedSkillName = skillMdPath.includes('/skills/')
@@ -1134,7 +1396,10 @@ export async function optimizeSkillMd(
     currentContent = await readFile(skillMdPath, 'utf-8');
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return { success: false, message: `Cannot read SKILL.md at ${skillMdPath}: ${msg}` };
+    return {
+      success: false,
+      message: `Cannot read SKILL.md at ${skillMdPath}: ${msg}`,
+    };
   }
 
   // Markdown structure validation (FIX-10)
@@ -1151,7 +1416,10 @@ export async function optimizeSkillMd(
   }
 
   // Shared helper: write patch content to results/spec/{date}/skill-optimization-patch.md
-  async function writePatchFile(lines: string[], date: string): Promise<string> {
+  async function writePatchFile(
+    lines: string[],
+    date: string,
+  ): Promise<string> {
     const root = getProjectRoot();
     const resultsDir = resolve(root, 'results', 'spec', date);
     await mkdir(resultsDir, { recursive: true });
@@ -1161,9 +1429,11 @@ export async function optimizeSkillMd(
   }
 
   // Build diff-style patch for dry-run output (FIX-05)
-  async function buildDiffPatch(skillIssues: OptimizationPlan['issues']): Promise<string> {
+  async function buildDiffPatch(
+    skillIssues: OptimizationPlan['issues'],
+  ): Promise<string> {
     const relativeSkillPath = skillMdPath.includes('/skills/')
-      ? 'skills/' + skillMdPath.split('/skills/')[1]
+      ? 'skills/' + (skillMdPath.split('/skills/')[1] ?? '')
       : basename(skillMdPath);
 
     const patchLines: string[] = [
@@ -1171,7 +1441,7 @@ export async function optimizeSkillMd(
       '',
       `Generated: ${new Date().toISOString()}`,
       `Source: ${skillMdPath}`,
-      `Issues analyzed: ${skillIssues.length}`,
+      `Issues analyzed: ${String(skillIssues.length)}`,
       '',
       `--- a/${relativeSkillPath}`,
       `+++ b/${relativeSkillPath}`,
@@ -1179,7 +1449,9 @@ export async function optimizeSkillMd(
     ];
 
     for (const issue of skillIssues) {
-      patchLines.push(`### ${issue.id}: ${issue.severity} - ${issue.description.substring(0, 120)}`);
+      patchLines.push(
+        `### ${issue.id}: ${issue.severity} - ${issue.description.substring(0, 120)}`,
+      );
       patchLines.push('');
       patchLines.push('FIND:');
       patchLines.push('```');
@@ -1188,12 +1460,20 @@ export async function optimizeSkillMd(
       patchLines.push('');
       patchLines.push('REPLACE:');
       patchLines.push('```');
-      patchLines.push(`${issue.suggestedFix || '(Review and adjust based on identified issues)'}`);
+      patchLines.push(
+        issue.suggestedFix || '(Review and adjust based on identified issues)',
+      );
       patchLines.push('```');
       patchLines.push('');
-      patchLines.push(`- **Frequency**: ${issue.frequency} tests affected`);
-      patchLines.push(`- **Affected Tests**: ${issue.affectedTests.join(', ')}`);
-      patchLines.push(`- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`);
+      patchLines.push(
+        `- **Frequency**: ${String(issue.frequency)} tests affected`,
+      );
+      patchLines.push(
+        `- **Affected Tests**: ${issue.affectedTests.join(', ')}`,
+      );
+      patchLines.push(
+        `- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`,
+      );
       patchLines.push('');
       patchLines.push('---');
       patchLines.push('');
@@ -1207,13 +1487,15 @@ export async function optimizeSkillMd(
   }
 
   // Build shared template patch (used by judge-unavailable path)
-  async function buildTemplatePatch(skillIssues: OptimizationPlan['issues']): Promise<string> {
+  async function buildTemplatePatch(
+    skillIssues: OptimizationPlan['issues'],
+  ): Promise<string> {
     const patchLines: string[] = [
       '# SKILL.md Optimization Suggestions',
       '',
       `Generated: ${new Date().toISOString()}`,
       `Source: ${skillMdPath}`,
-      `Issues analyzed: ${skillIssues.length}`,
+      `Issues analyzed: ${String(skillIssues.length)}`,
       '',
       '---',
       '',
@@ -1221,11 +1503,19 @@ export async function optimizeSkillMd(
       '',
     ];
     for (const issue of skillIssues) {
-      patchLines.push(`### ${issue.id}: ${issue.severity} - ${issue.description.substring(0, 120)}`);
+      patchLines.push(
+        `### ${issue.id}: ${issue.severity} - ${issue.description.substring(0, 120)}`,
+      );
       patchLines.push('');
-      patchLines.push(`- **Frequency**: ${issue.frequency} tests affected`);
-      patchLines.push(`- **Affected Tests**: ${issue.affectedTests.join(', ')}`);
-      patchLines.push(`- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`);
+      patchLines.push(
+        `- **Frequency**: ${String(issue.frequency)} tests affected`,
+      );
+      patchLines.push(
+        `- **Affected Tests**: ${issue.affectedTests.join(', ')}`,
+      );
+      patchLines.push(
+        `- **Evidence**: ${issue.evidence.join('; ') || '(none)'}`,
+      );
       patchLines.push(`- **Suggested Fix**: ${issue.suggestedFix || '(none)'}`);
       patchLines.push('');
     }
@@ -1268,21 +1558,31 @@ export async function optimizeSkillMd(
 
   // 2. Get judge model suggestions
   try {
-    const judgePrompt = buildSkillOptimizationPrompt(skillIssues, currentContent);
+    const judgePrompt = buildSkillOptimizationPrompt(
+      skillIssues,
+      currentContent,
+    );
     const { content } = await callJudgeModelRaw(
-      [{ role: 'user', content: judgePrompt } as Message],
+      [{ role: 'user', content: judgePrompt }],
       env,
       { timeoutMs: env.JUDGE_TIMEOUT * 1000 },
     );
 
     // Parse the judge's suggested changes
-    const { content: newContent, conflicts } = applySkillChanges(currentContent, content);
+    const { content: newContent, conflicts } = applySkillChanges(
+      currentContent,
+      content,
+    );
 
     // Report conflicts (FIX-12): unmatched FIND patterns
     if (conflicts.length > 0) {
-      console.warn(`Found ${conflicts.length} unmatched FIND pattern(s):`);
+      console.warn(
+        `Found ${String(conflicts.length)} unmatched FIND pattern(s):`,
+      );
       for (const c of conflicts) {
-        console.warn(`  - FIND pattern not matched: "${c.find.substring(0, 80)}..."`);
+        console.warn(
+          `  - FIND pattern not matched: "${c.find.substring(0, 80)}..."`,
+        );
       }
     }
 
@@ -1297,16 +1597,21 @@ export async function optimizeSkillMd(
       await copyFile(latestBakPath, skillMdPath);
       return {
         success: false,
-        message: 'Frontmatter validation failed: missing YAML delimiters (---). Backup restored.',
+        message:
+          'Frontmatter validation failed: missing YAML delimiters (---). Backup restored.',
       };
     }
-    const frontmatter = frontmatterMatch[1];
-    if (frontmatter.trim().length === 0 || !/^[a-zA-Z]/.test(frontmatter.trim())) {
+    const frontmatter = frontmatterMatch[1] ?? '';
+    if (
+      frontmatter.trim().length === 0 ||
+      !/^[a-zA-Z]/.test(frontmatter.trim())
+    ) {
       console.error('Frontmatter validation FAILED. Restoring backup...');
       await copyFile(latestBakPath, skillMdPath);
       return {
         success: false,
-        message: 'Frontmatter validation failed: empty or malformed content. Backup restored.',
+        message:
+          'Frontmatter validation failed: empty or malformed content. Backup restored.',
       };
     }
 
@@ -1317,7 +1622,9 @@ export async function optimizeSkillMd(
       const trimmed = line.trim();
       if (trimmed.length === 0 || trimmed.startsWith('#')) continue;
       if (!yamlKeyPattern.test(trimmed)) {
-        console.error(`Frontmatter validation FAILED: invalid YAML line "${trimmed}". Restoring backup...`);
+        console.error(
+          `Frontmatter validation FAILED: invalid YAML line "${trimmed}". Restoring backup...`,
+        );
         await copyFile(latestBakPath, skillMdPath);
         return {
           success: false,
@@ -1330,7 +1637,9 @@ export async function optimizeSkillMd(
     // 5. Validate Markdown structure
     const mdValidation = validateMarkdownStructure(newContent);
     if (!mdValidation.valid) {
-      console.error('Markdown structure validation FAILED. Restoring backup...');
+      console.error(
+        'Markdown structure validation FAILED. Restoring backup...',
+      );
       await copyFile(latestBakPath, skillMdPath);
       return {
         success: false,
@@ -1343,20 +1652,26 @@ export async function optimizeSkillMd(
     const backupDir = dirname(skillMdPath);
     const baseName = basename(skillMdPath);
     const backups = (await readdir(backupDir))
-      .filter(f => f.startsWith(baseName + '.bak.'))
+      .filter((f) => f.startsWith(baseName + '.bak.'))
       .sort()
       .reverse();
     for (let i = MAX_BACKUPS; i < backups.length; i++) {
-      await unlink(join(backupDir, backups[i]));
+      await unlink(join(backupDir, backups[i] as string));
     }
 
-    return { success: true, message: `SKILL.md optimized successfully. Backup: ${latestBakPath}` };
+    return {
+      success: true,
+      message: `SKILL.md optimized successfully. Backup: ${latestBakPath}`,
+    };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`SKILL.md optimization failed: ${msg}`);
     // Restore backup
     await copyFile(latestBakPath, skillMdPath);
     console.log(`Backup restored from ${latestBakPath}`);
-    return { success: false, message: `Optimization failed: ${msg}. Backup restored.` };
+    return {
+      success: false,
+      message: `Optimization failed: ${msg}. Backup restored.`,
+    };
   }
 }

@@ -1,6 +1,6 @@
 interface:
-  display_name: "spec"
-  short_description: "Generate shared feature spec, task, and checklist docs before coding"
+  display_name: 'spec'
+  short_description: 'Generate shared feature spec, task, and checklist docs before coding'
   default_prompt: >-
     Use $spec to create or update single-spec plans under docs/plans/<date>/<change_name>/ or parallel batches under docs/plans/<date>/<batch_name>/<change_name>/ with shared coordination.md and, only when specs cannot be parallel-safe without prior shared work, minimal non-business preparation.md; treat assets/templates/*.md as binding format; member specs assume preparation finished—do not duplicate preparation tasks; surface collisions early and resolve ownership via coordination.md; fill BDD in spec.md; integrate $test-case-strategy into tasks/checklists.
     **Critical layering:** design.md + contract.md are higher-level guiding context only (architecture + cite-backed external truth; coarse INT-### / EXT-### anchors). tasks.md MUST be the ONLY enumerated runnable queue with path-level edits and verification hooks—derive tasks FROM spec + design + contract WITHOUT mirroring checklist rows into design/contract; optionally cite INT/EXT on task lines for traceability—never duplicate task choreography inside design.md or contract.md.

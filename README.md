@@ -38,6 +38,7 @@ npx @laitszkin/apollo-toolkit
 ```
 
 The interactive installer:
+
 - shows a branded `Apollo Toolkit` terminal welcome screen with a short staged reveal
 - installs a managed copy into `~/.apollo-toolkit`
 - lets you multi-select `codex`, `openclaw`, `trae`, `agents`, `claude-code`, or `all`
@@ -50,10 +51,10 @@ The interactive installer:
 
 ### Symlink vs Copy
 
-| Mode | Pro | Con |
-| --- | --- | --- |
+| Mode                      | Pro                                                                                                      | Con                                                                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | **Symlink** (recommended) | Auto-updates when you `git pull` in `~/.apollo-toolkit`; no need to re-run installer after patch updates | Changes pushed to the repo automatically reflect in your skills — you may receive updates you did not intend to accept |
-| **Copy** | Stable snapshot; won't change until you re-run the installer | Must manually re-run `apltk` after each toolkit update to get the latest skills |
+| **Copy**                  | Stable snapshot; won't change until you re-run the installer                                             | Must manually re-run `apltk` after each toolkit update to get the latest skills                                        |
 
 ### Uninstall
 
@@ -168,12 +169,12 @@ In curl / iwr mode, the scripts clone or update the managed toolkit copy under `
 
 The install commands below were checked with the Skills CLI unless otherwise noted.
 
-| Skill name | Used by | Author / producer | Install command / note |
-| --- | --- | --- | --- |
-| `pdf` | `exam-pdf-workflow`, `financial-research`, `learning-error-book`, `weekly-financial-event-report` | OpenAI (`openai/skills`) | `npx skills add openai/skills@pdf -g -y` |
-| `spreadsheet` | `record-spending` | OpenAI (`openai/skills`) | `npx skills add openai/skills@spreadsheet -g -y` |
-| `remotion-best-practices` | `novel-to-short-video`, `video-production` | Remotion (`remotion-dev/skills`) | `npx skills add remotion-dev/skills@remotion-best-practices -g -y` |
-| `code-simplifier` | `open-source-pr-workflow` | Sentry (`getsentry/skills`) | `npx skills add getsentry/skills@code-simplifier -g -y` |
+| Skill name                | Used by                                                                                           | Author / producer                | Install command / note                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------ |
+| `pdf`                     | `exam-pdf-workflow`, `financial-research`, `learning-error-book`, `weekly-financial-event-report` | OpenAI (`openai/skills`)         | `npx skills add openai/skills@pdf -g -y`                           |
+| `spreadsheet`             | `record-spending`                                                                                 | OpenAI (`openai/skills`)         | `npx skills add openai/skills@spreadsheet -g -y`                   |
+| `remotion-best-practices` | `novel-to-short-video`, `video-production`                                                        | Remotion (`remotion-dev/skills`) | `npx skills add remotion-dev/skills@remotion-best-practices -g -y` |
+| `code-simplifier`         | `open-source-pr-workflow`                                                                         | Sentry (`getsentry/skills`)      | `npx skills add getsentry/skills@code-simplifier -g -y`            |
 
 Compatibility note:
 
@@ -184,7 +185,6 @@ Compatibility note:
 - `review` is a local skill that reviews spec compliance of changes against governing planning documents, assessing business goals before secondary code-practice concerns. It outputs `REPORT.md` (issue list only, no solutions).
 - `qa` reads `REPORT.md` and spec documents to generate `FIX.md` — a complete fix plan with dependency analysis and subagent routing. `fix` then reads `FIX.md` and executes mechanically.
 - `update-project-html` is a local skill that depends on `init-project-html` for semantic rules and on the `apltk architecture` CLI to refresh the base atlas after code changes; for spec overlay diagrams use `spec-to-project-html` instead.
-
 
 ## Code Intelligence: CodeGraph
 

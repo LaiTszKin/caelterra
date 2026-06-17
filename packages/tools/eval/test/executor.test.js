@@ -37,7 +37,11 @@ describe('REGTEST-06: 磁碟空間檢查（happy path）', () => {
   it('should proceed without disk-space error when sufficient space available', async () => {
     const results = await runAllTests([], mockEnv, testDate, 'test-skill');
     assert.ok(Array.isArray(results), 'runAllTests should return an array');
-    assert.equal(results.length, 0, 'With empty questions, results should be empty');
+    assert.equal(
+      results.length,
+      0,
+      'With empty questions, results should be empty',
+    );
   });
 });
 
@@ -66,7 +70,11 @@ describe('REGTEST-02 (R7): exec-lock 陳舊鎖自動清除', () => {
     // Should NOT throw "already in progress" because lock is stale
     const results = await runAllTests([], mockEnv, testDate, 'test-skill');
     assert.ok(Array.isArray(results), 'runAllTests should return an array');
-    assert.equal(results.length, 0, 'With empty questions, results should be empty');
+    assert.equal(
+      results.length,
+      0,
+      'With empty questions, results should be empty',
+    );
   });
 });
 
@@ -76,7 +84,8 @@ describe('REGTEST-02 (R7): exec-lock 陳舊鎖自動清除', () => {
 describe('REGTEST-04 (R7): TraceEvent type 包含 round event', () => {
   it('TraceEvent type union should include round', () => {
     const source = fs.readFileSync(
-      new URL('../executor.ts', import.meta.url), 'utf-8',
+      new URL('../executor.ts', import.meta.url),
+      'utf-8',
     );
 
     // Find TraceEvent interface/type definition
@@ -84,7 +93,10 @@ describe('REGTEST-04 (R7): TraceEvent type 包含 round event', () => {
     assert.ok(traceEventStart >= 0, 'TraceEvent interface must exist');
 
     // Read the type definition (next ~300 chars should cover the type union)
-    const traceEventSection = source.slice(traceEventStart, traceEventStart + 300);
+    const traceEventSection = source.slice(
+      traceEventStart,
+      traceEventStart + 300,
+    );
 
     // VERIFY: 'round' is in the type union
     assert.ok(
@@ -94,7 +106,10 @@ describe('REGTEST-04 (R7): TraceEvent type 包含 round event', () => {
 
     // VERIFY: Find the 'round' event recording in executeSingleTest
     const roundEventWrite = source.indexOf("type: 'round'");
-    assert.ok(roundEventWrite >= 0, 'executeSingleTest must record round events');
+    assert.ok(
+      roundEventWrite >= 0,
+      'executeSingleTest must record round events',
+    );
 
     // The round event should appear inside the tool-use loop (between for loop and finish_reason check)
     const forLoopStart = source.indexOf('for (let round = 0;');
@@ -112,7 +127,8 @@ describe('REGTEST-04 (R7): TraceEvent type 包含 round event', () => {
 describe('REGTEST-08 (R8): sigintCleanup 不含 process.exit', () => {
   it('sigintCleanup handler 不應呼叫 process.exit', () => {
     const source = fs.readFileSync(
-      new URL('../executor.ts', import.meta.url), 'utf-8',
+      new URL('../executor.ts', import.meta.url),
+      'utf-8',
     );
 
     // 找出 sigintCleanup 函式定義起始位置

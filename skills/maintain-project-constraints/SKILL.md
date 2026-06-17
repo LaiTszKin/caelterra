@@ -8,6 +8,7 @@ description: Reads the latest codebase and docs to update CLAUDE.md and AGENTS.m
 Maintain project constraint files at both root and sub-module levels so that every agent modifying any part of the codebase has clear boundaries to follow.
 
 **Deliverables:**
+
 - Root-level `CLAUDE.md` + `AGENTS.md` (three-section format: Commands / Business Goals / Documentation Index)
 - Per-module `CLAUDE.md` + `AGENTS.md` (description / file list / non-violable rules)
 
@@ -23,6 +24,7 @@ Maintain project constraint files at both root and sub-module levels so that eve
 ### 1. Explore the Codebase
 
 Read the repository to understand:
+
 - Project structure and how modules are organised
 - Build system and package managers in use
 - Existing documentation and development conventions
@@ -31,6 +33,7 @@ Read the repository to understand:
 ### 2. Extract Prohibitions
 
 Look across the project for implicit and explicit prohibitions. Concrete sources:
+
 - Recurring revert / fix commits in git log
 - Infeasible approaches mentioned in past issues
 - Operations explicitly banned in CI config
@@ -57,12 +60,12 @@ Create or update `CLAUDE.md` and `AGENTS.md` in the project root using `assets/t
 
 **AGENTS.md vs CLAUDE.md split:**
 
-| Aspect | AGENTS.md | CLAUDE.md |
-|--------|-----------|-----------|
-| Audience | Non-Claude agents (Codex, etc.) | Claude Code |
-| Syntax | Agent-neutral, no platform-specific syntax | May use Claude-specific syntax |
-| Claude-only content | Must not include | May include hooks, scheduled tasks, cowork, MCP |
-| Common base | Three sections + Prohibitions | Same as AGENTS.md |
+| Aspect              | AGENTS.md                                  | CLAUDE.md                                       |
+| ------------------- | ------------------------------------------ | ----------------------------------------------- |
+| Audience            | Non-Claude agents (Codex, etc.)            | Claude Code                                     |
+| Syntax              | Agent-neutral, no platform-specific syntax | May use Claude-specific syntax                  |
+| Claude-only content | Must not include                           | May include hooks, scheduled tasks, cowork, MCP |
+| Common base         | Three sections + Prohibitions              | Same as AGENTS.md                               |
 
 Both files must stay under **100 lines**. Prioritise brevity over completeness when constrained.
 
@@ -71,6 +74,7 @@ Both files must stay under **100 lines**. Prioritise brevity over completeness w
 For each sub-module discovered in Step 3, create or update `CLAUDE.md` and `AGENTS.md` in its directory using `assets/templates/module-CLAUDE.md` as the format skeleton.
 
 Key points:
+
 - Module-level `CLAUDE.md` and `AGENTS.md` have identical content — the format is simple and carries no platform-specific information
 - `MODULE FILE LIST` covers all source files; exclude generated output, dist, node_modules, target, etc.
 - `RULES SHOULD NOT BE VIOLATED` derives from: module boundary rules, dependency direction, internal conventions, and historical error patterns

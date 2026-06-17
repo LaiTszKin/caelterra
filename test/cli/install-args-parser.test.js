@@ -143,8 +143,5 @@ test('InstallArgsParser: --home with trailing equals operator works', () => {
 
 test('InstallArgsParser: unknown option re-throws the original parseArgs error', () => {
   const parser = new InstallArgsParser();
-  assert.throws(
-    () => parser.parse(['--unknown-option']),
-    /Unknown option/,
-  );
+  assert.throws(() => parser.parse(['--unknown-option']), /Unknown option/);
 });
