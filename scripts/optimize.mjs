@@ -1480,7 +1480,7 @@ async function optimizeApltkTools(
   if (anyRealChange) {
     try {
       console.log('\nRunning tests to validate changes...');
-      execSync('npm test', {
+      execSync('pnpm test', {
         cwd: sourceRoot,
         stdio: 'inherit',
         timeout: 120000,

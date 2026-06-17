@@ -81,3 +81,19 @@ test('REGTEST-01: root scripts use pnpm after package manager migration', () => 
   assert.ok(!/\bnpm\b/.test(pkg.scripts.prepublishOnly));
   assert.ok(!/\bnpm\b/.test(pkg.scripts['test:coverage']));
 });
+
+test('REGTEST-02: optimizer validation runs tests through pnpm', () => {
+  const optimizer = fs.readFileSync(
+    path.join(projectRoot, 'scripts', 'optimize.mjs'),
+    'utf-8',
+  );
+
+  assert.ok(
+    optimizer.includes("execSync('pnpm test'"),
+    'optimizer validation must run pnpm test',
+  );
+  assert.ok(
+    !optimizer.includes("execSync('npm test'"),
+    'optimizer validation must not run npm test',
+  );
+});
