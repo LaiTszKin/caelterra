@@ -69,3 +69,15 @@ test('REGTEST-05: lint-staged only targets specified staged file types', () => {
   assert.ok(!keys.some((k) => k.includes('.md')));
   assert.ok(!keys.some((k) => k.includes('md')));
 });
+
+test('REGTEST-01: root scripts use pnpm after package manager migration', () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'),
+  );
+
+  assert.equal(pkg.packageManager, 'pnpm@11.6.0');
+  assert.equal(pkg.scripts.prepublishOnly, 'pnpm run build');
+  assert.equal(pkg.scripts['test:coverage'], 'COVERAGE=true pnpm test');
+  assert.ok(!/\bnpm\b/.test(pkg.scripts.prepublishOnly));
+  assert.ok(!/\bnpm\b/.test(pkg.scripts['test:coverage']));
+});

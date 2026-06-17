@@ -22,10 +22,10 @@
   "scripts": {
     "build": "tsc --build",
     "postbuild": "node scripts/rewrite-imports.mjs",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "pnpm run build",
     "watch": "tsc --build --watch",
     "test": "scripts/test.sh",
-    "test:coverage": "COVERAGE=true npm test",
+    "test:coverage": "COVERAGE=true pnpm test",
     "test:ts": "node --test dist/test/",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache",
