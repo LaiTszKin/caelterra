@@ -16175,5 +16175,3606 @@
         }
       ]
     }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture  (+ codegraph integration overlay)",
+        "summary": "完整 C4 架構圖：eval 評測系統 (8 features) + codegraph 程式碼分析 (1 feature, 3 submodules)。 外部 actor: Judge Model API, GitHub Actions CI, Developer, Skill Files, @colbymchenry/codegraph (npm), @laitszkin/tool-registry, @laitszkin/tui。 Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter → CI Gate。\n",
+        "updatedAt": "2026-06-06T13:03:10.925Z"
+      },
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        },
+        {
+          "id": "codegraph-npm",
+          "label": "@colbymchenry/codegraph npm package"
+        },
+        {
+          "id": "tool-registry",
+          "label": "Tool Registry (@laitszkin/tool-registry)"
+        },
+        {
+          "id": "tui-lib",
+          "label": "TUI Library (@laitszkin/tui)"
+        }
+      ],
+      "features": [
+        {
+          "slug": "codegraph",
+          "title": "CodeGraph Integration",
+          "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
+          "dependsOn": ["eval-cli"],
+          "submodules": [
+            {
+              "slug": "cg-lifecycle",
+              "kind": "service",
+              "role": "Manage CodeGraph index lifecycle — init, sync, status, search",
+              "functions": [
+                {
+                  "name": "init",
+                  "in": "projectRoot: string",
+                  "out": "CodeGraph instance",
+                  "side": "io",
+                  "purpose": "Initialize .codegraph/ directory and optionally run full index"
+                },
+                {
+                  "name": "sync",
+                  "in": "projectRoot: string",
+                  "out": "SyncResult",
+                  "side": "io",
+                  "purpose": "Incremental update of existing index"
+                },
+                {
+                  "name": "status",
+                  "in": "projectRoot: string",
+                  "out": "GraphStats",
+                  "side": "pure",
+                  "purpose": "Query index statistics"
+                },
+                {
+                  "name": "search",
+                  "in": "query: string",
+                  "out": "SearchResult[]",
+                  "side": "pure",
+                  "purpose": "Full-text symbol search via FTS5"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "cg-discovery",
+              "kind": "service",
+              "role": "Explore and survey code structure — explore, survey, list-apis",
+              "functions": [
+                {
+                  "name": "explore",
+                  "in": "query: string",
+                  "out": "Context (source grouped by file + relationship map)",
+                  "side": "pure",
+                  "purpose": "Get full context for symbols matching a query"
+                },
+                {
+                  "name": "survey",
+                  "in": "dirPath: string",
+                  "out": "SurveyReport (submodule suggestions + edge suggestions)",
+                  "side": "pure",
+                  "purpose": "Survey a directory and produce atlas-compatible structure report"
+                },
+                {
+                  "name": "listApis",
+                  "in": "featureSlug: string",
+                  "out": "APIDirectory (public functions + params + callers)",
+                  "side": "pure",
+                  "purpose": "List public API surface of a feature area"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "cg-validation",
+              "kind": "service",
+              "role": "Verify architecture proposals and batch-apply atlas mutations",
+              "functions": [
+                {
+                  "name": "verify",
+                  "in": "specOverlayPath: string",
+                  "out": "VerifyReport (passed/failed items)",
+                  "side": "pure",
+                  "purpose": "Validate that spec overlay references match actual code"
+                },
+                {
+                  "name": "applyBatch",
+                  "in": "proposalYaml: string",
+                  "out": "ApplyResult",
+                  "side": "io",
+                  "purpose": "Execute multiple atlas mutations from a single YAML file"
+                },
+                {
+                  "name": "generateTemplate",
+                  "in": "specMdPath: string",
+                  "out": "proposalYaml path",
+                  "side": "io",
+                  "purpose": "Generate empty proposal skeleton from SPEC.md"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "cg-fe-001",
+              "from": "cg-lifecycle",
+              "to": "cg-discovery",
+              "kind": "data-row",
+              "label": "survey/list-apis 依賴已索引的資料庫"
+            },
+            {
+              "id": "cg-fe-002",
+              "from": "cg-discovery",
+              "to": "cg-validation",
+              "kind": "data-row",
+              "label": "verify 使用 discovery 的搜尋能力"
+            },
+            {
+              "id": "cg-fe-003",
+              "from": "cg-validation",
+              "to": "cg-lifecycle",
+              "kind": "data-row",
+              "label": "apply 非索引操作，不需 lifecycle — 但 template 可搭配 list-apis"
+            }
+          ]
+        },
+        {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [
+                {
+                  "name": "extractIssues",
+                  "in": "scores",
+                  "out": "RawIssue[]",
+                  "side": "pure",
+                  "purpose": "從 score.json 提取問題與分類統計"
+                },
+                {
+                  "name": "generateOptimizationPlan",
+                  "in": "issues",
+                  "out": "OptimizationPlan",
+                  "side": "pure",
+                  "purpose": "從去重後問題生成 FIND/REPLACE 優化 diff"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [
+                {
+                  "name": "deduplicateIssues",
+                  "in": "issues",
+                  "out": "DedupedIssue[]",
+                  "side": "pure",
+                  "purpose": "Jaccard+Judge 語意去重"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [
+                {
+                  "name": "evalHandler",
+                  "in": "argv, context",
+                  "out": "exitCode",
+                  "side": "pure",
+                  "purpose": "CLI 入口：解析參數、調度評測流程"
+                },
+                {
+                  "name": "parseArgs",
+                  "in": "argv",
+                  "out": "ParsedArgs",
+                  "side": "pure",
+                  "purpose": "解析 CLI 參數與模式選擇"
+                },
+                {
+                  "name": "tool",
+                  "in": "ToolDefinition",
+                  "out": "void",
+                  "side": "pure",
+                  "purpose": "向 tool-registry 註冊 eval 命令"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "progress-display",
+              "kind": "ui",
+              "role": "終端機進度指示",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "workflow-trigger",
+              "kind": "service",
+              "role": "GitHub Actions workflow on PR skill file change",
+              "functions": [
+                {
+                  "name": "detectSkillChanges",
+                  "in": "prFiles",
+                  "out": "string[]",
+                  "side": "pure",
+                  "purpose": "檢測 PR 中技能檔案變更"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pr-reporter",
+              "kind": "service",
+              "role": "PR評論回報評測結果",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "tool-dispatcher",
+              "kind": "service",
+              "role": "工具調用攔截系統：讀取工具在workspace內真實執行、寫入工具模擬回傳、路徑穿越防護",
+              "functions": [
+                {
+                  "name": "buildSystemPrompt",
+                  "in": "question",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "建立隔離環境的 system prompt"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-question",
+          "title": "評測題庫",
+          "story": "管理評測題庫的載入、驗證、抽樣與LLM變體生成",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-loader",
+              "kind": "service",
+              "role": "題目載入與JSON Schema驗證",
+              "functions": [
+                {
+                  "name": "loadQuestions",
+                  "in": "specDir",
+                  "out": "Question[]",
+                  "side": "pure",
+                  "purpose": "載入題目並進行 JSON Schema 驗證"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "variant-generator",
+              "kind": "service",
+              "role": "LLM變體生成，保留評分標準",
+              "functions": [
+                {
+                  "name": "generateVariants",
+                  "in": "questions, count",
+                  "out": "Question[]",
+                  "side": "io",
+                  "purpose": "LLM 變體生成，保留評分標準"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-executor",
+          "title": "評測執行器",
+          "story": "在隔離環境中執行技能，記錄工具調用軌跡為JSONL",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "trace-recorder",
+              "kind": "service",
+              "role": "多輪tool-use loop軌跡記錄：tool_call/tool_result事件序列、JSONL行號標記、.done完成標記",
+              "functions": [
+                {
+                  "name": "runSingleTest",
+                  "in": "question, skillDir",
+                  "out": "TraceEvent[]",
+                  "side": "pure",
+                  "purpose": "執行單一技能測試，記錄 tool call 軌跡"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "exec-api-client",
+              "kind": "api",
+              "role": "Exec Model HTTP client with retry",
+              "functions": [
+                {
+                  "name": "withRetry",
+                  "in": "fn, options",
+                  "out": "Result",
+                  "side": "io",
+                  "purpose": "HTTP client with retry for exec model"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-scorer",
+          "title": "評分引擎",
+          "story": "調用LLM評分模型從三維度打分，產出結構化評分JSON",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "judge-prompt-builder",
+              "kind": "service",
+              "role": "評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示",
+              "functions": [
+                {
+                  "name": "buildJudgePrompt",
+                  "in": "trace, scoreCriteria",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "將 trace 事件摘要轉為評分提示詞"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "judge-api-client",
+              "kind": "api",
+              "role": "Judge Model HTTP client with parse fallback",
+              "functions": [
+                {
+                  "name": "callJudgeModel",
+                  "in": "prompt, options",
+                  "out": "ScoreResult",
+                  "side": "io",
+                  "purpose": "呼叫 Judge Model API 進行評分"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-reporter",
+          "title": "評測報告",
+          "story": "彙總評分結果產出結構化Markdown報告",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "report-composer",
+              "kind": "service",
+              "role": "Markdown報告組合與渲染",
+              "functions": [
+                {
+                  "name": "generateReport",
+                  "in": "scores",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "彙總評分結果產出結構化 Markdown 報告"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "cli-dispatch",
+          "title": "CLI Dispatch and Install Engine",
+          "story": "CLI entry point providing argument parsing, command dispatch, and install/uninstall orchestration engine",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "arg-parser",
+              "kind": "service",
+              "role": "parseArguments: CLI argument parsing and dispatch",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "help-builder",
+              "kind": "service",
+              "role": "buildHelpText family: command help text generation",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "installer-core",
+              "kind": "service",
+              "role": "installLinks/syncToolkitHome/uninstallSkills: installation engine",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-discovery",
+              "kind": "service",
+              "role": "registerAllTools/isKnownToolName: dynamic tool loading",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "update-checker",
+              "kind": "service",
+              "role": "checkForPackageUpdate/execCommand: npm version check",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "tool-registry",
+          "title": "Tool Registry",
+          "story": "Central in-memory registry of ToolDefinition entries, supporting register/get/list/runTool and tool list formatting",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "registry-core",
+              "kind": "service",
+              "role": "registerTool/getTool/listTools/runTool: in-memory registry",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "formatter",
+              "kind": "service",
+              "role": "formatToolList/buildToolDiscoveryHelp: tool list display",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "tool-utils",
+          "title": "Tool Utilities",
+          "story": "Shared utilities consumed by tools: timestamp parsing, skill discovery, cross-platform abstraction (after refactoring)",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "log-utils",
+              "kind": "service",
+              "role": "extractTimestamp/parseCliTimestamp/inWindow: log parsing",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-discovery",
+              "kind": "service",
+              "role": "iterSkillDirs: skill directory enumeration",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "terminal-ui",
+          "title": "Terminal UI",
+          "story": "Terminal output formatting: ANSI color, banner/welcome screen, interactive prompts, and structured output functions",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "terminal-detection",
+              "kind": "service",
+              "role": "isInteractive/supportsColor: TTY and color detection",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "banner-display",
+              "kind": "service",
+              "role": "buildBanner/buildWordmark: branding display",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "interactive-prompts",
+              "kind": "service",
+              "role": "promptForModes/promptYesNo: user prompts",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      ],
+      "edges": [
+        {
+          "id": "cg-e-001",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-lifecycle"
+          },
+          "to": {
+            "feature": "codegraph",
+            "submodule": "cg-discovery"
+          },
+          "kind": "data-row",
+          "label": "survey/list-apis 依賴已索引的資料庫"
+        },
+        {
+          "id": "cg-e-002",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-discovery"
+          },
+          "to": {
+            "feature": "codegraph",
+            "submodule": "cg-validation"
+          },
+          "kind": "data-row",
+          "label": "verify 使用 discovery 的搜尋能力"
+        },
+        {
+          "id": "cg-e-003",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-lifecycle"
+          },
+          "to": {
+            "feature": "eval-cli"
+          },
+          "kind": "call",
+          "label": "codegraph init --index 與 eval-cli 共用 CLI 工具基礎架構"
+        },
+        {
+          "id": "eval-cli-exec",
+          "from": {
+            "feature": "eval-cli",
+            "submodule": "cli-handler"
+          },
+          "to": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "kind": "call",
+          "label": "evalHandler 觸發 runSingleTest"
+        },
+        {
+          "id": "eval-exec-iso",
+          "from": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "to": {
+            "feature": "eval-isolation",
+            "submodule": "tool-dispatcher"
+          },
+          "kind": "call",
+          "label": "執行隔離環境中的工具調用"
+        },
+        {
+          "id": "eval-exec-scorer",
+          "from": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "to": {
+            "feature": "eval-scorer",
+            "submodule": "judge-prompt-builder"
+          },
+          "kind": "data-row",
+          "label": "trace events 送入評分"
+        },
+        {
+          "id": "eval-scorer-reporter",
+          "from": {
+            "feature": "eval-scorer"
+          },
+          "to": {
+            "feature": "eval-reporter"
+          },
+          "kind": "data-row",
+          "label": "ScoreResult 送入報告組合"
+        },
+        {
+          "id": "eval-exec-optimizer",
+          "from": {
+            "feature": "eval-executor"
+          },
+          "to": {
+            "feature": "eval-optimizer"
+          },
+          "kind": "data-row",
+          "label": "執行結果觸發優化"
+        },
+        {
+          "id": "eval-cli-ci",
+          "from": {
+            "feature": "eval-cli"
+          },
+          "to": {
+            "feature": "eval-ci-gate"
+          },
+          "kind": "call",
+          "label": "CI 模式下觸發 PR 回報"
+        },
+        {
+          "id": "cli-edge-001",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "arg-parser"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "registry-core"
+          },
+          "kind": "call",
+          "label": "run() calls runTool()"
+        },
+        {
+          "id": "cli-edge-002",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "banner-display"
+          },
+          "kind": "call",
+          "label": "install summary uses banner"
+        },
+        {
+          "id": "cli-edge-003",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "interactive-prompts"
+          },
+          "kind": "call",
+          "label": "install prompts use inquirer"
+        },
+        {
+          "id": "cli-edge-004",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "help-builder"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "banner-display"
+          },
+          "kind": "call",
+          "label": "help text uses buildBanner"
+        },
+        {
+          "id": "cli-edge-005",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "help-builder"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "formatter"
+          },
+          "kind": "call",
+          "label": "help text uses formatToolList"
+        },
+        {
+          "id": "cli-edge-006",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "tool-discovery"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "registry-core"
+          },
+          "kind": "call",
+          "label": "registerAllTools calls registerTool"
+        },
+        {
+          "id": "cli-edge-007",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "update-checker"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "terminal-detection"
+          },
+          "kind": "call",
+          "label": "update check uses isInteractive"
+        },
+        {
+          "id": "cli-edge-008",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "terminal-detection"
+          },
+          "kind": "call",
+          "label": "installer uses supportsColor"
+        }
+      ]
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture  (+ codegraph integration overlay)",
+        "summary": "完整 C4 架構圖：eval 評測系統 (8 features) + codegraph 程式碼分析 (1 feature, 3 submodules)。 外部 actor: Judge Model API, GitHub Actions CI, Developer, Skill Files, @colbymchenry/codegraph (npm), @laitszkin/tool-registry, @laitszkin/tui。 Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter → CI Gate。\n",
+        "updatedAt": "2026-06-17T07:47:47.424Z"
+      },
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        },
+        {
+          "id": "codegraph-npm",
+          "label": "@colbymchenry/codegraph npm package"
+        },
+        {
+          "id": "tool-registry",
+          "label": "Tool Registry (@laitszkin/tool-registry)"
+        },
+        {
+          "id": "tui-lib",
+          "label": "TUI Library (@laitszkin/tui)"
+        }
+      ],
+      "features": [
+        {
+          "slug": "codegraph",
+          "title": "CodeGraph Integration",
+          "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
+          "dependsOn": ["eval-cli"],
+          "submodules": [
+            {
+              "slug": "cg-lifecycle",
+              "kind": "service",
+              "role": "Manage CodeGraph index lifecycle — init, sync, status, search",
+              "functions": [
+                {
+                  "name": "init",
+                  "in": "projectRoot: string",
+                  "out": "CodeGraph instance",
+                  "side": "io",
+                  "purpose": "Initialize .codegraph/ directory and optionally run full index"
+                },
+                {
+                  "name": "sync",
+                  "in": "projectRoot: string",
+                  "out": "SyncResult",
+                  "side": "io",
+                  "purpose": "Incremental update of existing index"
+                },
+                {
+                  "name": "status",
+                  "in": "projectRoot: string",
+                  "out": "GraphStats",
+                  "side": "pure",
+                  "purpose": "Query index statistics"
+                },
+                {
+                  "name": "search",
+                  "in": "query: string",
+                  "out": "SearchResult[]",
+                  "side": "pure",
+                  "purpose": "Full-text symbol search via FTS5"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "cg-discovery",
+              "kind": "service",
+              "role": "Explore and survey code structure — explore, survey, list-apis",
+              "functions": [
+                {
+                  "name": "explore",
+                  "in": "query: string",
+                  "out": "Context (source grouped by file + relationship map)",
+                  "side": "pure",
+                  "purpose": "Get full context for symbols matching a query"
+                },
+                {
+                  "name": "survey",
+                  "in": "dirPath: string",
+                  "out": "SurveyReport (submodule suggestions + edge suggestions)",
+                  "side": "pure",
+                  "purpose": "Survey a directory and produce atlas-compatible structure report"
+                },
+                {
+                  "name": "listApis",
+                  "in": "featureSlug: string",
+                  "out": "APIDirectory (public functions + params + callers)",
+                  "side": "pure",
+                  "purpose": "List public API surface of a feature area"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "cg-validation",
+              "kind": "service",
+              "role": "Verify architecture proposals and batch-apply atlas mutations",
+              "functions": [
+                {
+                  "name": "verify",
+                  "in": "specOverlayPath: string",
+                  "out": "VerifyReport (passed/failed items)",
+                  "side": "pure",
+                  "purpose": "Validate that spec overlay references match actual code"
+                },
+                {
+                  "name": "applyBatch",
+                  "in": "proposalYaml: string",
+                  "out": "ApplyResult",
+                  "side": "io",
+                  "purpose": "Execute multiple atlas mutations from a single YAML file"
+                },
+                {
+                  "name": "generateTemplate",
+                  "in": "specMdPath: string",
+                  "out": "proposalYaml path",
+                  "side": "io",
+                  "purpose": "Generate empty proposal skeleton from SPEC.md"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "cg-fe-001",
+              "from": "cg-lifecycle",
+              "to": "cg-discovery",
+              "kind": "data-row",
+              "label": "survey/list-apis 依賴已索引的資料庫"
+            },
+            {
+              "id": "cg-fe-002",
+              "from": "cg-discovery",
+              "to": "cg-validation",
+              "kind": "data-row",
+              "label": "verify 使用 discovery 的搜尋能力"
+            },
+            {
+              "id": "cg-fe-003",
+              "from": "cg-validation",
+              "to": "cg-lifecycle",
+              "kind": "data-row",
+              "label": "apply 非索引操作，不需 lifecycle — 但 template 可搭配 list-apis"
+            }
+          ]
+        },
+        {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [
+                {
+                  "name": "extractIssues",
+                  "in": "scores",
+                  "out": "RawIssue[]",
+                  "side": "pure",
+                  "purpose": "從 score.json 提取問題與分類統計"
+                },
+                {
+                  "name": "generateOptimizationPlan",
+                  "in": "issues",
+                  "out": "OptimizationPlan",
+                  "side": "pure",
+                  "purpose": "從去重後問題生成 FIND/REPLACE 優化 diff"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [
+                {
+                  "name": "deduplicateIssues",
+                  "in": "issues",
+                  "out": "DedupedIssue[]",
+                  "side": "pure",
+                  "purpose": "Jaccard+Judge 語意去重"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [
+                {
+                  "name": "evalHandler",
+                  "in": "argv, context",
+                  "out": "exitCode",
+                  "side": "pure",
+                  "purpose": "CLI 入口：解析參數、調度評測流程"
+                },
+                {
+                  "name": "parseArgs",
+                  "in": "argv",
+                  "out": "ParsedArgs",
+                  "side": "pure",
+                  "purpose": "解析 CLI 參數與模式選擇"
+                },
+                {
+                  "name": "tool",
+                  "in": "ToolDefinition",
+                  "out": "void",
+                  "side": "pure",
+                  "purpose": "向 tool-registry 註冊 eval 命令"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "progress-display",
+              "kind": "ui",
+              "role": "終端機進度指示",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "workflow-trigger",
+              "kind": "service",
+              "role": "GitHub Actions workflow on PR skill file change",
+              "functions": [
+                {
+                  "name": "detectSkillChanges",
+                  "in": "prFiles",
+                  "out": "string[]",
+                  "side": "pure",
+                  "purpose": "檢測 PR 中技能檔案變更"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pr-reporter",
+              "kind": "service",
+              "role": "PR評論回報評測結果",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "tool-dispatcher",
+              "kind": "service",
+              "role": "工具調用攔截系統：讀取工具在workspace內真實執行、寫入工具模擬回傳、路徑穿越防護",
+              "functions": [
+                {
+                  "name": "buildSystemPrompt",
+                  "in": "question",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "建立隔離環境的 system prompt"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-question",
+          "title": "評測題庫",
+          "story": "管理評測題庫的載入、驗證、抽樣與LLM變體生成",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-loader",
+              "kind": "service",
+              "role": "題目載入與JSON Schema驗證",
+              "functions": [
+                {
+                  "name": "loadQuestions",
+                  "in": "specDir",
+                  "out": "Question[]",
+                  "side": "pure",
+                  "purpose": "載入題目並進行 JSON Schema 驗證"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "variant-generator",
+              "kind": "service",
+              "role": "LLM變體生成，保留評分標準",
+              "functions": [
+                {
+                  "name": "generateVariants",
+                  "in": "questions, count",
+                  "out": "Question[]",
+                  "side": "io",
+                  "purpose": "LLM 變體生成，保留評分標準"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-executor",
+          "title": "評測執行器",
+          "story": "在隔離環境中執行技能，記錄工具調用軌跡為JSONL",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "trace-recorder",
+              "kind": "service",
+              "role": "多輪tool-use loop軌跡記錄：tool_call/tool_result事件序列、JSONL行號標記、.done完成標記",
+              "functions": [
+                {
+                  "name": "runSingleTest",
+                  "in": "question, skillDir",
+                  "out": "TraceEvent[]",
+                  "side": "pure",
+                  "purpose": "執行單一技能測試，記錄 tool call 軌跡"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "exec-api-client",
+              "kind": "api",
+              "role": "Exec Model HTTP client with retry",
+              "functions": [
+                {
+                  "name": "withRetry",
+                  "in": "fn, options",
+                  "out": "Result",
+                  "side": "io",
+                  "purpose": "HTTP client with retry for exec model"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-scorer",
+          "title": "評分引擎",
+          "story": "調用LLM評分模型從三維度打分，產出結構化評分JSON",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "judge-prompt-builder",
+              "kind": "service",
+              "role": "評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示",
+              "functions": [
+                {
+                  "name": "buildJudgePrompt",
+                  "in": "trace, scoreCriteria",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "將 trace 事件摘要轉為評分提示詞"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "judge-api-client",
+              "kind": "api",
+              "role": "Judge Model HTTP client with parse fallback",
+              "functions": [
+                {
+                  "name": "callJudgeModel",
+                  "in": "prompt, options",
+                  "out": "ScoreResult",
+                  "side": "io",
+                  "purpose": "呼叫 Judge Model API 進行評分"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-reporter",
+          "title": "評測報告",
+          "story": "彙總評分結果產出結構化Markdown報告",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "report-composer",
+              "kind": "service",
+              "role": "Markdown報告組合與渲染",
+              "functions": [
+                {
+                  "name": "generateReport",
+                  "in": "scores",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "彙總評分結果產出結構化 Markdown 報告"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "cli-dispatch",
+          "title": "CLI Dispatch and Install Engine",
+          "story": "CLI entry point providing argument parsing, command dispatch, and install/uninstall orchestration engine",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "arg-parser",
+              "kind": "service",
+              "role": "parseArguments: CLI argument parsing and dispatch",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "help-builder",
+              "kind": "service",
+              "role": "buildHelpText family: command help text generation",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "installer-core",
+              "kind": "service",
+              "role": "installLinks/syncToolkitHome/uninstallSkills: installation engine",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-discovery",
+              "kind": "service",
+              "role": "registerAllTools/isKnownToolName: dynamic tool loading",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "update-checker",
+              "kind": "service",
+              "role": "checkForPackageUpdate/execCommand: npm version check",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "tool-registry",
+          "title": "Tool Registry",
+          "story": "Central in-memory registry of ToolDefinition entries, supporting register/get/list/runTool and tool list formatting",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "registry-core",
+              "kind": "service",
+              "role": "registerTool/getTool/listTools/runTool: in-memory registry",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "formatter",
+              "kind": "service",
+              "role": "formatToolList/buildToolDiscoveryHelp: tool list display",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "tool-utils",
+          "title": "Tool Utilities",
+          "story": "Shared utilities consumed by tools: timestamp parsing, skill discovery, cross-platform abstraction (after refactoring)",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "log-utils",
+              "kind": "service",
+              "role": "extractTimestamp/parseCliTimestamp/inWindow: log parsing",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-discovery",
+              "kind": "service",
+              "role": "iterSkillDirs: skill directory enumeration",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "terminal-ui",
+          "title": "Terminal UI",
+          "story": "Terminal output formatting: ANSI color, banner/welcome screen, interactive prompts, and structured output functions",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "terminal-detection",
+              "kind": "service",
+              "role": "isInteractive/supportsColor: TTY and color detection",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "banner-display",
+              "kind": "service",
+              "role": "buildBanner/buildWordmark: branding display",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "interactive-prompts",
+              "kind": "service",
+              "role": "promptForModes/promptYesNo: user prompts",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "quality-gate",
+          "title": "quality-gate",
+          "story": "",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "pnpm-config",
+              "kind": "config",
+              "role": "",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "lint-format",
+              "kind": "config",
+              "role": "",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pre-commit-hooks",
+              "kind": "config",
+              "role": "",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      ],
+      "edges": [
+        {
+          "id": "cg-e-001",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-lifecycle"
+          },
+          "to": {
+            "feature": "codegraph",
+            "submodule": "cg-discovery"
+          },
+          "kind": "data-row",
+          "label": "survey/list-apis 依賴已索引的資料庫"
+        },
+        {
+          "id": "cg-e-002",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-discovery"
+          },
+          "to": {
+            "feature": "codegraph",
+            "submodule": "cg-validation"
+          },
+          "kind": "data-row",
+          "label": "verify 使用 discovery 的搜尋能力"
+        },
+        {
+          "id": "cg-e-003",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-lifecycle"
+          },
+          "to": {
+            "feature": "eval-cli"
+          },
+          "kind": "call",
+          "label": "codegraph init --index 與 eval-cli 共用 CLI 工具基礎架構"
+        },
+        {
+          "id": "eval-cli-exec",
+          "from": {
+            "feature": "eval-cli",
+            "submodule": "cli-handler"
+          },
+          "to": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "kind": "call",
+          "label": "evalHandler 觸發 runSingleTest"
+        },
+        {
+          "id": "eval-exec-iso",
+          "from": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "to": {
+            "feature": "eval-isolation",
+            "submodule": "tool-dispatcher"
+          },
+          "kind": "call",
+          "label": "執行隔離環境中的工具調用"
+        },
+        {
+          "id": "eval-exec-scorer",
+          "from": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "to": {
+            "feature": "eval-scorer",
+            "submodule": "judge-prompt-builder"
+          },
+          "kind": "data-row",
+          "label": "trace events 送入評分"
+        },
+        {
+          "id": "eval-scorer-reporter",
+          "from": {
+            "feature": "eval-scorer"
+          },
+          "to": {
+            "feature": "eval-reporter"
+          },
+          "kind": "data-row",
+          "label": "ScoreResult 送入報告組合"
+        },
+        {
+          "id": "eval-exec-optimizer",
+          "from": {
+            "feature": "eval-executor"
+          },
+          "to": {
+            "feature": "eval-optimizer"
+          },
+          "kind": "data-row",
+          "label": "執行結果觸發優化"
+        },
+        {
+          "id": "eval-cli-ci",
+          "from": {
+            "feature": "eval-cli"
+          },
+          "to": {
+            "feature": "eval-ci-gate"
+          },
+          "kind": "call",
+          "label": "CI 模式下觸發 PR 回報"
+        },
+        {
+          "id": "cli-edge-001",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "arg-parser"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "registry-core"
+          },
+          "kind": "call",
+          "label": "run() calls runTool()"
+        },
+        {
+          "id": "cli-edge-002",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "banner-display"
+          },
+          "kind": "call",
+          "label": "install summary uses banner"
+        },
+        {
+          "id": "cli-edge-003",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "interactive-prompts"
+          },
+          "kind": "call",
+          "label": "install prompts use inquirer"
+        },
+        {
+          "id": "cli-edge-004",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "help-builder"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "banner-display"
+          },
+          "kind": "call",
+          "label": "help text uses buildBanner"
+        },
+        {
+          "id": "cli-edge-005",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "help-builder"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "formatter"
+          },
+          "kind": "call",
+          "label": "help text uses formatToolList"
+        },
+        {
+          "id": "cli-edge-006",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "tool-discovery"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "registry-core"
+          },
+          "kind": "call",
+          "label": "registerAllTools calls registerTool"
+        },
+        {
+          "id": "cli-edge-007",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "update-checker"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "terminal-detection"
+          },
+          "kind": "call",
+          "label": "update check uses isInteractive"
+        },
+        {
+          "id": "cli-edge-008",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "terminal-detection"
+          },
+          "kind": "call",
+          "label": "installer uses supportsColor"
+        },
+        {
+          "id": "e-fxh5po",
+          "from": {
+            "feature": "quality-gate",
+            "submodule": "lint-format"
+          },
+          "to": {
+            "feature": "cli-dispatch"
+          },
+          "kind": "dependency",
+          "label": ""
+        },
+        {
+          "id": "e-q743si",
+          "from": {
+            "feature": "quality-gate"
+          },
+          "to": {
+            "feature": "cli-dispatch"
+          },
+          "kind": "dependency",
+          "label": ""
+        }
+      ]
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture  (+ codegraph integration overlay)",
+        "summary": "完整 C4 架構圖：eval 評測系統 (8 features) + codegraph 程式碼分析 (1 feature, 3 submodules)。 外部 actor: Judge Model API, GitHub Actions CI, Developer, Skill Files, @colbymchenry/codegraph (npm), @laitszkin/tool-registry, @laitszkin/tui。 Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter → CI Gate。\n",
+        "updatedAt": "2026-06-17T07:48:02.936Z"
+      },
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        },
+        {
+          "id": "codegraph-npm",
+          "label": "@colbymchenry/codegraph npm package"
+        },
+        {
+          "id": "tool-registry",
+          "label": "Tool Registry (@laitszkin/tool-registry)"
+        },
+        {
+          "id": "tui-lib",
+          "label": "TUI Library (@laitszkin/tui)"
+        }
+      ],
+      "features": [
+        {
+          "slug": "codegraph",
+          "title": "CodeGraph Integration",
+          "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
+          "dependsOn": ["eval-cli"],
+          "submodules": [
+            {
+              "slug": "cg-lifecycle",
+              "kind": "service",
+              "role": "Manage CodeGraph index lifecycle — init, sync, status, search",
+              "functions": [
+                {
+                  "name": "init",
+                  "in": "projectRoot: string",
+                  "out": "CodeGraph instance",
+                  "side": "io",
+                  "purpose": "Initialize .codegraph/ directory and optionally run full index"
+                },
+                {
+                  "name": "sync",
+                  "in": "projectRoot: string",
+                  "out": "SyncResult",
+                  "side": "io",
+                  "purpose": "Incremental update of existing index"
+                },
+                {
+                  "name": "status",
+                  "in": "projectRoot: string",
+                  "out": "GraphStats",
+                  "side": "pure",
+                  "purpose": "Query index statistics"
+                },
+                {
+                  "name": "search",
+                  "in": "query: string",
+                  "out": "SearchResult[]",
+                  "side": "pure",
+                  "purpose": "Full-text symbol search via FTS5"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "cg-discovery",
+              "kind": "service",
+              "role": "Explore and survey code structure — explore, survey, list-apis",
+              "functions": [
+                {
+                  "name": "explore",
+                  "in": "query: string",
+                  "out": "Context (source grouped by file + relationship map)",
+                  "side": "pure",
+                  "purpose": "Get full context for symbols matching a query"
+                },
+                {
+                  "name": "survey",
+                  "in": "dirPath: string",
+                  "out": "SurveyReport (submodule suggestions + edge suggestions)",
+                  "side": "pure",
+                  "purpose": "Survey a directory and produce atlas-compatible structure report"
+                },
+                {
+                  "name": "listApis",
+                  "in": "featureSlug: string",
+                  "out": "APIDirectory (public functions + params + callers)",
+                  "side": "pure",
+                  "purpose": "List public API surface of a feature area"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "cg-validation",
+              "kind": "service",
+              "role": "Verify architecture proposals and batch-apply atlas mutations",
+              "functions": [
+                {
+                  "name": "verify",
+                  "in": "specOverlayPath: string",
+                  "out": "VerifyReport (passed/failed items)",
+                  "side": "pure",
+                  "purpose": "Validate that spec overlay references match actual code"
+                },
+                {
+                  "name": "applyBatch",
+                  "in": "proposalYaml: string",
+                  "out": "ApplyResult",
+                  "side": "io",
+                  "purpose": "Execute multiple atlas mutations from a single YAML file"
+                },
+                {
+                  "name": "generateTemplate",
+                  "in": "specMdPath: string",
+                  "out": "proposalYaml path",
+                  "side": "io",
+                  "purpose": "Generate empty proposal skeleton from SPEC.md"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "cg-fe-001",
+              "from": "cg-lifecycle",
+              "to": "cg-discovery",
+              "kind": "data-row",
+              "label": "survey/list-apis 依賴已索引的資料庫"
+            },
+            {
+              "id": "cg-fe-002",
+              "from": "cg-discovery",
+              "to": "cg-validation",
+              "kind": "data-row",
+              "label": "verify 使用 discovery 的搜尋能力"
+            },
+            {
+              "id": "cg-fe-003",
+              "from": "cg-validation",
+              "to": "cg-lifecycle",
+              "kind": "data-row",
+              "label": "apply 非索引操作，不需 lifecycle — 但 template 可搭配 list-apis"
+            }
+          ]
+        },
+        {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [
+                {
+                  "name": "extractIssues",
+                  "in": "scores",
+                  "out": "RawIssue[]",
+                  "side": "pure",
+                  "purpose": "從 score.json 提取問題與分類統計"
+                },
+                {
+                  "name": "generateOptimizationPlan",
+                  "in": "issues",
+                  "out": "OptimizationPlan",
+                  "side": "pure",
+                  "purpose": "從去重後問題生成 FIND/REPLACE 優化 diff"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [
+                {
+                  "name": "deduplicateIssues",
+                  "in": "issues",
+                  "out": "DedupedIssue[]",
+                  "side": "pure",
+                  "purpose": "Jaccard+Judge 語意去重"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [
+                {
+                  "name": "evalHandler",
+                  "in": "argv, context",
+                  "out": "exitCode",
+                  "side": "pure",
+                  "purpose": "CLI 入口：解析參數、調度評測流程"
+                },
+                {
+                  "name": "parseArgs",
+                  "in": "argv",
+                  "out": "ParsedArgs",
+                  "side": "pure",
+                  "purpose": "解析 CLI 參數與模式選擇"
+                },
+                {
+                  "name": "tool",
+                  "in": "ToolDefinition",
+                  "out": "void",
+                  "side": "pure",
+                  "purpose": "向 tool-registry 註冊 eval 命令"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "progress-display",
+              "kind": "ui",
+              "role": "終端機進度指示",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "workflow-trigger",
+              "kind": "service",
+              "role": "GitHub Actions workflow on PR skill file change",
+              "functions": [
+                {
+                  "name": "detectSkillChanges",
+                  "in": "prFiles",
+                  "out": "string[]",
+                  "side": "pure",
+                  "purpose": "檢測 PR 中技能檔案變更"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pr-reporter",
+              "kind": "service",
+              "role": "PR評論回報評測結果",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "tool-dispatcher",
+              "kind": "service",
+              "role": "工具調用攔截系統：讀取工具在workspace內真實執行、寫入工具模擬回傳、路徑穿越防護",
+              "functions": [
+                {
+                  "name": "buildSystemPrompt",
+                  "in": "question",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "建立隔離環境的 system prompt"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-question",
+          "title": "評測題庫",
+          "story": "管理評測題庫的載入、驗證、抽樣與LLM變體生成",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-loader",
+              "kind": "service",
+              "role": "題目載入與JSON Schema驗證",
+              "functions": [
+                {
+                  "name": "loadQuestions",
+                  "in": "specDir",
+                  "out": "Question[]",
+                  "side": "pure",
+                  "purpose": "載入題目並進行 JSON Schema 驗證"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "variant-generator",
+              "kind": "service",
+              "role": "LLM變體生成，保留評分標準",
+              "functions": [
+                {
+                  "name": "generateVariants",
+                  "in": "questions, count",
+                  "out": "Question[]",
+                  "side": "io",
+                  "purpose": "LLM 變體生成，保留評分標準"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-executor",
+          "title": "評測執行器",
+          "story": "在隔離環境中執行技能，記錄工具調用軌跡為JSONL",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "trace-recorder",
+              "kind": "service",
+              "role": "多輪tool-use loop軌跡記錄：tool_call/tool_result事件序列、JSONL行號標記、.done完成標記",
+              "functions": [
+                {
+                  "name": "runSingleTest",
+                  "in": "question, skillDir",
+                  "out": "TraceEvent[]",
+                  "side": "pure",
+                  "purpose": "執行單一技能測試，記錄 tool call 軌跡"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "exec-api-client",
+              "kind": "api",
+              "role": "Exec Model HTTP client with retry",
+              "functions": [
+                {
+                  "name": "withRetry",
+                  "in": "fn, options",
+                  "out": "Result",
+                  "side": "io",
+                  "purpose": "HTTP client with retry for exec model"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-scorer",
+          "title": "評分引擎",
+          "story": "調用LLM評分模型從三維度打分，產出結構化評分JSON",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "judge-prompt-builder",
+              "kind": "service",
+              "role": "評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示",
+              "functions": [
+                {
+                  "name": "buildJudgePrompt",
+                  "in": "trace, scoreCriteria",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "將 trace 事件摘要轉為評分提示詞"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "judge-api-client",
+              "kind": "api",
+              "role": "Judge Model HTTP client with parse fallback",
+              "functions": [
+                {
+                  "name": "callJudgeModel",
+                  "in": "prompt, options",
+                  "out": "ScoreResult",
+                  "side": "io",
+                  "purpose": "呼叫 Judge Model API 進行評分"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-reporter",
+          "title": "評測報告",
+          "story": "彙總評分結果產出結構化Markdown報告",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "report-composer",
+              "kind": "service",
+              "role": "Markdown報告組合與渲染",
+              "functions": [
+                {
+                  "name": "generateReport",
+                  "in": "scores",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "彙總評分結果產出結構化 Markdown 報告"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "cli-dispatch",
+          "title": "CLI Dispatch and Install Engine",
+          "story": "CLI entry point providing argument parsing, command dispatch, and install/uninstall orchestration engine",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "arg-parser",
+              "kind": "service",
+              "role": "parseArguments: CLI argument parsing and dispatch",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "help-builder",
+              "kind": "service",
+              "role": "buildHelpText family: command help text generation",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "installer-core",
+              "kind": "service",
+              "role": "installLinks/syncToolkitHome/uninstallSkills: installation engine",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-discovery",
+              "kind": "service",
+              "role": "registerAllTools/isKnownToolName: dynamic tool loading",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "update-checker",
+              "kind": "service",
+              "role": "checkForPackageUpdate/execCommand: npm version check",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "tool-registry",
+          "title": "Tool Registry",
+          "story": "Central in-memory registry of ToolDefinition entries, supporting register/get/list/runTool and tool list formatting",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "registry-core",
+              "kind": "service",
+              "role": "registerTool/getTool/listTools/runTool: in-memory registry",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "formatter",
+              "kind": "service",
+              "role": "formatToolList/buildToolDiscoveryHelp: tool list display",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "tool-utils",
+          "title": "Tool Utilities",
+          "story": "Shared utilities consumed by tools: timestamp parsing, skill discovery, cross-platform abstraction (after refactoring)",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "log-utils",
+              "kind": "service",
+              "role": "extractTimestamp/parseCliTimestamp/inWindow: log parsing",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-discovery",
+              "kind": "service",
+              "role": "iterSkillDirs: skill directory enumeration",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "terminal-ui",
+          "title": "Terminal UI",
+          "story": "Terminal output formatting: ANSI color, banner/welcome screen, interactive prompts, and structured output functions",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "terminal-detection",
+              "kind": "service",
+              "role": "isInteractive/supportsColor: TTY and color detection",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "banner-display",
+              "kind": "service",
+              "role": "buildBanner/buildWordmark: branding display",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "interactive-prompts",
+              "kind": "service",
+              "role": "promptForModes/promptYesNo: user prompts",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "quality-gate",
+          "title": "quality-gate",
+          "story": "",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "pnpm-config",
+              "kind": "service",
+              "role": "",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "lint-format",
+              "kind": "config",
+              "role": "",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pre-commit-hooks",
+              "kind": "config",
+              "role": "",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      ],
+      "edges": [
+        {
+          "id": "cg-e-001",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-lifecycle"
+          },
+          "to": {
+            "feature": "codegraph",
+            "submodule": "cg-discovery"
+          },
+          "kind": "data-row",
+          "label": "survey/list-apis 依賴已索引的資料庫"
+        },
+        {
+          "id": "cg-e-002",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-discovery"
+          },
+          "to": {
+            "feature": "codegraph",
+            "submodule": "cg-validation"
+          },
+          "kind": "data-row",
+          "label": "verify 使用 discovery 的搜尋能力"
+        },
+        {
+          "id": "cg-e-003",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-lifecycle"
+          },
+          "to": {
+            "feature": "eval-cli"
+          },
+          "kind": "call",
+          "label": "codegraph init --index 與 eval-cli 共用 CLI 工具基礎架構"
+        },
+        {
+          "id": "eval-cli-exec",
+          "from": {
+            "feature": "eval-cli",
+            "submodule": "cli-handler"
+          },
+          "to": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "kind": "call",
+          "label": "evalHandler 觸發 runSingleTest"
+        },
+        {
+          "id": "eval-exec-iso",
+          "from": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "to": {
+            "feature": "eval-isolation",
+            "submodule": "tool-dispatcher"
+          },
+          "kind": "call",
+          "label": "執行隔離環境中的工具調用"
+        },
+        {
+          "id": "eval-exec-scorer",
+          "from": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "to": {
+            "feature": "eval-scorer",
+            "submodule": "judge-prompt-builder"
+          },
+          "kind": "data-row",
+          "label": "trace events 送入評分"
+        },
+        {
+          "id": "eval-scorer-reporter",
+          "from": {
+            "feature": "eval-scorer"
+          },
+          "to": {
+            "feature": "eval-reporter"
+          },
+          "kind": "data-row",
+          "label": "ScoreResult 送入報告組合"
+        },
+        {
+          "id": "eval-exec-optimizer",
+          "from": {
+            "feature": "eval-executor"
+          },
+          "to": {
+            "feature": "eval-optimizer"
+          },
+          "kind": "data-row",
+          "label": "執行結果觸發優化"
+        },
+        {
+          "id": "eval-cli-ci",
+          "from": {
+            "feature": "eval-cli"
+          },
+          "to": {
+            "feature": "eval-ci-gate"
+          },
+          "kind": "call",
+          "label": "CI 模式下觸發 PR 回報"
+        },
+        {
+          "id": "cli-edge-001",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "arg-parser"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "registry-core"
+          },
+          "kind": "call",
+          "label": "run() calls runTool()"
+        },
+        {
+          "id": "cli-edge-002",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "banner-display"
+          },
+          "kind": "call",
+          "label": "install summary uses banner"
+        },
+        {
+          "id": "cli-edge-003",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "interactive-prompts"
+          },
+          "kind": "call",
+          "label": "install prompts use inquirer"
+        },
+        {
+          "id": "cli-edge-004",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "help-builder"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "banner-display"
+          },
+          "kind": "call",
+          "label": "help text uses buildBanner"
+        },
+        {
+          "id": "cli-edge-005",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "help-builder"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "formatter"
+          },
+          "kind": "call",
+          "label": "help text uses formatToolList"
+        },
+        {
+          "id": "cli-edge-006",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "tool-discovery"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "registry-core"
+          },
+          "kind": "call",
+          "label": "registerAllTools calls registerTool"
+        },
+        {
+          "id": "cli-edge-007",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "update-checker"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "terminal-detection"
+          },
+          "kind": "call",
+          "label": "update check uses isInteractive"
+        },
+        {
+          "id": "cli-edge-008",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "terminal-detection"
+          },
+          "kind": "call",
+          "label": "installer uses supportsColor"
+        },
+        {
+          "id": "e-fxh5po",
+          "from": {
+            "feature": "quality-gate",
+            "submodule": "lint-format"
+          },
+          "to": {
+            "feature": "cli-dispatch"
+          },
+          "kind": "dependency",
+          "label": ""
+        },
+        {
+          "id": "e-q743si",
+          "from": {
+            "feature": "quality-gate"
+          },
+          "to": {
+            "feature": "cli-dispatch"
+          },
+          "kind": "dependency",
+          "label": ""
+        }
+      ]
+    }
+  },
+  {
+    "base": {
+      "meta": {
+        "title": "Project architecture  (+ codegraph integration overlay)",
+        "summary": "完整 C4 架構圖：eval 評測系統 (8 features) + codegraph 程式碼分析 (1 feature, 3 submodules)。 外部 actor: Judge Model API, GitHub Actions CI, Developer, Skill Files, @colbymchenry/codegraph (npm), @laitszkin/tool-registry, @laitszkin/tui。 Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter → CI Gate。\n",
+        "updatedAt": "2026-06-17T07:48:03.385Z"
+      },
+      "actors": [
+        {
+          "id": "judge-model-api",
+          "label": "Judge Model API"
+        },
+        {
+          "id": "github-actions",
+          "label": "GitHub Actions CI"
+        },
+        {
+          "id": "user-dev",
+          "label": "Developer"
+        },
+        {
+          "id": "skill-files",
+          "label": "Skill Files (SKILL.md, scripts/, references/, assets/)"
+        },
+        {
+          "id": "codegraph-npm",
+          "label": "@colbymchenry/codegraph npm package"
+        },
+        {
+          "id": "tool-registry",
+          "label": "Tool Registry (@laitszkin/tool-registry)"
+        },
+        {
+          "id": "tui-lib",
+          "label": "TUI Library (@laitszkin/tui)"
+        }
+      ],
+      "features": [
+        {
+          "slug": "codegraph",
+          "title": "CodeGraph Integration",
+          "story": "Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.\n",
+          "dependsOn": ["eval-cli"],
+          "submodules": [
+            {
+              "slug": "cg-lifecycle",
+              "kind": "service",
+              "role": "Manage CodeGraph index lifecycle — init, sync, status, search",
+              "functions": [
+                {
+                  "name": "init",
+                  "in": "projectRoot: string",
+                  "out": "CodeGraph instance",
+                  "side": "io",
+                  "purpose": "Initialize .codegraph/ directory and optionally run full index"
+                },
+                {
+                  "name": "sync",
+                  "in": "projectRoot: string",
+                  "out": "SyncResult",
+                  "side": "io",
+                  "purpose": "Incremental update of existing index"
+                },
+                {
+                  "name": "status",
+                  "in": "projectRoot: string",
+                  "out": "GraphStats",
+                  "side": "pure",
+                  "purpose": "Query index statistics"
+                },
+                {
+                  "name": "search",
+                  "in": "query: string",
+                  "out": "SearchResult[]",
+                  "side": "pure",
+                  "purpose": "Full-text symbol search via FTS5"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "cg-discovery",
+              "kind": "service",
+              "role": "Explore and survey code structure — explore, survey, list-apis",
+              "functions": [
+                {
+                  "name": "explore",
+                  "in": "query: string",
+                  "out": "Context (source grouped by file + relationship map)",
+                  "side": "pure",
+                  "purpose": "Get full context for symbols matching a query"
+                },
+                {
+                  "name": "survey",
+                  "in": "dirPath: string",
+                  "out": "SurveyReport (submodule suggestions + edge suggestions)",
+                  "side": "pure",
+                  "purpose": "Survey a directory and produce atlas-compatible structure report"
+                },
+                {
+                  "name": "listApis",
+                  "in": "featureSlug: string",
+                  "out": "APIDirectory (public functions + params + callers)",
+                  "side": "pure",
+                  "purpose": "List public API surface of a feature area"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "cg-validation",
+              "kind": "service",
+              "role": "Verify architecture proposals and batch-apply atlas mutations",
+              "functions": [
+                {
+                  "name": "verify",
+                  "in": "specOverlayPath: string",
+                  "out": "VerifyReport (passed/failed items)",
+                  "side": "pure",
+                  "purpose": "Validate that spec overlay references match actual code"
+                },
+                {
+                  "name": "applyBatch",
+                  "in": "proposalYaml: string",
+                  "out": "ApplyResult",
+                  "side": "io",
+                  "purpose": "Execute multiple atlas mutations from a single YAML file"
+                },
+                {
+                  "name": "generateTemplate",
+                  "in": "specMdPath: string",
+                  "out": "proposalYaml path",
+                  "side": "io",
+                  "purpose": "Generate empty proposal skeleton from SPEC.md"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": [
+            {
+              "id": "cg-fe-001",
+              "from": "cg-lifecycle",
+              "to": "cg-discovery",
+              "kind": "data-row",
+              "label": "survey/list-apis 依賴已索引的資料庫"
+            },
+            {
+              "id": "cg-fe-002",
+              "from": "cg-discovery",
+              "to": "cg-validation",
+              "kind": "data-row",
+              "label": "verify 使用 discovery 的搜尋能力"
+            },
+            {
+              "id": "cg-fe-003",
+              "from": "cg-validation",
+              "to": "cg-lifecycle",
+              "kind": "data-row",
+              "label": "apply 非索引操作，不需 lifecycle — 但 template 可搭配 list-apis"
+            }
+          ]
+        },
+        {
+          "slug": "eval-optimizer",
+          "title": "優化引擎",
+          "story": "從評分結果提取問題、去重、生成FIND/REPLACE格式的優化diff",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "issue-extractor",
+              "kind": "service",
+              "role": "從score.json提取問題、分類統計",
+              "functions": [
+                {
+                  "name": "extractIssues",
+                  "in": "scores",
+                  "out": "RawIssue[]",
+                  "side": "pure",
+                  "purpose": "從 score.json 提取問題與分類統計"
+                },
+                {
+                  "name": "generateOptimizationPlan",
+                  "in": "issues",
+                  "out": "OptimizationPlan",
+                  "side": "pure",
+                  "purpose": "從去重後問題生成 FIND/REPLACE 優化 diff"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "dedup-engine",
+              "kind": "service",
+              "role": "Jaccard+Judge語意去重",
+              "functions": [
+                {
+                  "name": "deduplicateIssues",
+                  "in": "issues",
+                  "out": "DedupedIssue[]",
+                  "side": "pure",
+                  "purpose": "Jaccard+Judge 語意去重"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "diff-generator",
+              "kind": "service",
+              "role": "FIND/REPLACE diff生成與備份/復原",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-cli",
+          "title": "CLI命令",
+          "story": "註冊apltk eval命令，參數解析、模式選擇、進度顯示",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "cli-handler",
+              "kind": "service",
+              "role": "ToolDefinition註冊、參數解析、流程編排",
+              "functions": [
+                {
+                  "name": "evalHandler",
+                  "in": "argv, context",
+                  "out": "exitCode",
+                  "side": "pure",
+                  "purpose": "CLI 入口：解析參數、調度評測流程"
+                },
+                {
+                  "name": "parseArgs",
+                  "in": "argv",
+                  "out": "ParsedArgs",
+                  "side": "pure",
+                  "purpose": "解析 CLI 參數與模式選擇"
+                },
+                {
+                  "name": "tool",
+                  "in": "ToolDefinition",
+                  "out": "void",
+                  "side": "pure",
+                  "purpose": "向 tool-registry 註冊 eval 命令"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "progress-display",
+              "kind": "ui",
+              "role": "終端機進度指示",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-ci-gate",
+          "title": "PR閘門",
+          "story": "GitHub Actions整合：檢測技能檔案變更、觸發評測、回報結果",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "workflow-trigger",
+              "kind": "service",
+              "role": "GitHub Actions workflow on PR skill file change",
+              "functions": [
+                {
+                  "name": "detectSkillChanges",
+                  "in": "prFiles",
+                  "out": "string[]",
+                  "side": "pure",
+                  "purpose": "檢測 PR 中技能檔案變更"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pr-reporter",
+              "kind": "service",
+              "role": "PR評論回報評測結果",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-isolation",
+          "title": "上下文隔離與工具模擬",
+          "story": "工具調用攔截層：讀取真實執行、寫入mock回傳；確保評分上下文獨立",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "tool-dispatcher",
+              "kind": "service",
+              "role": "工具調用攔截系統：讀取工具在workspace內真實執行、寫入工具模擬回傳、路徑穿越防護",
+              "functions": [
+                {
+                  "name": "buildSystemPrompt",
+                  "in": "question",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "建立隔離環境的 system prompt"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-question",
+          "title": "評測題庫",
+          "story": "管理評測題庫的載入、驗證、抽樣與LLM變體生成",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "question-loader",
+              "kind": "service",
+              "role": "題目載入與JSON Schema驗證",
+              "functions": [
+                {
+                  "name": "loadQuestions",
+                  "in": "specDir",
+                  "out": "Question[]",
+                  "side": "pure",
+                  "purpose": "載入題目並進行 JSON Schema 驗證"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "variant-generator",
+              "kind": "service",
+              "role": "LLM變體生成，保留評分標準",
+              "functions": [
+                {
+                  "name": "generateVariants",
+                  "in": "questions, count",
+                  "out": "Question[]",
+                  "side": "io",
+                  "purpose": "LLM 變體生成，保留評分標準"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-executor",
+          "title": "評測執行器",
+          "story": "在隔離環境中執行技能，記錄工具調用軌跡為JSONL",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "trace-recorder",
+              "kind": "service",
+              "role": "多輪tool-use loop軌跡記錄：tool_call/tool_result事件序列、JSONL行號標記、.done完成標記",
+              "functions": [
+                {
+                  "name": "runSingleTest",
+                  "in": "question, skillDir",
+                  "out": "TraceEvent[]",
+                  "side": "pure",
+                  "purpose": "執行單一技能測試，記錄 tool call 軌跡"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "exec-api-client",
+              "kind": "api",
+              "role": "Exec Model HTTP client with retry",
+              "functions": [
+                {
+                  "name": "withRetry",
+                  "in": "fn, options",
+                  "out": "Result",
+                  "side": "io",
+                  "purpose": "HTTP client with retry for exec model"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-scorer",
+          "title": "評分引擎",
+          "story": "調用LLM評分模型從三維度打分，產出結構化評分JSON",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "judge-prompt-builder",
+              "kind": "service",
+              "role": "評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示",
+              "functions": [
+                {
+                  "name": "buildJudgePrompt",
+                  "in": "trace, scoreCriteria",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "將 trace 事件摘要轉為評分提示詞"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "judge-api-client",
+              "kind": "api",
+              "role": "Judge Model HTTP client with parse fallback",
+              "functions": [
+                {
+                  "name": "callJudgeModel",
+                  "in": "prompt, options",
+                  "out": "ScoreResult",
+                  "side": "io",
+                  "purpose": "呼叫 Judge Model API 進行評分"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "eval-reporter",
+          "title": "評測報告",
+          "story": "彙總評分結果產出結構化Markdown報告",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "report-composer",
+              "kind": "service",
+              "role": "Markdown報告組合與渲染",
+              "functions": [
+                {
+                  "name": "generateReport",
+                  "in": "scores",
+                  "out": "string",
+                  "side": "pure",
+                  "purpose": "彙總評分結果產出結構化 Markdown 報告"
+                }
+              ],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "cli-dispatch",
+          "title": "CLI Dispatch and Install Engine",
+          "story": "CLI entry point providing argument parsing, command dispatch, and install/uninstall orchestration engine",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "arg-parser",
+              "kind": "service",
+              "role": "parseArguments: CLI argument parsing and dispatch",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "help-builder",
+              "kind": "service",
+              "role": "buildHelpText family: command help text generation",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "installer-core",
+              "kind": "service",
+              "role": "installLinks/syncToolkitHome/uninstallSkills: installation engine",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "tool-discovery",
+              "kind": "service",
+              "role": "registerAllTools/isKnownToolName: dynamic tool loading",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "update-checker",
+              "kind": "service",
+              "role": "checkForPackageUpdate/execCommand: npm version check",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "tool-registry",
+          "title": "Tool Registry",
+          "story": "Central in-memory registry of ToolDefinition entries, supporting register/get/list/runTool and tool list formatting",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "registry-core",
+              "kind": "service",
+              "role": "registerTool/getTool/listTools/runTool: in-memory registry",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "formatter",
+              "kind": "service",
+              "role": "formatToolList/buildToolDiscoveryHelp: tool list display",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "tool-utils",
+          "title": "Tool Utilities",
+          "story": "Shared utilities consumed by tools: timestamp parsing, skill discovery, cross-platform abstraction (after refactoring)",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "log-utils",
+              "kind": "service",
+              "role": "extractTimestamp/parseCliTimestamp/inWindow: log parsing",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "skill-discovery",
+              "kind": "service",
+              "role": "iterSkillDirs: skill directory enumeration",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "terminal-ui",
+          "title": "Terminal UI",
+          "story": "Terminal output formatting: ANSI color, banner/welcome screen, interactive prompts, and structured output functions",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "terminal-detection",
+              "kind": "service",
+              "role": "isInteractive/supportsColor: TTY and color detection",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "banner-display",
+              "kind": "service",
+              "role": "buildBanner/buildWordmark: branding display",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "interactive-prompts",
+              "kind": "service",
+              "role": "promptForModes/promptYesNo: user prompts",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        },
+        {
+          "slug": "quality-gate",
+          "title": "quality-gate",
+          "story": "",
+          "dependsOn": [],
+          "submodules": [
+            {
+              "slug": "pnpm-config",
+              "kind": "service",
+              "role": "",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "lint-format",
+              "kind": "service",
+              "role": "",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            },
+            {
+              "slug": "pre-commit-hooks",
+              "kind": "config",
+              "role": "",
+              "functions": [],
+              "variables": [],
+              "dataflow": [],
+              "errors": []
+            }
+          ],
+          "edges": []
+        }
+      ],
+      "edges": [
+        {
+          "id": "cg-e-001",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-lifecycle"
+          },
+          "to": {
+            "feature": "codegraph",
+            "submodule": "cg-discovery"
+          },
+          "kind": "data-row",
+          "label": "survey/list-apis 依賴已索引的資料庫"
+        },
+        {
+          "id": "cg-e-002",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-discovery"
+          },
+          "to": {
+            "feature": "codegraph",
+            "submodule": "cg-validation"
+          },
+          "kind": "data-row",
+          "label": "verify 使用 discovery 的搜尋能力"
+        },
+        {
+          "id": "cg-e-003",
+          "from": {
+            "feature": "codegraph",
+            "submodule": "cg-lifecycle"
+          },
+          "to": {
+            "feature": "eval-cli"
+          },
+          "kind": "call",
+          "label": "codegraph init --index 與 eval-cli 共用 CLI 工具基礎架構"
+        },
+        {
+          "id": "eval-cli-exec",
+          "from": {
+            "feature": "eval-cli",
+            "submodule": "cli-handler"
+          },
+          "to": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "kind": "call",
+          "label": "evalHandler 觸發 runSingleTest"
+        },
+        {
+          "id": "eval-exec-iso",
+          "from": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "to": {
+            "feature": "eval-isolation",
+            "submodule": "tool-dispatcher"
+          },
+          "kind": "call",
+          "label": "執行隔離環境中的工具調用"
+        },
+        {
+          "id": "eval-exec-scorer",
+          "from": {
+            "feature": "eval-executor",
+            "submodule": "trace-recorder"
+          },
+          "to": {
+            "feature": "eval-scorer",
+            "submodule": "judge-prompt-builder"
+          },
+          "kind": "data-row",
+          "label": "trace events 送入評分"
+        },
+        {
+          "id": "eval-scorer-reporter",
+          "from": {
+            "feature": "eval-scorer"
+          },
+          "to": {
+            "feature": "eval-reporter"
+          },
+          "kind": "data-row",
+          "label": "ScoreResult 送入報告組合"
+        },
+        {
+          "id": "eval-exec-optimizer",
+          "from": {
+            "feature": "eval-executor"
+          },
+          "to": {
+            "feature": "eval-optimizer"
+          },
+          "kind": "data-row",
+          "label": "執行結果觸發優化"
+        },
+        {
+          "id": "eval-cli-ci",
+          "from": {
+            "feature": "eval-cli"
+          },
+          "to": {
+            "feature": "eval-ci-gate"
+          },
+          "kind": "call",
+          "label": "CI 模式下觸發 PR 回報"
+        },
+        {
+          "id": "cli-edge-001",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "arg-parser"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "registry-core"
+          },
+          "kind": "call",
+          "label": "run() calls runTool()"
+        },
+        {
+          "id": "cli-edge-002",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "banner-display"
+          },
+          "kind": "call",
+          "label": "install summary uses banner"
+        },
+        {
+          "id": "cli-edge-003",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "interactive-prompts"
+          },
+          "kind": "call",
+          "label": "install prompts use inquirer"
+        },
+        {
+          "id": "cli-edge-004",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "help-builder"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "banner-display"
+          },
+          "kind": "call",
+          "label": "help text uses buildBanner"
+        },
+        {
+          "id": "cli-edge-005",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "help-builder"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "formatter"
+          },
+          "kind": "call",
+          "label": "help text uses formatToolList"
+        },
+        {
+          "id": "cli-edge-006",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "tool-discovery"
+          },
+          "to": {
+            "feature": "tool-registry",
+            "submodule": "registry-core"
+          },
+          "kind": "call",
+          "label": "registerAllTools calls registerTool"
+        },
+        {
+          "id": "cli-edge-007",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "update-checker"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "terminal-detection"
+          },
+          "kind": "call",
+          "label": "update check uses isInteractive"
+        },
+        {
+          "id": "cli-edge-008",
+          "from": {
+            "feature": "cli-dispatch",
+            "submodule": "installer-core"
+          },
+          "to": {
+            "feature": "terminal-ui",
+            "submodule": "terminal-detection"
+          },
+          "kind": "call",
+          "label": "installer uses supportsColor"
+        },
+        {
+          "id": "e-fxh5po",
+          "from": {
+            "feature": "quality-gate",
+            "submodule": "lint-format"
+          },
+          "to": {
+            "feature": "cli-dispatch"
+          },
+          "kind": "dependency",
+          "label": ""
+        },
+        {
+          "id": "e-q743si",
+          "from": {
+            "feature": "quality-gate"
+          },
+          "to": {
+            "feature": "cli-dispatch"
+          },
+          "kind": "dependency",
+          "label": ""
+        }
+      ]
+    }
   }
 ]

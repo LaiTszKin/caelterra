@@ -50,6 +50,9 @@
   --edge-return: #C9C3B3;
   --edge-data-row: #F4B850;
   --edge-failure: #F47391;
+  --edge-dependency: #B79EFF;
+  --edge-implements: #66E5C7;
+  --edge-deployed-on: #FF9B6A;
 
   /* shadows */
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 30px 60px -30px rgba(0, 0, 0, 0.7), 0 18px 40px -30px rgba(102, 229, 199, 0.10);
@@ -281,6 +284,9 @@ p { line-height: 1.6; color: var(--vellum-soft); }
 .legend-swatch--return { background: var(--edge-return); }
 .legend-swatch--data-row { background: var(--edge-data-row); }
 .legend-swatch--failure { background: var(--edge-failure); }
+.legend-swatch--dependency { background: var(--edge-dependency); }
+.legend-swatch--implements { background: var(--edge-implements); }
+.legend-swatch--deployed-on { background: var(--edge-deployed-on); }
 
 .atlas-index {
   background: rgba(15, 27, 42, 0.6);
@@ -421,12 +427,18 @@ p { line-height: 1.6; color: var(--vellum-soft); }
 .m-edge--return path { stroke: var(--edge-return); stroke-dasharray: 6 4; }
 .m-edge--data-row path { stroke: var(--edge-data-row); }
 .m-edge--failure path { stroke: var(--edge-failure); stroke-dasharray: 3 3; }
+.m-edge--dependency path { stroke: var(--edge-dependency); stroke-dasharray: 4 3; }
+.m-edge--implements path { stroke: var(--edge-implements); }
+.m-edge--deployed-on path { stroke: var(--edge-deployed-on); stroke-dasharray: 8 3; }
 
 .m-arrow path { fill: currentColor; }
 .m-arrow--call { color: var(--edge-call); }
 .m-arrow--return { color: var(--edge-return); }
 .m-arrow--data-row { color: var(--edge-data-row); }
 .m-arrow--failure { color: var(--edge-failure); }
+.m-arrow--dependency { color: var(--edge-dependency); }
+.m-arrow--implements { color: var(--edge-implements); }
+.m-arrow--deployed-on { color: var(--edge-deployed-on); }
 
 .m-edge__label {
   fill: var(--vellum-soft);
@@ -566,6 +578,9 @@ p { line-height: 1.6; color: var(--vellum-soft); }
 .feature-edges__item--return { border-left: 3px solid var(--edge-return); }
 .feature-edges__item--data-row { border-left: 3px solid var(--edge-data-row); }
 .feature-edges__item--failure { border-left: 3px solid var(--edge-failure); }
+.feature-edges__item--dependency { border-left: 3px solid var(--edge-dependency); }
+.feature-edges__item--implements { border-left: 3px solid var(--edge-implements); }
+.feature-edges__item--deployed-on { border-left: 3px solid var(--edge-deployed-on); }
 
 /* =================================================================
    submodule page
@@ -759,7 +774,8 @@ p { line-height: 1.6; color: var(--vellum-soft); }
 /* =================================================================
    evidence badges
    ================================================================= */
-.evi { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 11px; font-weight: 600; line-height: 18px; cursor: help; }
+.evi { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 11px; font-weight: 600; line-height: 18px; cursor: help; white-space: nowrap; }
+.evi__source { font-size: 10px; font-weight: 400; margin-left: 4px; padding: 1px 5px; border-radius: 3px; background: rgba(0,0,0,0.15); color: inherit; }
 .evi--observed { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
 .evi--inferred { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
 .evi--assumed { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }

@@ -1,68 +1,45 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en" data-atlas-page="submodule">
-  <head>
-    <meta charset="utf-8" />
-    <title>評分引擎 · judge-prompt-builder</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap"
-    />
-    <link rel="stylesheet" href="../../assets/architecture.css" />
-  </head>
-  <body>
-    <header class="submodule-header">
-      <nav class="submodule-breadcrumb">
-        <a href="../../index.html">← Atlas</a> ·
-        <a href="index.html">← 評分引擎</a>
-      </nav>
-      <h1>
-        judge-prompt-builder <small class="submodule-kind">Service</small>
-      </h1>
-      <p class="submodule-role">
-        評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示
-      </p>
-    </header>
-    <main class="submodule-main">
-      <section aria-label="Function I/O">
-        <h2>Function I/O</h2>
-        <table class="sub-table">
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col">In</th>
-              <th scope="col">Out</th>
-              <th scope="col">Side</th>
-              <th scope="col">Purpose</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>buildJudgePrompt</td>
-              <td>trace, scoreCriteria</td>
-              <td>string</td>
-              <td>pure</td>
-              <td>將 trace 事件摘要轉為評分提示詞</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-      <section aria-label="Variables">
-        <h2>Variables</h2>
-        <p class="sub-section__empty">No variables recorded.</p>
-      </section>
-      <section aria-label="Internal data flow">
-        <h2>Internal data flow</h2>
-        <p class="sub-dataflow__empty">No internal dataflow steps recorded.</p>
-      </section>
-      <section aria-label="Errors">
-        <h2>Errors</h2>
-        <p class="sub-section__empty">No errors recorded.</p>
-      </section>
-    </main>
-    <script src="../../assets/viewer.client.js" defer></script>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <title>評分引擎 · judge-prompt-builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="../../assets/architecture.css">
+</head>
+<body>
+  <header class="submodule-header">
+    <nav class="submodule-breadcrumb"><a href="../../index.html">← Atlas</a> · <a href="index.html">← 評分引擎</a></nav>
+    <h1>judge-prompt-builder <small class="submodule-kind">Service</small></h1>
+    <p class="submodule-role">評分提示詞構建：trace事件摘要含JSONL行號(L{N})引用、三維度評分指示</p>
+    
+  </header>
+  <main class="submodule-main">
+    <section aria-label="Function I/O">
+      <h2>Function I/O</h2>
+      <table class="sub-table">
+        <thead><tr><th scope="col">Name</th><th scope="col">In</th><th scope="col">Out</th><th scope="col">Side</th><th scope="col">Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>buildJudgePrompt</td><td>trace, scoreCriteria</td><td>string</td><td>pure</td><td>將 trace 事件摘要轉為評分提示詞</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section aria-label="Variables">
+      <h2>Variables</h2>
+      <p class="sub-section__empty">No variables recorded.</p>
+    </section>
+    <section aria-label="Internal data flow">
+      <h2>Internal data flow</h2>
+      <p class="sub-dataflow__empty">No internal dataflow steps recorded.</p>
+    </section>
+    <section aria-label="Errors">
+      <h2>Errors</h2>
+      <p class="sub-section__empty">No errors recorded.</p>
+    </section>
+  </main>
+  <script src="../../assets/viewer.client.js" defer></script>
+</body>
 </html>

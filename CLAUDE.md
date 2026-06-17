@@ -44,6 +44,21 @@
 - `README.md` - Public installation guide and skill catalog
 - `CHANGELOG.md` - Release history
 - `LICENSE` - MIT License
+- `packages/cli/CLAUDE.md` - CLI command management module
+- `packages/tool-registry/CLAUDE.md` - Tool registration and dispatch module
+- `packages/tool-utils/CLAUDE.md` - Shared tool utilities module
+- `packages/tui/CLAUDE.md` - Terminal UI components module
+- `packages/tools/architecture/CLAUDE.md` - Architecture atlas tool
+- `packages/tools/codegraph/CLAUDE.md` - CodeGraph codebase exploration tool
+- `packages/tools/create-review-report/CLAUDE.md` - Review report generation tool
+- `packages/tools/create-specs/CLAUDE.md` - Spec generation tool
+- `packages/tools/eval/CLAUDE.md` - LLM-as-Judge evaluation tool
+- `packages/tools/find-github-issues/CLAUDE.md` - GitHub issue search tool
+- `packages/tools/open-github-issue/CLAUDE.md` - GitHub issue creation tool
+- `packages/tools/read-github-issue/CLAUDE.md` - GitHub issue reader tool
+- `packages/tools/review-threads/CLAUDE.md` - Review thread management tool
+- `packages/tools/validate-openai-agent-config/CLAUDE.md` - OpenAI agent config validator tool
+- `packages/tools/validate-skill-frontmatter/CLAUDE.md` - Skill frontmatter validator tool
 
 ## Prohibitions
 

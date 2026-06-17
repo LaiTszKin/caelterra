@@ -1,98 +1,58 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en" data-atlas-page="feature">
-  <head>
-    <meta charset="utf-8" />
-    <title>CodeGraph Integration</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap"
-    />
-    <link rel="stylesheet" href="../../assets/architecture.css" />
-  </head>
-  <body>
-    <header class="feature-header">
-      <nav class="feature-breadcrumb">
-        <a href="../../index.html">← Atlas</a>
-      </nav>
-      <h1>CodeGraph Integration</h1>
-      <p class="feature-depends">
-        Depends on: <a href="../eval-cli/index.html">eval-cli</a>
-      </p>
-    </header>
-    <main class="feature-main">
-      <section class="feature-story">
-        <p>
-          Provide LLM agents with deterministic code structure data through
-          apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed
-          knowledge graph queries.
-        </p>
-      </section>
-      <section class="feature-submodules" aria-label="Submodules">
-        <h2>Submodules</h2>
-        <ul class="submodule-nav">
-          <li class="submodule-card">
-            <a class="submodule-card__link" href="cg-lifecycle.html">
-              <span class="submodule-card__name">cg-lifecycle</span>
-              <span class="submodule-card__kind">Service</span>
-            </a>
-            <p class="submodule-card__role">
-              Manage CodeGraph index lifecycle — init, sync, status, search
-            </p>
-          </li>
-          <li class="submodule-card">
-            <a class="submodule-card__link" href="cg-discovery.html">
-              <span class="submodule-card__name">cg-discovery</span>
-              <span class="submodule-card__kind">Service</span>
-            </a>
-            <p class="submodule-card__role">
-              Explore and survey code structure — explore, survey, list-apis
-            </p>
-          </li>
-          <li class="submodule-card">
-            <a class="submodule-card__link" href="cg-validation.html">
-              <span class="submodule-card__name">cg-validation</span>
-              <span class="submodule-card__kind">Service</span>
-            </a>
-            <p class="submodule-card__role">
-              Verify architecture proposals and batch-apply atlas mutations
-            </p>
-          </li>
-        </ul>
-      </section>
-      <section class="feature-edges" aria-label="Intra-feature edges">
-        <h2>Intra-feature edges</h2>
-        <ul class="feature-edges__list">
-          <li class="feature-edges__item feature-edges__item--data-row">
-            <span class="feature-edges__endpoints"
-              >cg-lifecycle → cg-discovery</span
-            ><span class="feature-edges__kind">data-row</span
-            ><span class="feature-edges__label"
-              >survey/list-apis 依賴已索引的資料庫</span
-            >
-          </li>
-          <li class="feature-edges__item feature-edges__item--data-row">
-            <span class="feature-edges__endpoints"
-              >cg-discovery → cg-validation</span
-            ><span class="feature-edges__kind">data-row</span
-            ><span class="feature-edges__label"
-              >verify 使用 discovery 的搜尋能力</span
-            >
-          </li>
-          <li class="feature-edges__item feature-edges__item--data-row">
-            <span class="feature-edges__endpoints"
-              >cg-validation → cg-lifecycle</span
-            ><span class="feature-edges__kind">data-row</span
-            ><span class="feature-edges__label"
-              >apply 非索引操作，不需 lifecycle — 但 template 可搭配
-              list-apis</span
-            >
-          </li>
-        </ul>
-      </section>
-    </main>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <title>CodeGraph Integration</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="../../assets/architecture.css">
+</head>
+<body>
+  <header class="feature-header">
+    <nav class="feature-breadcrumb"><a href="../../index.html">← Atlas</a></nav>
+    <h1>CodeGraph Integration</h1>
+    <p class="feature-depends">Depends on: <a href="../eval-cli/index.html">eval-cli</a></p>
+  </header>
+  <main class="feature-main">
+    <section class="feature-story"><p>Provide LLM agents with deterministic code structure data through apltk CLI. Replaces manual grep/Read discovery with tree-sitter parsed knowledge graph queries.
+</p></section>
+    <section class="feature-submodules" aria-label="Submodules">
+      <h2>Submodules</h2>
+      <ul class="submodule-nav">
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="cg-lifecycle.html">
+          <span class="submodule-card__name">cg-lifecycle</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">Manage CodeGraph index lifecycle — init, sync, status, search</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="cg-discovery.html">
+          <span class="submodule-card__name">cg-discovery</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">Explore and survey code structure — explore, survey, list-apis</p>
+      </li>
+      <li class="submodule-card">
+        <a class="submodule-card__link" href="cg-validation.html">
+          <span class="submodule-card__name">cg-validation</span>
+          <span class="submodule-card__kind">Service</span>
+        </a>
+        <p class="submodule-card__role">Verify architecture proposals and batch-apply atlas mutations</p>
+      </li>
+      </ul>
+    </section>
+    <section class="feature-edges" aria-label="Intra-feature edges">
+      <h2>Intra-feature edges</h2>
+      <ul class="feature-edges__list">
+        <li class="feature-edges__item feature-edges__item--data-row"><span class="feature-edges__endpoints">cg-lifecycle → cg-discovery</span><span class="feature-edges__kind">data-row</span><span class="feature-edges__label">survey/list-apis 依賴已索引的資料庫</span></li>
+        <li class="feature-edges__item feature-edges__item--data-row"><span class="feature-edges__endpoints">cg-discovery → cg-validation</span><span class="feature-edges__kind">data-row</span><span class="feature-edges__label">verify 使用 discovery 的搜尋能力</span></li>
+        <li class="feature-edges__item feature-edges__item--data-row"><span class="feature-edges__endpoints">cg-validation → cg-lifecycle</span><span class="feature-edges__kind">data-row</span><span class="feature-edges__label">apply 非索引操作，不需 lifecycle — 但 template 可搭配 list-apis</span></li>
+      </ul>
+    </section>
+  </main>
+</body>
 </html>

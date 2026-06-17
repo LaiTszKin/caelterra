@@ -5,7 +5,7 @@ meta:
     Model API, GitHub Actions CI, Developer, Skill Files, @colbymchenry/codegraph (npm),
     @laitszkin/tool-registry, @laitszkin/tui。 Eval 管線包含完整資料流: CLI → Executor → Scorer → Reporter →
     CI Gate。
-  updatedAt: '2026-06-06T13:03:10.925Z'
+  updatedAt: '2026-06-17T07:48:03.913Z'
 actors:
   - id: judge-model-api
     label: Judge Model API
@@ -35,6 +35,7 @@ features:
   - tool-registry
   - tool-utils
   - terminal-ui
+  - quality-gate
 edges:
   - id: cg-e-001
     from:
@@ -182,3 +183,18 @@ edges:
       submodule: terminal-detection
     kind: call
     label: installer uses supportsColor
+  - id: e-fxh5po
+    from:
+      feature: quality-gate
+      submodule: lint-format
+    to:
+      feature: cli-dispatch
+    kind: dependency
+    label: ''
+  - id: e-q743si
+    from:
+      feature: quality-gate
+    to:
+      feature: cli-dispatch
+    kind: dependency
+    label: ''

@@ -1,4 +1,0 @@
-{"ts":"2026-06-16T17:51:10.766Z","action":"feature add","args":{"slug":"quality-gate"},"mode":"spec"}
-{"ts":"2026-06-16T17:51:15.346Z","action":"submodule add","args":{"feature":"quality-gate","slug":"pnpm-config","kind":"config"},"mode":"spec"}
-{"ts":"2026-06-16T17:51:15.963Z","action":"submodule add","args":{"feature":"quality-gate","slug":"lint-format","kind":"config"},"mode":"spec"}
-{"ts":"2026-06-16T17:51:19.555Z","action":"submodule add","args":{"feature":"quality-gate","slug":"pre-commit-hooks","kind":"config"},"mode":"spec"}
