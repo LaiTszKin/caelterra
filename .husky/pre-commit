@@ -1,1 +1,1 @@
-npx --yes pnpm@11.6.0 lint-staged
+lint-staged

@@ -97,3 +97,55 @@ test('REGTEST-02: optimizer validation runs tests through pnpm', () => {
     'optimizer validation must not run npm test',
   );
 });
+
+test('REGTEST-06: root package.json has all internal workspace devDependencies', () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'),
+  );
+
+  const requiredWorkspaceDevDeps = [
+    '@laitszkin/cli',
+    '@laitszkin/tui',
+    '@laitszkin/tool-registry',
+    '@laitszkin/tool-utils',
+    '@laitszkin/tool-architecture',
+    '@laitszkin/tool-codegraph',
+    '@laitszkin/tool-create-review-report',
+    '@laitszkin/tool-create-specs',
+    '@laitszkin/tool-find-github-issues',
+    '@laitszkin/tool-open-github-issue',
+    '@laitszkin/tool-read-github-issue',
+    '@laitszkin/tool-review-threads',
+    '@laitszkin/tool-validate-openai-agent-config',
+    '@laitszkin/tool-validate-skill-frontmatter',
+  ];
+
+  for (const dep of requiredWorkspaceDevDeps) {
+    assert.ok(
+      Object.hasOwn(pkg.devDependencies, dep),
+      `Missing workspace devDependency: ${dep}`,
+    );
+    assert.equal(
+      pkg.devDependencies[dep],
+      'workspace:*',
+      `devDependency ${dep} must be "workspace:*", got "${pkg.devDependencies[dep]}"`,
+    );
+  }
+});
+
+test('REGTEST-07: pre-commit hook runs lint-staged directly without npm or npx', () => {
+  const hook = fs
+    .readFileSync(path.join(projectRoot, '.husky', 'pre-commit'), 'utf-8')
+    .trim();
+
+  assert.equal(
+    hook,
+    'lint-staged',
+    'pre-commit hook must run lint-staged directly',
+  );
+  assert.ok(!hook.includes('npx'), 'pre-commit hook must not invoke npx');
+  assert.ok(
+    !/\bnpm\s/.test(hook),
+    'pre-commit hook must not invoke standalone npm',
+  );
+});

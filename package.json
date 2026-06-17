@@ -67,6 +67,20 @@
     "lint-staged": "^15.0.0",
     "prettier": "^3.0.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.0.0"
+    "typescript-eslint": "^8.0.0",
+    "@laitszkin/cli": "workspace:*",
+    "@laitszkin/tui": "workspace:*",
+    "@laitszkin/tool-registry": "workspace:*",
+    "@laitszkin/tool-utils": "workspace:*",
+    "@laitszkin/tool-architecture": "workspace:*",
+    "@laitszkin/tool-codegraph": "workspace:*",
+    "@laitszkin/tool-create-review-report": "workspace:*",
+    "@laitszkin/tool-create-specs": "workspace:*",
+    "@laitszkin/tool-find-github-issues": "workspace:*",
+    "@laitszkin/tool-open-github-issue": "workspace:*",
+    "@laitszkin/tool-read-github-issue": "workspace:*",
+    "@laitszkin/tool-review-threads": "workspace:*",
+    "@laitszkin/tool-validate-openai-agent-config": "workspace:*",
+    "@laitszkin/tool-validate-skill-frontmatter": "workspace:*"
   }
 }

@@ -15,20 +15,20 @@ Needs Work
 
 ## Requirement Status Summary
 
-| Requirement                | Status     | Evidence Location                                                                                        | Open Findings |
-| -------------------------- | ---------- | -------------------------------------------------------------------------------------------------------- | ------------- |
-| pnpm-migration Req 1       | Complete   | `pnpm-workspace.yaml:1`, `pnpm-lock.yaml`, no `package-lock.json`                                        | 0             |
-| pnpm-migration Req 2       | Complete   | `package.json:16`, `packages/*/package.json`, `packages/tools/*/package.json`                            | 0             |
-| pnpm-migration Req 3       | Partial    | `package.json:23`, `package.json:27`, `package.json:28`, `scripts/optimize.mjs:1483`                     | P1-001        |
-| pnpm-migration Req 4       | Complete   | `.github/workflows/test.yml:15`, `.github/workflows/publish-npm.yml:20`, `.github/workflows/eval.yml:25` | 0             |
-| quality-gate-setup Req 1   | Complete   | `tsconfig.json:10`, all 15 package-level `tsconfig.json` files                                           | 0             |
-| quality-gate-setup Req 2   | Complete   | `eslint.config.mjs:7`, `eslint.config.mjs:15`, `eslint.config.mjs:20`, `package.json:30`                 | 0             |
-| quality-gate-setup Req 3   | Complete   | `.prettierrc:1`, `.prettierignore:1`, `package.json:32`, `package.json:33`                               | 0             |
-| quality-gate-setup Req 4   | Complete   | `.husky/pre-commit:1`, `.lintstagedrc.json:1`                                                            | 0             |
-| quality-gate-setup Req 5   | Complete   | `.github/workflows/test.yml:24`, `.github/workflows/publish-npm.yml:37`, `.github/workflows/eval.yml:34` | 0             |
-| codebase-refactoring Req 1 | Unverified | `package.json:31`, `package.json:32`; local `pnpm` and `corepack` unavailable in review environment      | 0             |
-| codebase-refactoring Req 2 | Unverified | `eslint.config.mjs`; local `pnpm` and `corepack` unavailable in review environment                       | 0             |
-| codebase-refactoring Req 3 | Partial    | `package.json:23`, `package.json:27`, `package.json:28`, `scripts/optimize.mjs:1483`                     | P1-001        |
+| Requirement                | Status   | Evidence Location                                                                                                    | Open Findings |
+| -------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------------- |
+| pnpm-migration Req 1       | Complete | `pnpm-workspace.yaml:1`, `pnpm-lock.yaml:1`, no `package-lock.json`, root `package.json` has no `workspaces` field   | 0             |
+| pnpm-migration Req 2       | Partial  | `package.json:51`, `pnpm-lock.yaml:8`, `node_modules/@laitszkin` absent after frozen install                         | P1-002        |
+| pnpm-migration Req 3       | Partial  | `package.json:23`, `package.json:27`, `scripts/test.sh:141`, local `pnpm test` fails after frozen pnpm install       | P1-002        |
+| pnpm-migration Req 4       | Complete | `.github/workflows/test.yml:15`, `.github/workflows/publish-npm.yml:20`, `.github/workflows/eval.yml:25`             | 0             |
+| quality-gate-setup Req 1   | Complete | `tsconfig.json:9`, all 16 discovered `tsconfig.json` files contain the additional strict flags                       | 0             |
+| quality-gate-setup Req 2   | Partial  | `eslint.config.mjs:7`, `eslint.config.mjs:15`, `eslint.config.mjs:20`, local `pnpm lint --cache` fails               | P1-001        |
+| quality-gate-setup Req 3   | Complete | `.prettierrc:1`, `.prettierignore:1`, `package.json:32`, `package.json:33`, local `pnpm format:check` passes         | 0             |
+| quality-gate-setup Req 4   | Partial  | `.husky/pre-commit:1`, `.lintstagedrc.json:1`                                                                        | P2-001        |
+| quality-gate-setup Req 5   | Complete | `.github/workflows/test.yml:24`, `.github/workflows/publish-npm.yml:37`, `.github/workflows/skill-validation.yml:32` | 0             |
+| codebase-refactoring Req 1 | Partial  | `package.json:30`, `package.json:33`, local `pnpm lint --cache` fails and `pnpm format:check` passes                 | P1-001        |
+| codebase-refactoring Req 2 | Partial  | `bin/apollo-toolkit.ts:12`, local lint output reports 5 strict-type-checked errors                                   | P1-001        |
+| codebase-refactoring Req 3 | Partial  | `package.json:23`, `package.json:27`, local `pnpm run build` passes, local `pnpm test` fails                         | P1-002        |
 
 ---
 
@@ -36,9 +36,16 @@ Needs Work
 
 ### P1 — Requirement Defect
 
-| #      | Description                                                                                  | Impact                                                                                                                                              | File                   | Line  | Dimension                     | Requirement                                      |
-| ------ | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ----- | ----------------------------- | ------------------------------------------------ |
-| P1-001 | A source validation path still shells out through `npm test` after the repository migration. | Running optimization with real changes exercises the npm test path instead of the pnpm workspace path required by the migration and refactor specs. | `scripts/optimize.mjs` | L1483 | Spec implementation deviation | pnpm-migration Req 3; codebase-refactoring Req 3 |
+| #      | Description                                                                 | Impact                                                                                                                                            | File                    | Line | Dimension                     | Requirement                                                 |
+| ------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---- | ----------------------------- | ----------------------------------------------------------- |
+| P1-001 | The strict lint gate still fails on the CLI entry point.                    | `pnpm lint --cache` exits 1 with five `@typescript-eslint/no-unsafe-*` errors, so the required zero-error strict-type-checked gate is unmet.      | `bin/apollo-toolkit.ts` | L12  | Spec implementation omission  | quality-gate-setup Req 2; codebase-refactoring Req 1, Req 2 |
+| P1-002 | Root tests cannot resolve workspace package imports after a frozen install. | `pnpm test` exits 1 because root tests importing `@laitszkin/*` packages fail with `ERR_MODULE_NOT_FOUND`, so the pnpm test requirement is unmet. | `scripts/test.sh`       | L141 | Spec implementation deviation | pnpm-migration Req 2, Req 3; codebase-refactoring Req 3     |
+
+### P2 — Requirement Risk
+
+| #      | Description                                                 | Impact                                                                                                                                           | File                | Line | Dimension           | Requirement              |
+| ------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | ---- | ------------------- | ------------------------ |
+| P2-001 | The pre-commit hook shells through `npx --yes pnpm@11.6.0`. | The hook depends on npm/npx network resolution instead of the installed workspace package-manager path, weakening local enforcement reliability. | `.husky/pre-commit` | L1   | Architecture defect | quality-gate-setup Req 4 |
 
 ---
 
@@ -48,7 +55,7 @@ Needs Work
 
 - **Verdict**: Needs Work
 - **Issues**: P0:0, P1:1, P2:0, P3:0
-- **Key findings**: The prior report found root package scripts still invoked npm (`prepublishOnly` and `test:coverage`), leaving the pnpm migration incomplete.
+- **Key findings**: The prior report found an `npm test` validation path in `scripts/optimize.mjs`. Current evidence shows that path now invokes `pnpm test`.
 
 ---
 

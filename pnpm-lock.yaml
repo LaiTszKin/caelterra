@@ -24,6 +24,48 @@ importers:
       '@eslint/js':
         specifier: ^9.0.0
         version: 9.39.4
+      '@laitszkin/cli':
+        specifier: workspace:*
+        version: link:packages/cli
+      '@laitszkin/tool-architecture':
+        specifier: workspace:*
+        version: link:packages/tools/architecture
+      '@laitszkin/tool-codegraph':
+        specifier: workspace:*
+        version: link:packages/tools/codegraph
+      '@laitszkin/tool-create-review-report':
+        specifier: workspace:*
+        version: link:packages/tools/create-review-report
+      '@laitszkin/tool-create-specs':
+        specifier: workspace:*
+        version: link:packages/tools/create-specs
+      '@laitszkin/tool-find-github-issues':
+        specifier: workspace:*
+        version: link:packages/tools/find-github-issues
+      '@laitszkin/tool-open-github-issue':
+        specifier: workspace:*
+        version: link:packages/tools/open-github-issue
+      '@laitszkin/tool-read-github-issue':
+        specifier: workspace:*
+        version: link:packages/tools/read-github-issue
+      '@laitszkin/tool-registry':
+        specifier: workspace:*
+        version: link:packages/tool-registry
+      '@laitszkin/tool-review-threads':
+        specifier: workspace:*
+        version: link:packages/tools/review-threads
+      '@laitszkin/tool-utils':
+        specifier: workspace:*
+        version: link:packages/tool-utils
+      '@laitszkin/tool-validate-openai-agent-config':
+        specifier: workspace:*
+        version: link:packages/tools/validate-openai-agent-config
+      '@laitszkin/tool-validate-skill-frontmatter':
+        specifier: workspace:*
+        version: link:packages/tools/validate-skill-frontmatter
+      '@laitszkin/tui':
+        specifier: workspace:*
+        version: link:packages/tui
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
