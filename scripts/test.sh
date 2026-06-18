@@ -163,14 +163,14 @@ run_test_group "Package tests (mock.module)" \
 if [ "$COVERAGE" = "true" ]; then
   total_files=$((G1_FILES + G2_FILES))
   if [ "$total_files" -gt 0 ]; then
-    combined_pct=$(echo "scale=2; ($G1_PCT * $G1_FILES + $G2_PCT * $G2_FILES) / $total_files" | bc -l)
+    combined_pct=$(awk "BEGIN {printf \"%.2f\", ($G1_PCT * $G1_FILES + $G2_PCT * $G2_FILES) / $total_files}")
     echo ""
     echo "==> Combined coverage (G1+G2, file-weighted): ${combined_pct}%"
-    if [ "$(echo "$combined_pct < 65" | bc -l)" = "1" ]; then
+    if [ "$(awk "BEGIN {print ($combined_pct < 65)}")" = "1" ]; then
       echo "    FAIL (combined coverage ${combined_pct}% < 65%)"
       EXIT=1
     else
-      echo "    PASS (combined coverage ${combined_pct}% >= 80%)"
+      echo "    PASS (combined coverage ${combined_pct}% >= 65%)"
     fi
   fi
 fi

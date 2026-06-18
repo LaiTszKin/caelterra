@@ -5447,12 +5447,16 @@ test('REGTEST-21: open --spec renders and opens spec overlay (P2-8)', async () =
     );
     assert.equal(code, 0);
     const outPath = openIo.stdout_text.trim().split('\n').pop();
+    const normalizedPath = outPath.replace(/\\/g, '/');
     // Should be inside the spec's architecture_diff directory
     assert.ok(
-      outPath.includes(specDir),
+      normalizedPath.includes(specDir),
       'output should reference spec directory',
     );
-    assert.ok(outPath.endsWith('index.html'), 'output should be an HTML file');
+    assert.ok(
+      normalizedPath.endsWith('index.html'),
+      'output should be an HTML file',
+    );
     assert.ok(fs.existsSync(outPath), 'spec overlay HTML should exist');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

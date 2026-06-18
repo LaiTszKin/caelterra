@@ -235,7 +235,7 @@ test('open subcommand prints atlas path through atlas CLI', async () => {
     assert.equal(code, 0);
     assert.match(
       io.stdout_text,
-      /resources\/project-architecture\/index\.html/,
+      /resources[\\/]project-architecture[\\/]index\.html/,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -253,7 +253,7 @@ test('open subcommand bootstraps atlas when resources tree is empty', async () =
     assert.equal(code, 0);
     assert.match(
       io.stdout_text,
-      /resources\/project-architecture\/index\.html/,
+      /resources[\\/]project-architecture[\\/]index\.html/,
     );
     assert.ok(
       fs.existsSync(
