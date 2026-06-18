@@ -74,14 +74,13 @@ export function createPacotePackageSource(
         };
       }
       // Lazy dynamic import — pacote is not a build-time dependency yet.
-      // @ts-expect-error - pacote dependency added by T4.1; safe at runtime
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const pacote: {
+      // @ts-expect-error — no types for pacote
+      const pacote = (await import('pacote')) as {
         manifest: (
           spec: string,
           opts?: Record<string, unknown>,
         ) => Promise<{ version: string }>;
-      } = await import('pacote');
+      };
       const manifest = await pacote.manifest(`${packageName}@latest`, {
         fullMetadata: false,
       });
@@ -95,15 +94,14 @@ export function createPacotePackageSource(
       if (options?.extract) {
         await options.extract(spec, destination);
       } else {
-        // @ts-expect-error - pacote dependency added by T4.1; safe at runtime
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const pacote: {
+        // @ts-expect-error — no types for pacote
+        const pacote = (await import('pacote')) as {
           extract: (
             spec: string,
             dest: string,
             opts?: Record<string, unknown>,
           ) => Promise<void>;
-        } = await import('pacote');
+        };
         await pacote.extract(spec, destination);
       }
 
