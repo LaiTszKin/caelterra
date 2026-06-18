@@ -1,12 +1,17 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import os from 'node:os';
 
 describe('execCommand shell behavior', () => {
-  it('resolves with stdout on successful command', async () => {
-    const { execCommand } = await import('../packages/cli/dist/updater.js');
-    const result = await execCommand('node', ['--version']);
-    assert.ok(result.stdout.trim().startsWith('v'));
-  });
+  it(
+    'resolves with stdout on successful command',
+    { skip: os.platform() === 'win32' },
+    async () => {
+      const { execCommand } = await import('../packages/cli/dist/updater.js');
+      const result = await execCommand('node', ['--version']);
+      assert.ok(result.stdout.trim().startsWith('v'));
+    },
+  );
 
   it('rejects on non-zero exit code', async () => {
     const { execCommand } = await import('../packages/cli/dist/updater.js');

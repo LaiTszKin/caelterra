@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -7,16 +8,14 @@ import { run, readAutoUpdateConfig } from '@laitszkin/cli';
 
 function createMemoryStream() {
   let data = '';
-  return {
-    isTTY: false,
-    write(chunk) {
-      data += chunk;
-      return true;
-    },
-    toString() {
-      return data;
-    },
+  const stream = new EventEmitter();
+  stream.isTTY = false;
+  stream.write = (chunk) => {
+    data += chunk;
+    return true;
   };
+  stream.toString = () => data;
+  return stream;
 }
 
 async function createFixtureSource(rootDir) {

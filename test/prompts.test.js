@@ -1,14 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { promptForModes, promptYesNo } from '@laitszkin/tui';
 
 /**
  * Create a mock readline-like stream for prompt tests.
- * On Windows, @inquirer/prompts calls output.on('keypress', ...) even
- * when isTTY is false, so the mock needs an on() method.
+ * On Windows, @inquirer/prompts uses more of the stream interface
+ * (on, emit, pipe, etc.) via MuteStream even when isTTY is false.
  */
 function mockStream(isTTY = false) {
-  return { isTTY, on: () => mockStream(isTTY) };
+  const s = new EventEmitter();
+  s.isTTY = isTTY;
+  return s;
 }
 
 test('promptForModes throws when not in a TTY', async () => {

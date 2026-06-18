@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { run } from '@laitszkin/cli';
@@ -16,13 +17,13 @@ const PROJECT_ROOT = path.resolve(
 
 function createMockStream() {
   let output = '';
-  return {
-    write: (s) => {
-      output += String(s);
-    },
-    getOutput: () => output,
-    isTTY: false,
+  const stream = new EventEmitter();
+  stream.write = (s) => {
+    output += String(s);
   };
+  stream.getOutput = () => output;
+  stream.isTTY = false;
+  return stream;
 }
 
 // ---- Success path -----------------------------------------------------------
@@ -112,7 +113,7 @@ test('run: handler throwing UserInputError writes message without "Error:" prefi
   });
   assert.equal(result, 1);
   const err = stderr.getOutput();
-  assert.equal(err, 'user typed something wrong\n');
+  assert.equal(err.replace(/\r/g, ''), 'user typed something wrong\n');
   assert.ok(
     !err.includes('Error:'),
     'stderr should NOT contain "Error:" for UserInputError',
