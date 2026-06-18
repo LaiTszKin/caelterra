@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workflowPath = path.resolve(
@@ -104,7 +105,6 @@ test('REGTEST-06: root package.json has all internal workspace devDependencies',
   );
 
   const requiredWorkspaceDevDeps = [
-    '@laitszkin/cli',
     '@laitszkin/tui',
     '@laitszkin/tool-registry',
     '@laitszkin/tool-utils',
@@ -147,5 +147,69 @@ test('REGTEST-07: pre-commit hook runs lint-staged directly without npm or npx',
   assert.ok(
     !/\bnpm\s/.test(hook),
     'pre-commit hook must not invoke standalone npm',
+  );
+});
+
+test('REGTEST-08: pnpm migration has no npm lockfile', () => {
+  const pnpmLockPath = path.join(projectRoot, 'pnpm-lock.yaml');
+  const npmLockPath = path.join(projectRoot, 'package-lock.json');
+
+  assert.ok(
+    fs.existsSync(pnpmLockPath),
+    'pnpm-lock.yaml must exist after migration to pnpm',
+  );
+  assert.ok(
+    !fs.existsSync(npmLockPath),
+    'package-lock.json must not exist on disk after migration to pnpm',
+  );
+
+  const result = spawnSync('git', ['ls-files', 'package-lock.json'], {
+    cwd: projectRoot,
+    encoding: 'utf-8',
+  });
+
+  assert.strictEqual(
+    result.status,
+    0,
+    'git ls-files command exited with an error',
+  );
+  assert.strictEqual(
+    result.stdout.trim(),
+    '',
+    'package-lock.json must not be tracked by git',
+  );
+});
+
+test('REGTEST-09: root package declares CLI workspace runtime dependency', () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'),
+  );
+  const binSource = fs.readFileSync(
+    path.join(projectRoot, 'bin', 'apollo-toolkit.ts'),
+    'utf-8',
+  );
+
+  assert.ok(
+    binSource.includes("from '@laitszkin/cli'"),
+    'bin/apollo-toolkit.ts must import from @laitszkin/cli',
+  );
+  assert.equal(
+    pkg.dependencies['@laitszkin/cli'],
+    'workspace:*',
+    '@laitszkin/cli must be a workspace:* runtime dependency',
+  );
+  assert.ok(
+    !Object.hasOwn(pkg.devDependencies, '@laitszkin/cli'),
+    '@laitszkin/cli must not appear in devDependencies',
+  );
+  assert.equal(
+    pkg.bin['apollo-toolkit'],
+    'dist/bin/apollo-toolkit.js',
+    'apollo-toolkit bin entry must point to dist/bin/apollo-toolkit.js',
+  );
+  assert.equal(
+    pkg.bin.apltk,
+    'dist/bin/apollo-toolkit.js',
+    'apltk bin entry must point to dist/bin/apollo-toolkit.js',
   );
 });
