@@ -199,7 +199,9 @@ test('buildSymlinkInfo and promptSymlinkChoice output correct format (via run in
 // ---- Auto-update default enablement after install ----
 
 test('install enables auto-update by default when no disabled config exists', async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'interactive-enable-auto-update-'));
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'interactive-enable-auto-update-'),
+  );
   try {
     const sourceRoot = path.join(tempDir, 'source');
     const homeDir = path.join(tempDir, 'home');
@@ -237,7 +239,9 @@ test('install enables auto-update by default when no disabled config exists', as
 });
 
 test('existing disabled auto-update config is preserved after install', async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'interactive-preserve-disabled-'));
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'interactive-preserve-disabled-'),
+  );
   try {
     const sourceRoot = path.join(tempDir, 'source');
     const homeDir = path.join(tempDir, 'home');

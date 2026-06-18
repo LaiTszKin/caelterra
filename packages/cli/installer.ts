@@ -475,7 +475,10 @@ export async function getUninstallTargetRoots(
   return targets;
 }
 
-export async function getManagedInstallTargets(modes: string[] = [...VALID_MODES], env: NodeJS.ProcessEnv = process.env): Promise<InstallTarget[]> {
+export async function getManagedInstallTargets(
+  modes: string[] = [...VALID_MODES],
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<InstallTarget[]> {
   const managedTargets: InstallTarget[] = [];
   const normalizedModes = normalizeModes(modes);
   for (const mode of normalizedModes) {

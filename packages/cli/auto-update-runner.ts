@@ -71,7 +71,9 @@ export interface AutoUpdateResult {
  *
  * The runner explicitly never calls checkForPackageUpdate or npm install -g.
  */
-export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpdateResult> {
+export async function runAutoUpdate(
+  options: AutoUpdateOptions,
+): Promise<AutoUpdateResult> {
   const {
     toolkitHome,
     packageName,
@@ -103,7 +105,11 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
             lastSuccessAt: new Date().toISOString(),
             lastVersion: currentVersion,
           });
-          return { updated: false, latestVersion: latest.version, previousVersion: currentVersion };
+          return {
+            updated: false,
+            latestVersion: latest.version,
+            previousVersion: currentVersion,
+          };
         }
 
         // 3. Create a temp directory for extraction
@@ -118,15 +124,22 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
         const pkgJsonPath = path.join(extractedRoot, 'package.json');
         const skillsPath = path.join(extractedRoot, 'skills');
         if (!fs.existsSync(pkgJsonPath)) {
-          throw new Error(`Extracted package missing package.json at ${pkgJsonPath}`);
+          throw new Error(
+            `Extracted package missing package.json at ${pkgJsonPath}`,
+          );
         }
         if (!fs.existsSync(skillsPath)) {
-          throw new Error(`Extracted package missing skills/ directory at ${skillsPath}`);
+          throw new Error(
+            `Extracted package missing skills/ directory at ${skillsPath}`,
+          );
         }
 
         // 6. Discover managed targets and derive managedModes
-        const managedTargets = modes.length > 0 ? await getManagedInstallTargets(modes, env) : [];
-        const managedModes = [...new Set(managedTargets.map((target) => target.id))];
+        const managedTargets =
+          modes.length > 0 ? await getManagedInstallTargets(modes, env) : [];
+        const managedModes = [
+          ...new Set(managedTargets.map((target) => target.id)),
+        ];
 
         // 7. Sync toolkit home with the extracted source (using managedModes for codex content)
         await syncToolkitHome({
@@ -138,7 +151,10 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
 
         // 8. Re-install links only to managed agent targets
         if (managedModes.length > 0) {
-          const previousSkillNames = await listSkillNames(toolkitHome, managedModes).catch(() => []);
+          const previousSkillNames = await listSkillNames(
+            toolkitHome,
+            managedModes,
+          ).catch(() => []);
           await installLinks({
             toolkitHome,
             modes: managedModes,
@@ -162,7 +178,11 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
           updatedAt: new Date().toISOString(),
         }).catch(() => {});
 
-        return { updated: true, latestVersion: extractedVersion, previousVersion: currentVersion };
+        return {
+          updated: true,
+          latestVersion: extractedVersion,
+          previousVersion: currentVersion,
+        };
       } catch (error) {
         // Inner catch: update failure inside the lock
         const errorMessage = (error as Error).message;
@@ -175,7 +195,9 @@ export async function runAutoUpdate(options: AutoUpdateOptions): Promise<AutoUpd
       } finally {
         // Always clean the temp directory
         if (tempDir) {
-          await fsp.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+          await fsp
+            .rm(tempDir, { recursive: true, force: true })
+            .catch(() => {});
         }
       }
     });
@@ -207,7 +229,10 @@ async function writeRunnerStatus(
 ): Promise<void> {
   try {
     const existing = await readAutoUpdateStatus(toolkitHome).catch(() => null);
-    await writeAutoUpdateStatus(toolkitHome, { ...(existing || { enabled: true }), ...fields });
+    await writeAutoUpdateStatus(toolkitHome, {
+      ...(existing || { enabled: true }),
+      ...fields,
+    });
   } catch {
     // Non-critical — status write failure should not interrupt the update flow.
   }

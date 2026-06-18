@@ -51,7 +51,12 @@ test('AutoUpdateArgsParser: parse "run" action', () => {
 
 test('AutoUpdateArgsParser: --home with path before action', () => {
   const parser = new AutoUpdateArgsParser();
-  const result = parser.parse(['auto-update', '--home', '/custom/path', 'status']);
+  const result = parser.parse([
+    'auto-update',
+    '--home',
+    '/custom/path',
+    'status',
+  ]);
   assert.equal(result.command, 'auto-update');
   assert.equal(result.action, 'status');
   assert.equal(result.toolkitHome, '/custom/path');
@@ -59,7 +64,12 @@ test('AutoUpdateArgsParser: --home with path before action', () => {
 
 test('AutoUpdateArgsParser: --home with path after action', () => {
   const parser = new AutoUpdateArgsParser();
-  const result = parser.parse(['auto-update', 'status', '--home', '/custom/path']);
+  const result = parser.parse([
+    'auto-update',
+    'status',
+    '--home',
+    '/custom/path',
+  ]);
   assert.equal(result.command, 'auto-update');
   assert.equal(result.action, 'status');
   assert.equal(result.toolkitHome, '/custom/path');

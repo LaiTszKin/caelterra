@@ -1,6 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+  existsSync,
+  readFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -27,11 +34,17 @@ function createTempHome() {
 
 describe('constants', () => {
   it('AUTO_UPDATE_CONFIG_FILENAME', () => {
-    assert.equal(AUTO_UPDATE_CONFIG_FILENAME, '.apollo-toolkit-auto-update.json');
+    assert.equal(
+      AUTO_UPDATE_CONFIG_FILENAME,
+      '.apollo-toolkit-auto-update.json',
+    );
   });
 
   it('AUTO_UPDATE_STATUS_FILENAME', () => {
-    assert.equal(AUTO_UPDATE_STATUS_FILENAME, '.apollo-toolkit-auto-update-status.json');
+    assert.equal(
+      AUTO_UPDATE_STATUS_FILENAME,
+      '.apollo-toolkit-auto-update-status.json',
+    );
   });
 
   it('AUTO_UPDATE_LOG_DIRNAME', () => {
@@ -54,8 +67,14 @@ describe('resolveAutoUpdatePaths', () => {
     assert.equal(paths.status, join(home, AUTO_UPDATE_STATUS_FILENAME));
     assert.equal(paths.lock, join(home, AUTO_UPDATE_LOCK_FILENAME));
     assert.equal(paths.logDir, join(home, AUTO_UPDATE_LOG_DIRNAME));
-    assert.equal(paths.stdoutLog, join(home, AUTO_UPDATE_LOG_DIRNAME, 'stdout.log'));
-    assert.equal(paths.stderrLog, join(home, AUTO_UPDATE_LOG_DIRNAME, 'stderr.log'));
+    assert.equal(
+      paths.stdoutLog,
+      join(home, AUTO_UPDATE_LOG_DIRNAME, 'stdout.log'),
+    );
+    assert.equal(
+      paths.stderrLog,
+      join(home, AUTO_UPDATE_LOG_DIRNAME, 'stderr.log'),
+    );
   });
 });
 
@@ -68,13 +87,22 @@ describe('readAutoUpdateConfig', () => {
 
     const config = await readAutoUpdateConfig(home);
     assert.equal(config.enabled, true);
-    assert.ok(typeof config.updatedAt === 'string', 'updatedAt should be a string');
+    assert.ok(
+      typeof config.updatedAt === 'string',
+      'updatedAt should be a string',
+    );
     assert.ok(config.updatedAt.length > 0, 'updatedAt should not be empty');
   });
 
   it('returns enabled default when config directory does not exist', async (t) => {
     const home = join(tmpdir(), 'nonexistent-dir-' + Date.now());
-    t.after(() => { try { rmSync(home, { recursive: true, force: true }); } catch { /* ignore */ } });
+    t.after(() => {
+      try {
+        rmSync(home, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+    });
 
     const config = await readAutoUpdateConfig(home);
     assert.equal(config.enabled, true);
@@ -122,7 +150,11 @@ describe('readAutoUpdateConfig', () => {
 
     const { config: configPath } = resolveAutoUpdatePaths(home);
     mkdirSync(home, { recursive: true });
-    writeFileSync(configPath, JSON.stringify({ enabled: 'yes', updatedAt: new Date().toISOString() }), 'utf8');
+    writeFileSync(
+      configPath,
+      JSON.stringify({ enabled: 'yes', updatedAt: new Date().toISOString() }),
+      'utf8',
+    );
 
     const config = await readAutoUpdateConfig(home);
     assert.equal(config.enabled, true);
@@ -134,7 +166,11 @@ describe('readAutoUpdateConfig', () => {
 
     const { config: configPath } = resolveAutoUpdatePaths(home);
     mkdirSync(home, { recursive: true });
-    writeFileSync(configPath, JSON.stringify({ updatedAt: new Date().toISOString() }), 'utf8');
+    writeFileSync(
+      configPath,
+      JSON.stringify({ updatedAt: new Date().toISOString() }),
+      'utf8',
+    );
 
     const config = await readAutoUpdateConfig(home);
     assert.equal(config.enabled, true);
@@ -178,7 +214,10 @@ describe('writeAutoUpdateConfig', () => {
     // Remove the temp home so we know it doesn't exist
     rmSync(home, { recursive: true, force: true });
 
-    await writeAutoUpdateConfig(home, { enabled: true, updatedAt: new Date().toISOString() });
+    await writeAutoUpdateConfig(home, {
+      enabled: true,
+      updatedAt: new Date().toISOString(),
+    });
 
     const { config: configPath } = resolveAutoUpdatePaths(home);
     assert.ok(existsSync(configPath), 'config file should exist after write');
@@ -198,7 +237,13 @@ describe('readAutoUpdateStatus', () => {
 
   it('returns null when status directory does not exist', async (t) => {
     const home = join(tmpdir(), 'nonexistent-status-dir-' + Date.now());
-    t.after(() => { try { rmSync(home, { recursive: true, force: true }); } catch { /* ignore */ } });
+    t.after(() => {
+      try {
+        rmSync(home, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+    });
 
     const status = await readAutoUpdateStatus(home);
     assert.equal(status, null);
@@ -327,7 +372,10 @@ describe('withAutoUpdateLock', () => {
     assert.equal(result, 42, 'should return the callback result');
 
     const { lock: lockPath } = resolveAutoUpdatePaths(home);
-    assert.ok(!existsSync(lockPath), 'lock file should be removed after callback');
+    assert.ok(
+      !existsSync(lockPath),
+      'lock file should be removed after callback',
+    );
   });
 
   it('releases the lock when callback resolves with undefined', async (t) => {
@@ -354,7 +402,10 @@ describe('withAutoUpdateLock', () => {
     );
 
     const { lock: lockPath } = resolveAutoUpdatePaths(home);
-    assert.ok(!existsSync(lockPath), 'lock file should be removed after rejection');
+    assert.ok(
+      !existsSync(lockPath),
+      'lock file should be removed after rejection',
+    );
   });
 
   it('throws a clear error when lock already exists', async (t) => {

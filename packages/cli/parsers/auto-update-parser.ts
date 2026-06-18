@@ -1,7 +1,11 @@
 import { parseArgs } from 'node:util';
 import path from 'node:path';
 import type { ParsedArguments } from '../types.js';
-import type { AutoUpdateAction, AutoUpdateCommand, CommandParser } from './types.js';
+import type {
+  AutoUpdateAction,
+  AutoUpdateCommand,
+  CommandParser,
+} from './types.js';
 import { normalizeParseError } from './parser-utils.js';
 
 /**
@@ -25,7 +29,12 @@ import { normalizeParseError } from './parser-utils.js';
  */
 export class AutoUpdateArgsParser implements CommandParser<AutoUpdateCommand> {
   /** Valid action keywords accepted by the parser. */
-  private static readonly VALID_ACTIONS: readonly string[] = ['enable', 'disable', 'status', 'run'];
+  private static readonly VALID_ACTIONS: readonly string[] = [
+    'enable',
+    'disable',
+    'status',
+    'run',
+  ];
 
   parse(argv: string[]): AutoUpdateCommand {
     let showHelp = false;

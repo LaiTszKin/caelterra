@@ -46,7 +46,12 @@ export interface ParsedArguments {
   assumeYes: boolean;
   explicitInstallCommand: boolean;
   autoUpdateAction: 'enable' | 'disable' | 'status' | 'run' | null;
-  helpTopic: 'overview' | 'install' | 'uninstall' | 'tools-help' | 'auto-update';
+  helpTopic:
+    | 'overview'
+    | 'install'
+    | 'uninstall'
+    | 'tools-help'
+    | 'auto-update';
 }
 
 export interface CliContext {

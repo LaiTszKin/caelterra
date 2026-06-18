@@ -212,11 +212,31 @@ export class HelpTextBuilder {
   /** Auto-update command help. */
   autoUpdate(): string {
     const examples = [
-      { command: 'apltk auto-update status', result: 'Shows whether the background auto-update is enabled or disabled, plus the last check time.' },
-      { command: 'apltk auto-update enable', result: 'Enables scheduled background auto-update checks (default behaviour).' },
-      { command: 'apltk auto-update disable', result: 'Disables the scheduled background auto-update check so the CLI never auto-updates.' },
-      { command: 'apltk auto-update run', result: 'Runs a one-off background auto-update check now (does not update the running CLI package).' },
-      { command: 'apltk auto-update --home /custom/path status', result: 'Uses a custom toolkit home directory for the auto-update status check.' },
+      {
+        command: 'apltk auto-update status',
+        result:
+          'Shows whether the background auto-update is enabled or disabled, plus the last check time.',
+      },
+      {
+        command: 'apltk auto-update enable',
+        result:
+          'Enables scheduled background auto-update checks (default behaviour).',
+      },
+      {
+        command: 'apltk auto-update disable',
+        result:
+          'Disables the scheduled background auto-update check so the CLI never auto-updates.',
+      },
+      {
+        command: 'apltk auto-update run',
+        result:
+          'Runs a one-off background auto-update check now (does not update the running CLI package).',
+      },
+      {
+        command: 'apltk auto-update --home /custom/path status',
+        result:
+          'Uses a custom toolkit home directory for the auto-update status check.',
+      },
     ];
 
     return this.joinLines([

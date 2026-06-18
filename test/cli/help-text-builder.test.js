@@ -208,7 +208,10 @@ test('colorEnabled=true produces ANSI escape codes in toolsHelp section', () => 
 // ---- autoUpdate() tests ----------------------------------------------------
 
 test('autoUpdate() contains Usage, Actions, Behavior notes, Options, and Examples sections', () => {
-  const text = new HelpTextBuilder({ version: '1.0.0', colorEnabled: false }).autoUpdate();
+  const text = new HelpTextBuilder({
+    version: '1.0.0',
+    colorEnabled: false,
+  }).autoUpdate();
   assert.match(text, /Usage:/);
   assert.match(text, /Actions:/);
   assert.match(text, /Behavior notes:/);
@@ -217,7 +220,10 @@ test('autoUpdate() contains Usage, Actions, Behavior notes, Options, and Example
 });
 
 test('autoUpdate() lists enable, disable, status, and run actions', () => {
-  const text = new HelpTextBuilder({ version: '1.0.0', colorEnabled: false }).autoUpdate();
+  const text = new HelpTextBuilder({
+    version: '1.0.0',
+    colorEnabled: false,
+  }).autoUpdate();
   assert.match(text, /enable/);
   assert.match(text, /disable/);
   assert.match(text, /status/);
@@ -225,31 +231,46 @@ test('autoUpdate() lists enable, disable, status, and run actions', () => {
 });
 
 test('autoUpdate() mentions default-on wording', () => {
-  const text = new HelpTextBuilder({ version: '1.0.0', colorEnabled: false }).autoUpdate();
+  const text = new HelpTextBuilder({
+    version: '1.0.0',
+    colorEnabled: false,
+  }).autoUpdate();
   assert.match(text, /enabled by default/);
   assert.match(text, /default-on/);
 });
 
 test('autoUpdate() mentions disable only stops scheduled updates, not CLI package', () => {
-  const text = new HelpTextBuilder({ version: '1.0.0', colorEnabled: false }).autoUpdate();
+  const text = new HelpTextBuilder({
+    version: '1.0.0',
+    colorEnabled: false,
+  }).autoUpdate();
   assert.match(text, /disable/);
   assert.match(text, /does not update the running CLI package/);
   assert.match(text, /one-off/);
 });
 
 test('autoUpdate() includes --home and --help options', () => {
-  const text = new HelpTextBuilder({ version: '1.0.0', colorEnabled: false }).autoUpdate();
+  const text = new HelpTextBuilder({
+    version: '1.0.0',
+    colorEnabled: false,
+  }).autoUpdate();
   assert.match(text, /--home/);
   assert.match(text, /--help/);
 });
 
 test('autoUpdate() shows usage lines', () => {
-  const text = new HelpTextBuilder({ version: '1.0.0', colorEnabled: false }).autoUpdate();
+  const text = new HelpTextBuilder({
+    version: '1.0.0',
+    colorEnabled: false,
+  }).autoUpdate();
   assert.match(text, /apltk auto-update/);
   assert.match(text, /apollo-toolkit auto-update/);
 });
 
 test('autoUpdate() includes version in banner', () => {
-  const text = new HelpTextBuilder({ version: '4.2.0', colorEnabled: false }).autoUpdate();
+  const text = new HelpTextBuilder({
+    version: '4.2.0',
+    colorEnabled: false,
+  }).autoUpdate();
   assert.match(text, /Version 4\.2\.0/);
 });

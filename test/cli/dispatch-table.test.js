@@ -472,11 +472,22 @@ test('REGTEST-02: parseArguments backward compatibility — all command types', 
     },
     // isKnownToolName fallback → 'tool' command
 
-    { argv: ['architecture'],       command: 'tool',       props: { toolName: 'architecture' } },
+    {
+      argv: ['architecture'],
+      command: 'tool',
+      props: { toolName: 'architecture' },
+    },
     // Dispatch table 'auto-update' entry
-    { argv: ['auto-update', 'status'], command: 'auto-update', props: { autoUpdateAction: 'status', showHelp: false } },
-    { argv: ['auto-update', '--help'],  command: 'auto-update', props: { showHelp: true, helpTopic: 'auto-update' } },
-
+    {
+      argv: ['auto-update', 'status'],
+      command: 'auto-update',
+      props: { autoUpdateAction: 'status', showHelp: false },
+    },
+    {
+      argv: ['auto-update', '--help'],
+      command: 'auto-update',
+      props: { showHelp: true, helpTopic: 'auto-update' },
+    },
   ];
 
   for (const { argv, command, props } of scenarios) {

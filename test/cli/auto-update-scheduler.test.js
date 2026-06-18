@@ -54,7 +54,9 @@ function createFakeExecutor() {
  * Returns the path and a cleanup function.
  */
 function createTempHome() {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apltk-scheduler-test-'));
+  const tmpDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'apltk-scheduler-test-'),
+  );
   return {
     path: tmpDir,
     cleanup() {
@@ -119,7 +121,11 @@ test('detectPlatform respects override', () => {
 test('macOS: register creates plist and calls launchctl bootstrap', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'darwin', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'darwin',
+    execOverride: exec,
+  });
 
   const result = await registerAutoUpdateTask(opts);
 
@@ -128,7 +134,12 @@ test('macOS: register creates plist and calls launchctl bootstrap', async () => 
   assert.match(result.message, /launchd job/);
 
   // Plist was written to correct path
-  const plistPath = path.join(tmp.path, 'Library', 'LaunchAgents', 'com.apollotoolkit.auto-update.plist');
+  const plistPath = path.join(
+    tmp.path,
+    'Library',
+    'LaunchAgents',
+    'com.apollotoolkit.auto-update.plist',
+  );
   assert.ok(fs.existsSync(plistPath), 'plist file should exist');
 
   const plistContent = fs.readFileSync(plistPath, 'utf-8');
@@ -154,7 +165,11 @@ test('macOS: register creates plist and calls launchctl bootstrap', async () => 
 test('macOS: unregister calls bootout and removes plist', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'darwin', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'darwin',
+    execOverride: exec,
+  });
 
   // First register
   await registerAutoUpdateTask(opts);
@@ -170,7 +185,12 @@ test('macOS: unregister calls bootout and removes plist', async () => {
   assert.ok(bootoutCall, 'should have called launchctl bootout');
 
   // Plist was removed
-  const plistPath = path.join(tmp.path, 'Library', 'LaunchAgents', 'com.apollotoolkit.auto-update.plist');
+  const plistPath = path.join(
+    tmp.path,
+    'Library',
+    'LaunchAgents',
+    'com.apollotoolkit.auto-update.plist',
+  );
   assert.ok(!fs.existsSync(plistPath), 'plist should be removed');
 
   tmp.cleanup();
@@ -179,7 +199,11 @@ test('macOS: unregister calls bootout and removes plist', async () => {
 test('macOS: status checks plist existence and launchctl list', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'darwin', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'darwin',
+    execOverride: exec,
+  });
 
   // Status without plist = not registered
   let status = await getAutoUpdateTaskStatus(opts);
@@ -203,7 +227,11 @@ test('macOS: status checks plist existence and launchctl list', async () => {
 test('Linux: register creates unit files and calls systemctl commands', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'linux', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'linux',
+    execOverride: exec,
+  });
 
   const result = await registerAutoUpdateTask(opts);
 
@@ -212,7 +240,13 @@ test('Linux: register creates unit files and calls systemctl commands', async ()
   assert.match(result.message, /systemd timer/);
 
   // Service file was written
-  const servicePath = path.join(tmp.path, '.config', 'systemd', 'user', 'apollo-toolkit-update.service');
+  const servicePath = path.join(
+    tmp.path,
+    '.config',
+    'systemd',
+    'user',
+    'apollo-toolkit-update.service',
+  );
   assert.ok(fs.existsSync(servicePath), 'service file should exist');
   const serviceContent = fs.readFileSync(servicePath, 'utf-8');
   assert.match(serviceContent, /ExecStart=/);
@@ -220,7 +254,13 @@ test('Linux: register creates unit files and calls systemctl commands', async ()
   assert.match(serviceContent, /auto-update run/);
 
   // Timer file was written
-  const timerPath = path.join(tmp.path, '.config', 'systemd', 'user', 'apollo-toolkit-update.timer');
+  const timerPath = path.join(
+    tmp.path,
+    '.config',
+    'systemd',
+    'user',
+    'apollo-toolkit-update.timer',
+  );
   assert.ok(fs.existsSync(timerPath), 'timer file should exist');
   const timerContent = fs.readFileSync(timerPath, 'utf-8');
   assert.match(timerContent, /OnCalendar=daily/);
@@ -231,7 +271,12 @@ test('Linux: register creates unit files and calls systemctl commands', async ()
   assert.equal(exec.calls[0].command, 'systemctl');
   assert.deepEqual(exec.calls[0].args, ['--user', 'daemon-reload']);
   assert.equal(exec.calls[1].command, 'systemctl');
-  assert.deepEqual(exec.calls[1].args, ['--user', 'enable', '--now', 'apollo-toolkit-update.timer']);
+  assert.deepEqual(exec.calls[1].args, [
+    '--user',
+    'enable',
+    '--now',
+    'apollo-toolkit-update.timer',
+  ]);
 
   tmp.cleanup();
 });
@@ -239,7 +284,11 @@ test('Linux: register creates unit files and calls systemctl commands', async ()
 test('Linux: unregister disables timer and removes unit files', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'linux', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'linux',
+    execOverride: exec,
+  });
 
   await registerAutoUpdateTask(opts);
   const result = await unregisterAutoUpdateTask(opts);
@@ -252,8 +301,20 @@ test('Linux: unregister disables timer and removes unit files', async () => {
   assert.ok(disableCall, 'should have called systemctl disable --now');
 
   // Unit files were removed
-  const servicePath = path.join(tmp.path, '.config', 'systemd', 'user', 'apollo-toolkit-update.service');
-  const timerPath = path.join(tmp.path, '.config', 'systemd', 'user', 'apollo-toolkit-update.timer');
+  const servicePath = path.join(
+    tmp.path,
+    '.config',
+    'systemd',
+    'user',
+    'apollo-toolkit-update.service',
+  );
+  const timerPath = path.join(
+    tmp.path,
+    '.config',
+    'systemd',
+    'user',
+    'apollo-toolkit-update.timer',
+  );
   assert.ok(!fs.existsSync(servicePath), 'service file should be removed');
   assert.ok(!fs.existsSync(timerPath), 'timer file should be removed');
 
@@ -263,7 +324,11 @@ test('Linux: unregister disables timer and removes unit files', async () => {
 test('Linux: register handles quoted paths in ExecStart', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'linux', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'linux',
+    execOverride: exec,
+  });
 
   // Use a runner command with a space in the path
   opts.runnerCommand = [
@@ -277,7 +342,13 @@ test('Linux: register handles quoted paths in ExecStart', async () => {
 
   await registerAutoUpdateTask(opts);
 
-  const servicePath = path.join(tmp.path, '.config', 'systemd', 'user', 'apollo-toolkit-update.service');
+  const servicePath = path.join(
+    tmp.path,
+    '.config',
+    'systemd',
+    'user',
+    'apollo-toolkit-update.service',
+  );
   const serviceContent = fs.readFileSync(servicePath, 'utf-8');
   assert.match(serviceContent, /"\/opt\/my tools\/apollo-toolkit\.js"/);
 
@@ -288,11 +359,19 @@ test('Linux: status calls systemctl is-enabled', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
   // Make the is-enabled call return 'enabled'
-  exec.setResult('systemctl', ['--user', 'is-enabled', 'apollo-toolkit-update.timer'], {
-    stdout: 'enabled\n',
-    stderr: '',
+  exec.setResult(
+    'systemctl',
+    ['--user', 'is-enabled', 'apollo-toolkit-update.timer'],
+    {
+      stdout: 'enabled\n',
+      stderr: '',
+    },
+  );
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'linux',
+    execOverride: exec,
   });
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'linux', execOverride: exec });
 
   // Status with registered = true (executor returns 'enabled')
   const status = await getAutoUpdateTaskStatus(opts);
@@ -307,11 +386,19 @@ test('Linux: status returns registered=false when timer is disabled', async () =
   const tmp = createTempHome();
   const exec = createFakeExecutor();
   // Make the is-enabled call return 'disabled'
-  exec.setResult('systemctl', ['--user', 'is-enabled', 'apollo-toolkit-update.timer'], {
-    stdout: 'disabled\n',
-    stderr: '',
+  exec.setResult(
+    'systemctl',
+    ['--user', 'is-enabled', 'apollo-toolkit-update.timer'],
+    {
+      stdout: 'disabled\n',
+      stderr: '',
+    },
+  );
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'linux',
+    execOverride: exec,
   });
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'linux', execOverride: exec });
 
   const status = await getAutoUpdateTaskStatus(opts);
   assert.equal(status.registered, false);
@@ -327,7 +414,11 @@ test('Linux: status returns registered=false when timer is disabled', async () =
 test('Windows: register calls schtasks with SC DAILY and stable task name', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'win32', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'win32',
+    execOverride: exec,
+  });
 
   const result = await registerAutoUpdateTask(opts);
 
@@ -341,7 +432,10 @@ test('Windows: register calls schtasks with SC DAILY and stable task name', asyn
   assert.ok(exec.calls[0].args.includes('/SC'), 'should include /SC');
   assert.ok(exec.calls[0].args.includes('DAILY'), 'should include DAILY');
   assert.ok(exec.calls[0].args.includes('/TN'), 'should include /TN');
-  assert.ok(exec.calls[0].args.includes('ApolloToolkitAutoUpdate'), 'should include stable task name');
+  assert.ok(
+    exec.calls[0].args.includes('ApolloToolkitAutoUpdate'),
+    'should include stable task name',
+  );
   assert.ok(exec.calls[0].args.includes('/ST'), 'should include /ST');
   assert.ok(exec.calls[0].args.includes('/F'), 'should include /F (force)');
 
@@ -351,7 +445,11 @@ test('Windows: register calls schtasks with SC DAILY and stable task name', asyn
 test('Windows: unregister calls schtasks /Delete', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'win32', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'win32',
+    execOverride: exec,
+  });
 
   await registerAutoUpdateTask(opts);
   const result = await unregisterAutoUpdateTask(opts);
@@ -368,7 +466,11 @@ test('Windows: unregister calls schtasks /Delete', async () => {
 test('Windows: status calls schtasks /Query and returns registered=true', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'win32', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'win32',
+    execOverride: exec,
+  });
 
   const status = await getAutoUpdateTaskStatus(opts);
   assert.equal(status.registered, true);
@@ -384,7 +486,11 @@ test('Windows: status calls schtasks /Query and returns registered=true', async 
 test('Windows: register /TR argument preserves spaces via quoteWindowsArg', async () => {
   const tmp = createTempHome();
   const exec = createFakeExecutor();
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'win32', execOverride: exec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'win32',
+    execOverride: exec,
+  });
 
   // Override runnerCommand with paths containing spaces to verify quoteWindowsArg
   opts.runnerCommand = [
@@ -409,7 +515,10 @@ test('Windows: register /TR argument preserves spaces via quoteWindowsArg', asyn
 
   // Assert each spaced argument is double-quoted
   assert.match(tr, /"C:\\Program Files\\nodejs\\node\.exe"/);
-  assert.match(tr, /"C:\\Program Files\\Apollo Toolkit\\dist\\bin\\apollo-toolkit\.js"/);
+  assert.match(
+    tr,
+    /"C:\\Program Files\\Apollo Toolkit\\dist\\bin\\apollo-toolkit\.js"/,
+  );
   assert.match(tr, /"C:\\Users\\Jane Doe\\.apollo-toolkit"/);
 
   // Assert non-spaced arguments still appear unquoted
@@ -426,11 +535,19 @@ test('unregister: handles missing tasks gracefully on all platforms', async () =
   for (const platform of ['darwin', 'linux', 'win32']) {
     const tmp = createTempHome();
     const exec = createFakeExecutor();
-    const opts = makeSchedulerOptions({ tempHome: tmp.path, platform, execOverride: exec });
+    const opts = makeSchedulerOptions({
+      tempHome: tmp.path,
+      platform,
+      execOverride: exec,
+    });
 
     // Unregister without prior registration — should not throw
     const result = await unregisterAutoUpdateTask(opts);
-    assert.equal(result.registered, false, `unregister on ${platform} should return registered=false`);
+    assert.equal(
+      result.registered,
+      false,
+      `unregister on ${platform} should return registered=false`,
+    );
     assert.equal(result.platform, platform);
 
     tmp.cleanup();
@@ -446,7 +563,11 @@ test('command failure: register throws error including platform and action', asy
   const failingExec = async () => {
     throw new Error('execution failed');
   };
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'darwin', execOverride: failingExec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'darwin',
+    execOverride: failingExec,
+  });
 
   await assert.rejects(
     () => registerAutoUpdateTask(opts),
@@ -469,7 +590,11 @@ test('command failure: unregister does not throw, returns registered=false', asy
   const failingExec = async () => {
     throw new Error('execution failed');
   };
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'linux', execOverride: failingExec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'linux',
+    execOverride: failingExec,
+  });
 
   // Unregister catches exec errors internally — should not throw
   const result = await unregisterAutoUpdateTask(opts);
@@ -484,7 +609,11 @@ test('command failure: status catches exec errors and returns registered=false',
   const failingExec = async () => {
     throw new Error('execution failed');
   };
-  const opts = makeSchedulerOptions({ tempHome: tmp.path, platform: 'linux', execOverride: failingExec });
+  const opts = makeSchedulerOptions({
+    tempHome: tmp.path,
+    platform: 'linux',
+    execOverride: failingExec,
+  });
 
   const result = await getAutoUpdateTaskStatus(opts);
   assert.equal(result.registered, false);
