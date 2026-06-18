@@ -11,6 +11,8 @@ import { promptForModes, promptYesNo } from '@laitszkin/tui';
 function mockStream(isTTY = false) {
   const s = new EventEmitter();
   s.isTTY = isTTY;
+  s.resume = () => {};
+  s.pause = () => {};
   return s;
 }
 

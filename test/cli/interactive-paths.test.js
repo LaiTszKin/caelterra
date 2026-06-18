@@ -96,7 +96,7 @@ test('printUninstallSummary shows empty message when no installations found (via
     const exitCode = await run(['uninstall', '--yes'], {
       sourceRoot,
       env: { HOME: homeDir, APOLLO_TOOLKIT_SKIP_UPDATE_CHECK: '1' },
-      stdin: { isTTY: false },
+      stdin: createMemoryStream(),
       stdout,
       stderr,
     });
@@ -134,7 +134,7 @@ test('promptIncludeExclusiveSkills returns false when no codex skills exist (via
         APOLLO_TOOLKIT_HOME: toolkitHome,
         APOLLO_TOOLKIT_SKIP_UPDATE_CHECK: '1',
       },
-      stdin: { isTTY: false },
+      stdin: createMemoryStream(),
       stdout,
       stderr,
     });
@@ -176,7 +176,7 @@ test('buildSymlinkInfo and promptSymlinkChoice output correct format (via run in
         APOLLO_TOOLKIT_HOME: toolkitHome,
         APOLLO_TOOLKIT_SKIP_UPDATE_CHECK: '1',
       },
-      stdin: { isTTY: false },
+      stdin: createMemoryStream(),
       stdout,
       stderr,
     });
@@ -221,7 +221,7 @@ test('install enables auto-update by default when no disabled config exists', as
         APOLLO_TOOLKIT_HOME: toolkitHome,
         APOLLO_TOOLKIT_SKIP_UPDATE_CHECK: '1',
       },
-      stdin: { isTTY: false },
+      stdin: createMemoryStream(),
       stdout,
       stderr,
     });
@@ -268,7 +268,7 @@ test('existing disabled auto-update config is preserved after install', async ()
         APOLLO_TOOLKIT_HOME: toolkitHome,
         APOLLO_TOOLKIT_SKIP_UPDATE_CHECK: '1',
       },
-      stdin: { isTTY: false },
+      stdin: createMemoryStream(),
       stdout,
       stderr,
     });
