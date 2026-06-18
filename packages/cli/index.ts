@@ -75,8 +75,18 @@ export {
   execCommand,
 };
 // Re-export auto-update modules for external consumers (tests, bin)
-export { readAutoUpdateConfig, writeAutoUpdateConfig, readAutoUpdateStatus, writeAutoUpdateStatus, resolveAutoUpdatePaths } from './auto-update-state.js';
-export { registerAutoUpdateTask, unregisterAutoUpdateTask, getAutoUpdateTaskStatus } from './auto-update-scheduler.js';
+export {
+  readAutoUpdateConfig,
+  writeAutoUpdateConfig,
+  readAutoUpdateStatus,
+  writeAutoUpdateStatus,
+  resolveAutoUpdatePaths,
+} from './auto-update-state.js';
+export {
+  registerAutoUpdateTask,
+  unregisterAutoUpdateTask,
+  getAutoUpdateTaskStatus,
+} from './auto-update-scheduler.js';
 export { runAutoUpdate } from './auto-update-runner.js';
 import type { CliContext, InstallMode, ParsedArguments } from './types.js';
 import { formatAppError } from '@laitszkin/tool-utils';
@@ -112,19 +122,33 @@ function parseArguments(argv: string[]): ParsedArguments {
   // parser, and error-boundary changes.  Modify with care.
   // =================================
 
-  const commandParsers = new Map<string, CommandParser<any>>([
-    ['install', installParser],
-    ['uninstall', new UninstallArgsParser()],
-    ['tools', toolParser],
-    ['tool', toolParser],
-    ['auto-update', new AutoUpdateArgsParser()],
+  const commandParsers = new Map<string, (argv: string[]) => ParsedArguments>([
+    [
+      'install',
+      (argv) => installParser.toParsedArguments(installParser.parse(argv)),
+    ],
+    [
+      'uninstall',
+      (argv) =>
+        new UninstallArgsParser().toParsedArguments(
+          new UninstallArgsParser().parse(argv),
+        ),
+    ],
+    ['tools', (argv) => toolParser.toParsedArguments(toolParser.parse(argv))],
+    ['tool', (argv) => toolParser.toParsedArguments(toolParser.parse(argv))],
+    [
+      'auto-update',
+      (argv) =>
+        new AutoUpdateArgsParser().toParsedArguments(
+          new AutoUpdateArgsParser().parse(argv),
+        ),
+    ],
   ]);
 
   // Command dispatch: iterate parsers, first match wins
-  for (const [name, parser] of commandParsers) {
+  for (const [name, dispatch] of commandParsers) {
     if (firstArg === name) {
-      const result = parser.parse(argv);
-      return parser.toParsedArguments(result);
+      return dispatch(argv);
     }
   }
 
@@ -341,15 +365,18 @@ export async function run(
     if (parsed.showHelp) {
       const colorEnabled = supportsColor(stdout, env);
       if (parsed.helpTopic === 'overview') await registerAllTools();
-      const builder = new HelpTextBuilder({ version: packageJson.version, colorEnabled });
-      const helpText = parsed.helpTopic === 'install'
-        ? builder.install()
-        : parsed.helpTopic === 'uninstall'
-          ? builder.uninstall()
-          : parsed.helpTopic === 'auto-update'
-            ? builder.autoUpdate()
-
-            : builder.overview();
+      const builder = new HelpTextBuilder({
+        version: packageJson.version,
+        colorEnabled,
+      });
+      const helpText =
+        parsed.helpTopic === 'install'
+          ? builder.install()
+          : parsed.helpTopic === 'uninstall'
+            ? builder.uninstall()
+            : parsed.helpTopic === 'auto-update'
+              ? builder.autoUpdate()
+              : builder.overview();
       stdout.write(`${helpText}\n`);
       return 0;
     }
@@ -467,7 +494,11 @@ export async function run(
         if (action === 'enable') {
           const nodePath = process.execPath;
           const cliPath = getCliBinPath(sourceRoot);
-          const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+          const runnerCommand = buildRunnerCommand({
+            nodePath,
+            cliPath,
+            toolkitHome,
+          });
           const result = await registerAutoUpdateTask({
             toolkitHome,
             runnerCommand,
@@ -484,7 +515,11 @@ export async function run(
         if (action === 'disable') {
           const nodePath = process.execPath;
           const cliPath = getCliBinPath(sourceRoot);
-          const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+          const runnerCommand = buildRunnerCommand({
+            nodePath,
+            cliPath,
+            toolkitHome,
+          });
           await unregisterAutoUpdateTask({
             toolkitHome,
             runnerCommand,
@@ -500,19 +535,27 @@ export async function run(
 
         if (action === 'status') {
           const config = await readAutoUpdateConfig(toolkitHome);
-          stdout.write(`Auto-update: ${config.enabled ? 'enabled' : 'disabled'}\n`);
+          stdout.write(
+            `Auto-update: ${config.enabled ? 'enabled' : 'disabled'}\n`,
+          );
           stdout.write(`Last config update: ${config.updatedAt}\n`);
 
           try {
             const nodePath = process.execPath;
             const cliPath = getCliBinPath(sourceRoot);
-            const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+            const runnerCommand = buildRunnerCommand({
+              nodePath,
+              cliPath,
+              toolkitHome,
+            });
             const taskStatus = await getAutoUpdateTaskStatus({
               toolkitHome,
               runnerCommand,
               env,
             });
-            stdout.write(`Scheduler: ${taskStatus.registered ? 'registered' : 'not registered'} (${taskStatus.platform})\n`);
+            stdout.write(
+              `Scheduler: ${taskStatus.registered ? 'registered' : 'not registered'} (${taskStatus.platform})\n`,
+            );
             if (taskStatus.message) {
               stdout.write(`  ${taskStatus.message}\n`);
             }
@@ -536,18 +579,24 @@ export async function run(
             autoUpdateEnabled: config.enabled,
           });
           if (result.updated) {
-            stdout.write(`Auto-update: updated from ${result.previousVersion ?? '(unknown)'} to ${result.latestVersion ?? '(unknown)'}.\n`);
+            stdout.write(
+              `Auto-update: updated from ${result.previousVersion ?? '(unknown)'} to ${result.latestVersion ?? '(unknown)'}.\n`,
+            );
             return 0;
           }
           if (result.lastError) {
             stdout.write(`Auto-update: failed - ${result.lastError}\n`);
             return 1;
           }
-          stdout.write(`Auto-update: already up-to-date (${result.latestVersion ?? '(unknown)'}).\n`);
+          stdout.write(
+            `Auto-update: already up-to-date (${result.latestVersion ?? '(unknown)'}).\n`,
+          );
           return 0;
         }
 
-        stdout.write('No action specified. Use: enable, disable, status, or run.\n');
+        stdout.write(
+          'No action specified. Use: enable, disable, status, or run.\n',
+        );
         return 1;
       } catch (error) {
         formatAppError(stderr, error);
@@ -650,7 +699,12 @@ export async function run(
     // Read auto-update config before syncToolkitHome (which wipes the directory)
     const preinstallAutoUpdateConfig = await readAutoUpdateConfig(toolkitHome);
 
-    const syncResult = await syncToolkitHome({ sourceRoot, toolkitHome, version: packageJson.version, modes: effectiveModes });
+    const syncResult = await syncToolkitHome({
+      sourceRoot,
+      toolkitHome,
+      version: packageJson.version,
+      modes: effectiveModes,
+    });
     const installResult = await installLinks({
       toolkitHome,
       modes,
@@ -660,13 +714,20 @@ export async function run(
       env: { ...env, APOLLO_TOOLKIT_HOME: toolkitHome },
     });
 
-    printSummary({ stdout, version: packageJson.version, toolkitHome, modes, installResult, env });
+    printSummary({
+      stdout,
+      version: packageJson.version,
+      toolkitHome,
+      modes,
+      installResult,
+      env,
+    });
 
     // Enable background auto-update by default unless explicitly disabled.
     // Always re-write the config since syncToolkitHome wipes the directory.
     // If previously disabled, preserve that state rather than defaulting to enabled.
     try {
-      const enableAutoUpdate = preinstallAutoUpdateConfig.enabled !== false;
+      const enableAutoUpdate = preinstallAutoUpdateConfig.enabled;
       await writeAutoUpdateConfig(toolkitHome, {
         enabled: enableAutoUpdate,
         updatedAt: new Date().toISOString(),
@@ -674,7 +735,11 @@ export async function run(
       if (enableAutoUpdate) {
         const nodePath = process.execPath;
         const cliPath = getCliBinPath(sourceRoot);
-        const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+        const runnerCommand = buildRunnerCommand({
+          nodePath,
+          cliPath,
+          toolkitHome,
+        });
         try {
           await registerAutoUpdateTask({
             toolkitHome,

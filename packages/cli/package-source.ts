@@ -13,7 +13,9 @@ export interface PackageSource {
    * Resolve the latest published version for a package name.
    * Returns the version string and a specifier suitable for extract().
    */
-  resolveLatest(packageName: string): Promise<{ version: string; spec: string }>;
+  resolveLatest(
+    packageName: string,
+  ): Promise<{ version: string; spec: string }>;
 
   /**
    * Extract the package identified by `spec` (e.g. "pkg@1.2.3") into
@@ -23,7 +25,10 @@ export interface PackageSource {
    * Returns the version (read from extracted package.json if available)
    * and the root path where the package contents were extracted.
    */
-  extract(spec: string, destination: string): Promise<{ version?: string; sourceRoot: string }>;
+  extract(
+    spec: string,
+    destination: string,
+  ): Promise<{ version?: string; sourceRoot: string }>;
 }
 
 /**
@@ -33,9 +38,16 @@ export interface PackageSource {
  */
 export interface PackageSourceOptions {
   /** Optional replacement for pacote.manifest(spec, opts). */
-  manifest?: (spec: string, opts?: Record<string, unknown>) => Promise<{ version: string }>;
+  manifest?: (
+    spec: string,
+    opts?: Record<string, unknown>,
+  ) => Promise<{ version: string }>;
   /** Optional replacement for pacote.extract(spec, dest, opts). */
-  extract?: (spec: string, dest: string, opts?: Record<string, unknown>) => Promise<void>;
+  extract?: (
+    spec: string,
+    dest: string,
+    opts?: Record<string, unknown>,
+  ) => Promise<void>;
 }
 
 /**
@@ -47,18 +59,36 @@ export interface PackageSourceOptions {
  *
  * @param options  Optional injected functions for testing (skip real pacote).
  */
-export function createPacotePackageSource(options?: PackageSourceOptions): PackageSource {
+export function createPacotePackageSource(
+  options?: PackageSourceOptions,
+): PackageSource {
   return {
     async resolveLatest(packageName) {
       if (options?.manifest) {
-        const result = await options.manifest(`${packageName}@latest`, { fullMetadata: false });
-        return { version: result.version, spec: `${packageName}@${result.version}` };
+        const result = await options.manifest(`${packageName}@latest`, {
+          fullMetadata: false,
+        });
+        return {
+          version: result.version,
+          spec: `${packageName}@${result.version}`,
+        };
       }
       // Lazy dynamic import — pacote is not a build-time dependency yet.
       // @ts-expect-error - pacote dependency added by T4.1; safe at runtime
-      const pacote: any = await import('pacote');
-      const manifest = await pacote.manifest(`${packageName}@latest`, { fullMetadata: false });
-      return { version: manifest.version, spec: `${packageName}@${manifest.version}` };
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const pacote: {
+        manifest: (
+          spec: string,
+          opts?: Record<string, unknown>,
+        ) => Promise<{ version: string }>;
+      } = await import('pacote');
+      const manifest = await pacote.manifest(`${packageName}@latest`, {
+        fullMetadata: false,
+      });
+      return {
+        version: manifest.version,
+        spec: `${packageName}@${manifest.version}`,
+      };
     },
 
     async extract(spec, destination) {
@@ -66,21 +96,34 @@ export function createPacotePackageSource(options?: PackageSourceOptions): Packa
         await options.extract(spec, destination);
       } else {
         // @ts-expect-error - pacote dependency added by T4.1; safe at runtime
-        const pacote: any = await import('pacote');
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const pacote: {
+          extract: (
+            spec: string,
+            dest: string,
+            opts?: Record<string, unknown>,
+          ) => Promise<void>;
+        } = await import('pacote');
         await pacote.extract(spec, destination);
       }
 
       // Try to read the version from the extracted package.json.
       let version: string | undefined;
       try {
-        const raw = await fsp.readFile(path.join(destination, 'package.json'), 'utf8');
+        const raw = await fsp.readFile(
+          path.join(destination, 'package.json'),
+          'utf8',
+        );
         const pkg = JSON.parse(raw) as { version?: string };
         version = pkg.version;
       } catch {
         // Non-critical — version stays undefined.
       }
 
-      return { version, sourceRoot: destination };
+      return {
+        ...(version !== undefined ? { version } : {}),
+        sourceRoot: destination,
+      };
     },
   };
 }
