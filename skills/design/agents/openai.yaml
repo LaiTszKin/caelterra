@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Design'
+  short_description: 'Read SPEC.md and produce DESIGN.md, CHECKLIST.md, architecture diff, and refactoring plan'
+  default_prompt: 'Use $design to read SPEC.md, validate technical feasibility through web research, find quality reference implementations, confirm tech stack compatibility, then produce DESIGN.md (architecture design, external dependencies), CHECKLIST.md (verification strategy), Architecture Diff, and design-time refactoring plan.'
