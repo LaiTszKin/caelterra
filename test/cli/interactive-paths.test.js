@@ -6,15 +6,17 @@ import os from 'node:os';
 import path from 'node:path';
 import { run, readAutoUpdateConfig } from '@laitszkin/cli';
 
-function createMemoryStream() {
+function createMemoryStream(isTTY = false) {
   let data = '';
   const stream = new EventEmitter();
-  stream.isTTY = false;
+  stream.isTTY = isTTY;
   stream.write = (chunk) => {
     data += chunk;
     return true;
   };
   stream.toString = () => data;
+  stream.resume = () => {};
+  stream.pause = () => {};
   return stream;
 }
 
