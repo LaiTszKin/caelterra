@@ -20,6 +20,14 @@ function createMemoryStream(isTTY = false) {
   return stream;
 }
 
+function createInputStream(input, isTTY = true) {
+  const stream = createMemoryStream(isTTY);
+  stream[Symbol.asyncIterator] = async function* () {
+    yield input;
+  };
+  return stream;
+}
+
 async function createFixtureSource(rootDir) {
   await fs.mkdir(path.join(rootDir, 'skills', 'alpha-skill'), {
     recursive: true,
@@ -297,3 +305,58 @@ test(
     }
   },
 );
+
+test('install exits after global CLI update instead of installing from stale sourceRoot', async () => {
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'interactive-stale-update-'),
+  );
+  try {
+    const sourceRoot = path.join(tempDir, 'source');
+    const homeDir = path.join(tempDir, 'home');
+    const toolkitHome = path.join(homeDir, '.apollo-toolkit');
+    const traeRoot = path.join(homeDir, '.trae', 'skills');
+    const stdout = createMemoryStream(true);
+    const stderr = createMemoryStream(true);
+    const npmCalls = [];
+
+    await fs.mkdir(sourceRoot, { recursive: true });
+    await createFixtureSource(sourceRoot);
+    await fs.mkdir(traeRoot, { recursive: true });
+
+    const exitCode = await run(['trae', '--copy'], {
+      sourceRoot,
+      env: {
+        HOME: homeDir,
+        APOLLO_TOOLKIT_HOME: toolkitHome,
+        FORCE_COLOR: '0',
+      },
+      stdin: createInputStream('y\n'),
+      stdout,
+      stderr,
+      execCommand: async (command, args) => {
+        npmCalls.push([command, ...args]);
+        if (args[0] === 'view') {
+          return { stdout: '"4.1.5"\n', stderr: '' };
+        }
+        return { stdout: '', stderr: '' };
+      },
+      confirmUpdate: async () => true,
+    });
+
+    assert.equal(exitCode, 0, stderr.toString());
+    assert.deepEqual(npmCalls, [
+      ['npm', 'view', '@laitszkin/apollo-toolkit', 'version', '--json'],
+      ['npm', 'install', '-g', '@laitszkin/apollo-toolkit@latest'],
+    ]);
+    assert.match(
+      stdout.toString(),
+      /Restart apltk to continue with @laitszkin\/apollo-toolkit 4\.1\.5/,
+    );
+    await assert.rejects(
+      fs.access(path.join(toolkitHome, 'package.json')),
+      /ENOENT/,
+    );
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});

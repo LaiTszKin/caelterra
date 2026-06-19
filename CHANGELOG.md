@@ -4,6 +4,12 @@ All notable changes to this repository are documented in this file.
 
 ## [Unreleased]
 
+## [v5.3.1] - 2026-06-19
+
+### Fixed
+
+- **Interactive CLI update flow**: After a global CLI update, `apltk` now exits and asks users to restart instead of continuing the install flow from the stale pre-update source tree.
+
 ## [v5.3.0] - 2026-06-19
 
 ### Added

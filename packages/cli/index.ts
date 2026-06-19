@@ -357,7 +357,7 @@ export async function run(
   const stdin = context.stdin || process.stdin;
   const env = context.env || process.env;
   const stdioWriter: StdioWriter = createStdioWriter({ stdout, stderr, env });
-  let packageJson = readPackageJson(sourceRoot);
+  const packageJson = readPackageJson(sourceRoot);
 
   try {
     const parsed = parseArguments(argv);
@@ -619,7 +619,10 @@ export async function run(
     });
 
     if (updateResult.updated) {
-      packageJson = readPackageJson(sourceRoot);
+      stdout.write(
+        `Restart apltk to continue with ${packageJson.name} ${updateResult.latestVersion ?? 'latest'}.\n`,
+      );
+      return 0;
     }
 
     const toolkitHome = parsed.toolkitHome || resolveToolkitHome(env);
