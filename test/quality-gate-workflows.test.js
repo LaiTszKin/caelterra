@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
@@ -180,7 +181,7 @@ test('REGTEST-08: pnpm migration has no npm lockfile', () => {
   );
 });
 
-test('REGTEST-09: root package declares CLI workspace runtime dependency', () => {
+test('REGTEST-09: root package keeps CLI workspace dependency out of runtime metadata', () => {
   const pkg = JSON.parse(
     fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'),
   );
@@ -193,14 +194,23 @@ test('REGTEST-09: root package declares CLI workspace runtime dependency', () =>
     binSource.includes("from '@laitszkin/cli'"),
     'bin/apollo-toolkit.ts must import from @laitszkin/cli',
   );
-  assert.equal(
-    pkg.dependencies['@laitszkin/cli'],
-    'workspace:*',
-    '@laitszkin/cli must be a workspace:* runtime dependency',
+  assert.ok(
+    !Object.hasOwn(pkg.dependencies, '@laitszkin/cli'),
+    '@laitszkin/cli must not be a root runtime dependency; compiled imports are rewritten into package-relative paths',
   );
   assert.ok(
-    !Object.hasOwn(pkg.devDependencies, '@laitszkin/cli'),
-    '@laitszkin/cli must not appear in devDependencies',
+    Object.hasOwn(pkg.devDependencies, '@laitszkin/cli'),
+    '@laitszkin/cli must remain a workspace devDependency for local TypeScript and tests',
+  );
+  assert.equal(
+    pkg.devDependencies['@laitszkin/cli'],
+    'workspace:*',
+    '@laitszkin/cli devDependency must use the local workspace package',
+  );
+  assert.equal(
+    pkg.dependencies.pacote,
+    '^22.0.0',
+    'pacote must be a root runtime dependency because the published auto-update runner dynamically imports it',
   );
   assert.equal(
     pkg.bin['apollo-toolkit'],
@@ -212,4 +222,70 @@ test('REGTEST-09: root package declares CLI workspace runtime dependency', () =>
     'dist/bin/apollo-toolkit.js',
     'apltk bin entry must point to dist/bin/apollo-toolkit.js',
   );
+});
+
+test('REGTEST-10: packed npm manifest does not depend on unpublished workspace packages', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apollo-pack-test-'));
+  try {
+    const result = spawnSync(
+      'pnpm',
+      ['pack', '--json', '--pack-destination', tempDir],
+      {
+        cwd: projectRoot,
+        encoding: 'utf-8',
+      },
+    );
+
+    assert.strictEqual(
+      result.status,
+      0,
+      `pnpm pack failed:\n${result.stdout}\n${result.stderr}`,
+    );
+
+    const parsedPackResult = JSON.parse(result.stdout);
+    const packResult = Array.isArray(parsedPackResult)
+      ? parsedPackResult[0]
+      : parsedPackResult;
+    const tarballPath = packResult.filename;
+    const manifest = spawnSync(
+      'tar',
+      ['-xOf', tarballPath, 'package/package.json'],
+      {
+        cwd: projectRoot,
+        encoding: 'utf-8',
+      },
+    );
+
+    assert.strictEqual(
+      manifest.status,
+      0,
+      `failed to read packed package.json:\n${manifest.stderr}`,
+    );
+
+    const packedPkg = JSON.parse(manifest.stdout);
+    const runtimeDeps = {
+      ...(packedPkg.dependencies || {}),
+      ...(packedPkg.optionalDependencies || {}),
+    };
+    const unpublishedWorkspaceDeps = Object.keys(runtimeDeps).filter((name) =>
+      name.startsWith('@laitszkin/'),
+    );
+
+    // The published root package includes compiled workspace package files and
+    // scripts/rewrite-imports.mjs rewrites @laitszkin/* imports to relative
+    // paths. Leaving workspace packages in npm runtime metadata makes global
+    // installs resolve unpublished packages and fail before the CLI can run.
+    assert.deepEqual(
+      unpublishedWorkspaceDeps,
+      [],
+      `packed runtime dependencies must not include unpublished workspace packages: ${unpublishedWorkspaceDeps.join(', ')}`,
+    );
+    assert.equal(
+      runtimeDeps.pacote,
+      '^22.0.0',
+      'packed package must keep pacote as a runtime dependency for auto-update extraction',
+    );
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 });

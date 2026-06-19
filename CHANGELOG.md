@@ -4,6 +4,12 @@ All notable changes to this repository are documented in this file.
 
 ## [Unreleased]
 
+## [v5.3.2] - 2026-06-19
+
+### Fixed
+
+- **npm package metadata**: Published package manifests no longer declare unpublished `@laitszkin/*` workspace packages as runtime npm dependencies, preventing global install failures.
+
 ## [v5.3.1] - 2026-06-19
 
 ### Fixed
