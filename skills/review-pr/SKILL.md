@@ -14,12 +14,12 @@ description: Review a pull request — interactive PR selection via `gh`, 4-dime
 
 ## Severity Scale
 
-| Level | When to assign |
-|-------|----------------|
+| Level             | When to assign                                                      |
+| ----------------- | ------------------------------------------------------------------- |
 | **P0 — Critical** | Main functionality broken; business logic contradicts design intent |
-| **P1 — Major** | Secondary functionality broken |
-| **P2 — Minor** | Edge functionality broken |
-| **P3 — Trivial** | Rare boundary conditions cause incorrect behavior |
+| **P1 — Major**    | Secondary functionality broken                                      |
+| **P2 — Minor**    | Edge functionality broken                                           |
+| **P3 — Trivial**  | Rare boundary conditions cause incorrect behavior                   |
 
 ## Review Dimensions
 

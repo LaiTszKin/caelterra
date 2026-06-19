@@ -1,9 +1,11 @@
 # apltk architecture — Declarative Architecture Diagram CLI
 
 ## Purpose
+
 Manages architecture diagrams under `resources/project-architecture/` via YAML state files, supporting baseline diagrams, spec overlay diffing, and merge.
 
 ## Usage
+
 Before using this tool, run `apltk architecture --help` and the relevant subcommand help, then follow the live CLI guidance.
 
 ```
@@ -11,20 +13,22 @@ apltk architecture [verb] [options]
 ```
 
 ## Global Flags
-| Flag | Effect |
-|------|--------|
-| `--project <root>` | Specify project root (defaults to upward search from cwd) |
-| `--spec <spec_dir>` | Write to spec overlay rather than base architecture |
-| `--no-render` | Skip auto-re-render after a change (batch multiple commands) |
-| `--no-open` | Suppress browser open on `open` and `diff` |
-| `--dry-run` | Preview changes as JSON diff, do not write |
-| `--out <dir>` | Output directory for `diff` |
-| `--clean` | Remove spec overlay directory after successful `merge` |
-| `--all` | Select all pending spec overlays on `merge` |
-| `--json` | Output JSON on `status` |
+
+| Flag                          | Effect                                                                |
+| ----------------------------- | --------------------------------------------------------------------- |
+| `--project <root>`            | Specify project root (defaults to upward search from cwd)             |
+| `--spec <spec_dir>`           | Write to spec overlay rather than base architecture                   |
+| `--no-render`                 | Skip auto-re-render after a change (batch multiple commands)          |
+| `--no-open`                   | Suppress browser open on `open` and `diff`                            |
+| `--dry-run`                   | Preview changes as JSON diff, do not write                            |
+| `--out <dir>`                 | Output directory for `diff`                                           |
+| `--clean`                     | Remove spec overlay directory after successful `merge`                |
+| `--all`                       | Select all pending spec overlays on `merge`                           |
+| `--json`                      | Output JSON on `status`                                               |
 | `--evidence <level[:source]>` | Mark a component's evidence quality level (observed/inferred/assumed) |
 
 ## Top-Level Verbs
+
 - **`open`** — Open the base architecture diagram HTML (bootstraps if not yet rendered)
 - **`diff`** — Collect all overlays under `docs/plans/`, produce a before/after viewer
 - **`render`** — Regenerate HTML from current YAML state
@@ -49,6 +53,7 @@ apltk architecture add relation <endpoint> --deployed-on <endpoint>
 ```
 
 **Module flags:**
+
 - `--part-of <feature>` (required) — parent feature this module belongs to
 - `--kind <kind>` — submodule kind (service, api, ui, worker, external)
 - `--depends-on <feature>` — comma-separated dependency targets
@@ -56,6 +61,7 @@ apltk architecture add relation <endpoint> --deployed-on <endpoint>
 - `--data-flow-to <endpoint>` — target endpoint for data flow
 
 **Relation flags:**
+
 - `--data-flow-to <endpoint>` — data flows from source to target
 - `--implements <endpoint>` — implements an interface
 - `--deployed-on <endpoint>` — deployment target
@@ -80,6 +86,7 @@ apltk architecture add feature <slug> [--depends-on <feature>] \
 ```
 
 ## Notes
+
 - Auto-renders after each mutation (unless `--no-render`)
 - Each mutation creates an undo snapshot; run `undo` to revert
 - Work is not complete until validation passes

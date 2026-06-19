@@ -6,7 +6,11 @@ const TOOLS_BY_NAME = new Map<string, ToolDefinition>();
 export function registerTool(tool: ToolDefinition): void {
   TOOLS_BY_NAME.set(tool.name, tool);
   for (const alias of tool.aliases || []) {
-    TOOLS_BY_NAME.set(alias, { ...tool, name: alias, canonicalName: tool.name });
+    TOOLS_BY_NAME.set(alias, {
+      ...tool,
+      name: alias,
+      canonicalName: tool.name,
+    });
   }
 }
 
@@ -25,8 +29,6 @@ export async function runTool(
   toolArgs: string[],
   context: ToolContext = {},
 ): Promise<number> {
-  const stdout = context.stdout || process.stdout;
-  const stderr = context.stderr || process.stderr;
   const tool = getTool(toolName);
 
   if (!tool) {
@@ -41,18 +43,20 @@ export async function runTool(
 }
 
 export function formatExamples(examples: ToolExample[] = []): string {
-  return examples.map(({ command, result }) => (
-    `  ${command}\n    Result: ${result}`
-  )).join('\n');
+  return examples
+    .map(({ command, result }) => `  ${command}\n    Result: ${result}`)
+    .join('\n');
 }
 
 export function formatToolList(): string {
   const tools = listTools();
   const width = tools.reduce((max, t) => Math.max(max, t.name.length), 0);
-  return tools.map((t) => {
-    const name = t.name.padEnd(width, ' ');
-    return `  ${name}  ${t.description}`;
-  }).join('\n');
+  return tools
+    .map((t) => {
+      const name = t.name.padEnd(width, ' ');
+      return `  ${name}  ${t.description}`;
+    })
+    .join('\n');
 }
 
 export function buildToolDiscoveryHelp(): string {
@@ -62,21 +66,29 @@ export function buildToolDiscoveryHelp(): string {
     if (!categories.has(category)) {
       categories.set(category, []);
     }
-    categories.get(category)!.push(tool);
+    categories.get(category)?.push(tool);
   }
 
   const lines = ['Common goals:'];
   for (const [category, tools] of categories.entries()) {
     lines.push(`  ${category}:`);
     for (const tool of tools) {
-      const firstUseCase = tool.help?.useWhen?.[0] || tool.description;
+      const firstUseCase = tool.help?.useWhen[0] || tool.description;
       lines.push(`    - \`${tool.name}\`: ${firstUseCase}`);
     }
   }
-  lines.push('', 'Next step:', '  Run `apltk tools <tool> --help` for the exact flags, behavior notes, and examples of one tool.');
+  lines.push(
+    '',
+    'Next step:',
+    '  Run `apltk tools <tool> --help` for the exact flags, behavior notes, and examples of one tool.',
+  );
   return lines.join('\n');
 }
 
 export function isTopLevelToolHelpRequest(toolArgs: string[]): boolean {
-  return Array.isArray(toolArgs) && toolArgs.length > 0 && toolArgs.every((arg) => arg === '--help' || arg === '-h');
+  return (
+    Array.isArray(toolArgs) &&
+    toolArgs.length > 0 &&
+    toolArgs.every((arg) => arg === '--help' || arg === '-h')
+  );
 }

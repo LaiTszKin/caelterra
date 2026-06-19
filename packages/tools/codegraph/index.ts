@@ -12,7 +12,10 @@ import { handleImpact } from './lib/cmd-impact.js';
 import { handleNode } from './lib/cmd-node.js';
 import { handleContext } from './lib/cmd-context.js';
 
-export async function codegraphHandler(args: string[], context: ToolContext): Promise<number> {
+export async function codegraphHandler(
+  args: string[],
+  context: ToolContext,
+): Promise<number> {
   const stdout = context.stdout || process.stdout;
   const stderr = context.stderr || process.stderr;
 
@@ -22,12 +25,17 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
   if (jsonIndex >= 0) args.splice(jsonIndex, 1);
 
   // Main help: no args, --help, -h, or "help" subcommand
-  if (args.length === 0 || args[0] === '--help' || args[0] === '-h' || args[0] === 'help') {
+  if (
+    args.length === 0 ||
+    args[0] === '--help' ||
+    args[0] === '-h' ||
+    args[0] === 'help'
+  ) {
     printHelp(stdout);
     return 0;
   }
 
-  const subcommand = args[0];
+  const subcommand = args[0] ?? '';
 
   // Per-subcommand help: e.g., "apltk codegraph search --help"
   // Check for --help/-h at position 1 (after the subcommand name)
@@ -44,9 +52,17 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
   try {
     projectRoot = findProjectRoot(context.cwd || process.cwd());
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error finding project root';
-    if ((error as any)?.code === 'MODULE_NOT_FOUND' || message.includes('Cannot find module')) {
-      throw new UserInputError('`@colbymchenry/codegraph` is not installed. Run `npm install @colbymchenry/codegraph` in your project directory.');
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unknown error finding project root';
+    if (
+      (error as { code?: string } | null)?.code === 'MODULE_NOT_FOUND' ||
+      message.includes('Cannot find module')
+    ) {
+      throw new UserInputError(
+        '`@colbymchenry/codegraph` is not installed. Run `npm install @colbymchenry/codegraph` in your project directory.',
+      );
     }
     throw new SystemError(`Error finding project root: ${message}`);
   }
@@ -60,7 +76,8 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
   const limitIndex = rest.indexOf('--limit');
   let limit: number | undefined;
   if (limitIndex >= 0 && limitIndex + 1 < rest.length) {
-    limit = parseInt(rest[limitIndex + 1], 10);
+    const limitVal = rest[limitIndex + 1];
+    limit = limitVal !== undefined ? parseInt(limitVal, 10) : undefined;
     rest.splice(limitIndex, 2);
   }
 
@@ -74,7 +91,8 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
   const depthIndex = rest.indexOf('--depth');
   let depth: number | undefined;
   if (depthIndex >= 0 && depthIndex + 1 < rest.length) {
-    depth = parseInt(rest[depthIndex + 1], 10);
+    const depthVal = rest[depthIndex + 1];
+    depth = depthVal !== undefined ? parseInt(depthVal, 10) : undefined;
     rest.splice(depthIndex, 2);
   }
 
@@ -88,7 +106,9 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
   const maxNodesIndex = rest.indexOf('--max-nodes');
   let maxNodes: number | undefined;
   if (maxNodesIndex >= 0 && maxNodesIndex + 1 < rest.length) {
-    maxNodes = parseInt(rest[maxNodesIndex + 1], 10);
+    const maxNodesVal = rest[maxNodesIndex + 1];
+    maxNodes =
+      maxNodesVal !== undefined ? parseInt(maxNodesVal, 10) : undefined;
     rest.splice(maxNodesIndex, 2);
   }
 
@@ -99,7 +119,10 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
   try {
     switch (subcommand) {
       case 'init':
-        return await handleInit(projectRoot, { index: shouldIndex, json: isJson });
+        return await handleInit(projectRoot, {
+          index: shouldIndex,
+          json: isJson,
+        });
 
       case 'index':
         return await handleIndex(projectRoot, { json: isJson });
@@ -114,35 +137,58 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
       case 'search': {
         const query = rest.join(' ');
         if (!query) {
-          throw new UserInputError('Usage: apltk codegraph query <query> [--kind KIND] [--limit N] [--json]');
+          throw new UserInputError(
+            'Usage: apltk codegraph query <query> [--kind KIND] [--limit N] [--json]',
+          );
         }
-        return await handleQuery(projectRoot, query, { kind, limit, json: isJson });
+        return await handleQuery(projectRoot, query, {
+          ...(kind !== undefined && { kind }),
+          ...(limit !== undefined && { limit }),
+          json: isJson,
+        });
       }
 
-      case 'files':
-        return await handleFiles(projectRoot, { filter: filter || rest[0], json: isJson });
+      case 'files': {
+        const filesFilter = filter || rest[0];
+        return await handleFiles(projectRoot, {
+          ...(filesFilter !== undefined && { filter: filesFilter }),
+          json: isJson,
+        });
+      }
 
       case 'callers':
       case 'callees': {
         const symbol = rest.join(' ');
         if (!symbol) {
-          throw new UserInputError(`Usage: apltk codegraph ${subcommand} <symbol> [--limit N] [--json]`);
+          throw new UserInputError(
+            `Usage: apltk codegraph ${subcommand} <symbol> [--limit N] [--json]`,
+          );
         }
-        return await handleRelations(projectRoot, subcommand, symbol, { limit, json: isJson });
+        return await handleRelations(projectRoot, subcommand, symbol, {
+          ...(limit !== undefined && { limit }),
+          json: isJson,
+        });
       }
 
       case 'impact': {
         const symbol = rest.join(' ');
         if (!symbol) {
-          throw new UserInputError('Usage: apltk codegraph impact <symbol> [--depth N] [--json]');
+          throw new UserInputError(
+            'Usage: apltk codegraph impact <symbol> [--depth N] [--json]',
+          );
         }
-        return await handleImpact(projectRoot, symbol, { depth, json: isJson });
+        return await handleImpact(projectRoot, symbol, {
+          ...(depth !== undefined && { depth }),
+          json: isJson,
+        });
       }
 
       case 'node': {
         const symbol = rest.join(' ');
         if (!symbol) {
-          throw new UserInputError('Usage: apltk codegraph node <symbol-or-id> [--json]');
+          throw new UserInputError(
+            'Usage: apltk codegraph node <symbol-or-id> [--json]',
+          );
         }
         return await handleNode(projectRoot, symbol, { json: isJson });
       }
@@ -151,17 +197,29 @@ export async function codegraphHandler(args: string[], context: ToolContext): Pr
       case 'explore': {
         const query = rest.join(' ');
         if (!query) {
-          throw new UserInputError('Usage: apltk codegraph context <question> [--max-nodes N] [--no-code] [--json]');
+          throw new UserInputError(
+            'Usage: apltk codegraph context <question> [--max-nodes N] [--no-code] [--json]',
+          );
         }
-        return await handleContext(projectRoot, query, { maxNodes, includeCode, json: isJson });
+        return await handleContext(projectRoot, query, {
+          ...(maxNodes !== undefined && { maxNodes }),
+          includeCode,
+          json: isJson,
+        });
       }
 
       default:
-        throw new SystemError(`Unknown codegraph subcommand: ${subcommand}`);
+        throw new SystemError(
+          `Unknown codegraph subcommand: ${subcommand || 'unknown'}`,
+        );
     }
   } catch (error: unknown) {
-    if (error instanceof SystemError || error instanceof UserInputError) throw error;
-    throw new SystemError(error instanceof Error ? error.message : 'Unknown error in codegraph', { cause: error instanceof Error ? error : undefined });
+    if (error instanceof SystemError || error instanceof UserInputError)
+      throw error;
+    throw new SystemError(
+      error instanceof Error ? error.message : 'Unknown error in codegraph',
+      { cause: error instanceof Error ? error : undefined },
+    );
   }
 }
 
@@ -238,9 +296,11 @@ Examples:
 `);
 }
 
-function printSubcommandHelp(subcommand: string, stream: NodeJS.WriteStream, errStream: NodeJS.WriteStream): void {
-  const PAD = '  ';
-
+function printSubcommandHelp(
+  subcommand: string,
+  stream: NodeJS.WriteStream,
+  errStream: NodeJS.WriteStream,
+): void {
   const helps: Record<string, string> = {
     init: `Usage: apltk codegraph init [--index] [--json]
 
@@ -406,13 +466,16 @@ Examples:
   if (text) {
     stream.write(text);
   } else {
-    errStream.write(`Unknown subcommand: "${subcommand}". Use "apltk codegraph --help" for the list of available subcommands.\n`);
+    errStream.write(
+      `Unknown subcommand: "${subcommand}". Use "apltk codegraph --help" for the list of available subcommands.\n`,
+    );
   }
 }
 
 export const tool: ToolDefinition = {
   name: 'codegraph',
   category: 'Code analysis',
-  description: 'CodeGraph codebase exploration — init, index, sync, status, query, files, callers, callees, impact, node, context',
+  description:
+    'CodeGraph codebase exploration — init, index, sync, status, query, files, callers, callees, impact, node, context',
   handler: codegraphHandler,
 };

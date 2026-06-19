@@ -116,11 +116,11 @@
 
 ### 平台支援
 
-| 平台 | 排程機制 | 任務名稱 |
-|------|---------|---------|
-| macOS | launchd user agent | `com.apollotoolkit.auto-update` |
-| Linux | systemd user timer | `apollo-toolkit-update.timer` |
-| Windows | schtasks | `ApolloToolkitAutoUpdate` |
+| 平台    | 排程機制           | 任務名稱                        |
+| ------- | ------------------ | ------------------------------- |
+| macOS   | launchd user agent | `com.apollotoolkit.auto-update` |
+| Linux   | systemd user timer | `apollo-toolkit-update.timer`   |
+| Windows | schtasks           | `ApolloToolkitAutoUpdate`       |
 
 ### 實作檔案
 

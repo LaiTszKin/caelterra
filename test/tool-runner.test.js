@@ -1,16 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseArguments, run, HelpTextBuilder } from '@laitszkin/cli';
+import { run, HelpTextBuilder } from '@laitszkin/cli';
 import { listTools, getTool, runTool } from '@laitszkin/tool-registry';
 
 test('HelpTextBuilder.toolsHelp lists bundled tools', () => {
-  const help = new HelpTextBuilder({ version: '1.2.3', colorEnabled: false }).toolsHelp();
+  const help = new HelpTextBuilder({
+    version: '1.2.3',
+    colorEnabled: false,
+  }).toolsHelp();
   assert.match(help, /apltk tools/);
   assert.match(help, /Common goals:/);
 });
 
 test('HelpTextBuilder.overview provides task-oriented overview help', () => {
-  const help = new HelpTextBuilder({ version: '1.2.3', colorEnabled: false }).overview();
+  const help = new HelpTextBuilder({
+    version: '1.2.3',
+    colorEnabled: false,
+  }).overview();
   assert.match(help, /Common goals:/);
   assert.match(help, /apltk tools --help/);
   assert.match(help, /Examples:/);
@@ -26,11 +32,17 @@ test('getTool returns null for unknown tool', () => {
 });
 
 test('runTool throws ToolNotFoundError for unknown tool', async () => {
-  let stderrText = '';
+  let _stderrText = '';
   await assert.rejects(
-    () => runTool('nonexistent-tool', [], {
-      stderr: { write(chunk) { stderrText += chunk; return true; } },
-    }),
+    () =>
+      runTool('nonexistent-tool', [], {
+        stderr: {
+          write(chunk) {
+            _stderrText += chunk;
+            return true;
+          },
+        },
+      }),
     (err) => {
       assert.match(err.message, /Unknown tool/);
       assert.equal(err.code, 'TOOL_NOT_FOUND');

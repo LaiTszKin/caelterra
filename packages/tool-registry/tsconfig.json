@@ -7,6 +7,9 @@
     "rootDir": ".",
     "declaration": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noPropertyAccessFromIndexSignature": true,
     "composite": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -15,8 +18,5 @@
   },
   "include": ["*.ts"],
   "exclude": ["dist", "node_modules"],
-  "references": [
-    { "path": "../tui" },
-    { "path": "../tool-utils" }
-  ]
+  "references": [{ "path": "../tui" }, { "path": "../tool-utils" }]
 }

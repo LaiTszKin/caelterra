@@ -1,7 +1,7 @@
 {
   "name": "@laitszkin/tool-registry",
   "version": "5.0.0",
-  "description": "Apollo Toolkit \u2014 unified tool registration, lookup, and dispatch",
+  "description": "Apollo Toolkit — unified tool registration, lookup, and dispatch",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,6 +15,9 @@
   "scripts": {
     "build": "tsc --build",
     "test": "node --test dist/"
+  },
+  "dependencies": {
+    "@laitszkin/tool-utils": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

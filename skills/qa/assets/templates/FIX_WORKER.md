@@ -59,6 +59,7 @@
 ### Output
 
 When done, report back to the coordinator:
+
 - **Files modified**: [list of files]
 - **Change summary**: [brief description]
 - **Test results**: [pass/fail]

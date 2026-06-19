@@ -1,10 +1,19 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { createToolRunner, AppError } from '@laitszkin/tool-utils';
 
 function createMemoryStream() {
   let data = '';
-  return { write(chunk) { data += chunk; return true; }, toString() { return data; } };
+  const stream = new EventEmitter();
+  stream.write = (chunk) => {
+    data += chunk;
+    return true;
+  };
+  stream.toString = () => data;
+  stream.resume = () => {};
+  stream.pause = () => {};
+  return stream;
 }
 
 describe('SchemaOption multiple support', () => {
@@ -52,12 +61,17 @@ describe('createToolRunner catch with AppError base class', () => {
   it('returns exit code 1 and formats AppError with "Error:" prefix', async () => {
     const schema = {
       options: {},
-      handler: async () => { throw new AppError('base app error'); },
+      handler: async () => {
+        throw new AppError('base app error');
+      },
     };
     const runner = createToolRunner(schema);
     const stderr = createMemoryStream();
     const exitCode = await runner([], { stdout: createMemoryStream(), stderr });
     assert.strictEqual(exitCode, 1);
-    assert.strictEqual(stderr.toString(), 'Error: base app error\n');
+    assert.strictEqual(
+      stderr.toString().replace(/\r/g, ''),
+      'Error: base app error\n',
+    );
   });
 });

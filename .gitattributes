@@ -1,0 +1,4 @@
+# Force LF line endings for consistency across platforms.
+# Prettier expects LF; without this, Windows git checkouts
+# convert to CRLF and cause spurious format-check failures.
+* text=auto eol=lf

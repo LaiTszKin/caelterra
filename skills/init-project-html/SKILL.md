@@ -19,12 +19,12 @@ Help users understand the project's software architecture.
 
 This skill's "feature" and "submodule" map to the C4 model as follows:
 
-| C4 Level | Skill Equivalent | Description | When to Use |
-|----------|-----------------|-------------|-------------|
-| System Context | Whole system | System boundaries, external actors, and external systems | Step 1 — establish baseline awareness |
-| Container | Feature | High-level functional boundary (e.g. Login, Payment) | Primary abstraction level |
-| Component | Submodule | Implementation unit inside a feature (controller, service, repository) | Primary detail level |
-| Code | Function row | Function-level detail with source file and line evidence | Mandatory — every submodule must declare its functions with `evidence.sourceFile:sourceLine` |
+| C4 Level       | Skill Equivalent | Description                                                            | When to Use                                                                                  |
+| -------------- | ---------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| System Context | Whole system     | System boundaries, external actors, and external systems               | Step 1 — establish baseline awareness                                                        |
+| Container      | Feature          | High-level functional boundary (e.g. Login, Payment)                   | Primary abstraction level                                                                    |
+| Component      | Submodule        | Implementation unit inside a feature (controller, service, repository) | Primary detail level                                                                         |
+| Code           | Function row     | Function-level detail with source file and line evidence               | Mandatory — every submodule must declare its functions with `evidence.sourceFile:sourceLine` |
 
 ## Mode Detection
 
@@ -58,6 +58,7 @@ Applicable modes: design (full initialization), record (quick recording)
 Before choosing commands, run `apltk codegraph --help` and `apltk codegraph <subcommand> --help`. Use the live help output to initialize/index if needed, then inspect files, symbols, call relationships, contextual flows, or impact radius relevant to the architecture atlas.
 
 Based on CodeGraph findings, partition features (C4 Container level):
+
 - Group interconnected function clusters into the same feature's submodules
 - Identify feature boundaries and cross-feature call relationships
 

@@ -12,10 +12,10 @@
 
 Map each BDD requirement from SPEC.md to one or more tests:
 
-| ID | Observable Behavior | SPEC Requirement | Corresponding Test | Result |
-|---|---|---|---|---|
-| CL-01 | [Behavior description] | Req 1 | [Test IDs] | `[status]` |
-| CL-02 | [Behavior description] | Req 1 | [Test IDs] | `[status]` |
+| ID    | Observable Behavior    | SPEC Requirement | Corresponding Test | Result     |
+| ----- | ---------------------- | ---------------- | ------------------ | ---------- |
+| CL-01 | [Behavior description] | Req 1            | [Test IDs]         | `[status]` |
+| CL-02 | [Behavior description] | Req 1            | [Test IDs]         | `[status]` |
 
 ---
 
@@ -34,9 +34,9 @@ Map each BDD requirement from SPEC.md to one or more tests:
 
 ## E2E / Integration Decisions
 
-| Flow / Risk | Test Level | Rationale |
-|---|---|---|
-| [Flow description] | [E2E / Integration / Existing coverage / N/A] | [why] |
+| Flow / Risk        | Test Level                                    | Rationale |
+| ------------------ | --------------------------------------------- | --------- |
+| [Flow description] | [E2E / Integration / Existing coverage / N/A] | [why]     |
 
 ---
 

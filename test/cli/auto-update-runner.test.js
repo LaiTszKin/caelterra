@@ -7,7 +7,6 @@ import {
   existsSync,
   readFileSync,
   rmSync,
-  readdirSync,
 } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -22,7 +21,11 @@ import { tmpdir } from 'node:os';
  */
 function createSourceFixture(rootDir, version, skillContent) {
   mkdirSync(join(rootDir, 'skills', 'test-skill'), { recursive: true });
-  writeFileSync(join(rootDir, 'skills', 'test-skill', 'SKILL.md'), skillContent, 'utf8');
+  writeFileSync(
+    join(rootDir, 'skills', 'test-skill', 'SKILL.md'),
+    skillContent,
+    'utf8',
+  );
   writeFileSync(
     join(rootDir, 'package.json'),
     JSON.stringify({ name: '@laitszkin/cli', version }, null, 2),
@@ -63,15 +66,19 @@ describe('auto-update-runner', () => {
 
     // Fake PackageSource that returns the same version as current.
     const fakeSource = {
-      resolveLatest: async (_pkgName) => ({ version: '1.0.0', spec: `${_pkgName}@1.0.0` }),
+      resolveLatest: async (_pkgName) => ({
+        version: '1.0.0',
+        spec: `${_pkgName}@1.0.0`,
+      }),
       extract: async (_spec, _dest) => {
-        throw new Error('extract should not be called when version is not newer');
+        throw new Error(
+          'extract should not be called when version is not newer',
+        );
       },
     };
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     const result = await runAutoUpdate({
       sourceRoot: tmp,
@@ -82,15 +89,27 @@ describe('auto-update-runner', () => {
       packageSource: fakeSource,
     });
 
-    assert.equal(result.updated, false, 'should indicate no update was performed');
+    assert.equal(
+      result.updated,
+      false,
+      'should indicate no update was performed',
+    );
     assert.equal(result.latestVersion, '1.0.0', 'should report latest version');
-    assert.equal(result.previousVersion, '1.0.0', 'should report previous version');
+    assert.equal(
+      result.previousVersion,
+      '1.0.0',
+      'should report previous version',
+    );
 
     // Status file should have a lastRunAt timestamp.
     const status = readStatusFile(toolkitHome);
     assert.ok(status, 'status file should exist');
     assert.ok(status.lastRunAt, 'status should have lastRunAt');
-    assert.equal(status.lastVersion, '1.0.0', 'status should record current version');
+    assert.equal(
+      status.lastVersion,
+      '1.0.0',
+      'status should record current version',
+    );
     assert.ok(!status.lastError, 'status should not have lastError');
   });
 
@@ -102,13 +121,17 @@ describe('auto-update-runner', () => {
     createSourceFixture(toolkitHome, '2.0.0', '# Newer content\n');
 
     const fakeSource = {
-      resolveLatest: async (_pkgName) => ({ version: '1.0.0', spec: `${_pkgName}@1.0.0` }),
-      extract: async () => { throw new Error('extract should not be called'); },
+      resolveLatest: async (_pkgName) => ({
+        version: '1.0.0',
+        spec: `${_pkgName}@1.0.0`,
+      }),
+      extract: async () => {
+        throw new Error('extract should not be called');
+      },
     };
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     const result = await runAutoUpdate({
       sourceRoot: tmp,
@@ -119,8 +142,16 @@ describe('auto-update-runner', () => {
       packageSource: fakeSource,
     });
 
-    assert.equal(result.updated, false, 'should indicate no update was performed');
-    assert.equal(result.latestVersion, '1.0.0', 'should report older latest version');
+    assert.equal(
+      result.updated,
+      false,
+      'should indicate no update was performed',
+    );
+    assert.equal(
+      result.latestVersion,
+      '1.0.0',
+      'should report older latest version',
+    );
   });
 
   // ---- Test 2: Managed skill content is overwritten by extracted content ----
@@ -137,21 +168,32 @@ describe('auto-update-runner', () => {
 
     // Fake PackageSource that extracts new version to a temp dir.
     const fakeSource = {
-      resolveLatest: async (_pkgName) => ({ version: '2.0.0', spec: `${_pkgName}@2.0.0` }),
+      resolveLatest: async (_pkgName) => ({
+        version: '2.0.0',
+        spec: `${_pkgName}@2.0.0`,
+      }),
       extract: async (_spec, dest) => {
-        writeFileSync(join(dest, 'package.json'), JSON.stringify({ name: '@laitszkin/cli', version: '2.0.0' }));
+        writeFileSync(
+          join(dest, 'package.json'),
+          JSON.stringify({ name: '@laitszkin/cli', version: '2.0.0' }),
+        );
         mkdirSync(join(dest, 'skills', 'test-skill'), { recursive: true });
-        writeFileSync(join(dest, 'skills', 'test-skill', 'SKILL.md'), '# New content\n');
+        writeFileSync(
+          join(dest, 'skills', 'test-skill', 'SKILL.md'),
+          '# New content\n',
+        );
         // Also add a new skill that didn't exist before.
         mkdirSync(join(dest, 'skills', 'new-skill'), { recursive: true });
-        writeFileSync(join(dest, 'skills', 'new-skill', 'SKILL.md'), '# New skill\n');
+        writeFileSync(
+          join(dest, 'skills', 'new-skill', 'SKILL.md'),
+          '# New skill\n',
+        );
         return { version: '2.0.0', sourceRoot: dest };
       },
     };
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     const result = await runAutoUpdate({
       sourceRoot: tmp,
@@ -166,11 +208,18 @@ describe('auto-update-runner', () => {
     assert.equal(result.latestVersion, '2.0.0', 'should report new version');
 
     // Old content should now be overwritten.
-    assert.match(readFileSync(oldSkillFile, 'utf8'), /New content/, 'old skill content should be overwritten');
+    assert.match(
+      readFileSync(oldSkillFile, 'utf8'),
+      /New content/,
+      'old skill content should be overwritten',
+    );
 
     // New skill should exist.
     const newSkillFile = join(toolkitHome, 'skills', 'new-skill', 'SKILL.md');
-    assert.ok(existsSync(newSkillFile), 'new skill from extracted package should exist');
+    assert.ok(
+      existsSync(newSkillFile),
+      'new skill from extracted package should exist',
+    );
     assert.match(readFileSync(newSkillFile, 'utf8'), /New skill/);
 
     // Status should record success.
@@ -191,24 +240,36 @@ describe('auto-update-runner', () => {
     // Write config with disabled state before the run.
     writeFileSync(
       join(toolkitHome, '.apollo-toolkit-auto-update.json'),
-      JSON.stringify({ enabled: false, updatedAt: '2026-06-16T00:00:00.000Z' }, null, 2),
+      JSON.stringify(
+        { enabled: false, updatedAt: '2026-06-16T00:00:00.000Z' },
+        null,
+        2,
+      ),
       'utf8',
     );
 
     // Fake PackageSource that extracts a newer version successfully.
     const fakeSource = {
-      resolveLatest: async (_pkgName) => ({ version: '2.0.0', spec: `${_pkgName}@2.0.0` }),
+      resolveLatest: async (_pkgName) => ({
+        version: '2.0.0',
+        spec: `${_pkgName}@2.0.0`,
+      }),
       extract: async (_spec, dest) => {
-        writeFileSync(join(dest, 'package.json'), JSON.stringify({ name: '@laitszkin/cli', version: '2.0.0' }));
+        writeFileSync(
+          join(dest, 'package.json'),
+          JSON.stringify({ name: '@laitszkin/cli', version: '2.0.0' }),
+        );
         mkdirSync(join(dest, 'skills', 'test-skill'), { recursive: true });
-        writeFileSync(join(dest, 'skills', 'test-skill', 'SKILL.md'), '# New content\n');
+        writeFileSync(
+          join(dest, 'skills', 'test-skill', 'SKILL.md'),
+          '# New content\n',
+        );
         return { version: '2.0.0', sourceRoot: dest };
       },
     };
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     const result = await runAutoUpdate({
       sourceRoot: tmp,
@@ -233,7 +294,11 @@ describe('auto-update-runner', () => {
     assert.ok(status, 'status file should exist');
     assert.equal(status.enabled, false, 'status.enabled should be false');
     assert.ok(status.lastSuccessAt, 'status should have lastSuccessAt');
-    assert.equal(status.lastVersion, '2.0.0', 'status should record new version');
+    assert.equal(
+      status.lastVersion,
+      '2.0.0',
+      'status should record new version',
+    );
   });
 
   // ---- Test 4b: Only updates manifest-backed installed targets ----
@@ -250,10 +315,15 @@ describe('auto-update-runner', () => {
 
     // Create existing Trae target skill (simulating previously installed skill)
     mkdirSync(join(traeRoot, 'test-skill'), { recursive: true });
-    writeFileSync(join(traeRoot, 'test-skill', 'SKILL.md'), '# Locally modified target\n', 'utf8');
+    writeFileSync(
+      join(traeRoot, 'test-skill', 'SKILL.md'),
+      '# Locally modified target\n',
+      'utf8',
+    );
 
     // Write Trae manifest via writeManifest
-    const { writeManifest } = await import('../../packages/cli/dist/installer.js');
+    const { writeManifest } =
+      await import('../../packages/cli/dist/installer.js');
     await writeManifest(traeRoot, {
       version: '1.0.0',
       linkMode: 'copy',
@@ -265,7 +335,10 @@ describe('auto-update-runner', () => {
 
     // Fake PackageSource that extracts version 2.0.0 with updated skill content
     const fakeSource = {
-      resolveLatest: async (_pkgName) => ({ version: '2.0.0', spec: `${_pkgName}@2.0.0` }),
+      resolveLatest: async (_pkgName) => ({
+        version: '2.0.0',
+        spec: `${_pkgName}@2.0.0`,
+      }),
       extract: async (_spec, dest) => {
         writeFileSync(
           join(dest, 'package.json'),
@@ -273,14 +346,17 @@ describe('auto-update-runner', () => {
           'utf8',
         );
         mkdirSync(join(dest, 'skills', 'test-skill'), { recursive: true });
-        writeFileSync(join(dest, 'skills', 'test-skill', 'SKILL.md'), '# New content\n', 'utf8');
+        writeFileSync(
+          join(dest, 'skills', 'test-skill', 'SKILL.md'),
+          '# New content\n',
+          'utf8',
+        );
         return { version: '2.0.0', sourceRoot: dest };
       },
     };
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     const result = await runAutoUpdate({
       sourceRoot: tmp,
@@ -294,7 +370,11 @@ describe('auto-update-runner', () => {
 
     assert.equal(result.updated, true, 'should indicate update was performed');
     assert.equal(result.latestVersion, '2.0.0', 'should report new version');
-    assert.equal(result.previousVersion, '1.0.0', 'should report previous version');
+    assert.equal(
+      result.previousVersion,
+      '1.0.0',
+      'should report previous version',
+    );
     assert.ok(!result.lastError, 'should have no error');
 
     // Trae skill (which HAS a manifest) SHOULD be updated
@@ -331,7 +411,11 @@ describe('auto-update-runner', () => {
     // Status should record success
     const status = readStatusFile(toolkitHome);
     assert.ok(status, 'status file should exist');
-    assert.equal(status.lastVersion, '2.0.0', 'status should record new version');
+    assert.equal(
+      status.lastVersion,
+      '2.0.0',
+      'status should record new version',
+    );
     assert.ok(status.lastSuccessAt, 'status should have lastSuccessAt');
     assert.ok(!status.lastError, 'status should not have lastError');
   });
@@ -342,21 +426,30 @@ describe('auto-update-runner', () => {
     t.after(() => rmSync(tmp, { recursive: true, force: true }));
 
     const toolkitHome = join(tmp, 'toolkit-home');
-    createSourceFixture(toolkitHome, '1.0.0', '# Content that should survive\n');
+    createSourceFixture(
+      toolkitHome,
+      '1.0.0',
+      '# Content that should survive\n',
+    );
 
     // Fake extract that writes package.json but NO skills/ directory.
     const fakeSource = {
-      resolveLatest: async (_pkgName) => ({ version: '3.0.0', spec: `${_pkgName}@3.0.0` }),
+      resolveLatest: async (_pkgName) => ({
+        version: '3.0.0',
+        spec: `${_pkgName}@3.0.0`,
+      }),
       extract: async (_spec, dest) => {
-        writeFileSync(join(dest, 'package.json'), JSON.stringify({ name: '@laitszkin/cli', version: '3.0.0' }));
+        writeFileSync(
+          join(dest, 'package.json'),
+          JSON.stringify({ name: '@laitszkin/cli', version: '3.0.0' }),
+        );
         // Intentionally NOT creating skills/ — validation should fail.
         return { version: '3.0.0', sourceRoot: dest };
       },
     };
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     const result = await runAutoUpdate({
       sourceRoot: tmp,
@@ -384,8 +477,14 @@ describe('auto-update-runner', () => {
     );
 
     // package.json should still be the old version.
-    const pkg = JSON.parse(readFileSync(join(toolkitHome, 'package.json'), 'utf8'));
-    assert.equal(pkg.version, '1.0.0', 'toolkit home package.json should remain at old version');
+    const pkg = JSON.parse(
+      readFileSync(join(toolkitHome, 'package.json'), 'utf8'),
+    );
+    assert.equal(
+      pkg.version,
+      '1.0.0',
+      'toolkit home package.json should remain at old version',
+    );
   });
 
   it('preserves previous toolkit home when package.json is missing', async (t) => {
@@ -396,18 +495,23 @@ describe('auto-update-runner', () => {
     createSourceFixture(toolkitHome, '1.0.0', '# Survivor content\n');
 
     const fakeSource = {
-      resolveLatest: async (_pkgName) => ({ version: '3.0.0', spec: `${_pkgName}@3.0.0` }),
+      resolveLatest: async (_pkgName) => ({
+        version: '3.0.0',
+        spec: `${_pkgName}@3.0.0`,
+      }),
       extract: async (_spec, dest) => {
         // Write skills but NOT package.json.
         mkdirSync(join(dest, 'skills', 'test-skill'), { recursive: true });
-        writeFileSync(join(dest, 'skills', 'test-skill', 'SKILL.md'), '# New\n');
+        writeFileSync(
+          join(dest, 'skills', 'test-skill', 'SKILL.md'),
+          '# New\n',
+        );
         return { version: '3.0.0', sourceRoot: dest };
       },
     };
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     const result = await runAutoUpdate({
       sourceRoot: tmp,
@@ -420,12 +524,20 @@ describe('auto-update-runner', () => {
 
     assert.equal(result.updated, false);
     assert.ok(result.lastError);
-    assert.ok(result.lastError.includes('package.json'), 'error should mention missing package.json');
+    assert.ok(
+      result.lastError.includes('package.json'),
+      'error should mention missing package.json',
+    );
 
     // Original toolkit home should be intact.
-    assert.ok(existsSync(join(toolkitHome, 'skills', 'test-skill', 'SKILL.md')));
+    assert.ok(
+      existsSync(join(toolkitHome, 'skills', 'test-skill', 'SKILL.md')),
+    );
     assert.equal(
-      readFileSync(join(toolkitHome, 'skills', 'test-skill', 'SKILL.md'), 'utf8'),
+      readFileSync(
+        join(toolkitHome, 'skills', 'test-skill', 'SKILL.md'),
+        'utf8',
+      ),
       '# Survivor content\n',
     );
   });
@@ -439,15 +551,17 @@ describe('auto-update-runner', () => {
     createSourceFixture(toolkitHome, '1.0.0', '# Old\n');
 
     const fakeSource = {
-      resolveLatest: async (_pkgName) => ({ version: '2.0.0', spec: `${_pkgName}@2.0.0` }),
+      resolveLatest: async (_pkgName) => ({
+        version: '2.0.0',
+        spec: `${_pkgName}@2.0.0`,
+      }),
       extract: async (_spec, _dest) => {
         throw new Error('Network timeout while fetching package');
       },
     };
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     const result = await runAutoUpdate({
       sourceRoot: tmp,
@@ -489,18 +603,26 @@ describe('auto-update-runner', () => {
     writeFileSync(lockFile, '');
 
     const fakeSource = {
-      resolveLatest: async (_pkgName) => ({ version: '2.0.0', spec: `${_pkgName}@2.0.0` }),
+      resolveLatest: async (_pkgName) => ({
+        version: '2.0.0',
+        spec: `${_pkgName}@2.0.0`,
+      }),
       extract: async (_spec, dest) => {
-        writeFileSync(join(dest, 'package.json'), JSON.stringify({ name: '@laitszkin/cli', version: '2.0.0' }));
+        writeFileSync(
+          join(dest, 'package.json'),
+          JSON.stringify({ name: '@laitszkin/cli', version: '2.0.0' }),
+        );
         mkdirSync(join(dest, 'skills', 'test-skill'), { recursive: true });
-        writeFileSync(join(dest, 'skills', 'test-skill', 'SKILL.md'), '# New\n');
+        writeFileSync(
+          join(dest, 'skills', 'test-skill', 'SKILL.md'),
+          '# New\n',
+        );
         return { version: '2.0.0', sourceRoot: dest };
       },
     };
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     const result = await runAutoUpdate({
       sourceRoot: tmp,
@@ -511,7 +633,11 @@ describe('auto-update-runner', () => {
       packageSource: fakeSource,
     });
 
-    assert.equal(result.updated, false, 'should indicate update was not performed');
+    assert.equal(
+      result.updated,
+      false,
+      'should indicate update was not performed',
+    );
     assert.ok(result.lastError, 'should have a lock error message');
     assert.ok(
       result.lastError.toLowerCase().includes('lock'),
@@ -520,7 +646,10 @@ describe('auto-update-runner', () => {
 
     // Toolkit home should NOT have been modified (the lock prevented the update).
     assert.match(
-      readFileSync(join(toolkitHome, 'skills', 'test-skill', 'SKILL.md'), 'utf8'),
+      readFileSync(
+        join(toolkitHome, 'skills', 'test-skill', 'SKILL.md'),
+        'utf8',
+      ),
       /Old content/,
       'skill content should remain unchanged',
     );
@@ -530,9 +659,14 @@ describe('auto-update-runner', () => {
   it('does not import or call checkForPackageUpdate', () => {
     const source = readFileSync('packages/cli/auto-update-runner.ts', 'utf8');
     // Check for actual import or call of checkForPackageUpdate, not comments.
-    const lines = source.split('\n').filter(
-      (l) => l.includes('checkForPackageUpdate') && !l.trim().startsWith('*') && !l.trim().startsWith('//'),
-    );
+    const lines = source
+      .split('\n')
+      .filter(
+        (l) =>
+          l.includes('checkForPackageUpdate') &&
+          !l.trim().startsWith('*') &&
+          !l.trim().startsWith('//'),
+      );
     assert.equal(
       lines.length,
       0,
@@ -543,9 +677,14 @@ describe('auto-update-runner', () => {
   it('does not use npm install -g call in the runner code', () => {
     const source = readFileSync('packages/cli/auto-update-runner.ts', 'utf8');
     // "npm install -g" should not appear as a command string (exclude comments).
-    const lines = source.split('\n').filter(
-      (l) => l.includes('npm install') && !l.trim().startsWith('*') && !l.trim().startsWith('//'),
-    );
+    const lines = source
+      .split('\n')
+      .filter(
+        (l) =>
+          l.includes('npm install') &&
+          !l.trim().startsWith('*') &&
+          !l.trim().startsWith('//'),
+      );
     assert.equal(
       lines.length,
       0,
@@ -566,18 +705,18 @@ describe('auto-update-runner', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'runner-no-source-'));
     t.after(() => rmSync(tmp, { recursive: true, force: true }));
 
-    const { runAutoUpdate } = await import(
-      '../../packages/cli/dist/auto-update-runner.js'
-    );
+    const { runAutoUpdate } =
+      await import('../../packages/cli/dist/auto-update-runner.js');
 
     await assert.rejects(
-      () => runAutoUpdate({
-        sourceRoot: tmp,
-        toolkitHome: join(tmp, 'home'),
-        packageName: '@laitszkin/cli',
-        currentVersion: '1.0.0',
-        modes: [],
-      }),
+      () =>
+        runAutoUpdate({
+          sourceRoot: tmp,
+          toolkitHome: join(tmp, 'home'),
+          packageName: '@laitszkin/cli',
+          currentVersion: '1.0.0',
+          modes: [],
+        }),
       /packageSource is required/,
       'should throw when packageSource is missing',
     );

@@ -1,4 +1,3 @@
-
 /**
  * env-utils.ts
  *
@@ -84,7 +83,9 @@ const DEFAULTS: Record<string, string> = {
  * @throws Error if .env file is missing or required vars are missing
  */
 export function loadEnv(envPath?: string): EnvConfig {
-  const resolved = envPath ? path.resolve(envPath) : path.resolve(process.cwd(), '.env');
+  const resolved = envPath
+    ? path.resolve(envPath)
+    : path.resolve(process.cwd(), '.env');
 
   // Read .env file
   let content: string;
@@ -97,12 +98,14 @@ export function loadEnv(envPath?: string): EnvConfig {
       if (nodeErr.code === 'ENOENT') {
         throw new Error(
           `.env 檔案不存在: "${resolved}"\n` +
-          '請從 .env.example 複製一份並填入實際值:\n' +
-          '  cp .env.example .env',
+            '請從 .env.example 複製一份並填入實際值:\n' +
+            '  cp .env.example .env',
         );
       }
     }
-    throw new Error(`無法讀取 .env 檔案 "${resolved}": ${(err as Error).message}`);
+    throw new Error(
+      `無法讀取 .env 檔案 "${resolved}": ${(err as Error).message}`,
+    );
   }
 
   // Parse each line
@@ -110,7 +113,7 @@ export function loadEnv(envPath?: string): EnvConfig {
   const lines = content.split('\n');
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+    const line = (lines[i] ?? '').trim();
 
     // Skip blank lines and comments
     if (line === '' || line.startsWith('#')) {
@@ -147,7 +150,7 @@ export function loadEnv(envPath?: string): EnvConfig {
     if (key in process.env) {
       stringVals[key] = process.env[key] as string;
     } else if (key in parsed) {
-      stringVals[key] = parsed[key];
+      stringVals[key] = parsed[key] as string;
     }
   }
 
@@ -155,7 +158,7 @@ export function loadEnv(envPath?: string): EnvConfig {
     if (key in process.env) {
       stringVals[key] = process.env[key] as string;
     } else if (key in parsed) {
-      stringVals[key] = parsed[key];
+      stringVals[key] = parsed[key] as string;
     } else {
       stringVals[key] = defaultValue;
     }
@@ -171,9 +174,9 @@ export function loadEnv(envPath?: string): EnvConfig {
 
   if (missing.length > 0) {
     throw new Error(
-      `.env 檔案缺少必要的環境變數 (${missing.length} 個):\n` +
-      missing.join('\n') +
-      '\n\n請確認 .env 檔案包含所有必要變數 (參考 .env.example)',
+      `.env 檔案缺少必要的環境變數 (${String(missing.length)} 個):\n` +
+        missing.join('\n') +
+        '\n\n請確認 .env 檔案包含所有必要變數 (參考 .env.example)',
     );
   }
 
@@ -185,8 +188,8 @@ export function loadEnv(envPath?: string): EnvConfig {
 
   // Same model warning (FIX-21)
   if (
-    stringVals.EXEC_MODEL === stringVals.JUDGE_MODEL &&
-    stringVals.EXEC_BASE_URL === stringVals.JUDGE_BASE_URL
+    stringVals['EXEC_MODEL'] === stringVals['JUDGE_MODEL'] &&
+    stringVals['EXEC_BASE_URL'] === stringVals['JUDGE_BASE_URL']
   ) {
     console.warn(
       'Warning: EXEC_MODEL and JUDGE_MODEL are the same. Context isolation may be compromised.',
@@ -195,22 +198,28 @@ export function loadEnv(envPath?: string): EnvConfig {
 
   return {
     // Required vars
-    EXEC_BASE_URL: stringVals.EXEC_BASE_URL,
-    EXEC_MODEL: stringVals.EXEC_MODEL,
-    EXEC_API_KEY: stringVals.EXEC_API_KEY,
-    JUDGE_BASE_URL: stringVals.JUDGE_BASE_URL,
-    JUDGE_MODEL: stringVals.JUDGE_MODEL,
-    JUDGE_API_KEY: stringVals.JUDGE_API_KEY,
+    EXEC_BASE_URL: stringVals['EXEC_BASE_URL'] ?? '',
+    EXEC_MODEL: stringVals['EXEC_MODEL'] ?? '',
+    EXEC_API_KEY: stringVals['EXEC_API_KEY'] ?? '',
+    JUDGE_BASE_URL: stringVals['JUDGE_BASE_URL'] ?? '',
+    JUDGE_MODEL: stringVals['JUDGE_MODEL'] ?? '',
+    JUDGE_API_KEY: stringVals['JUDGE_API_KEY'] ?? '',
     // Default string vars
-    EXEC_REASONING_EFFORT: stringVals.EXEC_REASONING_EFFORT ?? '',
-    JUDGE_REASONING_EFFORT: stringVals.JUDGE_REASONING_EFFORT ?? '',
+    EXEC_REASONING_EFFORT: stringVals['EXEC_REASONING_EFFORT'] ?? '',
+    JUDGE_REASONING_EFFORT: stringVals['JUDGE_REASONING_EFFORT'] ?? '',
     // Numeric conversions
-    EXEC_CONCURRENCY: parsePositiveInt(stringVals.EXEC_CONCURRENCY, 10),
-    JUDGE_CONCURRENCY: parsePositiveInt(stringVals.JUDGE_CONCURRENCY, 5),
-    EXEC_TIMEOUT: parsePositiveInt(stringVals.EXEC_TIMEOUT, 600),
-    JUDGE_TIMEOUT: parsePositiveInt(stringVals.JUDGE_TIMEOUT, 120),
+    EXEC_CONCURRENCY: parsePositiveInt(
+      stringVals['EXEC_CONCURRENCY'] ?? '10',
+      10,
+    ),
+    JUDGE_CONCURRENCY: parsePositiveInt(
+      stringVals['JUDGE_CONCURRENCY'] ?? '5',
+      5,
+    ),
+    EXEC_TIMEOUT: parsePositiveInt(stringVals['EXEC_TIMEOUT'] ?? '600', 600),
+    JUDGE_TIMEOUT: parsePositiveInt(stringVals['JUDGE_TIMEOUT'] ?? '120', 120),
     // CI gate thresholds
-    EVAL_MIN_SCORE: parsePositiveInt(stringVals.EVAL_MIN_SCORE ?? '60', 60),
-    EVAL_MAX_P0: parsePositiveInt(stringVals.EVAL_MAX_P0 ?? '0', 0),
+    EVAL_MIN_SCORE: parsePositiveInt(stringVals['EVAL_MIN_SCORE'] ?? '60', 60),
+    EVAL_MAX_P0: parsePositiveInt(stringVals['EVAL_MAX_P0'] ?? '0', 0),
   };
 }

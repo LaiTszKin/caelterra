@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Plan'
+  short_description: 'Convert SPEC.md + DESIGN.md + CHECKLIST.md into a self-contained coordinator prompt (PROMPT.md)'
+  default_prompt: 'Use $plan to convert SPEC.md + DESIGN.md + CHECKLIST.md into a self-contained coordinator prompt (PROMPT.md) with complete task decomposition, dependency analysis, batch scheduling, and pre-written worker prompts. The generated PROMPT.md is consumed directly by the $implement skill.'

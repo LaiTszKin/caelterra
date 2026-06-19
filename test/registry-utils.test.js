@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  registerTool, getTool, listTools, runTool,
-  formatExamples, formatToolList, buildToolDiscoveryHelp,
+  registerTool,
+  getTool,
+  listTools,
+  runTool,
+  formatExamples,
+  formatToolList,
+  buildToolDiscoveryHelp,
   isTopLevelToolHelpRequest,
 } from '@laitszkin/tool-registry';
 
@@ -129,7 +134,7 @@ test('runTool throws SystemError for tool with no handler', async () => {
     (err) => {
       assert.ok(err.message.includes('not fully configured'));
       return true;
-    }
+    },
   );
 });
 

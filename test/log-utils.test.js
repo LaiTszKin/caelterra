@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  normalizeTimestamp, parseCliTimestamp, extractTimestamp,
-  buildTimezone, validateTimeWindow, inWindow, iterInputLines,
+  normalizeTimestamp,
+  parseCliTimestamp,
+  extractTimestamp,
+  buildTimezone,
+  validateTimeWindow,
+  inWindow,
+  iterInputLines,
 } from '@laitszkin/tool-utils';
 
 // ----------------------------------------------------------------
@@ -10,19 +15,31 @@ import {
 // ----------------------------------------------------------------
 
 test('normalizeTimestamp replaces Z with +00:00', () => {
-  assert.equal(normalizeTimestamp('2026-03-24T10:00:00Z'), '2026-03-24T10:00:00+00:00');
+  assert.equal(
+    normalizeTimestamp('2026-03-24T10:00:00Z'),
+    '2026-03-24T10:00:00+00:00',
+  );
 });
 
 test('normalizeTimestamp replaces comma with dot in fractional seconds', () => {
-  assert.equal(normalizeTimestamp('2026-03-24T10:00:00,123Z'), '2026-03-24T10:00:00.123+00:00');
+  assert.equal(
+    normalizeTimestamp('2026-03-24T10:00:00,123Z'),
+    '2026-03-24T10:00:00.123+00:00',
+  );
 });
 
 test('normalizeTimestamp leaves already-normalized timestamps unchanged', () => {
-  assert.equal(normalizeTimestamp('2026-03-24T10:00:00+00:00'), '2026-03-24T10:00:00+00:00');
+  assert.equal(
+    normalizeTimestamp('2026-03-24T10:00:00+00:00'),
+    '2026-03-24T10:00:00+00:00',
+  );
 });
 
 test('normalizeTimestamp trims whitespace', () => {
-  assert.equal(normalizeTimestamp('  2026-03-24T10:00:00Z  '), '2026-03-24T10:00:00+00:00');
+  assert.equal(
+    normalizeTimestamp('  2026-03-24T10:00:00Z  '),
+    '2026-03-24T10:00:00+00:00',
+  );
 });
 
 // ----------------------------------------------------------------
@@ -57,7 +74,10 @@ test('parseCliTimestamp parses with fractional seconds', () => {
 });
 
 test('parseCliTimestamp throws for invalid timestamp', () => {
-  assert.throws(() => parseCliTimestamp('not-a-timestamp', 'UTC'), /invalid timestamp/);
+  assert.throws(
+    () => parseCliTimestamp('not-a-timestamp', 'UTC'),
+    /invalid timestamp/,
+  );
 });
 
 test('parseCliTimestamp throws for completely wrong format', () => {
@@ -81,7 +101,10 @@ test('extractTimestamp extracts timestamp with space separator', () => {
 });
 
 test('extractTimestamp returns null for line without timestamp', () => {
-  assert.equal(extractTimestamp('plain log line with no timestamp', 'UTC'), null);
+  assert.equal(
+    extractTimestamp('plain log line with no timestamp', 'UTC'),
+    null,
+  );
 });
 
 test('extractTimestamp returns null for empty string', () => {
@@ -93,7 +116,10 @@ test('extractTimestamp returns null for invalid timestamp pattern', () => {
 });
 
 test('extractTimestamp with timezone offset in log line', () => {
-  const d = extractTimestamp('2026-03-24T10:00:00+02:00 [INFO] event occurred', 'UTC');
+  const d = extractTimestamp(
+    '2026-03-24T10:00:00+02:00 [INFO] event occurred',
+    'UTC',
+  );
   assert.ok(d instanceof Date);
   assert.equal(d.getTime(), new Date('2026-03-24T08:00:00Z').getTime());
 });
@@ -147,17 +173,27 @@ test('validateTimeWindow returns true when both are null', () => {
 
 test('validateTimeWindow returns true when only start is set', () => {
   const out = { write() {} };
-  assert.equal(validateTimeWindow(new Date('2026-03-24T10:00:00Z'), null, out), true);
+  assert.equal(
+    validateTimeWindow(new Date('2026-03-24T10:00:00Z'), null, out),
+    true,
+  );
 });
 
 test('validateTimeWindow returns true when only end is set', () => {
   const out = { write() {} };
-  assert.equal(validateTimeWindow(null, new Date('2026-03-24T12:00:00Z'), out), true);
+  assert.equal(
+    validateTimeWindow(null, new Date('2026-03-24T12:00:00Z'), out),
+    true,
+  );
 });
 
 test('validateTimeWindow returns false and writes error when start is after end', () => {
   let stderrText = '';
-  const stderr = { write(chunk) { stderrText += chunk; } };
+  const stderr = {
+    write(chunk) {
+      stderrText += chunk;
+    },
+  };
   const start = new Date('2026-03-24T12:00:00Z');
   const end = new Date('2026-03-24T10:00:00Z');
   assert.equal(validateTimeWindow(start, end, stderr), false);
@@ -169,7 +205,14 @@ test('validateTimeWindow returns false and writes error when start is after end'
 // ----------------------------------------------------------------
 
 test('inWindow returns false for null timestamp', () => {
-  assert.equal(inWindow(null, new Date('2026-03-24T10:00:00Z'), new Date('2026-03-24T12:00:00Z')), false);
+  assert.equal(
+    inWindow(
+      null,
+      new Date('2026-03-24T10:00:00Z'),
+      new Date('2026-03-24T12:00:00Z'),
+    ),
+    false,
+  );
 });
 
 test('inWindow returns true for timestamp within window', () => {

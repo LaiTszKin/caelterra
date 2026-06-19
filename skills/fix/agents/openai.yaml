@@ -1,4 +1,4 @@
 interface:
-  display_name: "Solve Issues Found During Review"
-  short_description: "Coordinate fix and regression test workers from a fix plan (FIX.md) by severity order"
-  default_prompt: "Load FIX.md. Dispatch fix workers per the batch schedule (priority order), then dispatch regression test workers — workers share the working tree, safety comes from file overlap detection. Verify each test's oracle (fails on unfixed code). Resolve conflicts. Commit and report."
+  display_name: 'Solve Issues Found During Review'
+  short_description: 'Coordinate fix and regression test workers from a fix plan (FIX.md) by severity order'
+  default_prompt: "Use $fix to load FIX.md. Dispatch fix workers per the batch schedule (priority order), then dispatch regression test workers — workers share the working tree, safety comes from file overlap detection. Verify each test's oracle (fails on unfixed code). Resolve conflicts. Commit and report."

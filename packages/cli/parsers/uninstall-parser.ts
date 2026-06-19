@@ -1,6 +1,5 @@
 import { parseArgs } from 'node:util';
 import path from 'node:path';
-import { UserInputError } from '@laitszkin/tool-utils';
 import type { InstallMode, ParsedArguments } from '../types.js';
 import type { CommandParser, UninstallCommand } from './types.js';
 import { normalizeParseError } from './parser-utils.js';

@@ -1,0 +1,27 @@
+slug: quality-gate
+title: quality-gate
+story: ''
+dependsOn: []
+submodules:
+  - slug: pnpm-config
+    kind: service
+    role: ''
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: lint-format
+    kind: service
+    role: ''
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+  - slug: pre-commit-hooks
+    kind: service
+    role: ''
+    functions: []
+    variables: []
+    dataflow: []
+    errors: []
+edges: []

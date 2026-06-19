@@ -1,7 +1,7 @@
 {
   "name": "@laitszkin/tool-create-specs",
   "version": "5.0.0",
-  "description": "Apollo Toolkit \u2014 CLI tool",
+  "description": "Apollo Toolkit — CLI tool",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,7 +17,8 @@
     "test": "node --test dist/"
   },
   "dependencies": {
-    "@laitszkin/tool-registry": "*"
+    "@laitszkin/tool-registry": "workspace:*",
+    "@laitszkin/tool-utils": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

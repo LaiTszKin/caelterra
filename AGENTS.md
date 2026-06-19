@@ -3,8 +3,12 @@
 ## Common Development Commands
 
 - Before using any `apltk` or `node dist/bin/apollo-toolkit.js` command, run the corresponding `--help` command first and follow the live CLI guidance rather than memorized flags.
-- `npm test` - Run Node test suite (`node --test`).
-- `npm run build` - Full build of all packages.
+- `pnpm test` - Run Node test suite (`node --test`).
+- `pnpm run build` - Full build of all packages (tsc --build).
+- `pnpm lint` - Run ESLint strict-type-checked across all packages.
+- `pnpm lint:fix` - Run ESLint with autofix.
+- `pnpm format` - Format all files with Prettier.
+- `pnpm format:check` - Check formatting without writing.
 - `node dist/bin/apollo-toolkit.js [mode...]` - Start CLI, install skills to targets (codex/openclaw/trae/agents/claude-code/all).
 - `node dist/bin/apollo-toolkit.js uninstall [mode...]` - Remove Apollo Toolkit skills from targets.
 - `node dist/bin/apollo-toolkit.js tools` - List all built-in CLI tools and their categories.
@@ -42,6 +46,21 @@
 - `README.md` - Public installation guide and skill catalog
 - `CHANGELOG.md` - Release history
 - `LICENSE` - MIT License
+- `packages/cli/AGENTS.md` - CLI command management module
+- `packages/tool-registry/AGENTS.md` - Tool registration and dispatch module
+- `packages/tool-utils/AGENTS.md` - Shared tool utilities module
+- `packages/tui/AGENTS.md` - Terminal UI components module
+- `packages/tools/architecture/AGENTS.md` - Architecture atlas tool
+- `packages/tools/codegraph/AGENTS.md` - CodeGraph codebase exploration tool
+- `packages/tools/create-review-report/AGENTS.md` - Review report generation tool
+- `packages/tools/create-specs/AGENTS.md` - Spec generation tool
+- `packages/tools/eval/AGENTS.md` - LLM-as-Judge evaluation tool
+- `packages/tools/find-github-issues/AGENTS.md` - GitHub issue search tool
+- `packages/tools/open-github-issue/AGENTS.md` - GitHub issue creation tool
+- `packages/tools/read-github-issue/AGENTS.md` - GitHub issue reader tool
+- `packages/tools/review-threads/AGENTS.md` - Review thread management tool
+- `packages/tools/validate-openai-agent-config/AGENTS.md` - OpenAI agent config validator tool
+- `packages/tools/validate-skill-frontmatter/AGENTS.md` - Skill frontmatter validator tool
 
 ## Prohibitions
 

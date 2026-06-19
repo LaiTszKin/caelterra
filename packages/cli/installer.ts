@@ -2,7 +2,12 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { createPlatformAdapter } from '@laitszkin/tool-utils';
-import type { InstallMode, InstallTarget, ManifestData, SyncResult } from './types.js';
+import type {
+  InstallMode,
+  InstallTarget,
+  ManifestData,
+  SyncResult,
+} from './types.js';
 
 const platformAdapter = createPlatformAdapter();
 
@@ -14,22 +19,39 @@ export interface TargetDefinition {
 
 export const TARGET_DEFINITIONS: readonly TargetDefinition[] = Object.freeze([
   { id: 'codex', label: 'Codex', description: '~/.codex/skills' },
-  { id: 'openclaw', label: 'OpenClaw', description: '~/.openclaw/workspace*/skills' },
+  {
+    id: 'openclaw',
+    label: 'OpenClaw',
+    description: '~/.openclaw/workspace*/skills',
+  },
   { id: 'trae', label: 'Trae', description: '~/.trae/skills' },
   { id: 'agents', label: 'Agents', description: '~/.agents/skills' },
   { id: 'claude-code', label: 'Claude Code', description: '~/.claude/skills' },
 ]);
 
-export const VALID_MODES: readonly InstallMode[] = TARGET_DEFINITIONS.map(({ id }) => id);
-const COPY_FILES = new Set(['AGENTS.md', 'CHANGELOG.md', 'LICENSE', 'README.md', 'package.json']);
+export const VALID_MODES: readonly InstallMode[] = TARGET_DEFINITIONS.map(
+  ({ id }) => id,
+);
+const COPY_FILES = new Set([
+  'AGENTS.md',
+  'CHANGELOG.md',
+  'LICENSE',
+  'README.md',
+  'package.json',
+]);
 const SKILLS_DIRNAME = 'skills';
 export const MANIFEST_FILENAME = '.apollo-toolkit-manifest.json';
 
-export function resolveHomeDirectory(env: NodeJS.ProcessEnv = process.env): string {
+export function resolveHomeDirectory(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   return createPlatformAdapter().homeDir(env);
 }
 
-export function expandUserPath(inputPath: string, env: NodeJS.ProcessEnv = process.env): string {
+export function expandUserPath(
+  inputPath: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   if (!inputPath) return inputPath;
   if (inputPath === '~') return resolveHomeDirectory(env);
   if (inputPath.startsWith('~/') || inputPath.startsWith('~\\')) {
@@ -38,9 +60,11 @@ export function expandUserPath(inputPath: string, env: NodeJS.ProcessEnv = proce
   return inputPath;
 }
 
-export function resolveToolkitHome(env: NodeJS.ProcessEnv = process.env): string {
-  if (env.APOLLO_TOOLKIT_HOME) {
-    return path.resolve(expandUserPath(env.APOLLO_TOOLKIT_HOME, env));
+export function resolveToolkitHome(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  if (env['APOLLO_TOOLKIT_HOME']) {
+    return path.resolve(expandUserPath(env['APOLLO_TOOLKIT_HOME'], env));
   }
   return path.join(resolveHomeDirectory(env), '.apollo-toolkit');
 }
@@ -48,7 +72,7 @@ export function resolveToolkitHome(env: NodeJS.ProcessEnv = process.env): string
 export function normalizeModes(inputModes: string[]): InstallMode[] {
   const modes: InstallMode[] = [];
   for (const rawMode of inputModes) {
-    const mode = String(rawMode).toLowerCase();
+    const mode = rawMode.toLowerCase();
     if (mode === 'all') {
       for (const candidate of VALID_MODES) {
         if (!modes.includes(candidate)) {
@@ -67,7 +91,10 @@ export function normalizeModes(inputModes: string[]): InstallMode[] {
   return modes;
 }
 
-export async function listSkillNames(rootDir: string, modes: InstallMode[] = []): Promise<string[]> {
+export async function listSkillNames(
+  rootDir: string,
+  modes: InstallMode[] = [],
+): Promise<string[]> {
   const skillsDir = path.join(rootDir, SKILLS_DIRNAME);
   const entries = fs.existsSync(skillsDir)
     ? await fsp.readdir(skillsDir, { withFileTypes: true })
@@ -86,7 +113,10 @@ export async function listSkillNames(rootDir: string, modes: InstallMode[] = [])
     if (fs.existsSync(codexDir)) {
       const codexEntries = await fsp.readdir(codexDir, { withFileTypes: true });
       for (const entry of codexEntries) {
-        if (entry.isDirectory() && fs.existsSync(path.join(codexDir, entry.name, 'SKILL.md'))) {
+        if (
+          entry.isDirectory() &&
+          fs.existsSync(path.join(codexDir, entry.name, 'SKILL.md'))
+        ) {
           skillNames.add(entry.name);
         }
       }
@@ -102,42 +132,66 @@ export async function listCodexSkillNames(rootDir: string): Promise<string[]> {
 
   const entries = await fsp.readdir(codexDir, { withFileTypes: true });
   return entries
-    .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(codexDir, entry.name, 'SKILL.md')))
+    .filter(
+      (entry) =>
+        entry.isDirectory() &&
+        fs.existsSync(path.join(codexDir, entry.name, 'SKILL.md')),
+    )
     .map((entry) => entry.name)
     .sort();
 }
 
-export async function readManifest(targetRoot: string): Promise<ManifestData | null> {
+export async function readManifest(
+  targetRoot: string,
+): Promise<ManifestData | null> {
   const manifestPath = path.join(targetRoot, MANIFEST_FILENAME);
   try {
     const raw = await fsp.readFile(manifestPath, 'utf8');
-    return JSON.parse(raw);
+    return JSON.parse(raw) as ManifestData;
   } catch {
     return null;
   }
 }
 
 export function isSafeSkillName(skillName: string): boolean {
-  return typeof skillName === 'string'
-    && skillName.length > 0
-    && !skillName.includes('\0')
-    && !skillName.includes('/')
-    && !(skillName.includes('\\') && createPlatformAdapter().isWindows())
-    && !path.isAbsolute(skillName)
-    && skillName !== '.'
-    && skillName !== '..';
+  return (
+    typeof skillName === 'string' &&
+    skillName.length > 0 &&
+    !skillName.includes('\0') &&
+    !skillName.includes('/') &&
+    !(skillName.includes('\\') && createPlatformAdapter().isWindows()) &&
+    !path.isAbsolute(skillName) &&
+    skillName !== '.' &&
+    skillName !== '..'
+  );
 }
 
 function getManifestSkillNames(manifest: ManifestData): string[] {
-  return [...new Set([
-    ...(Array.isArray(manifest.historicalSkills) ? manifest.historicalSkills : []),
-    ...(Array.isArray(manifest.skills) ? manifest.skills : []),
-  ])].filter(isSafeSkillName).sort();
+  return [
+    ...new Set([
+      ...(Array.isArray(manifest.historicalSkills)
+        ? manifest.historicalSkills
+        : []),
+      ...(Array.isArray(manifest.skills) ? manifest.skills : []),
+    ]),
+  ]
+    .filter(isSafeSkillName)
+    .sort();
 }
 
 export async function writeManifest(
   targetRoot: string,
-  { version, linkMode, skills, previousSkills = [] }: { version: string; linkMode: string; skills: string[]; previousSkills?: string[] },
+  {
+    version,
+    linkMode,
+    skills,
+    previousSkills = [],
+  }: {
+    version: string;
+    linkMode: string;
+    skills: string[];
+    previousSkills?: string[];
+  },
 ): Promise<void> {
   const historicalSkills = [...new Set([...previousSkills, ...skills])].sort();
   const manifest: ManifestData = {
@@ -155,16 +209,26 @@ export async function writeManifest(
   );
 }
 
-export async function listAllKnownSkillNames({ toolkitHome, modes = [], env = process.env }: { toolkitHome: string; modes?: InstallMode[]; env?: NodeJS.ProcessEnv }): Promise<string[]> {
+export async function listAllKnownSkillNames({
+  toolkitHome,
+  modes = [],
+  env = process.env,
+}: {
+  toolkitHome: string;
+  modes?: InstallMode[];
+  env?: NodeJS.ProcessEnv;
+}): Promise<string[]> {
   const allNames = new Set<string>();
-  const currentSkills = await listSkillNames(toolkitHome, modes).catch(() => []);
+  const currentSkills = await listSkillNames(toolkitHome, modes).catch(
+    () => [],
+  );
   for (const name of currentSkills) allNames.add(name);
 
   const targets = await getUninstallTargetRoots(modes, env);
   for (const target of targets) {
     if (!target.root) continue;
     const manifest = await readManifest(target.root);
-    if (manifest && manifest.historicalSkills) {
+    if (manifest) {
       for (const name of getManifestSkillNames(manifest)) {
         allNames.add(name);
       }
@@ -173,18 +237,29 @@ export async function listAllKnownSkillNames({ toolkitHome, modes = [], env = pr
   return [...allNames].sort();
 }
 
-function getTargetSkillNames({ targetMode, sharedSkillNames, codexSkillNames, includeExclusiveSkills = false }: {
+function getTargetSkillNames({
+  targetMode,
+  sharedSkillNames,
+  codexSkillNames,
+  includeExclusiveSkills = false,
+}: {
   targetMode: string;
   sharedSkillNames: string[];
   codexSkillNames: string[];
   includeExclusiveSkills?: boolean;
 }): string[] {
   const includeCodexSkills = targetMode === 'codex' || includeExclusiveSkills;
-  if (!includeCodexSkills || codexSkillNames.length === 0) return sharedSkillNames;
+  if (!includeCodexSkills || codexSkillNames.length === 0)
+    return sharedSkillNames;
   return [...new Set([...sharedSkillNames, ...codexSkillNames])].sort();
 }
 
-function resolveInstallSourcePath({ toolkitHome, targetMode, skillName, codexSkillNames }: {
+function resolveInstallSourcePath({
+  toolkitHome,
+  targetMode,
+  skillName,
+  codexSkillNames,
+}: {
   toolkitHome: string;
   targetMode: string;
   skillName: string;
@@ -202,15 +277,31 @@ function shouldCopyEntry(entry: fs.Dirent): boolean {
   return entry.name === SKILLS_DIRNAME;
 }
 
-function shouldCopyCodexContainer(sourceRoot: string, entry: fs.Dirent, modes: InstallMode[]): boolean {
-  if (entry.name !== 'codex' || !entry.isDirectory() || !modes.includes('codex')) return false;
+function shouldCopyCodexContainer(
+  sourceRoot: string,
+  entry: fs.Dirent,
+  modes: InstallMode[],
+): boolean {
+  if (
+    entry.name !== 'codex' ||
+    !entry.isDirectory() ||
+    !modes.includes('codex')
+  )
+    return false;
   const codexDir = path.join(sourceRoot, entry.name);
   if (!fs.existsSync(codexDir)) return false;
   const childNames = fs.readdirSync(codexDir);
-  return childNames.some((childName) => fs.existsSync(path.join(codexDir, childName, 'SKILL.md')));
+  return childNames.some((childName) =>
+    fs.existsSync(path.join(codexDir, childName, 'SKILL.md')),
+  );
 }
 
-async function stageToolkitContents({ sourceRoot, destinationRoot, version, modes = [] }: {
+async function stageToolkitContents({
+  sourceRoot,
+  destinationRoot,
+  version,
+  modes = [],
+}: {
   sourceRoot: string;
   destinationRoot: string;
   version: string;
@@ -221,14 +312,22 @@ async function stageToolkitContents({ sourceRoot, destinationRoot, version, mode
   await fsp.mkdir(destinationRoot, { recursive: true });
 
   for (const entry of entries) {
-    if (!shouldCopyEntry(entry) && !shouldCopyCodexContainer(sourceRoot, entry, modes)) continue;
+    if (
+      !shouldCopyEntry(entry) &&
+      !shouldCopyCodexContainer(sourceRoot, entry, modes)
+    )
+      continue;
     const sourcePath = path.join(sourceRoot, entry.name);
     const destinationPath = path.join(destinationRoot, entry.name);
     await fsp.cp(sourcePath, destinationPath, { recursive: true, force: true });
     copiedEntries.push(entry.name);
   }
 
-  const metadata = { version, installedAt: new Date().toISOString(), source: 'npm-package' };
+  const metadata = {
+    version,
+    installedAt: new Date().toISOString(),
+    source: 'npm-package',
+  };
   await fsp.writeFile(
     path.join(destinationRoot, '.apollo-toolkit-install.json'),
     `${JSON.stringify(metadata, null, 2)}${platformAdapter.EOL}`,
@@ -237,22 +336,39 @@ async function stageToolkitContents({ sourceRoot, destinationRoot, version, mode
   return copiedEntries.sort();
 }
 
-export async function syncToolkitHome({ sourceRoot, toolkitHome, version, modes = [] }: {
+export async function syncToolkitHome({
+  sourceRoot,
+  toolkitHome,
+  version,
+  modes = [],
+}: {
   sourceRoot: string;
   toolkitHome: string;
   version: string;
   modes?: InstallMode[];
 }): Promise<SyncResult & { toolkitHome: string; skillNames: string[] }> {
   const parentDir = path.dirname(toolkitHome);
-  const tempDir = path.join(parentDir, `.apollo-toolkit.tmp-${process.pid}-${Date.now()}`);
-  const previousSkillNames = await listSkillNames(toolkitHome, modes).catch(() => []);
+  const tempDir = path.join(
+    parentDir,
+    `.apollo-toolkit.tmp-${String(process.pid)}-${String(Date.now())}`,
+  );
+  const previousSkillNames = await listSkillNames(toolkitHome, modes).catch(
+    () => [],
+  );
 
   await fsp.rm(tempDir, { recursive: true, force: true });
-  await stageToolkitContents({ sourceRoot, destinationRoot: tempDir, version, modes });
+  await stageToolkitContents({
+    sourceRoot,
+    destinationRoot: tempDir,
+    version,
+    modes,
+  });
 
   const stat = await fsp.lstat(toolkitHome).catch(() => null);
   if (stat && !stat.isDirectory()) {
-    throw new Error(`Apollo Toolkit home exists but is not a directory: ${toolkitHome}`);
+    throw new Error(
+      `Apollo Toolkit home exists but is not a directory: ${toolkitHome}`,
+    );
   }
 
   await fsp.rm(toolkitHome, { recursive: true, force: true });
@@ -266,7 +382,10 @@ export async function syncToolkitHome({ sourceRoot, toolkitHome, version, modes 
   };
 }
 
-export async function getTargetRoots(modes: string[], env: NodeJS.ProcessEnv = process.env): Promise<InstallTarget[]> {
+export async function getTargetRoots(
+  modes: string[],
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<InstallTarget[]> {
   const homeDir = resolveHomeDirectory(env);
   const targets: InstallTarget[] = [];
 
@@ -275,8 +394,8 @@ export async function getTargetRoots(modes: string[], env: NodeJS.ProcessEnv = p
       targets.push({
         id: mode,
         label: 'Codex',
-        root: env.CODEX_SKILLS_DIR
-          ? path.resolve(expandUserPath(env.CODEX_SKILLS_DIR, env))
+        root: env['CODEX_SKILLS_DIR']
+          ? path.resolve(expandUserPath(env['CODEX_SKILLS_DIR'], env))
           : path.join(homeDir, '.codex', 'skills'),
       });
       continue;
@@ -285,8 +404,8 @@ export async function getTargetRoots(modes: string[], env: NodeJS.ProcessEnv = p
       targets.push({
         id: mode,
         label: 'Trae',
-        root: env.TRAE_SKILLS_DIR
-          ? path.resolve(expandUserPath(env.TRAE_SKILLS_DIR, env))
+        root: env['TRAE_SKILLS_DIR']
+          ? path.resolve(expandUserPath(env['TRAE_SKILLS_DIR'], env))
           : path.join(homeDir, '.trae', 'skills'),
       });
       continue;
@@ -295,23 +414,29 @@ export async function getTargetRoots(modes: string[], env: NodeJS.ProcessEnv = p
       targets.push({
         id: mode,
         label: 'Agents',
-        root: env.AGENTS_SKILLS_DIR
-          ? path.resolve(expandUserPath(env.AGENTS_SKILLS_DIR, env))
+        root: env['AGENTS_SKILLS_DIR']
+          ? path.resolve(expandUserPath(env['AGENTS_SKILLS_DIR'], env))
           : path.join(homeDir, '.agents', 'skills'),
       });
       continue;
     }
     if (mode === 'openclaw') {
-      const openclawHome = env.OPENCLAW_HOME
-        ? path.resolve(expandUserPath(env.OPENCLAW_HOME, env))
+      const openclawHome = env['OPENCLAW_HOME']
+        ? path.resolve(expandUserPath(env['OPENCLAW_HOME'], env))
         : path.join(homeDir, '.openclaw');
-      const entries = await fsp.readdir(openclawHome, { withFileTypes: true }).catch(() => []);
+      const entries = await fsp
+        .readdir(openclawHome, { withFileTypes: true })
+        .catch(() => []);
       const workspaceNames = entries
-        .filter((entry) => entry.isDirectory() && entry.name.startsWith('workspace'))
+        .filter(
+          (entry) => entry.isDirectory() && entry.name.startsWith('workspace'),
+        )
         .map((entry) => entry.name)
         .sort();
       if (workspaceNames.length === 0) {
-        throw new Error(`No workspace directories found under: ${openclawHome}`);
+        throw new Error(
+          `No workspace directories found under: ${openclawHome}`,
+        );
       }
       for (const workspaceName of workspaceNames) {
         targets.push({
@@ -322,25 +447,27 @@ export async function getTargetRoots(modes: string[], env: NodeJS.ProcessEnv = p
       }
       continue;
     }
-    if (mode === 'claude-code') {
-      targets.push({
-        id: mode,
-        label: 'Claude Code',
-        root: env.CLAUDE_CODE_SKILLS_DIR
-          ? path.resolve(expandUserPath(env.CLAUDE_CODE_SKILLS_DIR, env))
-          : path.join(homeDir, '.claude', 'skills'),
-      });
-      continue;
-    }
+    // 'claude-code' is the only remaining mode at this point (all prior conditions handled)
+    targets.push({
+      id: mode,
+      label: 'Claude Code',
+      root: env['CLAUDE_CODE_SKILLS_DIR']
+        ? path.resolve(expandUserPath(env['CLAUDE_CODE_SKILLS_DIR'], env))
+        : path.join(homeDir, '.claude', 'skills'),
+    });
+    continue;
   }
   return targets;
 }
 
-export async function getUninstallTargetRoots(modes: string[] = [...VALID_MODES], env: NodeJS.ProcessEnv = process.env): Promise<InstallTarget[]> {
+export async function getUninstallTargetRoots(
+  modes: string[] = [...VALID_MODES],
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<InstallTarget[]> {
   const targets: InstallTarget[] = [];
   for (const mode of normalizeModes(modes)) {
     try {
-      targets.push(...await getTargetRoots([mode], env));
+      targets.push(...(await getTargetRoots([mode], env)));
     } catch {
       // Uninstall is best-effort across agents
     }
@@ -348,7 +475,10 @@ export async function getUninstallTargetRoots(modes: string[] = [...VALID_MODES]
   return targets;
 }
 
-export async function getManagedInstallTargets(modes: string[] = [...VALID_MODES], env: NodeJS.ProcessEnv = process.env): Promise<InstallTarget[]> {
+export async function getManagedInstallTargets(
+  modes: string[] = [...VALID_MODES],
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<InstallTarget[]> {
   const managedTargets: InstallTarget[] = [];
   const normalizedModes = normalizeModes(modes);
   for (const mode of normalizedModes) {
@@ -374,13 +504,19 @@ async function ensureDirectory(dirPath: string): Promise<void> {
   await fsp.mkdir(dirPath, { recursive: true });
 }
 
-async function replaceWithCopy(sourcePath: string, targetPath: string): Promise<void> {
+async function replaceWithCopy(
+  sourcePath: string,
+  targetPath: string,
+): Promise<void> {
   await fsp.rm(targetPath, { recursive: true, force: true });
   await ensureDirectory(path.dirname(targetPath));
   await fsp.cp(sourcePath, targetPath, { recursive: true, force: true });
 }
 
-async function replaceWithSymlink(sourcePath: string, targetPath: string): Promise<void> {
+async function replaceWithSymlink(
+  sourcePath: string,
+  targetPath: string,
+): Promise<void> {
   const adapter = createPlatformAdapter();
   await fsp.rm(targetPath, { recursive: true, force: true });
   await ensureDirectory(path.dirname(targetPath));
@@ -388,7 +524,9 @@ async function replaceWithSymlink(sourcePath: string, targetPath: string): Promi
     await fsp.symlink(sourcePath, targetPath, adapter.symlinkType());
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code === 'EPERM') {
-      process.stderr.write(`Warning: Symlink not supported (EPERM). Falling back to copy mode.${adapter.EOL}`);
+      process.stderr.write(
+        `Warning: Symlink not supported (EPERM). Falling back to copy mode.${adapter.EOL}`,
+      );
       await replaceWithCopy(sourcePath, targetPath);
     } else {
       throw err;
@@ -396,24 +534,47 @@ async function replaceWithSymlink(sourcePath: string, targetPath: string): Promi
   }
 }
 
-export async function installLinks({ toolkitHome, modes, env = process.env, previousSkillNames = [], linkMode = 'copy', includeExclusiveSkills = false }: {
+export async function installLinks({
+  toolkitHome,
+  modes,
+  env = process.env,
+  previousSkillNames = [],
+  linkMode = 'copy',
+  includeExclusiveSkills = false,
+}: {
   toolkitHome: string;
   modes: InstallMode[];
   env?: NodeJS.ProcessEnv;
   previousSkillNames?: string[];
   linkMode?: 'copy' | 'symlink';
   includeExclusiveSkills?: boolean;
-}): Promise<{ skillNames: string[]; targets: InstallTarget[]; copiedPaths: any[]; linkMode: string }> {
+}): Promise<{
+  skillNames: string[];
+  targets: InstallTarget[];
+  copiedPaths: {
+    target: string;
+    path: string;
+    skillName: string;
+    linkMode: string;
+  }[];
+  linkMode: string;
+}> {
   const normalizedModes = normalizeModes(modes);
-  const codexSkillNames = (normalizedModes.includes('codex') || includeExclusiveSkills)
-    ? await listCodexSkillNames(toolkitHome)
-    : [];
+  const codexSkillNames =
+    normalizedModes.includes('codex') || includeExclusiveSkills
+      ? await listCodexSkillNames(toolkitHome)
+      : [];
   const sharedSkillNames = await listSkillNames(toolkitHome);
   const skillNames = normalizedModes.includes('codex')
     ? [...new Set([...sharedSkillNames, ...codexSkillNames])].sort()
     : sharedSkillNames;
   const targets = await getTargetRoots(normalizedModes, env);
-  const copiedPaths: any[] = [];
+  const copiedPaths: {
+    target: string;
+    path: string;
+    skillName: string;
+    linkMode: string;
+  }[] = [];
 
   for (const target of targets) {
     const targetSkillNames = getTargetSkillNames({
@@ -423,18 +584,26 @@ export async function installLinks({ toolkitHome, modes, env = process.env, prev
       includeExclusiveSkills,
     });
 
-    const existingManifest = await readManifest(target.root!);
+    const existingManifest = await readManifest(target.root);
     const allPreviousSkills = existingManifest
-      ? [...new Set([...getManifestSkillNames(existingManifest), ...previousSkillNames.filter(isSafeSkillName)])]
+      ? [
+          ...new Set([
+            ...getManifestSkillNames(existingManifest),
+            ...previousSkillNames.filter(isSafeSkillName),
+          ]),
+        ]
       : previousSkillNames.filter(isSafeSkillName);
 
     const staleSkillNames = allPreviousSkills.filter(
       (skillName) => !targetSkillNames.includes(skillName),
     );
 
-    await ensureDirectory(target.root!);
+    await ensureDirectory(target.root);
     for (const staleSkillName of staleSkillNames) {
-      await fsp.rm(path.join(target.root!, staleSkillName), { recursive: true, force: true });
+      await fsp.rm(path.join(target.root, staleSkillName), {
+        recursive: true,
+        force: true,
+      });
     }
     for (const skillName of targetSkillNames) {
       const sourcePath = resolveInstallSourcePath({
@@ -443,17 +612,22 @@ export async function installLinks({ toolkitHome, modes, env = process.env, prev
         skillName,
         codexSkillNames,
       });
-      const targetPath = path.join(target.root!, skillName);
+      const targetPath = path.join(target.root, skillName);
 
       if (linkMode === 'symlink') {
         await replaceWithSymlink(sourcePath, targetPath);
       } else {
         await replaceWithCopy(sourcePath, targetPath);
       }
-      copiedPaths.push({ target: target.label, path: targetPath, skillName, linkMode });
+      copiedPaths.push({
+        target: target.label,
+        path: targetPath,
+        skillName,
+        linkMode,
+      });
     }
 
-    await writeManifest(target.root!, {
+    await writeManifest(target.root, {
       version: existingManifest?.version || 'unknown',
       linkMode,
       skills: targetSkillNames,
@@ -464,19 +638,25 @@ export async function installLinks({ toolkitHome, modes, env = process.env, prev
   return { skillNames, targets, copiedPaths, linkMode };
 }
 
-export async function uninstallSkills({ env = process.env, modes = null }: { env?: NodeJS.ProcessEnv; modes?: InstallMode[] | null } = {}): Promise<{ target: string; root: string; removedSkills: string[] }[]> {
+export async function uninstallSkills({
+  env = process.env,
+  modes = null,
+}: { env?: NodeJS.ProcessEnv; modes?: InstallMode[] | null } = {}): Promise<
+  { target: string; root: string; removedSkills: string[] }[]
+> {
   const normalizedModes = modes ? normalizeModes(modes) : [...VALID_MODES];
   const targets = await getUninstallTargetRoots(normalizedModes, env);
-  const results: { target: string; root: string; removedSkills: string[] }[] = [];
+  const results: { target: string; root: string; removedSkills: string[] }[] =
+    [];
 
   for (const target of targets) {
-    const manifest = await readManifest(target.root!);
+    const manifest = await readManifest(target.root);
     if (!manifest) continue;
 
     const skillNames = getManifestSkillNames(manifest);
     const removedSkills: string[] = [];
     for (const skillName of skillNames) {
-      const skillPath = path.join(target.root!, skillName);
+      const skillPath = path.join(target.root, skillName);
       try {
         await fsp.rm(skillPath, { recursive: true, force: true });
         removedSkills.push(skillName);
@@ -486,12 +666,12 @@ export async function uninstallSkills({ env = process.env, modes = null }: { env
     }
 
     try {
-      await fsp.rm(path.join(target.root!, MANIFEST_FILENAME), { force: true });
+      await fsp.rm(path.join(target.root, MANIFEST_FILENAME), { force: true });
     } catch {
       // ok
     }
 
-    results.push({ target: target.label, root: target.root!, removedSkills });
+    results.push({ target: target.label, root: target.root, removedSkills });
   }
 
   return results;

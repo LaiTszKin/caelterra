@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { UserInputError } from '@laitszkin/tool-utils';
 import { InstallArgsParser } from '@laitszkin/cli';
 
@@ -65,7 +66,7 @@ test('InstallArgsParser: --home with path resolves to absolute path', () => {
   const parser = new InstallArgsParser();
   const result = parser.parse(['codex', '--home', '/custom/path']);
   assert.equal(result.command, 'install');
-  assert.equal(result.toolkitHome, '/custom/path');
+  assert.equal(result.toolkitHome, path.resolve('/custom/path'));
   assert.deepEqual(result.modes, ['codex']);
 });
 
@@ -138,13 +139,10 @@ test('InstallArgsParser: --home without a value throws UserInputError', () => {
 test('InstallArgsParser: --home with trailing equals operator works', () => {
   const parser = new InstallArgsParser();
   const result = parser.parse(['--home=/some/path']);
-  assert.equal(result.toolkitHome, '/some/path');
+  assert.equal(result.toolkitHome, path.resolve('/some/path'));
 });
 
 test('InstallArgsParser: unknown option re-throws the original parseArgs error', () => {
   const parser = new InstallArgsParser();
-  assert.throws(
-    () => parser.parse(['--unknown-option']),
-    /Unknown option/,
-  );
+  assert.throws(() => parser.parse(['--unknown-option']), /Unknown option/);
 });

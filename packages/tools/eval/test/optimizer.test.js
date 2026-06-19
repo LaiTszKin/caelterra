@@ -56,7 +56,9 @@ describe('REGTEST-10: Markdown 結構驗證', () => {
     assert.equal(result.valid, false);
     assert.ok(result.issues.length > 0);
     assert.ok(
-      result.issues.some((i) => i.includes('level-2 heading') || i.includes('##')),
+      result.issues.some(
+        (i) => i.includes('level-2 heading') || i.includes('##'),
+      ),
       JSON.stringify(result.issues),
     );
   });
@@ -71,19 +73,30 @@ describe('REGTEST-10: Markdown 結構驗證', () => {
     const result = validateMarkdownStructure('');
     assert.equal(result.valid, false);
     assert.ok(result.issues.length > 0);
-    assert.ok(result.issues.some((i) => i.toLowerCase().includes('empty')), JSON.stringify(result.issues));
+    assert.ok(
+      result.issues.some((i) => i.toLowerCase().includes('empty')),
+      JSON.stringify(result.issues),
+    );
   });
 
   it('should reject whitespace-only content', () => {
     const result = validateMarkdownStructure('   \n  \n  ');
     assert.equal(result.valid, false);
-    assert.ok(result.issues.some((i) => i.toLowerCase().includes('empty')), JSON.stringify(result.issues));
+    assert.ok(
+      result.issues.some((i) => i.toLowerCase().includes('empty')),
+      JSON.stringify(result.issues),
+    );
   });
 
   it('should detect unclosed fenced code blocks', () => {
-    const result = validateMarkdownStructure('## Section\n```\ncode block without closing');
+    const result = validateMarkdownStructure(
+      '## Section\n```\ncode block without closing',
+    );
     assert.equal(result.valid, false);
-    assert.ok(result.issues.some((i) => i.toLowerCase().includes('unclosed')), JSON.stringify(result.issues));
+    assert.ok(
+      result.issues.some((i) => i.toLowerCase().includes('unclosed')),
+      JSON.stringify(result.issues),
+    );
   });
 });
 
@@ -98,7 +111,8 @@ describe('REGTEST-05: O(n²) 優化', () => {
       issues.push({
         severity: severities[i % 3],
         category: 'skill',
-        description: 'Agent fails to follow the spec writing workflow instructions step by step',
+        description:
+          'Agent fails to follow the spec writing workflow instructions step by step',
         evidence: `L${i + 10}: trace shows skipped validation phase`,
         testNo: `Q${String(i + 1).padStart(3, '0')}`,
       });
@@ -109,14 +123,20 @@ describe('REGTEST-05: O(n²) 優化', () => {
     const deduped = await deduplicateIssues(issues, mockEnv, true);
 
     assert.ok(Array.isArray(deduped), 'Result should be an array');
-    assert.ok(deduped.length < 30, `Expected deduped count < 30, got ${deduped.length}`);
+    assert.ok(
+      deduped.length < 30,
+      `Expected deduped count < 30, got ${deduped.length}`,
+    );
     assert.ok(deduped.length > 0, 'Should have at least one deduped issue');
 
     for (const d of deduped) {
       assert.ok(d.category.length > 0, 'Category should not be empty');
       assert.ok(d.severity.length > 0, 'Severity should not be empty');
       assert.ok(d.frequency > 0, 'Frequency should be > 0');
-      assert.ok(Array.isArray(d.affectedTests), 'affectedTests should be an array');
+      assert.ok(
+        Array.isArray(d.affectedTests),
+        'affectedTests should be an array',
+      );
     }
   });
 });
@@ -168,7 +188,9 @@ describe('REGTEST-12: 衝突保留', () => {
     globalThis.fetch = origFetch;
     try {
       fs.rmSync(tmpRoot, { recursive: true, force: true });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   });
 
   it('should report conflicts when FIND pattern does not match SKILL.md', async (t) => {
@@ -193,12 +215,21 @@ describe('REGTEST-12: 衝突保留', () => {
     // Capture console.warn calls
     const warnMock = t.mock.method(console, 'warn');
 
-    const result = await optimizeSkillMd(plan, skillMdPath, mockEnv, false, '2026-05-29', true);
+    const result = await optimizeSkillMd(
+      plan,
+      skillMdPath,
+      mockEnv,
+      false,
+      '2026-05-29',
+      true,
+    );
 
     // Verify a conflict-related warning was emitted
     const hasConflictWarn = warnMock.mock.calls.some((call) => {
       const msg = String(call.arguments[0] ?? '');
-      return msg.includes('unmatched FIND pattern') || msg.includes('FIND pattern');
+      return (
+        msg.includes('unmatched FIND pattern') || msg.includes('FIND pattern')
+      );
     });
 
     assert.ok(
@@ -220,13 +251,17 @@ describe('REGTEST-D: isAllowedFile path safety', () => {
   });
 
   it('should return false for SKILL.md.backup', () => {
-    assert.ok(!isAllowedFile('/project/skills/spec/SKILL.md.backup', 'spec'),
-      'SKILL.md.backup should be rejected');
+    assert.ok(
+      !isAllowedFile('/project/skills/spec/SKILL.md.backup', 'spec'),
+      'SKILL.md.backup should be rejected',
+    );
   });
 
   it('should return false for similar directory names', () => {
-    assert.ok(!isAllowedFile('/project/skills/special-tool/SKILL.md', 'spec'),
-      'different skill dir should be rejected');
+    assert.ok(
+      !isAllowedFile('/project/skills/special-tool/SKILL.md', 'spec'),
+      'different skill dir should be rejected',
+    );
   });
 
   it('should allow scripts path under skill dir', () => {
@@ -244,17 +279,19 @@ describe('REGTEST-D: isAllowedFile path safety', () => {
 describe('REGTEST-E: deduplicateIssues pair cap', () => {
   it('should define MAX_PHASE1_PAIRS constant', () => {
     const source = fs.readFileSync(
-      new URL('../optimizer.ts', import.meta.url), 'utf-8'
+      new URL('../optimizer.ts', import.meta.url),
+      'utf-8',
     );
     assert.ok(
       source.includes('MAX_PHASE1_PAIRS'),
-      'optimizer.ts should define MAX_PHASE1_PAIRS constant'
+      'optimizer.ts should define MAX_PHASE1_PAIRS constant',
     );
   });
 
   it('Phase 1 clustering should have pair count limiting logic', () => {
     const source = fs.readFileSync(
-      new URL('../optimizer.ts', import.meta.url), 'utf-8'
+      new URL('../optimizer.ts', import.meta.url),
+      'utf-8',
     );
     // Check for pairCount or similar limiting mechanism in Phase 1
     const phase1Start = source.indexOf('* Phase 1:');
@@ -263,7 +300,7 @@ describe('REGTEST-E: deduplicateIssues pair cap', () => {
     const phase1Section = source.slice(phase1Start, phase1Start + 2500);
     assert.ok(
       phase1Section.includes('pairCount'),
-      'Phase 1 should have pairCount variable'
+      'Phase 1 should have pairCount variable',
     );
   });
 });
@@ -277,21 +314,21 @@ it('REGTEST-04: isAllowedFile should be CWD-independent', () => {
     process.chdir('/tmp');
     assert.ok(
       isAllowedFile('/any/project/skills/spec/SKILL.md', 'spec'),
-      'SKILL.md in skills/spec/ should be allowed regardless of CWD'
+      'SKILL.md in skills/spec/ should be allowed regardless of CWD',
     );
     assert.ok(
       !isAllowedFile('/any/project/skills/spec/SKILL.md.backup', 'spec'),
-      '.backup should be rejected regardless of CWD'
+      '.backup should be rejected regardless of CWD',
     );
     assert.ok(
       !isAllowedFile('/any/project/skills/special-tool/SKILL.md', 'spec'),
-      'different skill dir should be rejected regardless of CWD'
+      'different skill dir should be rejected regardless of CWD',
     );
 
     process.chdir('/');
     assert.ok(
       isAllowedFile('/any/project/skills/spec/SKILL.md', 'spec'),
-      'Should still allow SKILL.md when CWD=/'
+      'Should still allow SKILL.md when CWD=/',
     );
   } finally {
     process.chdir(originalCwd);
@@ -304,19 +341,21 @@ it('REGTEST-04: isAllowedFile should be CWD-independent', () => {
 // =========================================================================
 it('REGTEST-05: optimizer backup should use unique names and inline validation', async () => {
   const source = fs.readFileSync(
-    new URL('../optimizer.ts', import.meta.url), 'utf-8'
+    new URL('../optimizer.ts', import.meta.url),
+    'utf-8',
   );
 
   // 1. Backup should use dynamic name (not fixed .bak)
   assert.ok(
     source.match(/const\s+bakPath\s*=\s*skillMdPath\s*\+\s*'\.bak\.'\s*\+/),
-    'Primary backup should use timestamp after .bak.'
+    'Primary backup should use timestamp after .bak.',
   );
 
   // 2. Frontmatter validation should be inline (not execSync CLI call)
   assert.ok(
-    source.includes('---') && (source.includes('frontmatterMatch') || source.includes('frontmatter')),
-    'Frontmatter validation should use inline parsing'
+    source.includes('---') &&
+      (source.includes('frontmatterMatch') || source.includes('frontmatter')),
+    'Frontmatter validation should use inline parsing',
   );
 
   // 3. No execSync in optimizeSkillMd function
@@ -326,7 +365,7 @@ it('REGTEST-05: optimizer backup should use unique names and inline validation',
   const funcBody = source.slice(funcStart);
   assert.ok(
     !funcBody.includes('execSync'),
-    'optimizeSkillMd should not use execSync'
+    'optimizeSkillMd should not use execSync',
   );
 });
 
@@ -372,10 +411,7 @@ describe('REGTEST-02 (R8): Jaccard 預過濾器閾值降低', () => {
     const sim = jaccardSimilarity(text1, text2);
 
     // 舊閾值 0.25 會排除此對；新閾值 0.1 應讓它通過
-    assert.ok(
-      sim < 0.25,
-      `Jaccard ${sim} 應 < 0.25（舊閾值會排除）`,
-    );
+    assert.ok(sim < 0.25, `Jaccard ${sim} 應 < 0.25（舊閾值會排除）`);
     assert.ok(
       sim >= 0.1,
       `Jaccard ${sim} 應 >= 0.1（新閾值應讓它通過預過濾器）`,

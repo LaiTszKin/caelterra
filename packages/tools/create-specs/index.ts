@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, SystemError, createToolRunner } from '@laitszkin/tool-utils';
+import { UserInputError, createToolRunner } from '@laitszkin/tool-utils';
 
 const TEMPLATE_FILENAMES = ['SPEC.md'];
 
@@ -38,10 +38,10 @@ const schema = {
   options: {
     'batch-name': { type: 'string' as const },
     'change-name': { type: 'string' as const },
-    'slug': { type: 'string' as const },
+    slug: { type: 'string' as const },
     'output-dir': { type: 'string' as const, default: 'docs/plans' },
     'template-dir': { type: 'string' as const },
-    'force': { type: 'boolean' as const, default: false },
+    force: { type: 'boolean' as const, default: false },
   },
   allowPositionals: true,
   usage: 'apltk create-specs <feature_name> [options]',
@@ -52,84 +52,125 @@ prefixes like "2026-05-22-membership" — that produces nested date folders.
 Output:
   Single spec:  <output-dir>/<today>/<change-name>/SPEC.md
   Batch:        <output-dir>/<today>/<batch-name>/<change-name>/SPEC.md`,
-  handler: async (
+  handler: (
     values: Record<string, unknown>,
     positionals: string[],
     context: ToolContext,
-  ): Promise<number> => {
+  ): number => {
     const stderr = context.stderr ?? process.stderr;
 
-      const featureName = (positionals[0] || '').trim();
-      if (!featureName) {
-        throw new UserInputError('feature_name is required.');
-      }
+    const featureName = (positionals[0] || '').trim();
+    if (!featureName) {
+      throw new UserInputError('feature_name is required.');
+    }
 
-      const changeName = ((values['change-name'] as string | undefined) || (values['slug'] as string | undefined) || '').trim() || slugify(featureName);
-      if (!changeName) {
-        throw new UserInputError('Unable to build change_name. Provide --change-name with ASCII letters/numbers.');
-      }
+    const changeName =
+      (
+        (values['change-name'] as string | undefined) ||
+        (values['slug'] as string | undefined) ||
+        ''
+      ).trim() || slugify(featureName);
+    if (!changeName) {
+      throw new UserInputError(
+        'Unable to build change_name. Provide --change-name with ASCII letters/numbers.',
+      );
+    }
 
-      const batchName = (values['batch-name'] as string | undefined)?.trim() || null;
+    const batchName =
+      (values['batch-name'] as string | undefined)?.trim() || null;
 
-      // Warn if batch name looks like it starts with a date (common agent mistake
-      // that produces nested date folders like <today>/2026-05-22-my-batch/).
-      if (batchName && /^\d{4}-\d{2}-\d{2}/.test(batchName)) {
-        stderr.write(`Warning: --batch-name "${batchName}" starts with a date pattern. The tool already\n`);
-        stderr.write(`creates a <today> folder automatically, so this will produce nested date folders.\n`);
-        stderr.write(`Use a descriptive name without date prefix, e.g. --batch-name "membership-cutover".\n\n`);
-      }
+    // Warn if batch name looks like it starts with a date (common agent mistake
+    // that produces nested date folders like <today>/2026-05-22-my-batch/).
+    if (batchName && /^\d{4}-\d{2}-\d{2}/.test(batchName)) {
+      stderr.write(
+        `Warning: --batch-name "${batchName}" starts with a date pattern. The tool already\n`,
+      );
+      stderr.write(
+        `creates a <today> folder automatically, so this will produce nested date folders.\n`,
+      );
+      stderr.write(
+        `Use a descriptive name without date prefix, e.g. --batch-name "membership-cutover".\n\n`,
+      );
+    }
 
-      // Resolve template directory
-      const sourceRoot = context.sourceRoot || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
-      const templateDirRaw = (values['template-dir'] as string) || path.join(sourceRoot, 'skills', 'spec', 'assets', 'templates');
-      const templateDir = path.resolve(templateDirRaw);
+    // Resolve template directory
+    const sourceRoot =
+      context.sourceRoot ||
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        '..',
+        '..',
+      );
+    const templateDirRaw =
+      (values['template-dir'] as string) ||
+      path.join(sourceRoot, 'skills', 'spec', 'assets', 'templates');
+    const templateDir = path.resolve(templateDirRaw);
 
-      if (!fs.existsSync(templateDir)) {
-        throw new UserInputError(`Template directory not found: ${templateDir}`);
-      }
+    if (!fs.existsSync(templateDir)) {
+      throw new UserInputError(`Template directory not found: ${templateDir}`);
+    }
 
-      // Check template files exist
-      const missingTemplates = TEMPLATE_FILENAMES.filter((name) => !fs.existsSync(path.join(templateDir, name)));
-      if (missingTemplates.length > 0) {
-        throw new UserInputError(`Missing template files in ${templateDir}: ${missingTemplates.join(', ')}`);
-      }
+    // Check template files exist
+    const missingTemplates = TEMPLATE_FILENAMES.filter(
+      (name) => !fs.existsSync(path.join(templateDir, name)),
+    );
+    if (missingTemplates.length > 0) {
+      throw new UserInputError(
+        `Missing template files in ${templateDir}: ${missingTemplates.join(', ')}`,
+      );
+    }
 
-      const outputDir = path.resolve(values['output-dir'] as string || 'docs/plans');
-      const now = new Date();
-      const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    const outputDir = path.resolve(
+      (values['output-dir'] as string) || 'docs/plans',
+    );
+    const now = new Date();
+    const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
 
-      // Prevent double-nesting: if outputDir's last component is already today's date,
-      // use it directly as the date root rather than appending the date again.
-      const dateRoot = path.basename(outputDir) === today ? outputDir : path.join(outputDir, today);
-      const batchRoot = batchName ? path.join(dateRoot, batchName) : null;
-      const outputRoot = batchRoot ? path.join(batchRoot, changeName) : path.join(dateRoot, changeName);
+    // Prevent double-nesting: if outputDir's last component is already today's date,
+    // use it directly as the date root rather than appending the date again.
+    const dateRoot =
+      path.basename(outputDir) === today
+        ? outputDir
+        : path.join(outputDir, today);
+    const batchRoot = batchName ? path.join(dateRoot, batchName) : null;
+    const outputRoot = batchRoot
+      ? path.join(batchRoot, changeName)
+      : path.join(dateRoot, changeName);
 
-      const outputPaths = TEMPLATE_FILENAMES.map((name) => path.join(outputRoot, name));
+    const outputPaths = TEMPLATE_FILENAMES.map((name) =>
+      path.join(outputRoot, name),
+    );
 
-      const force = values['force'] === true;
-      const existingFiles = outputPaths.filter((p) => fs.existsSync(p));
-      if (existingFiles.length > 0 && !force) {
-        throw new UserInputError(`Files already exist: ${existingFiles.join(', ')}. Use --force to overwrite.`);
-      }
+    const force = values['force'] === true;
+    const existingFiles = outputPaths.filter((p) => fs.existsSync(p));
+    if (existingFiles.length > 0 && !force) {
+      throw new UserInputError(
+        `Files already exist: ${existingFiles.join(', ')}. Use --force to overwrite.`,
+      );
+    }
 
-      fs.mkdirSync(outputRoot, { recursive: true });
+    fs.mkdirSync(outputRoot, { recursive: true });
 
-      const stdout = context.stdout ?? process.stdout;
-      const todayStr = today;
+    const stdout = context.stdout ?? process.stdout;
+    const todayStr = today;
 
-      for (const filename of TEMPLATE_FILENAMES) {
-        const templatePath = path.join(templateDir, filename);
-        const outputPath = path.join(outputRoot, filename);
-        const content = fs.readFileSync(templatePath, 'utf-8');
-        fs.writeFileSync(
-          outputPath,
-          renderContent(content, todayStr, featureName, changeName, batchName),
-          'utf-8',
-        );
-        stdout.write(`${outputPath}\n`);
-      }
+    for (const filename of TEMPLATE_FILENAMES) {
+      const templatePath = path.join(templateDir, filename);
+      const outputPath = path.join(outputRoot, filename);
+      const content = fs.readFileSync(templatePath, 'utf-8');
+      fs.writeFileSync(
+        outputPath,
+        renderContent(content, todayStr, featureName, changeName, batchName),
+        'utf-8',
+      );
+      stdout.write(`${outputPath}\n`);
+    }
 
-      return 0;
+    return 0;
   },
 };
 

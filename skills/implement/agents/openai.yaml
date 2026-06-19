@@ -1,4 +1,4 @@
 interface:
-  display_name: "Implement"
-  short_description: "Coordinate implementation workers from a plan (PROMPT.md) without writing code directly"
-  default_prompt: "Load PROMPT.md. Dispatch implementation workers per the batch schedule — workers share the working tree and safety comes from file overlap detection. Verify each batch gate. Resolve conflicts if they arise. Commit and report."
+  display_name: 'Implement'
+  short_description: 'Coordinate implementation workers from a plan (PROMPT.md) without writing code directly'
+  default_prompt: 'Use $implement to load PROMPT.md. Dispatch implementation workers per the batch schedule — workers share the working tree and safety comes from file overlap detection. Verify each batch gate. Resolve conflicts if they arise. Commit and report.'

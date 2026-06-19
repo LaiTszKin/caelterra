@@ -21,11 +21,11 @@ Analyze a skill's full directory and produce an optimized rewrite. The goal is n
 
 A well-structured skill separates three distinct concerns:
 
-| Layer | What it contains | Where it lives |
-|---|---|---|
-| **Behavioral** | How to think, what to check, what principles to follow | SKILL.md |
-| **Format** | What the output structure looks like | Template files |
-| **Tool** | CLI flags, API params, external commands | Reference files |
+| Layer          | What it contains                                       | Where it lives  |
+| -------------- | ------------------------------------------------------ | --------------- |
+| **Behavioral** | How to think, what to check, what principles to follow | SKILL.md        |
+| **Format**     | What the output structure looks like                   | Template files  |
+| **Tool**       | CLI flags, API params, external commands               | Reference files |
 
 The most common problem in unoptimized skills is mixing these layers — templates that tell the agent what to do, SKILL.md that describes output formats, references that contain behavioral rules. Your job is to untangle them.
 
@@ -48,7 +48,7 @@ Go through every section across all files and classify it as behavioral, format,
 - **Format content in SKILL.md** → keep lightweight description, move details to template
 - **Tool content in SKILL.md** → move to references/
 
-The key question: *"If I removed this file, what would the agent lose?"* If the answer is "behavioral guidance," that content belongs in SKILL.md. If it's "structure to fill," it belongs in a template. "CLI flags to look up" belongs in references.
+The key question: _"If I removed this file, what would the agent lose?"_ If the answer is "behavioral guidance," that content belongs in SKILL.md. If it's "structure to fill," it belongs in a template. "CLI flags to look up" belongs in references.
 
 ### 3. Trace Consumption
 
@@ -78,7 +78,8 @@ After untangling, restructure SKILL.md so it guides the agent's thinking rather 
 The former teaches the agent a thought process. The latter gives it text to copy-paste, which is brittle and task-specific.
 
 Principles for writing guidance:
-- **Teach concepts, not steps** — explain the *why*, not just the *what*
+
+- **Teach concepts, not steps** — explain the _why_, not just the _what_
 - **Provide frameworks, not scripts** — offer mental models the agent can adapt
 - **Ask questions** — prompt the agent to think ("What should happen when a worker fails? What's the right retry policy for this kind of task?")
 - **Describe outcomes, not methods** — "verify every issue is resolved" not "run command X and check for Y"

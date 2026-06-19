@@ -17,17 +17,17 @@ describe('handleInit', () => {
   it('should include Duration: in TTY summary output when --index is used', async () => {
     const writes: string[] = [];
     const origWrite = process.stdout.write.bind(process.stdout);
-    process.stdout.write = (
-      chunk: unknown,
-      ..._rest: unknown[]
-    ): boolean => {
+    process.stdout.write = (chunk: unknown, ..._rest: unknown[]): boolean => {
       writes.push(String(chunk));
       return true;
     };
 
     try {
       const { handleInit } = await import('./cmd-init.js');
-      const code = await handleInit('/tmp/test-project', { index: true, json: false });
+      const code = await handleInit('/tmp/test-project', {
+        index: true,
+        json: false,
+      });
 
       assert.strictEqual(code, 0);
       const output = writes.join('');
@@ -43,17 +43,17 @@ describe('handleInit', () => {
   it('should include durationMs in JSON output when --index is used', async () => {
     const writes: string[] = [];
     const origWrite = process.stdout.write.bind(process.stdout);
-    process.stdout.write = (
-      chunk: unknown,
-      ..._rest: unknown[]
-    ): boolean => {
+    process.stdout.write = (chunk: unknown, ..._rest: unknown[]): boolean => {
       writes.push(String(chunk));
       return true;
     };
 
     try {
       const { handleInit } = await import('./cmd-init.js');
-      const code = await handleInit('/tmp/test-project', { index: true, json: true });
+      const code = await handleInit('/tmp/test-project', {
+        index: true,
+        json: true,
+      });
 
       assert.strictEqual(code, 0);
       const output = writes.join('');

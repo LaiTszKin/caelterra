@@ -1,10 +1,18 @@
-import { open, readFile, rename, unlink, writeFile, mkdir } from 'node:fs/promises';
+import {
+  open,
+  readFile,
+  rename,
+  unlink,
+  writeFile,
+  mkdir,
+} from 'node:fs/promises';
 import path from 'node:path';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 export const AUTO_UPDATE_CONFIG_FILENAME = '.apollo-toolkit-auto-update.json';
-export const AUTO_UPDATE_STATUS_FILENAME = '.apollo-toolkit-auto-update-status.json';
+export const AUTO_UPDATE_STATUS_FILENAME =
+  '.apollo-toolkit-auto-update-status.json';
 export const AUTO_UPDATE_LOG_DIRNAME = 'logs';
 export const AUTO_UPDATE_LOCK_FILENAME = '.apollo-toolkit-auto-update.lock';
 
@@ -54,15 +62,20 @@ export function resolveAutoUpdatePaths(toolkitHome: string): AutoUpdatePaths {
 
 // ── Config helpers ───────────────────────────────────────────────────────────
 
-export async function readAutoUpdateConfig(toolkitHome: string): Promise<AutoUpdateConfig> {
+export async function readAutoUpdateConfig(
+  toolkitHome: string,
+): Promise<AutoUpdateConfig> {
   const { config: configPath } = resolveAutoUpdatePaths(toolkitHome);
   try {
     const content = await readFile(configPath, 'utf8');
-    const parsed = JSON.parse(content);
-    if (typeof parsed.enabled === 'boolean') {
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    if (typeof parsed['enabled'] === 'boolean') {
       return {
-        enabled: parsed.enabled,
-        updatedAt: parsed.updatedAt ?? new Date().toISOString(),
+        enabled: parsed['enabled'],
+        updatedAt:
+          typeof parsed['updatedAt'] === 'string'
+            ? parsed['updatedAt']
+            : new Date().toISOString(),
       };
     }
     // Malformed: missing or non-boolean enabled field
@@ -94,9 +107,9 @@ export async function readAutoUpdateStatus(
   const { status: statusPath } = resolveAutoUpdatePaths(toolkitHome);
   try {
     const content = await readFile(statusPath, 'utf8');
-    const parsed = JSON.parse(content);
-    if (typeof parsed.enabled === 'boolean') {
-      return parsed as AutoUpdateStatus;
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    if (typeof parsed['enabled'] === 'boolean') {
+      return parsed as unknown as AutoUpdateStatus;
     }
     return null;
   } catch {
@@ -131,7 +144,7 @@ export async function withAutoUpdateLock<T>(
     const fd = await open(lockPath, 'wx');
     await fd.close();
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException)?.code === 'EEXIST') {
+    if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
       throw new Error(
         `Auto-update lock exists at ${lockPath}. Another auto-update process may be running.`,
       );

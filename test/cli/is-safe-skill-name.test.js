@@ -1,10 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import os from 'node:os';
 import { isSafeSkillName } from '../../packages/cli/dist/installer.js';
 
-test('isSafeSkillName allows backslash on non-Windows', () => {
-  assert.ok(isSafeSkillName('valid\\name'));
-});
+test(
+  'isSafeSkillName allows backslash on non-Windows',
+  { skip: os.platform() === 'win32' },
+  () => {
+    assert.ok(isSafeSkillName('valid\\name'));
+  },
+);
 
 test('isSafeSkillName still blocks null byte', () => {
   assert.ok(!isSafeSkillName('bad\0name'));

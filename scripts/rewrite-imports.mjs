@@ -114,7 +114,6 @@ let totalReplacements = 0;
 
 for (const file of jsFiles) {
   let content = readFileSync(file, 'utf-8');
-  let changed = false;
 
   // 1. Rewrite static imports: from '@laitszkin/xxx' → from 'relative-path'
   content = content.replace(
@@ -123,7 +122,9 @@ for (const file of jsFiles) {
       const fullName = `@laitszkin/${name}`;
       const pkgPath = resolvePackage(fullName);
       if (!pkgPath) {
-        console.warn(`WARN: unknown package in static import: ${fullName} (${file})`);
+        console.warn(
+          `WARN: unknown package in static import: ${fullName} (${file})`,
+        );
         return match;
       }
       const rel = relativePath(file, pkgPath);
@@ -135,20 +136,19 @@ for (const file of jsFiles) {
   // 2. Rewrite dynamic import strings in TOOL_MODULE_NAMES:
   //    '@laitszkin/tool-xxx' → 'relative-path'
   //    Only in the tool-registration file (or any file with TOOL_MODULE_NAMES)
-  content = content.replace(
-    /'@laitszkin\/(tool-[^']+)'/g,
-    (match, name) => {
-      const fullName = `@laitszkin/${name}`;
-      const pkgPath = resolvePackage(fullName);
-      if (!pkgPath) {
-        console.warn(`WARN: unknown package in dynamic import: ${fullName} (${file})`);
-        return match;
-      }
-      const rel = relativePath(file, pkgPath);
-      totalReplacements++;
-      return `'${rel}'`;
-    },
-  );
+  content = content.replace(/'@laitszkin\/(tool-[^']+)'/g, (match, name) => {
+    const fullName = `@laitszkin/${name}`;
+    const pkgPath = resolvePackage(fullName);
+    if (!pkgPath) {
+      console.warn(
+        `WARN: unknown package in dynamic import: ${fullName} (${file})`,
+      );
+      return match;
+    }
+    const rel = relativePath(file, pkgPath);
+    totalReplacements++;
+    return `'${rel}'`;
+  });
 
   // 3. Fix TOOL_NAMES computation: replace('@laitszkin/tool-', '') no longer works
   //    after dynamic import strings are rewritten. Replace with hardcoded set.
@@ -173,8 +173,12 @@ for (const file of jsFiles) {
 
   if (content !== readFileSync(file, 'utf-8')) {
     writeFileSync(file, content, 'utf-8');
-    console.log(`OK  ${relative(root, file)} (${totalReplacements} replacements so far)`);
+    console.log(
+      `OK  ${relative(root, file)} (${totalReplacements} replacements so far)`,
+    );
   }
 }
 
-console.log(`\nDone. ${totalReplacements} total replacements across ${jsFiles.length} files.`);
+console.log(
+  `\nDone. ${totalReplacements} total replacements across ${jsFiles.length} files.`,
+);

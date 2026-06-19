@@ -7,10 +7,40 @@ const originalQuestion = {
   difficulty: 'basic',
   projectContext: { description: 'Test project', files: [] },
   scoringCriteria: {
-    outcome: { weight: 0.3, checks: [{ id: 'o1', description: 'Complete task', passCondition: 'Output exists' }] },
-    process: { weight: 0.3, checks: [{ id: 'p1', description: 'Follow process', passCondition: 'Steps done' }] },
-    style: { weight: 0.2, checks: [{ id: 's1', description: 'Correct format', passCondition: 'Valid format' }] },
-    efficiency: { weight: 0.2, checks: [{ id: 'e1', description: 'Efficient', passCondition: 'Quick' }] },
+    outcome: {
+      weight: 0.3,
+      checks: [
+        {
+          id: 'o1',
+          description: 'Complete task',
+          passCondition: 'Output exists',
+        },
+      ],
+    },
+    process: {
+      weight: 0.3,
+      checks: [
+        {
+          id: 'p1',
+          description: 'Follow process',
+          passCondition: 'Steps done',
+        },
+      ],
+    },
+    style: {
+      weight: 0.2,
+      checks: [
+        {
+          id: 's1',
+          description: 'Correct format',
+          passCondition: 'Valid format',
+        },
+      ],
+    },
+    efficiency: {
+      weight: 0.2,
+      checks: [{ id: 'e1', description: 'Efficient', passCondition: 'Quick' }],
+    },
   },
 };
 
@@ -22,13 +52,18 @@ describe('REGTEST-F: generateVariants', () => {
     globalThis.fetch = async () => ({
       ok: true,
       json: async () => ({
-        choices: [{
-          message: {
-            content: JSON.stringify([
-              { id: 'Q001_v1', userPrompt: 'Write a spec for handling user authentication' },
-            ]),
+        choices: [
+          {
+            message: {
+              content: JSON.stringify([
+                {
+                  id: 'Q001_v1',
+                  userPrompt: 'Write a spec for handling user authentication',
+                },
+              ]),
+            },
           },
-        }],
+        ],
       }),
     });
   });
@@ -58,8 +93,11 @@ describe('REGTEST-F: generateVariants', () => {
     );
 
     // Verify difficulty is preserved
-    assert.equal(variants[0].difficulty, originalQuestion.difficulty,
-      'Variant should preserve difficulty');
+    assert.equal(
+      variants[0].difficulty,
+      originalQuestion.difficulty,
+      'Variant should preserve difficulty',
+    );
 
     // Verify projectContext is preserved
     assert.deepStrictEqual(
@@ -69,12 +107,17 @@ describe('REGTEST-F: generateVariants', () => {
     );
 
     // Verify userPrompt is different (rewritten)
-    assert.notEqual(variants[0].userPrompt, originalQuestion.userPrompt,
-      'Variant should have rewritten userPrompt');
+    assert.notEqual(
+      variants[0].userPrompt,
+      originalQuestion.userPrompt,
+      'Variant should have rewritten userPrompt',
+    );
 
     // Verify id reflects origin
-    assert.ok(variants[0].id.startsWith(originalQuestion.id + '_v'),
-      `Variant id "${variants[0].id}" should start with "${originalQuestion.id}_v"`);
+    assert.ok(
+      variants[0].id.startsWith(originalQuestion.id + '_v'),
+      `Variant id "${variants[0].id}" should start with "${originalQuestion.id}_v"`,
+    );
   });
 
   it('should return empty array when LLM returns unparseable response', async () => {
@@ -94,7 +137,14 @@ describe('REGTEST-F: generateVariants', () => {
       JUDGE_API_KEY: 'test-key',
     });
 
-    assert.ok(Array.isArray(variants), 'Should return array even on parse failure');
-    assert.equal(variants.length, 0, 'Should return empty array on parse failure');
+    assert.ok(
+      Array.isArray(variants),
+      'Should return array even on parse failure',
+    );
+    assert.equal(
+      variants.length,
+      0,
+      'Should return empty array on parse failure',
+    );
   });
 });

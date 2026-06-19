@@ -95,25 +95,25 @@ function parseArgs(argv: string[]): ReviewThreadsArgs {
 
   // First argument is the subcommand (list/resolve)
   let i = 0;
-  if (i < argv.length && !argv[i].startsWith('-')) {
-    args.command = argv[i++];
+  if (i < argv.length && !(argv[i] ?? '').startsWith('-')) {
+    args.command = argv[i++] ?? '';
   }
 
   while (i < argv.length) {
     const arg = argv[i];
     switch (arg) {
       case '--repo':
-        if (i + 1 < argv.length) args.repo = argv[++i];
+        if (i + 1 < argv.length) args.repo = argv[++i] ?? null;
         break;
       case '--pr':
         if (i + 1 < argv.length) {
-          const n = parseInt(argv[++i], 10);
+          const n = parseInt(argv[++i] ?? '', 10);
           if (n > 0) args.pr = n;
         }
         break;
       case '--state':
         if (i + 1 < argv.length) {
-          const val = argv[++i];
+          const val = argv[++i] ?? '';
           if (['unresolved', 'resolved', 'all'].includes(val)) args.state = val;
         }
         break;
@@ -124,10 +124,10 @@ function parseArgs(argv: string[]): ReviewThreadsArgs {
         }
         break;
       case '--thread-id':
-        if (i + 1 < argv.length) args.threadId.push(argv[++i]);
+        if (i + 1 < argv.length) args.threadId.push(argv[++i] ?? '');
         break;
       case '--thread-id-file':
-        if (i + 1 < argv.length) args.threadIdFile = argv[++i];
+        if (i + 1 < argv.length) args.threadIdFile = argv[++i] ?? null;
         break;
       case '--all-unresolved':
         args.allUnresolved = true;
@@ -163,7 +163,9 @@ function runGh(cmdArgs: string[]): Promise<CommandResult> {
           resolve({
             stdout: stdout || '',
             stderr: stderr || '',
-            exitCode: (error as NodeJS.ErrnoException & { status?: number }).status ?? 1,
+            exitCode:
+              (error as NodeJS.ErrnoException & { status?: number }).status ??
+              1,
           });
         } else {
           resolve({ stdout: stdout || '', stderr: stderr || '', exitCode: 0 });
@@ -179,9 +181,11 @@ function runGhJson(cmdArgs: string[]): Promise<Record<string, unknown>> {
       throw new SystemError(result.stderr.trim() || 'gh command failed');
     }
     try {
-      return JSON.parse(result.stdout);
+      return JSON.parse(result.stdout) as Record<string, unknown>;
     } catch (exc) {
-      throw new SystemError('Failed to parse gh JSON output', undefined, { cause: exc });
+      throw new SystemError('Failed to parse gh JSON output', undefined, {
+        cause: exc,
+      });
     }
   });
 }
@@ -209,12 +213,17 @@ async function resolveRepo(repo: string | null): Promise<string> {
     '.nameWithOwner',
   ]);
   if (result.exitCode !== 0) {
-    throw new SystemError(result.stderr.trim() || 'Unable to resolve current repo');
+    throw new SystemError(
+      result.stderr.trim() || 'Unable to resolve current repo',
+    );
   }
   return result.stdout.trim();
 }
 
-async function resolvePrNumber(repo: string, pr: number | null): Promise<number> {
+async function resolvePrNumber(
+  repo: string,
+  pr: number | null,
+): Promise<number> {
   if (pr !== null) return pr;
 
   const result = await runGh([
@@ -256,7 +265,7 @@ async function fetchReviewThreads(
   const threads: Array<Record<string, unknown>> = [];
   let after: string | null = null;
 
-  while (true) {
+  for (;;) {
     const payload = await ghGraphql(LIST_QUERY, {
       owner,
       name,
@@ -264,18 +273,20 @@ async function fetchReviewThreads(
       after,
     });
 
-    const pr = (payload.data as Record<string, unknown>)?.repository as Record<string, unknown> | undefined;
+    const pr = (payload['data'] as Record<string, unknown> | undefined)?.[
+      'repository'
+    ] as Record<string, unknown> | undefined;
     if (!pr) {
-      throw new UserInputError(`PR #${prNumber} not found in ${repo}`);
+      throw new UserInputError(`PR #${String(prNumber)} not found in ${repo}`);
     }
 
-    const reviewThreads = pr.reviewThreads as Record<string, unknown>;
-    const nodes = (reviewThreads.nodes as Array<Record<string, unknown>>) || [];
+    const reviewThreads = pr['reviewThreads'] as Record<string, unknown>;
+    const nodes = reviewThreads['nodes'] as Array<Record<string, unknown>>;
     threads.push(...nodes);
 
-    const pageInfo = reviewThreads.pageInfo as Record<string, unknown>;
-    if (!pageInfo.hasNextPage) break;
-    after = (pageInfo.endCursor as string) || null;
+    const pageInfo = reviewThreads['pageInfo'] as Record<string, unknown>;
+    if (!pageInfo['hasNextPage']) break;
+    after = (pageInfo['endCursor'] as string) || null;
     if (!after) break;
   }
 
@@ -288,35 +299,40 @@ function filterThreads(
 ): Array<Record<string, unknown>> {
   if (state === 'all') return threads;
   if (state === 'resolved') {
-    return threads.filter((item) => item.isResolved);
+    return threads.filter((item) => item['isResolved']);
   }
-  return threads.filter((item) => !item.isResolved);
+  return threads.filter((item) => !item['isResolved']);
 }
 
 function normalizeThread(
   thread: Record<string, unknown>,
 ): Record<string, unknown> {
-  const commentNodes = (thread.comments as Record<string, unknown>)?.nodes as
-    | Array<Record<string, unknown>>
-    | undefined;
-  const normalizedComments = (commentNodes || []).map((comment) => ({
-    id: comment.id,
-    url: comment.url,
-    author: ((comment.author as Record<string, unknown>)?.login as string) || null,
-    body: comment.body || '',
-    created_at: comment.createdAt,
-    path: comment.path,
-    line: comment.line,
-    outdated: comment.outdated,
-  }));
+  const comments = thread['comments'] as Record<string, unknown> | undefined;
+  const commentNodes =
+    (comments?.['nodes'] as Array<Record<string, unknown>> | undefined) || [];
+  const normalizedComments = commentNodes.map((comment) => {
+    const commentAuthor = comment['author'] as
+      | Record<string, unknown>
+      | undefined;
+    return {
+      id: comment['id'],
+      url: comment['url'],
+      author: (commentAuthor?.['login'] as string) || null,
+      body: comment['body'] || '',
+      created_at: comment['createdAt'],
+      path: comment['path'],
+      line: comment['line'],
+      outdated: comment['outdated'],
+    };
+  });
 
   return {
-    thread_id: thread.id,
-    is_resolved: thread.isResolved,
-    is_outdated: thread.isOutdated,
-    path: thread.path,
-    line: thread.line,
-    start_line: thread.startLine,
+    thread_id: thread['id'],
+    is_resolved: thread['isResolved'],
+    is_outdated: thread['isOutdated'],
+    path: thread['path'],
+    line: thread['line'],
+    start_line: thread['startLine'],
     comments: normalizedComments,
   };
 }
@@ -328,24 +344,29 @@ function truncate(text: string, width: number): string {
 }
 
 function previewBody(thread: Record<string, unknown>): string {
-  const comments = thread.comments as Array<Record<string, unknown>> | undefined;
+  const comments = thread['comments'] as
+    | Array<Record<string, unknown>>
+    | undefined;
   if (!comments || comments.length === 0) return '-';
-  const body = (comments[0].body as string || '').replace(/\n/g, ' ').trim();
+  const body = (((comments[0] ?? {})['body'] as string) || '')
+    .replace(/\n/g, ' ')
+    .trim();
   return truncate(body || '-', 72);
 }
 
 function renderLocation(thread: Record<string, unknown>): string {
-  const path = (thread.path as string) || '-';
-  const line = thread.line;
+  const path = (thread['path'] as string) || '-';
+  const line = thread['line'];
   if (line == null) return path;
-  return `${path}:${line}`;
+  const lineStr = typeof line === 'number' ? String(line) : '';
+  return `${path}:${lineStr}`;
 }
 
 function printTable(
   threads: Array<Record<string, unknown>>,
   context: ToolContext,
 ): void {
-  const { stdout } = context;
+  const stdout = context.stdout ?? process.stdout;
   const widths = {
     idx: 4,
     thread: 12,
@@ -359,22 +380,27 @@ function printTable(
     `${'THREAD_ID'.padEnd(widths.thread)} ` +
     `${'LOCATION'.padEnd(widths.location)} ` +
     `${'AUTHOR'.padEnd(widths.author)} ` +
-    `${'COMMENT_PREVIEW'.padEnd(widths.preview)}`;
-  stdout!.write(header + '\n');
-  stdout!.write('-'.repeat(header.length) + '\n');
+    'COMMENT_PREVIEW'.padEnd(widths.preview);
+  stdout.write(header + '\n');
+  stdout.write('-'.repeat(header.length) + '\n');
 
   for (let idx = 0; idx < threads.length; idx++) {
-    const thread = threads[idx];
-    const comments = thread.comments as Array<Record<string, unknown>> | undefined;
-    const author = comments?.[0]?.author ?? '-';
+    const thread = threads[idx] ?? {};
+    const comments = thread['comments'] as
+      | Array<Record<string, unknown>>
+      | undefined;
+    const firstComment = comments?.[0];
+    const firstCommentAuthor = firstComment?.['author'];
+    const author =
+      typeof firstCommentAuthor === 'string' ? firstCommentAuthor : '-';
 
     const row =
       `${String(idx + 1).padEnd(widths.idx)} ` +
-      `${truncate(String(thread.thread_id ?? '-'), widths.thread).padEnd(widths.thread)} ` +
+      `${truncate(typeof thread['thread_id'] === 'string' ? thread['thread_id'] : '-', widths.thread).padEnd(widths.thread)} ` +
       `${truncate(renderLocation(thread), widths.location).padEnd(widths.location)} ` +
-      `${truncate(String(author ?? '-'), widths.author).padEnd(widths.author)} ` +
-      `${previewBody(thread).padEnd(widths.preview)}`;
-    stdout!.write(row + '\n');
+      `${truncate(author, widths.author).padEnd(widths.author)} ` +
+      previewBody(thread).padEnd(widths.preview);
+    stdout.write(row + '\n');
   }
 }
 
@@ -382,21 +408,20 @@ function printTable(
 
 function loadThreadIds(filePath: string): string[] {
   const raw = readFileSync(filePath, 'utf-8');
-  const payload = JSON.parse(raw);
+  const payload = JSON.parse(raw) as Record<string, unknown>;
 
   let ids: unknown[];
   if (Array.isArray(payload)) {
     ids = payload;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety: payload could be null despite Record<string, unknown> type (from `as` cast)
   } else if (typeof payload === 'object' && payload !== null) {
-    const p = payload as Record<string, unknown>;
-    if (Array.isArray(p.thread_ids)) {
-      ids = p.thread_ids;
-    } else if (Array.isArray(p.adopted_thread_ids)) {
-      ids = p.adopted_thread_ids;
-    } else if (Array.isArray(p.threads)) {
-      ids = (p.threads as Array<Record<string, unknown>>)
-        .filter((item) => typeof item === 'object' && item !== null)
-        .map((item) => item.thread_id)
+    if (Array.isArray(payload['thread_ids'])) {
+      ids = payload['thread_ids'];
+    } else if (Array.isArray(payload['adopted_thread_ids'])) {
+      ids = payload['adopted_thread_ids'];
+    } else if (Array.isArray(payload['threads'])) {
+      ids = (payload['threads'] as Array<Record<string, unknown>>)
+        .map((item) => item['thread_id'])
         .filter((id) => id !== undefined);
     } else {
       throw new UserInputError(
@@ -408,7 +433,10 @@ function loadThreadIds(filePath: string): string[] {
   }
 
   const output = ids
-    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .filter(
+      (item): item is string =>
+        typeof item === 'string' && item.trim().length > 0,
+    )
     .map((item) => item.trim());
   return [...new Set(output)];
 }
@@ -421,8 +449,8 @@ function collectThreadIds(
 
   if (args.allUnresolved) {
     for (const item of unresolvedThreads) {
-      if (item.thread_id) {
-        ids.push(item.thread_id as string);
+      if (item['thread_id']) {
+        ids.push(item['thread_id'] as string);
       }
     }
   }
@@ -452,14 +480,14 @@ async function resolveThreads(
 
     try {
       const payload = await ghGraphql(RESOLVE_MUTATION, { threadId });
-      const thread = (
-        payload.data as Record<string, unknown>
-      )?.resolveReviewThread as Record<string, unknown> | undefined;
-      if (!thread?.thread) {
+      const thread = (payload['data'] as Record<string, unknown> | undefined)?.[
+        'resolveReviewThread'
+      ] as Record<string, unknown> | undefined;
+      if (!thread?.['thread']) {
         throw new SystemError('thread did not resolve');
       }
-      const resolvedThread = thread.thread as Record<string, unknown>;
-      if (!resolvedThread.isResolved) {
+      const resolvedThread = thread['thread'] as Record<string, unknown>;
+      if (!resolvedThread['isResolved']) {
         throw new SystemError('thread did not resolve');
       }
       resolved.push(threadId);
@@ -477,11 +505,14 @@ async function cmdList(
   args: ReviewThreadsArgs,
   context: ToolContext,
 ): Promise<number> {
-  const { stdout } = context;
+  const stdout = context.stdout ?? process.stdout;
 
   const repo = await resolveRepo(args.repo);
   const prNumber = await resolvePrNumber(repo, args.pr);
-  const threads: Array<Record<string, unknown>> = await fetchReviewThreads(repo, prNumber);
+  const threads: Array<Record<string, unknown>> = await fetchReviewThreads(
+    repo,
+    prNumber,
+  );
 
   const filtered = filterThreads(threads, args.state);
   const normalized = filtered.map(normalizeThread);
@@ -495,11 +526,11 @@ async function cmdList(
   };
 
   if (args.output === 'json') {
-    stdout!.write(JSON.stringify(result, null, 2) + '\n');
+    stdout.write(JSON.stringify(result, null, 2) + '\n');
   } else {
-    stdout!.write(`Repository: ${repo}\n`);
-    stdout!.write(`PR: #${prNumber}\n`);
-    stdout!.write(`Threads (${args.state}): ${normalized.length}\n`);
+    stdout.write(`Repository: ${repo}\n`);
+    stdout.write(`PR: #${String(prNumber)}\n`);
+    stdout.write(`Threads (${args.state}): ${String(normalized.length)}\n`);
     printTable(normalized, context);
   }
 
@@ -510,11 +541,15 @@ async function cmdResolve(
   args: ReviewThreadsArgs,
   context: ToolContext,
 ): Promise<number> {
-  const { stdout } = context;
+  const stdout = context.stdout ?? process.stdout;
+  const stderr = context.stderr ?? process.stderr;
 
   const repo = await resolveRepo(args.repo);
   const prNumber = await resolvePrNumber(repo, args.pr);
-  const threads: Array<Record<string, unknown>> = await fetchReviewThreads(repo, prNumber);
+  const threads: Array<Record<string, unknown>> = await fetchReviewThreads(
+    repo,
+    prNumber,
+  );
 
   const unresolved = filterThreads(threads, 'unresolved').map(normalizeThread);
   const threadIds = collectThreadIds(args, unresolved);
@@ -527,8 +562,8 @@ async function cmdResolve(
 
   const { resolved, failed } = await resolveThreads(threadIds, args.dryRun);
 
-  stdout!.write(JSON.stringify({ resolved }, null, 2) + '\n');
-  context.stderr!.write(JSON.stringify({ failed }, null, 2) + '\n');
+  stdout.write(JSON.stringify({ resolved }, null, 2) + '\n');
+  stderr.write(JSON.stringify({ failed }, null, 2) + '\n');
 
   return failed.length > 0 ? 1 : 0;
 }
@@ -576,11 +611,11 @@ export async function reviewThreadsHandler(
   argv: string[],
   context: ToolContext,
 ): Promise<number> {
-  const { stdout } = context;
+  const stdout = context.stdout ?? process.stdout;
   const args = parseArgs(argv);
 
   if (args.help) {
-    printHelp(stdout!);
+    printHelp(stdout);
     return 0;
   }
 

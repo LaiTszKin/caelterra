@@ -65,8 +65,8 @@ export function loadEnv(envPath) {
     if (err.code === 'ENOENT') {
       throw new Error(
         `.env 檔案不存在: "${resolved}"\n` +
-        '請從 .env.example 複製一份並填入實際值:\n' +
-        '  cp .env.example .env'
+          '請從 .env.example 複製一份並填入實際值:\n' +
+          '  cp .env.example .env',
       );
     }
     throw new Error(`無法讀取 .env 檔案 "${resolved}": ${err.message}`);
@@ -94,8 +94,10 @@ export function loadEnv(envPath) {
     let value = line.slice(eqIndex + 1).trim();
 
     // 移除包裹的引號
-    if ((value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))) {
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
       value = value.slice(1, -1);
     }
 
@@ -137,8 +139,8 @@ export function loadEnv(envPath) {
   if (missing.length > 0) {
     throw new Error(
       `.env 檔案缺少必要的環境變數 (${missing.length} 個):\n` +
-      missing.join('\n') +
-      '\n\n請確認 .env 檔案包含所有必要變數 (參考 .env.example)'
+        missing.join('\n') +
+        '\n\n請確認 .env 檔案包含所有必要變數 (參考 .env.example)',
     );
   }
 
@@ -167,7 +169,10 @@ function selfTest() {
     console.error('   失敗: 應該拋出錯誤');
     process.exit(1);
   } catch (err) {
-    if (err.message.includes('.env 檔案不存在') || err.message.includes('ENOENT')) {
+    if (
+      err.message.includes('.env 檔案不存在') ||
+      err.message.includes('ENOENT')
+    ) {
       console.log('   通過: 正確拋出檔案不存在錯誤');
     } else {
       console.log(`   部分通過 (錯誤訊息: ${err.message.split('\n')[0]})`);
@@ -180,7 +185,9 @@ function selfTest() {
   const envExamplePath = resolve(__selfDirname, '..', '.env.example');
   try {
     const content = readFileSync(envExamplePath, 'utf-8');
-    const lines = content.split('\n').filter(l => l.includes('=') && !l.startsWith('#'));
+    const lines = content
+      .split('\n')
+      .filter((l) => l.includes('=') && !l.startsWith('#'));
     console.log(`   通過: .env.example 存在，共 ${lines.length} 行有變數定義`);
   } catch (err) {
     console.error(`   失敗: ${err.message}`);
@@ -189,17 +196,19 @@ function selfTest() {
 
   // Test 3: DEFAULTS values
   console.log('\n3. 測試預設值:');
-  console.log(`   EXEC_CONCURRENCY=${DEFAULTS.EXEC_CONCURRENCY}, JUDGE_CONCURRENCY=${DEFAULTS.JUDGE_CONCURRENCY}, EXEC_TIMEOUT=${DEFAULTS.EXEC_TIMEOUT}`);
+  console.log(
+    `   EXEC_CONCURRENCY=${DEFAULTS.EXEC_CONCURRENCY}, JUDGE_CONCURRENCY=${DEFAULTS.JUDGE_CONCURRENCY}, EXEC_TIMEOUT=${DEFAULTS.EXEC_TIMEOUT}`,
+  );
   console.log('   通過: 所有預設值已定義');
 
   console.log('\n=== 測試完成 ===');
 }
 
 // Run self-test when executed directly
-const isDirectRun = process.argv[1] && (
-  process.argv[1].endsWith('env-utils.mjs') ||
-  process.argv[1].endsWith('env-utils')
-);
+const isDirectRun =
+  process.argv[1] &&
+  (process.argv[1].endsWith('env-utils.mjs') ||
+    process.argv[1].endsWith('env-utils'));
 
 if (isDirectRun) {
   selfTest();

@@ -4,10 +4,130 @@ import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 
-let _codeGraphModule: any = null;
-export function getCodeGraphModule(): { CodeGraph: any; findNearestCodeGraphRoot: any } {
+// --- Types for @colbymchenry/codegraph API ---
+
+export interface CodeGraphProgress {
+  phase: string;
+  current: number;
+  total: number;
+  currentFile?: string;
+}
+
+export interface CodeGraphStats {
+  fileCount: number;
+  nodeCount: number;
+  edgeCount: number;
+  dbSizeBytes: number;
+  lastUpdated: number;
+  nodesByKind: Record<string, number>;
+  edgesByKind: Record<string, number>;
+  filesByLanguage: Record<string, number>;
+}
+
+export interface CodeGraphNode {
+  id: string;
+  name: string;
+  kind: string;
+  qualifiedName: string;
+  filePath: string;
+  language: string;
+  startLine: number;
+  endLine: number;
+  signature: string;
+  isExported: boolean;
+}
+
+export interface CodeGraphEdge {
+  source: string;
+  target: string;
+  kind: string;
+  line: number;
+  metadata: Record<string, unknown>;
+  provenance: string;
+}
+
+export interface CodeGraphRelationRow {
+  node: CodeGraphNode;
+  edge: CodeGraphEdge;
+}
+
+export interface CodeGraphSearchResult {
+  node: CodeGraphNode;
+  score: number;
+}
+
+export interface CodeGraphFile {
+  path: string;
+  language: string;
+  nodeCount: number;
+}
+
+export interface CodeGraphSyncResult {
+  filesChecked: number;
+  filesAdded: number;
+  filesModified: number;
+  filesRemoved: number;
+  nodesUpdated: number;
+  durationMs: number;
+}
+
+export interface CodeGraphSubgraph {
+  roots: string[];
+  confidence: number;
+  nodes: Map<string, CodeGraphNode>;
+  edges: CodeGraphEdge[];
+}
+
+export interface CodeGraphInstance {
+  close(): void;
+  getStats(): CodeGraphStats;
+  getFiles(): CodeGraphFile[];
+  searchNodes(
+    query: string,
+    options?: { limit?: number; kinds?: string[] },
+  ): CodeGraphSearchResult[];
+  getNode(id: string): CodeGraphNode | null;
+  getNodesByName(name: string): CodeGraphNode[];
+  getCallers(id: string): CodeGraphRelationRow[];
+  getCallees(id: string): CodeGraphRelationRow[];
+  getImpactRadius(id: string, depth?: number): CodeGraphSubgraph;
+  getCode(id: string): Promise<string | null>;
+  buildContext(
+    query: string,
+    options?: { maxNodes?: number; includeCode?: boolean; format?: string },
+  ): Promise<unknown>;
+  indexAll(options?: {
+    onProgress?: (progress: CodeGraphProgress) => void;
+  }): Promise<unknown>;
+  sync(options?: {
+    onProgress?: (progress: CodeGraphProgress) => void;
+  }): Promise<CodeGraphSyncResult>;
+}
+
+interface CodeGraphStatic {
+  isInitialized(projectRoot: string): boolean;
+  init(
+    projectRoot: string,
+    options?: {
+      index?: boolean;
+      onProgress?: (progress: CodeGraphProgress) => void;
+    },
+  ): Promise<CodeGraphInstance>;
+  open(
+    projectRoot: string,
+    options?: { sync?: boolean; readOnly?: boolean },
+  ): Promise<CodeGraphInstance>;
+}
+
+interface CodeGraphModule {
+  CodeGraph: CodeGraphStatic;
+  findNearestCodeGraphRoot: (path: string) => string | null;
+}
+
+let _codeGraphModule: CodeGraphModule | null = null;
+export function getCodeGraphModule(): CodeGraphModule {
   if (!_codeGraphModule) {
-    _codeGraphModule = require('@colbymchenry/codegraph');
+    _codeGraphModule = require('@colbymchenry/codegraph') as CodeGraphModule;
   }
   return _codeGraphModule;
 }
@@ -16,11 +136,15 @@ export function getCodeGraphModule(): { CodeGraph: any; findNearestCodeGraphRoot
  * Walk up from `startDir` looking for `filename` (a file or directory).
  * Never goes above `upperBound`. Returns null if not found.
  */
-function findInParents(startDir: string, filename: string, upperBound?: string): string | null {
+function findInParents(
+  startDir: string,
+  filename: string,
+  upperBound?: string,
+): string | null {
   let dir = path.resolve(startDir);
-  while (true) {
+  for (;;) {
     if (fs.existsSync(path.join(dir, filename))) return dir;
-    if (upperBound && dir === upperBound) return null;
+    if (dir === upperBound) return null;
     const parent = path.dirname(dir);
     if (parent === dir) return null; // hit filesystem root
     dir = parent;
@@ -44,7 +168,10 @@ export function findProjectRoot(startPath?: string): string {
   // Determine the git root as a natural project boundary
   let gitRoot: string | undefined;
   try {
-    gitRoot = execSync('git rev-parse --show-toplevel', { cwd, encoding: 'utf-8' }).trim();
+    gitRoot = execSync('git rev-parse --show-toplevel', {
+      cwd,
+      encoding: 'utf-8',
+    }).trim();
   } catch {
     // Not in a git repo; no upper boundary constraint
   }
@@ -76,23 +203,33 @@ export function findProjectRoot(startPath?: string): string {
  */
 export async function createOrOpenIndex(
   projectRoot: string,
-  options?: { index?: boolean; onProgress?: (progress: any) => void },
-): Promise<any> {
-  const isInit = getCodeGraphModule().CodeGraph.isInitialized(projectRoot);
+  options?: {
+    index?: boolean;
+    onProgress?: (progress: CodeGraphProgress) => void;
+  },
+): Promise<CodeGraphInstance> {
+  const { CodeGraph } = getCodeGraphModule();
+  const isInit = CodeGraph.isInitialized(projectRoot);
   if (isInit) {
     throw new Error(
       `Project is already initialized at ${projectRoot}. Use \`apltk codegraph sync\` to update the index.`,
     );
   }
-  return getCodeGraphModule().CodeGraph.init(projectRoot, {
+  const initOptions: {
+    index?: boolean;
+    onProgress?: (progress: CodeGraphProgress) => void;
+  } = {
     index: options?.index ?? false,
-    onProgress: options?.onProgress,
-  });
+  };
+  if (options?.onProgress !== undefined) {
+    initOptions.onProgress = options.onProgress;
+  }
+  return CodeGraph.init(projectRoot, initOptions);
 }
 
 /**
  * Close a CodeGraph instance and release resources.
  */
-export function closeIndex(cg: any): void {
+export function closeIndex(cg: CodeGraphInstance): void {
   cg.close();
 }

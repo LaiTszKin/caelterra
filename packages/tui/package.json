@@ -1,7 +1,7 @@
 {
   "name": "@laitszkin/tui",
   "version": "5.0.0",
-  "description": "Apollo Toolkit \u2014 interactive terminal UI components",
+  "description": "Apollo Toolkit — interactive terminal UI components",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^8.0.0",
-    "@laitszkin/tool-utils": "*",
+    "@laitszkin/tool-utils": "workspace:*",
     "chalk": "^5.0.0"
   },
   "publishConfig": {

@@ -33,8 +33,10 @@ export async function registerAllTools(): Promise<void> {
     TOOL_MODULE_NAMES.map((name) => import(name)),
   );
 
+  type ToolDefinition = Parameters<typeof registerTool>[0];
+
   for (const mod of modules) {
-    registerTool(mod.tool);
+    registerTool((mod as { tool: ToolDefinition }).tool);
   }
 }
 

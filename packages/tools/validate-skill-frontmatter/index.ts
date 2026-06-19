@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
-import { UserInputError, iterSkillDirs, createToolRunner } from '@laitszkin/tool-utils';
+import {
+  UserInputError,
+  iterSkillDirs,
+  createToolRunner,
+} from '@laitszkin/tool-utils';
 
 const NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REQUIRED_KEYS = new Set(['name', 'description']);
@@ -15,15 +19,19 @@ function repoRoot(context?: ToolContext): string {
 
 function extractFrontmatter(content: string): string {
   const lines = content.split('\n');
-  if (!lines.length || lines[0].trim() !== '---') {
-    throw new UserInputError("SKILL.md must start with YAML frontmatter delimiter '---'.");
+  if (!lines.length || (lines[0] ?? '').trim() !== '---') {
+    throw new UserInputError(
+      "SKILL.md must start with YAML frontmatter delimiter '---'.",
+    );
   }
   for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim() === '---') {
+    if ((lines[i] ?? '').trim() === '---') {
       return lines.slice(1, i).join('\n');
     }
   }
-  throw new UserInputError("SKILL.md frontmatter is missing the closing '---' delimiter.");
+  throw new UserInputError(
+    "SKILL.md frontmatter is missing the closing '---' delimiter.",
+  );
 }
 
 function validateSkill(skillDir: string): string[] {
@@ -33,22 +41,22 @@ function validateSkill(skillDir: string): string[] {
   let content: string;
   try {
     content = fs.readFileSync(skillMd, 'utf8');
-  } catch (exc: any) {
-    return [`${skillMd}: cannot read file (${exc.message}).`];
+  } catch (exc: unknown) {
+    return [`${skillMd}: cannot read file (${(exc as Error).message}).`];
   }
 
   let frontmatterText: string;
   try {
     frontmatterText = extractFrontmatter(content);
-  } catch (exc: any) {
-    return [`${skillMd}: ${exc.message}`];
+  } catch (exc: unknown) {
+    return [`${skillMd}: ${(exc as Error).message}`];
   }
 
   // Simple YAML-like parsing for frontmatter (handles the common cases)
-  const frontmatter: Record<string, any> = {};
+  const frontmatter: Record<string, string> = {};
   for (const line of frontmatterText.split('\n')) {
     const match = line.match(/^(\w+):\s*(.*)$/);
-    if (match) {
+    if (match && match[1] !== undefined && match[2] !== undefined) {
       frontmatter[match[1]] = match[2].trim();
     }
   }
@@ -57,10 +65,14 @@ function validateSkill(skillDir: string): string[] {
   const missing = [...REQUIRED_KEYS].filter((k) => !keys.has(k));
   const extra = [...keys].filter((k) => !REQUIRED_KEYS.has(k));
   if (missing.length) {
-    errors.push(`${skillMd}: missing required frontmatter keys: ${missing.join(', ')}.`);
+    errors.push(
+      `${skillMd}: missing required frontmatter keys: ${missing.join(', ')}.`,
+    );
   }
   if (extra.length) {
-    errors.push(`${skillMd}: unsupported frontmatter keys: ${extra.join(', ')}.`);
+    errors.push(
+      `${skillMd}: unsupported frontmatter keys: ${extra.join(', ')}.`,
+    );
   }
 
   const name = frontmatter['name'];
@@ -69,10 +81,14 @@ function validateSkill(skillDir: string): string[] {
   } else {
     const normalizedName = name.trim();
     if (!NAME_PATTERN.test(normalizedName)) {
-      errors.push(`${skillMd}: 'name' must be kebab-case (lowercase letters, digits, and hyphens).`);
+      errors.push(
+        `${skillMd}: 'name' must be kebab-case (lowercase letters, digits, and hyphens).`,
+      );
     }
     if (normalizedName !== path.basename(skillDir)) {
-      errors.push(`${skillMd}: frontmatter name '${normalizedName}' must match folder name '${path.basename(skillDir)}'.`);
+      errors.push(
+        `${skillMd}: frontmatter name '${normalizedName}' must match folder name '${path.basename(skillDir)}'.`,
+      );
     }
   }
 
@@ -80,16 +96,18 @@ function validateSkill(skillDir: string): string[] {
   if (typeof description !== 'string' || !description.trim()) {
     errors.push(`${skillMd}: 'description' must be a non-empty string.`);
   } else if (description.length > MAX_DESCRIPTION_LENGTH) {
-    errors.push(`${skillMd}: invalid description: exceeds maximum length of ${MAX_DESCRIPTION_LENGTH} characters`);
+    errors.push(
+      `${skillMd}: invalid description: exceeds maximum length of ${String(MAX_DESCRIPTION_LENGTH)} characters`,
+    );
   }
 
   return errors;
 }
 
-async function validateSkillFrontmatterHandler(
+function validateSkillFrontmatterHandler(
   args: string[],
   context: ToolContext,
-): Promise<number> {
+): number {
   const stdout = context.stdout ?? process.stdout;
   const root = repoRoot(context);
   const skillDirs = iterSkillDirs(root);
@@ -113,7 +131,9 @@ async function validateSkillFrontmatterHandler(
     return 1;
   }
 
-  stdout.write(`SKILL.md frontmatter validation passed for ${skillDirs.length} skills.\n`);
+  stdout.write(
+    `SKILL.md frontmatter validation passed for ${String(skillDirs.length)} skills.\n`,
+  );
   return 0;
 }
 
@@ -125,6 +145,10 @@ export const tool: ToolDefinition = {
     options: {},
     allowPositionals: true,
     usage: 'apltk validate-skill-frontmatter',
-    handler: (_values: Record<string, unknown>, positionals: string[], context: ToolContext) => validateSkillFrontmatterHandler(positionals, context),
+    handler: (
+      _values: Record<string, unknown>,
+      positionals: string[],
+      context: ToolContext,
+    ) => validateSkillFrontmatterHandler(positionals, context),
   }),
 };

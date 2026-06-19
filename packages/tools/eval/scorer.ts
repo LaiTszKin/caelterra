@@ -18,7 +18,14 @@
  */
 
 import { existsSync } from 'node:fs';
-import { readFile, writeFile, rm, rmdir, readdir, access } from 'node:fs/promises';
+import {
+  readFile,
+  writeFile,
+  rm,
+  rmdir,
+  readdir,
+  access,
+} from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 
 import type { TraceEvent } from './executor.js';
@@ -26,7 +33,10 @@ import type { EnvConfig } from './lib/env-utils.js';
 import { callJudgeModel } from './lib/judge-api.js';
 import { promisePool } from './lib/promise-pool.js';
 import { acquireLock } from './lib/lock.js';
-import { loadQuestionsFromFile, getScoringCriteria } from './lib/question-utils.js';
+import {
+  loadQuestionsFromFile,
+  getScoringCriteria,
+} from './lib/question-utils.js';
 import type { Question, ScoringCriteria } from './lib/question-utils.js';
 import { getProjectRoot } from './lib/project-root.js';
 
@@ -74,7 +84,9 @@ type TraceEventWithLine = TraceEvent & { _lineNumber?: number };
  * @returns Object with events array and hasCorruption flag
  * @throws Error if the trace file does not exist
  */
-export async function readTrace(tracePath: string): Promise<{ events: TraceEvent[]; hasCorruption: boolean }> {
+export async function readTrace(
+  tracePath: string,
+): Promise<{ events: TraceEvent[]; hasCorruption: boolean }> {
   if (!existsSync(tracePath)) {
     throw new Error(`Trace 檔案不存在: ${tracePath}`);
   }
@@ -85,7 +97,7 @@ export async function readTrace(tracePath: string): Promise<{ events: TraceEvent
   let hasCorruption = false;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+    const line = (lines[i] ?? '').trim();
     if (!line) continue;
 
     try {
@@ -98,7 +110,11 @@ export async function readTrace(tracePath: string): Promise<{ events: TraceEvent
       const parseErrorEvent: TraceEventWithLine = {
         type: 'parse_error',
         timestamp: new Date().toISOString(),
-        data: { line: i + 1, raw: line.substring(0, 200), error: (err as Error).message },
+        data: {
+          line: i + 1,
+          raw: line.substring(0, 200),
+          error: (err as Error).message,
+        },
       };
       parseErrorEvent._lineNumber = i + 1;
       events.push(parseErrorEvent);
@@ -176,24 +192,27 @@ export function buildJudgePrompt(
     else if (e.type === 'error') errorEvents.push(e);
   }
 
-  const systemPrompt = safeString(thinkingEvent?.data?.systemPrompt, '(未記錄)');
-  const userPrompt = safeString(thinkingEvent?.data?.userPrompt, '(未記錄)');
+  const userPrompt = safeString(thinkingEvent?.data['userPrompt'], '(未記錄)');
   const assistantResponse = safeString(
-    (responseEvent?.data?.message as Record<string, unknown> | undefined)?.content,
+    (responseEvent?.data['message'] as Record<string, unknown> | undefined)?.[
+      'content'
+    ],
     '(無回應)',
   );
-  const duration = (endEvent?.data?.duration_ms as number | undefined) ?? 0;
-  const status = safeString(endEvent?.data?.status, 'unknown');
-  const errors = errorEvents.map(e => {
-    const raw = e.data?.error ?? e.data?.message ?? 'unknown error';
-    const msg = typeof raw === 'string' ? raw : String(raw);
+  const duration = (endEvent?.data['duration_ms'] as number | undefined) ?? 0;
+  const status = safeString(endEvent?.data['status'], 'unknown');
+  const errors = errorEvents.map((e) => {
+    const raw: unknown =
+      e.data['error'] ?? e.data['message'] ?? 'unknown error';
+    const msg = typeof raw === 'string' ? raw : JSON.stringify(raw);
     return msg;
   });
 
   // Truncate long assistant response
-  const truncatedResponse = assistantResponse.length > 8000
-    ? assistantResponse.substring(0, 8000) + '\n\n... (內容被截斷)'
-    : assistantResponse;
+  const truncatedResponse =
+    assistantResponse.length > 8000
+      ? assistantResponse.substring(0, 8000) + '\n\n... (內容被截斷)'
+      : assistantResponse;
 
   // Build reference criteria text from the original 4-dimension scoring criteria
   const dimLabels: Record<string, string> = {
@@ -207,8 +226,7 @@ export function buildJudgePrompt(
   let criteriaText = '';
   for (const key of dimKeys) {
     const criteria = scoringCriteria[key];
-    if (!criteria) continue;
-    criteriaText += `\n### ${dimLabels[key] ?? key} (權重: ${criteria.weight})\n`;
+    criteriaText += `\n### ${dimLabels[key] ?? key} (權重: ${String(criteria.weight)})\n`;
     for (const check of criteria.checks) {
       criteriaText += `- [${check.id}] ${check.description}\n`;
       criteriaText += `  通過條件: ${check.passCondition}\n`;
@@ -218,39 +236,50 @@ export function buildJudgePrompt(
   // Build the 3-dimension scoring rubric
   let rubricText = '';
   for (let i = 0; i < JUDGE_DIMENSIONS.length; i++) {
-    const d = JUDGE_DIMENSIONS[i];
-    rubricText += `${i + 1}. **${d.name}** (${d.label}): ${d.description}\n`;
+    const d = JUDGE_DIMENSIONS[i] as (typeof JUDGE_DIMENSIONS)[number];
+    rubricText += `${String(i + 1)}. **${d.name}** (${d.label}): ${d.description}\n`;
   }
 
   const skillContext = skillName ? `\n## 測試技能\n${skillName}\n` : '';
 
   // Build trace events summary with JSONL line numbers
-  const traceSummaryLines = trace.map(e => {
-      const type = e.type;
-      let detail = '';
-      if (type === 'tool_call' || type === 'tool_result') {
-        const tool = (e.data as Record<string, unknown> | undefined)?.tool;
-        if (tool) {
-          detail = ` — ${String(tool)}`;
-        }
-      } else if (type === 'thinking') {
-        const up = (e.data as Record<string, unknown> | undefined)?.userPrompt;
-        if (typeof up === 'string') detail = ` — "${up.substring(0, 60)}"`;
-      } else if (type === 'response') {
-        const msg = (e.data as Record<string, unknown> | undefined)?.message as Record<string, unknown> | undefined;
-        const content = msg?.content as string | undefined;
-        if (content) detail = ` — ${content.substring(0, 100)}`;
+  const traceSummaryLines = trace.map((e) => {
+    const type = e.type;
+    let detail = '';
+    if (type === 'tool_call' || type === 'tool_result') {
+      const tool = (e.data as Record<string, unknown> | undefined)?.['tool'];
+      if (tool) {
+        detail = ` — ${typeof tool === 'string' ? tool : JSON.stringify(tool)}`;
       }
-      if (type === 'tool_call') {
-        const params = (e.data as Record<string, unknown> | undefined)?.params;
-        if (params !== undefined) detail += `, params: ${JSON.stringify(params).substring(0, 200)}`;
-      } else if (type === 'tool_result') {
-        const result = (e.data as Record<string, unknown> | undefined)?.result;
-        if (result !== undefined) detail += `, result: ${JSON.stringify(result).substring(0, 200)}`;
-      }
-      return `L${e._lineNumber ?? '?'}: ${type}${detail}`;
-    });
-  let traceSummary = traceSummaryLines.length > 0 ? traceSummaryLines.join('\n') : '(無事件)';
+    } else if (type === 'thinking') {
+      const up = (e.data as Record<string, unknown> | undefined)?.[
+        'userPrompt'
+      ];
+      if (typeof up === 'string') detail = ` — "${up.substring(0, 60)}"`;
+    } else if (type === 'response') {
+      const msg = (e.data as Record<string, unknown> | undefined)?.[
+        'message'
+      ] as Record<string, unknown> | undefined;
+      const content = msg?.['content'] as string | undefined;
+      if (content) detail = ` — ${content.substring(0, 100)}`;
+    }
+    if (type === 'tool_call') {
+      const params = (e.data as Record<string, unknown> | undefined)?.[
+        'params'
+      ];
+      if (params !== undefined)
+        detail += `, params: ${JSON.stringify(params).substring(0, 200)}`;
+    } else if (type === 'tool_result') {
+      const result = (e.data as Record<string, unknown> | undefined)?.[
+        'result'
+      ];
+      if (result !== undefined)
+        detail += `, result: ${JSON.stringify(result).substring(0, 200)}`;
+    }
+    return `L${String(e._lineNumber ?? '?')}: ${type}${detail}`;
+  });
+  let traceSummary =
+    traceSummaryLines.length > 0 ? traceSummaryLines.join('\n') : '(無事件)';
   if (traceSummary.length > 5000) {
     traceSummary = traceSummary.substring(0, 5000) + '\n... (trace truncated)';
   }
@@ -268,7 +297,7 @@ export function buildJudgePrompt(
     '',
     '## 執行狀態',
     `- 狀態: ${status}`,
-    `- 耗時: ${duration}ms`,
+    `- 耗時: ${String(duration)}ms`,
     errors.length > 0 ? `- 錯誤: ${errors.join('; ')}` : '',
     '',
     '## 執行軌跡事件',
@@ -285,7 +314,7 @@ export function buildJudgePrompt(
     '',
     '**重要：若執行狀態為 timeout 或 error，且沒有有效的 agent 輸出，所有維度應評 0 分。**',
     '',
-    'Each issue\'s evidence MUST reference the JSONL line number(s) using the format \'L42: <description>\'.',
+    "Each issue's evidence MUST reference the JSONL line number(s) using the format 'L42: <description>'.",
     '',
     '## 輸出格式',
     '請以精確的 JSON 格式回覆（不要包含 markdown 標記，直接回傳 JSON object）：',
@@ -350,7 +379,13 @@ export async function scoreSingleTest(
   skillName?: string,
 ): Promise<{ testId: string; score: ScoreResult | null; skipped?: boolean }> {
   const rootDir = getProjectRoot();
-  const resultsDir = resolve(rootDir, 'results', 'spec', date, `test_${testNo}`);
+  const resultsDir = resolve(
+    rootDir,
+    'results',
+    'spec',
+    date,
+    `test_${testNo}`,
+  );
   const tracePath = join(resultsDir, 'trace.jsonl');
   const scorePath = join(resultsDir, 'score.json');
   const scoredPath = join(resultsDir, '.scored');
@@ -363,9 +398,15 @@ export async function scoreSingleTest(
   if (questionMap && questionMap[testNo]) {
     scoringCriteria = getScoringCriteria(questionMap[testNo]);
   } else {
-    const questionsPath = resolve(rootDir, 'assets', 'spec', date, 'test-questions.json');
+    const questionsPath = resolve(
+      rootDir,
+      'assets',
+      'spec',
+      date,
+      'test-questions.json',
+    );
     const questions = loadQuestionsFromFile(questionsPath);
-    const question = questions.find(q => q.id === testNo);
+    const question = questions.find((q) => q.id === testNo);
     if (!question) {
       throw new Error(`找不到題目: ${testNo}`);
     }
@@ -388,9 +429,13 @@ export async function scoreSingleTest(
     // Double-check: another process might have scored this while we waited for the lock
     try {
       await access(scoredPath);
-      console.warn(`${testNo}: already scored (detected after lock acquisition), skipping`);
+      console.warn(
+        `${testNo}: already scored (detected after lock acquisition), skipping`,
+      );
       return { testId: testNo, score: null, skipped: true };
-    } catch { /* .scored not found — safe to score */ }
+    } catch {
+      /* .scored not found — safe to score */
+    }
 
     // Skip if trace has corruption — don't waste judge API calls
     if (hasCorruption) {
@@ -398,12 +443,14 @@ export async function scoreSingleTest(
         testId: testNo,
         overallScore: 0,
         dimensions: [],
-        issues: [{
-          severity: 'P2',
-          category: 'other',
-          description: '軌跡檔案損壞，無法評分',
-          evidence: 'Trace file contains corrupted JSON lines',
-        }],
+        issues: [
+          {
+            severity: 'P2',
+            category: 'other',
+            description: '軌跡檔案損壞，無法評分',
+            evidence: 'Trace file contains corrupted JSON lines',
+          },
+        ],
         summary: '無法評分：軌跡檔案損壞',
         scoredAt: new Date().toISOString(),
         scorable: false,
@@ -419,19 +466,33 @@ export async function scoreSingleTest(
     const judgment = await callJudgeModel(prompt, env, { timeoutMs });
 
     // Warn if judge output had a parse error
-    if ((judgment as Record<string, unknown>)._parseError) {
+    if (judgment['_parseError']) {
       console.warn(`${testNo}: Judge 輸出解析失敗，使用預設評分結構`);
     }
 
     // Build ScoreResult from judgment with runtime type validation (FIX-20)
-    const rawDims = Array.isArray(judgment.dimensions) ? judgment.dimensions : [];
-    if (!Array.isArray(judgment.dimensions) && judgment.dimensions !== undefined) {
-      console.warn(`${testNo}: judgment.dimensions 不是陣列 (型別: ${typeof judgment.dimensions})，使用空陣列`);
+    const rawDims = Array.isArray(judgment['dimensions'])
+      ? judgment['dimensions']
+      : [];
+    if (
+      !Array.isArray(judgment['dimensions']) &&
+      judgment['dimensions'] !== undefined
+    ) {
+      console.warn(
+        `${testNo}: judgment['dimensions'] 不是陣列 (型別: ${typeof judgment['dimensions']})，使用空陣列`,
+      );
     }
 
-    const rawIssues = Array.isArray(judgment.issues) ? judgment.issues : [];
-    if (!Array.isArray(judgment.issues) && judgment.issues !== undefined) {
-      console.warn(`${testNo}: judgment.issues 不是陣列 (型別: ${typeof judgment.issues})，使用空陣列`);
+    const rawIssues = Array.isArray(judgment['issues'])
+      ? judgment['issues']
+      : [];
+    if (
+      !Array.isArray(judgment['issues']) &&
+      judgment['issues'] !== undefined
+    ) {
+      console.warn(
+        `${testNo}: judgment['issues'] 不是陣列 (型別: ${typeof judgment['issues']})，使用空陣列`,
+      );
     }
 
     // Allowed values for validation
@@ -440,55 +501,84 @@ export async function scoreSingleTest(
 
     const score: ScoreResult = {
       testId: testNo,
-      overallScore: typeof judgment.overallScore === 'number' ? judgment.overallScore : 0,
-      dimensions: rawDims.map((dim, idx) => {
-        const nameOk = typeof dim.name === 'string';
-        const scoreOk = typeof dim.score === 'number';
-        const maxScoreOk = typeof dim.maxScore === 'number';
-        const weightOk = typeof dim.weight === 'number';
-        const commentsOk = typeof dim.comments === 'string';
+      overallScore:
+        typeof judgment['overallScore'] === 'number'
+          ? judgment['overallScore']
+          : 0,
+      dimensions: rawDims.map((dim: Record<string, unknown>, idx) => {
+        const nameOk = typeof dim['name'] === 'string';
+        const scoreOk = typeof dim['score'] === 'number';
+        const maxScoreOk = typeof dim['maxScore'] === 'number';
+        const weightOk = typeof dim['weight'] === 'number';
+        const commentsOk = typeof dim['comments'] === 'string';
 
         if (!nameOk || !scoreOk || !maxScoreOk || !weightOk || !commentsOk) {
           const badFields: string[] = [];
-          if (!nameOk) badFields.push(`name (${typeof dim.name})`);
-          if (!scoreOk) badFields.push(`score (${typeof dim.score})`);
-          if (!maxScoreOk) badFields.push(`maxScore (${typeof dim.maxScore})`);
-          if (!weightOk) badFields.push(`weight (${typeof dim.weight})`);
-          if (!commentsOk) badFields.push(`comments (${typeof dim.comments})`);
-          console.warn(`${testNo}: dimension[${idx}] 欄位型別不符: ${badFields.join(', ')}，使用預設值`);
+          if (!nameOk) badFields.push(`name (${typeof dim['name']})`);
+          if (!scoreOk) badFields.push(`score (${typeof dim['score']})`);
+          if (!maxScoreOk)
+            badFields.push(`maxScore (${typeof dim['maxScore']})`);
+          if (!weightOk) badFields.push(`weight (${typeof dim['weight']})`);
+          if (!commentsOk)
+            badFields.push(`comments (${typeof dim['comments']})`);
+          console.warn(
+            `${testNo}: dimension[${String(idx)}] 欄位型別不符: ${badFields.join(', ')}，使用預設值`,
+          );
         }
 
         return {
-          name: typeof dim.name === 'string' ? dim.name : '',
-          score: typeof dim.score === 'number' ? dim.score : 0,
-          maxScore: typeof dim.maxScore === 'number' ? dim.maxScore : 100,
-          weight: typeof dim.weight === 'number' ? dim.weight : 0,
-          comments: typeof dim.comments === 'string' ? dim.comments : '',
+          name: typeof dim['name'] === 'string' ? dim['name'] : '',
+          score: typeof dim['score'] === 'number' ? dim['score'] : 0,
+          maxScore: typeof dim['maxScore'] === 'number' ? dim['maxScore'] : 100,
+          weight: typeof dim['weight'] === 'number' ? dim['weight'] : 0,
+          comments: typeof dim['comments'] === 'string' ? dim['comments'] : '',
         };
       }),
-      issues: rawIssues.map((issue, idx) => {
-        const severityOk = typeof issue.severity === 'string' && (ALLOWED_SEVERITY as string[]).includes(issue.severity);
-        const categoryOk = typeof issue.category === 'string' && (ALLOWED_CATEGORY as string[]).includes(issue.category);
-        const descOk = typeof issue.description === 'string';
-        const evidenceOk = typeof issue.evidence === 'string';
+      issues: rawIssues.map((issue: Record<string, unknown>, idx) => {
+        const severityOk =
+          typeof issue['severity'] === 'string' &&
+          (ALLOWED_SEVERITY as string[]).includes(issue['severity']);
+        const categoryOk =
+          typeof issue['category'] === 'string' &&
+          (ALLOWED_CATEGORY as string[]).includes(issue['category']);
+        const descOk = typeof issue['description'] === 'string';
+        const evidenceOk = typeof issue['evidence'] === 'string';
 
         if (!severityOk || !categoryOk || !descOk || !evidenceOk) {
           const badFields: string[] = [];
-          if (!severityOk) badFields.push(`severity (${typeof issue.severity}: ${String(issue.severity)})`);
-          if (!categoryOk) badFields.push(`category (${typeof issue.category}: ${String(issue.category)})`);
-          if (!descOk) badFields.push(`description (${typeof issue.description})`);
-          if (!evidenceOk) badFields.push(`evidence (${typeof issue.evidence})`);
-          console.warn(`${testNo}: issue[${idx}] 欄位型別不符: ${badFields.join(', ')}，使用預設值`);
+          if (!severityOk)
+            badFields.push(
+              `severity (${typeof issue['severity']}: ${String(issue['severity'])})`,
+            );
+          if (!categoryOk)
+            badFields.push(
+              `category (${typeof issue['category']}: ${String(issue['category'])})`,
+            );
+          if (!descOk)
+            badFields.push(`description (${typeof issue['description']})`);
+          if (!evidenceOk)
+            badFields.push(`evidence (${typeof issue['evidence']})`);
+          console.warn(
+            `${testNo}: issue[${String(idx)}] 欄位型別不符: ${badFields.join(', ')}，使用預設值`,
+          );
         }
 
         return {
-          severity: (severityOk ? issue.severity : 'P1') as Issue['severity'],
-          category: (categoryOk ? issue.category : 'other') as Issue['category'],
-          description: typeof issue.description === 'string' ? issue.description : '',
-          evidence: typeof issue.evidence === 'string' ? issue.evidence : '',
+          severity: (severityOk
+            ? issue['severity']
+            : 'P1') as Issue['severity'],
+          category: (categoryOk
+            ? issue['category']
+            : 'other') as Issue['category'],
+          description:
+            typeof issue['description'] === 'string'
+              ? issue['description']
+              : '',
+          evidence:
+            typeof issue['evidence'] === 'string' ? issue['evidence'] : '',
         };
       }),
-      summary: (judgment.summary as string) ?? '',
+      summary: (judgment['summary'] ?? '') as string,
       scoredAt: new Date().toISOString(),
       scorable: true,
     };
@@ -501,9 +591,15 @@ export async function scoreSingleTest(
     try {
       await rm(lockDir, { recursive: true });
     } catch (err) {
-      console.error(`[scorer] Failed to remove scoring lock at ${lockDir}: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(
+        `[scorer] Failed to remove scoring lock at ${lockDir}: ${err instanceof Error ? err.message : String(err)}`,
+      );
       // Fallback: try rmdir (succeeds only if lock dir is empty, i.e. normal case)
-      try { await rmdir(lockDir); } catch { /* ignore fallback failure */ }
+      try {
+        await rmdir(lockDir);
+      } catch {
+        /* ignore fallback failure */
+      }
     }
   }
 }
@@ -520,11 +616,16 @@ export async function scoreSingleTest(
  * @param env - Environment configuration
  * @returns Array of successfully scored ScoreResults
  */
-export async function scoreAllTests(date: string, env: EnvConfig): Promise<ScoreResult[]> {
+export async function scoreAllTests(
+  date: string,
+  env: EnvConfig,
+): Promise<ScoreResult[]> {
   const rootDir = getProjectRoot();
   const resultsBase = resolve(rootDir, 'results', 'spec', date);
   const doneTests = await scanForDoneAsync(resultsBase);
-  const unscoredTests = doneTests.filter(t => !isAlreadyScored(resultsBase, t));
+  const unscoredTests = doneTests.filter(
+    (t) => !isAlreadyScored(resultsBase, t),
+  );
 
   if (unscoredTests.length === 0) {
     return [];
@@ -533,7 +634,13 @@ export async function scoreAllTests(date: string, env: EnvConfig): Promise<Score
   // Pre-load question map for efficient scoring criteria lookup
   let questionMap: Record<string, Question> | undefined;
   try {
-    const questionsPath = resolve(rootDir, 'assets', 'spec', date, 'test-questions.json');
+    const questionsPath = resolve(
+      rootDir,
+      'assets',
+      'spec',
+      date,
+      'test-questions.json',
+    );
     const questions = loadQuestionsFromFile(questionsPath);
     questionMap = {};
     for (const q of questions) {
@@ -543,7 +650,9 @@ export async function scoreAllTests(date: string, env: EnvConfig): Promise<Score
     console.warn('無法載入題目檔案，將在評分時逐題載入');
   }
 
-  console.log(`找到 ${doneTests.length} 個已完成測試，其中 ${unscoredTests.length} 個尚未評分`);
+  console.log(
+    `找到 ${String(doneTests.length)} 個已完成測試，其中 ${String(unscoredTests.length)} 個尚未評分`,
+  );
 
   const startTime = Date.now();
   let successCount = 0;
@@ -551,20 +660,26 @@ export async function scoreAllTests(date: string, env: EnvConfig): Promise<Score
 
   const results = await promisePool(
     unscoredTests,
-    async (testNo: string, _i: number) => {
+    async (testNo: string) => {
       try {
         const result = await scoreSingleTest(testNo, date, env, questionMap);
         if (result.score) {
           successCount++;
-          console.log(`[${successCount + failCount}/${unscoredTests.length}] ${testNo} 評分完成 (總分: ${result.score.overallScore})`);
+          console.log(
+            `[${String(successCount + failCount)}/${String(unscoredTests.length)}] ${testNo} 評分完成 (總分: ${String(result.score.overallScore)})`,
+          );
         } else if (result.skipped) {
-          console.log(`[${successCount + failCount + 1}/${unscoredTests.length}] ${testNo} 跳過 (其他 process 佔用鎖)`);
+          console.log(
+            `[${String(successCount + failCount + 1)}/${String(unscoredTests.length)}] ${testNo} 跳過 (其他 process 佔用鎖)`,
+          );
         }
         return result;
       } catch (err) {
         failCount++;
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[${successCount + failCount}/${unscoredTests.length}] ${testNo} 評分失敗: ${msg}`);
+        console.error(
+          `[${String(successCount + failCount)}/${String(unscoredTests.length)}] ${testNo} 評分失敗: ${msg}`,
+        );
         return { testId: testNo, score: null };
       }
     },
@@ -573,13 +688,15 @@ export async function scoreAllTests(date: string, env: EnvConfig): Promise<Score
 
   const duration = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log(`\n=== 評分完成 ===`);
-  console.log(`成功: ${successCount}/${unscoredTests.length}`);
-  console.log(`失敗: ${failCount}/${unscoredTests.length}`);
+  console.log(`成功: ${String(successCount)}/${String(unscoredTests.length)}`);
+  console.log(`失敗: ${String(failCount)}/${String(unscoredTests.length)}`);
   console.log(`耗時: ${duration}s`);
 
   return results
-    .filter((r): r is { testId: string; score: ScoreResult } => r.score !== null)
-    .map(r => r.score);
+    .filter(
+      (r): r is { testId: string; score: ScoreResult } => r.score !== null,
+    )
+    .map((r) => r.score);
 }
 
 // --- Directory Scanning ---
@@ -623,9 +740,13 @@ async function scanForDoneAsync(resultsBase: string): Promise<string[]> {
         try {
           await access(join(resultsBase, entry.name, '.done'));
           doneTests.push(testNo);
-        } catch { /* .done not found */ }
+        } catch {
+          /* .done not found */
+        }
       }
     }
     return doneTests;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }

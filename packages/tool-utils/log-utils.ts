@@ -60,12 +60,12 @@ function parseWithFormat(
           groups.push({ name: 'tz', width: 0 });
           break;
         default:
-          regexStr += '\\' + fmt[i + 1];
+          regexStr += '\\' + fmt.charAt(i + 1);
           break;
       }
       i += 2;
     } else {
-      regexStr += fmt[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      regexStr += fmt.charAt(i).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       i++;
     }
   }
@@ -80,7 +80,9 @@ function parseWithFormat(
   };
 
   const hasTimezone = groups.some((g) => g.name === 'tz');
-  const tzGroup = hasTimezone ? match[groups.findIndex((g) => g.name === 'tz') + 1] : null;
+  const tzGroup = hasTimezone
+    ? match[groups.findIndex((g) => g.name === 'tz') + 1]
+    : null;
   const fracRaw = groups.some((g) => g.name === 'frac')
     ? match[groups.findIndex((g) => g.name === 'frac') + 1]
     : null;
@@ -102,7 +104,17 @@ function parseWithFormat(
     const tzHours = parseInt(tzGroup.slice(1, 3), 10);
     const tzMinutes = parseInt(tzGroup.slice(4, 6), 10);
     const offsetMinutes = sign * (tzHours * 60 + tzMinutes);
-    const date = new Date(Date.UTC(year, month, day, hour, minute - offsetMinutes, second, milliseconds));
+    const date = new Date(
+      Date.UTC(
+        year,
+        month,
+        day,
+        hour,
+        minute - offsetMinutes,
+        second,
+        milliseconds,
+      ),
+    );
     return date;
   }
 
@@ -125,7 +137,8 @@ function parseTimezoneOffset(raw: string): number {
   const match = /^([+-])(\d{2}):(\d{2})$/.exec(raw);
   if (!match) throw new Error(`timezone must be UTC or ±HH:MM, got: ${raw}`);
 
-  const totalMinutes = parseInt(match[2], 10) * 60 + parseInt(match[3], 10);
+  const totalMinutes =
+    parseInt(match[2] ?? '0', 10) * 60 + parseInt(match[3] ?? '0', 10);
   return match[1] === '-' ? -totalMinutes : totalMinutes;
 }
 
@@ -153,9 +166,9 @@ export function extractTimestamp(
   assumeTimezone: string,
 ): Date | null {
   const match = TIMESTAMP_PATTERN.exec(line);
-  if (!match || !match.groups?.timestamp) return null;
+  if (!match || !match.groups?.['timestamp']) return null;
   try {
-    return parseCliTimestamp(match.groups.timestamp, assumeTimezone);
+    return parseCliTimestamp(match.groups['timestamp'], assumeTimezone);
   } catch {
     return null;
   }
@@ -188,9 +201,7 @@ export function inWindow(
   return true;
 }
 
-export async function* iterInputLines(
-  paths: string[],
-): AsyncGenerator<string> {
+export async function* iterInputLines(paths: string[]): AsyncGenerator<string> {
   if (paths.length === 0) {
     yield* readStdinLines();
     return;

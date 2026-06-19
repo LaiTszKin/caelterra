@@ -61,7 +61,12 @@ export interface AutoUpdateCommand {
 /**
  * Union of all parsed commands returned by the CLI arg parsers.
  */
-export type ParsedCommand = InstallCommand | UninstallCommand | ToolCommand | ToolsHelpCommand | AutoUpdateCommand;
+export type ParsedCommand =
+  | InstallCommand
+  | UninstallCommand
+  | ToolCommand
+  | ToolsHelpCommand
+  | AutoUpdateCommand;
 
 /**
  * Parser interface for turning raw argv arrays into strongly-typed command objects.

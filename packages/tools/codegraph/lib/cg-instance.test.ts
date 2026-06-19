@@ -24,13 +24,12 @@ describe('createOrOpenIndex', () => {
     fs.writeFileSync(path.join(codegraphDir, 'codegraph.db'), '');
 
     // Act & Assert
-    await assert.rejects(
-      () => createOrOpenIndex(tmpDir),
-      (err: unknown) => {
-        assert.ok(err instanceof Error);
-        assert.match(err.message, /sync/);
-        return true;
-      },
-    );
+    const result = createOrOpenIndex(tmpDir);
+    assert.ok(result instanceof Promise);
+    await assert.rejects(result, (err: unknown) => {
+      assert.ok(err instanceof Error);
+      assert.match(err.message, /sync/);
+      return true;
+    });
   });
 });

@@ -22,7 +22,13 @@ export async function architectureHandler(
   // Delegate all verbs to the atlas CLI (JS)
   const sourceRoot =
     context.sourceRoot ||
-    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
+    path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '..',
+      '..',
+      '..',
+      '..',
+    );
   const cliPath = path.join(
     sourceRoot,
     'skills',
@@ -33,7 +39,14 @@ export async function architectureHandler(
   );
 
   // Use file URL for ESM import compatibility on Windows — import() requires forward slashes.
-  const cliModule = await import(pathToFileURL(cliPath).href);
+  const cliModule = (await import(pathToFileURL(cliPath).href)) as {
+    default: {
+      dispatch(
+        args: string[],
+        options: { stdout: NodeJS.WriteStream; stderr: NodeJS.WriteStream },
+      ): number;
+    };
+  };
   const cli = cliModule.default;
   return cli.dispatch(args, {
     stdout: context.stdout || process.stdout,
@@ -45,6 +58,7 @@ export const tool: ToolDefinition = {
   name: 'architecture',
   category: 'Planning & architecture',
   skill: 'init-project-html',
-  description: 'Open the project HTML architecture atlas, or render a paginated diff (`architecture diff`).',
+  description:
+    'Open the project HTML architecture atlas, or render a paginated diff (`architecture diff`).',
   handler: architectureHandler,
 };

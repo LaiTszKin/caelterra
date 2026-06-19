@@ -1,7 +1,7 @@
 {
   "name": "@laitszkin/tool-codegraph",
   "version": "5.0.0",
-  "description": "Apollo Toolkit \u2014 CodeGraph codebase exploration: init, index, sync, status, query, files, callers, callees, impact, node, context",
+  "description": "Apollo Toolkit — CodeGraph codebase exploration: init, index, sync, status, query, files, callers, callees, impact, node, context",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "@colbymchenry/codegraph": "^0.9.9",
-    "@laitszkin/tool-registry": "*"
+    "@laitszkin/tool-registry": "workspace:*",
+    "@laitszkin/tool-utils": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

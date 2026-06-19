@@ -60,7 +60,10 @@ export class InstallArgsParser implements CommandParser<InstallCommand> {
     }
 
     const helpTopic: 'overview' | 'install' = showHelp
-      ? (explicitInstallCommand || modes.length > 0 || linkMode !== null || toolkitHome !== null)
+      ? explicitInstallCommand ||
+        modes.length > 0 ||
+        linkMode !== null ||
+        toolkitHome !== null
         ? 'install'
         : 'overview'
       : 'overview';

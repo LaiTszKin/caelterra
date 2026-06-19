@@ -10,9 +10,11 @@ Use a concise Conventional Commit style:
 - If the commit only contains release metadata, use `chore(release): ...`
 
 Common types:
+
 - feat, fix, docs, chore, refactor, test, style, perf, build, ci
 
 Examples:
+
 - feat: add rpc retry backoff
 - fix: handle empty response payload
 - docs: update env var table

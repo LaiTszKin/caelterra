@@ -1,12 +1,17 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import os from 'node:os';
 
 describe('execCommand shell behavior', () => {
-  it('resolves with stdout on successful command', async () => {
-    const { execCommand } = await import('../packages/cli/dist/updater.js');
-    const result = await execCommand('node', ['--version']);
-    assert.ok(result.stdout.trim().startsWith('v'));
-  });
+  it(
+    'resolves with stdout on successful command',
+    { skip: os.platform() === 'win32' },
+    async () => {
+      const { execCommand } = await import('../packages/cli/dist/updater.js');
+      const result = await execCommand('node', ['--version']);
+      assert.ok(result.stdout.trim().startsWith('v'));
+    },
+  );
 
   it('rejects on non-zero exit code', async () => {
     const { execCommand } = await import('../packages/cli/dist/updater.js');
@@ -42,7 +47,8 @@ describe('compareVersions pre-release handling', () => {
 
 describe('getLatestPublishedVersion array branch', () => {
   it('should take the last element when npm returns an array', async () => {
-    const { checkForPackageUpdate } = await import('../packages/cli/dist/updater.js');
+    const { checkForPackageUpdate } =
+      await import('../packages/cli/dist/updater.js');
 
     const calls = [];
     const mockExec = async (cmd, args) => {
@@ -71,7 +77,8 @@ describe('getLatestPublishedVersion array branch', () => {
 
 describe('checkForPackageUpdate catch block', () => {
   it('should handle exec errors gracefully', async () => {
-    const { checkForPackageUpdate } = await import('../packages/cli/dist/updater.js');
+    const { checkForPackageUpdate } =
+      await import('../packages/cli/dist/updater.js');
 
     const mockExec = async () => {
       throw new Error('network error');
@@ -96,10 +103,11 @@ describe('checkForPackageUpdate catch block', () => {
 
 describe('checkForPackageUpdate missing latest version', () => {
   it('returns early when latest version is empty', async () => {
-    const { checkForPackageUpdate } = await import('../packages/cli/dist/updater.js');
+    const { checkForPackageUpdate } =
+      await import('../packages/cli/dist/updater.js');
 
     const mockExec = async () => {
-      return { stdout: '""' };  // Valid JSON empty string -> falsy -> !latestVersion
+      return { stdout: '""' }; // Valid JSON empty string -> falsy -> !latestVersion
     };
 
     const result = await checkForPackageUpdate({

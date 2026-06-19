@@ -3,9 +3,28 @@
 // cli-help.js — help page builders for the atlas CLI command tree.
 
 // Hidden fine-grained verbs shared with cli.js MULTI_VERBS (Req 4: hidden from --help)
-const hiddenVerbs = new Set(['feature', 'submodule', 'function', 'variable', 'dataflow', 'error', 'edge', 'meta', 'actor']);
+const hiddenVerbs = new Set([
+  'feature',
+  'submodule',
+  'function',
+  'variable',
+  'dataflow',
+  'error',
+  'edge',
+  'meta',
+  'actor',
+]);
 
-function buildHelpPage({ title, summary, usageLines, useWhen, requiredFlags, optionalFlags, notes, examples }) {
+function buildHelpPage({
+  title,
+  summary,
+  usageLines,
+  useWhen,
+  requiredFlags,
+  optionalFlags,
+  notes,
+  examples,
+}) {
   const lines = [title];
 
   if (summary) {
@@ -21,11 +40,19 @@ function buildHelpPage({ title, summary, usageLines, useWhen, requiredFlags, opt
   }
 
   if (requiredFlags?.length) {
-    lines.push('', 'Required flags:', ...requiredFlags.map((line) => `  - ${line}`));
+    lines.push(
+      '',
+      'Required flags:',
+      ...requiredFlags.map((line) => `  - ${line}`),
+    );
   }
 
   if (optionalFlags?.length) {
-    lines.push('', 'Optional flags:', ...optionalFlags.map((line) => `  - ${line}`));
+    lines.push(
+      '',
+      'Optional flags:',
+      ...optionalFlags.map((line) => `  - ${line}`),
+    );
   }
 
   if (notes?.length) {
@@ -58,7 +85,8 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
   if (!verb) {
     return buildHelpPage({
       title: 'apltk architecture — declarative atlas CLI.',
-      summary: 'Inspect, mutate, validate, diff, and merge the project architecture atlas without hand-editing the rendered HTML output.',
+      summary:
+        'Inspect, mutate, validate, diff, and merge the project architecture atlas without hand-editing the rendered HTML output.',
       usageLines: [
         'apltk architecture [verb] [options]',
         'apltk architecture add <entity-type> <name> [relation-flags...]',
@@ -95,18 +123,23 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
       examples: [
         {
           command: 'apltk architecture add feature payment --depends-on order',
-          result: 'Creates a "payment" feature with a dependency on "order", then re-renders.',
+          result:
+            'Creates a "payment" feature with a dependency on "order", then re-renders.',
         },
         {
-          command: 'apltk architecture add module payment-api --part-of payment',
-          result: 'Adds a "payment-api" submodule under the "payment" feature, then re-renders.',
+          command:
+            'apltk architecture add module payment-api --part-of payment',
+          result:
+            'Adds a "payment-api" submodule under the "payment" feature, then re-renders.',
         },
         {
           command: 'apltk architecture diff',
-          result: 'Builds the paginated diff viewer and prints its generated HTML path.',
+          result:
+            'Builds the paginated diff viewer and prints its generated HTML path.',
         },
         {
-          command: 'apltk architecture merge --spec docs/plans/2026-05-11/add-2fa',
+          command:
+            'apltk architecture merge --spec docs/plans/2026-05-11/add-2fa',
           result: 'Merges a spec overlay into the base atlas and re-renders.',
         },
       ],
@@ -115,7 +148,8 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
 
   // Hidden verbs redirect before any action-specific lookups (Req 4)
   if (verb && hiddenVerbs.has(verb)) {
-    if (subverb === 'add' || subverb === 'set') return buildArchitectureHelpPage('add');
+    if (subverb === 'add' || subverb === 'set')
+      return buildArchitectureHelpPage('add');
     if (subverb === 'remove') return buildArchitectureHelpPage('remove');
     return buildArchitectureHelpPage('add');
   }
@@ -132,7 +166,8 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
     case 'open':
       return buildHelpPage({
         title: 'apltk architecture open — open the base atlas HTML.',
-        summary: 'Open the rendered base atlas in a browser, bootstrapping it first if the HTML has not been rendered yet.',
+        summary:
+          'Open the rendered base atlas in a browser, bootstrapping it first if the HTML has not been rendered yet.',
         usageLines: [
           'apltk architecture open [--project <root>] [--no-open]',
           'apltk architecture [--project <root>] [--no-open]',
@@ -147,14 +182,17 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         examples: [
           {
             command: 'apltk architecture open --project /repo --no-open',
-            result: 'Prints `/repo/resources/project-architecture/index.html` after bootstrapping the atlas if needed.',
+            result:
+              'Prints `/repo/resources/project-architecture/index.html` after bootstrapping the atlas if needed.',
           },
         ],
       });
     case 'diff':
       return buildHelpPage({
-        title: 'apltk architecture diff — render the paginated before/after viewer.',
-        summary: 'Collect every `architecture_diff/` overlay under `docs/plans/` and build one HTML viewer that pairs base pages with proposed-after pages.',
+        title:
+          'apltk architecture diff — render the paginated before/after viewer.',
+        summary:
+          'Collect every `architecture_diff/` overlay under `docs/plans/` and build one HTML viewer that pairs base pages with proposed-after pages.',
         usageLines: [
           'apltk architecture diff [--project <root>] [--out <dir>] [--no-open]',
         ],
@@ -169,14 +207,17 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         examples: [
           {
             command: 'apltk architecture diff --project /repo --no-open',
-            result: 'Prints the diff viewer HTML path plus a one-line page-count summary.',
+            result:
+              'Prints the diff viewer HTML path plus a one-line page-count summary.',
           },
         ],
       });
     case 'render':
       return buildHelpPage({
-        title: 'apltk architecture render — regenerate atlas HTML from the current state.',
-        summary: 'Render the base atlas or the resolved spec overlay HTML from the current YAML state.',
+        title:
+          'apltk architecture render — regenerate atlas HTML from the current state.',
+        summary:
+          'Render the base atlas or the resolved spec overlay HTML from the current YAML state.',
         usageLines: [
           'apltk architecture render [--project <root>] [--spec <spec_dir>]',
         ],
@@ -189,15 +230,18 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         ],
         examples: [
           {
-            command: 'apltk architecture render --spec docs/plans/2026-05-11/add-2fa',
+            command:
+              'apltk architecture render --spec docs/plans/2026-05-11/add-2fa',
             result: 'Renders the overlay HTML and prints `atlas: rendered`.',
           },
         ],
       });
     case 'validate':
       return buildHelpPage({
-        title: 'apltk architecture validate — run schema and referential checks.',
-        summary: 'Validate the base atlas or resolved spec overlay and report whether the atlas state is structurally sound.',
+        title:
+          'apltk architecture validate — run schema and referential checks.',
+        summary:
+          'Validate the base atlas or resolved spec overlay and report whether the atlas state is structurally sound.',
         usageLines: [
           'apltk architecture validate [--project <root>] [--spec <spec_dir>]',
         ],
@@ -211,14 +255,16 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         examples: [
           {
             command: 'apltk architecture validate',
-            result: 'Prints `atlas: OK` on success or one validation error per broken reference.',
+            result:
+              'Prints `atlas: OK` on success or one validation error per broken reference.',
           },
         ],
       });
     case 'status':
       return buildHelpPage({
         title: 'apltk architecture status — print atlas state summary.',
-        summary: 'Display a structured digest of the current atlas, including feature/submodule counts, edge counts, actor count, last-updated timestamp, and validation status. Supports a `--json` flag for AI-agent-consumable output.',
+        summary:
+          'Display a structured digest of the current atlas, including feature/submodule counts, edge counts, actor count, last-updated timestamp, and validation status. Supports a `--json` flag for AI-agent-consumable output.',
         usageLines: [
           'apltk architecture status [--json] [--project <root>] [--spec <spec_dir>]',
         ],
@@ -238,22 +284,28 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         examples: [
           {
             command: 'apltk architecture status',
-            result: 'Prints a human-readable summary with counts and validation status.',
+            result:
+              'Prints a human-readable summary with counts and validation status.',
           },
           {
             command: 'apltk architecture status --json',
-            result: 'Outputs a JSON object with meta, counts, featureList, and validation fields.',
+            result:
+              'Outputs a JSON object with meta, counts, featureList, and validation fields.',
           },
           {
-            command: 'apltk architecture status --spec docs/plans/2026-05-11/add-2fa',
-            result: 'Reads the resolved spec overlay state and prints its status.',
+            command:
+              'apltk architecture status --spec docs/plans/2026-05-11/add-2fa',
+            result:
+              'Reads the resolved spec overlay state and prints its status.',
           },
         ],
       });
     case 'scan':
       return buildHelpPage({
-        title: 'apltk architecture scan — scan directory structure for feature candidates.',
-        summary: 'List the top-level source directories in a target path and output a JSON array of candidate feature slugs for agent-driven atlas modelling.',
+        title:
+          'apltk architecture scan — scan directory structure for feature candidates.',
+        summary:
+          'List the top-level source directories in a target path and output a JSON array of candidate feature slugs for agent-driven atlas modelling.',
         usageLines: [
           'apltk architecture scan [--src <dir>] [--project <root>]',
         ],
@@ -273,14 +325,16 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         examples: [
           {
             command: 'apltk architecture scan --src lib/',
-            result: 'Outputs a JSON array of directory entries in `lib/` with suggested feature slugs.',
+            result:
+              'Outputs a JSON array of directory entries in `lib/` with suggested feature slugs.',
           },
         ],
       });
     case 'undo':
       return buildHelpPage({
         title: 'apltk architecture undo — roll back recent mutations.',
-        summary: 'Restore the most recent undo snapshot from the base atlas or the selected spec overlay.',
+        summary:
+          'Restore the most recent undo snapshot from the base atlas or the selected spec overlay.',
         usageLines: [
           'apltk architecture undo [--steps <n>] [--project <root>] [--spec <spec_dir>] [--no-render]',
         ],
@@ -293,28 +347,30 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         ],
         examples: [
           {
-            command: 'apltk architecture undo --steps 2 --spec docs/plans/2026-05-11/add-2fa',
-            result: 'Restores the requested overlay snapshots and prints `atlas: undo applied (2 steps)`.',
+            command:
+              'apltk architecture undo --steps 2 --spec docs/plans/2026-05-11/add-2fa',
+            result:
+              'Restores the requested overlay snapshots and prints `atlas: undo applied (2 steps)`.',
           },
         ],
       });
     case 'merge':
       return buildHelpPage({
-        title: 'apltk architecture merge — merge spec overlay(s) into the base atlas.',
-        summary: 'Apply the architecture changes proposed in one or more spec overlays (architecture_diff/) to the project\'s main architecture diagram, then re-render the base HTML.',
+        title:
+          'apltk architecture merge — merge spec overlay(s) into the base atlas.',
+        summary:
+          "Apply the architecture changes proposed in one or more spec overlays (architecture_diff/) to the project's main architecture diagram, then re-render the base HTML.",
         usageLines: [
           'apltk architecture merge --spec <spec_dir> [--clean] [--no-render]',
           'apltk architecture merge --all [--clean] [--no-render]',
         ],
         useWhen: [
-          'A spec\'s proposed architecture changes have been approved and should become the new baseline.',
+          "A spec's proposed architecture changes have been approved and should become the new baseline.",
           'You want to apply multiple pending spec overlays to the project atlas in one step.',
         ],
-        requiredFlags: [
-          '`--spec <spec_dir>` or `--all` (one is required).',
-        ],
+        requiredFlags: ['`--spec <spec_dir>` or `--all` (one is required).'],
         optionalFlags: [
-          '`--clean` removes the spec\'s `architecture_diff/` directory after a successful merge.',
+          "`--clean` removes the spec's `architecture_diff/` directory after a successful merge.",
           '`--no-render` skips HTML regeneration so you can batch multiple operations.',
           '`--project <root>` selects the repository root.',
         ],
@@ -325,19 +381,24 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         ],
         examples: [
           {
-            command: 'apltk architecture merge --spec docs/plans/2026-05-11/add-2fa',
-            result: 'Merges the spec overlay into the base atlas, re-renders, and prints a change summary.',
+            command:
+              'apltk architecture merge --spec docs/plans/2026-05-11/add-2fa',
+            result:
+              'Merges the spec overlay into the base atlas, re-renders, and prints a change summary.',
           },
           {
             command: 'apltk architecture merge --all --clean',
-            result: 'Merges every pending spec overlay found under docs/plans/ and removes their diff directories.',
+            result:
+              'Merges every pending spec overlay found under docs/plans/ and removes their diff directories.',
           },
         ],
       });
     case 'add':
       return buildHelpPage({
-        title: 'apltk architecture add — add entities to the architecture diagram.',
-        summary: 'Add features, modules, or relations to the project architecture diagram. Supports both single-entity and batch mode.',
+        title:
+          'apltk architecture add — add entities to the architecture diagram.',
+        summary:
+          'Add features, modules, or relations to the project architecture diagram. Supports both single-entity and batch mode.',
         usageLines: [
           'apltk architecture add feature <slug> [--depends-on <feature>]',
           'apltk architecture add module <slug> --part-of <feature> [--depends-on <feature>]',
@@ -366,19 +427,25 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         ],
         examples: [
           {
-            command: 'apltk architecture add feature payment --depends-on order',
-            result: 'Creates a "payment" feature with a dependency on "order", then re-renders.',
+            command:
+              'apltk architecture add feature payment --depends-on order',
+            result:
+              'Creates a "payment" feature with a dependency on "order", then re-renders.',
           },
           {
-            command: 'apltk architecture add module payment-api --part-of payment --depends-on order-service',
-            result: 'Adds a "payment-api" submodule under the "payment" feature with a dependency edge.',
+            command:
+              'apltk architecture add module payment-api --part-of payment --depends-on order-service',
+            result:
+              'Adds a "payment-api" submodule under the "payment" feature with a dependency edge.',
           },
         ],
       });
     case 'remove':
       return buildHelpPage({
-        title: 'apltk architecture remove — remove entities from the architecture diagram.',
-        summary: 'Remove features, modules, or relations from the project architecture diagram.',
+        title:
+          'apltk architecture remove — remove entities from the architecture diagram.',
+        summary:
+          'Remove features, modules, or relations from the project architecture diagram.',
         usageLines: [
           'apltk architecture remove feature <slug>',
           'apltk architecture remove module <slug> --part-of <feature>',
@@ -399,11 +466,14 @@ function buildArchitectureHelpPage(verb = null, subverb = null) {
         examples: [
           {
             command: 'apltk architecture remove feature legacy-auth',
-            result: 'Removes the feature and its related edges, then re-renders.',
+            result:
+              'Removes the feature and its related edges, then re-renders.',
           },
           {
-            command: 'apltk architecture remove module payment-api --part-of payment',
-            result: 'Removes the submodule and its local edges, then re-renders.',
+            command:
+              'apltk architecture remove module payment-api --part-of payment',
+            result:
+              'Removes the submodule and its local edges, then re-renders.',
           },
         ],
       });
@@ -417,7 +487,12 @@ module.exports = {
   hiddenVerbs,
   get USAGE() {
     const value = buildArchitectureHelpPage();
-    Object.defineProperty(module.exports, 'USAGE', { value, enumerable: true, writable: false, configurable: false });
+    Object.defineProperty(module.exports, 'USAGE', {
+      value,
+      enumerable: true,
+      writable: false,
+      configurable: false,
+    });
     return value;
   },
 };

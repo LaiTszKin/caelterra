@@ -6,15 +6,28 @@ export interface InitOptions {
   json?: boolean;
 }
 
-export async function handleInit(projectRoot: string, options: InitOptions = {}): Promise<number> {
-  const progressEvents: Array<{ phase: string; current: number; total: number }> = [];
+export async function handleInit(
+  projectRoot: string,
+  options: InitOptions = {},
+): Promise<number> {
+  const progressEvents: Array<{
+    phase: string;
+    current: number;
+    total: number;
+  }> = [];
   const start = Date.now();
   const cg = await createOrOpenIndex(projectRoot, {
-    index: options.index,
+    ...(options.index !== undefined && { index: options.index }),
     onProgress: (p) => {
-      progressEvents.push({ phase: p.phase, current: p.current, total: p.total });
+      progressEvents.push({
+        phase: p.phase,
+        current: p.current,
+        total: p.total,
+      });
       if (process.stdout.isTTY) {
-        process.stdout.write(`\r  Indexing: ${p.phase} ${p.current}/${p.total}${p.currentFile ? `  ${p.currentFile}` : ''}`);
+        process.stdout.write(
+          `\r  Indexing: ${p.phase} ${String(p.current)}/${String(p.total)}${p.currentFile ? `  ${p.currentFile}` : ''}`,
+        );
       }
     },
   });
@@ -51,7 +64,7 @@ export async function handleInit(projectRoot: string, options: InitOptions = {})
       summary.push(['Files:', stats.fileCount]);
       summary.push(['Nodes:', stats.nodeCount]);
       summary.push(['Edges:', stats.edgeCount]);
-      summary.push(['Duration:', `${durationMs}ms`]);
+      summary.push(['Duration:', `${String(durationMs)}ms`]);
     }
     process.stdout.write(formatSummary(summary) + '\n');
   }

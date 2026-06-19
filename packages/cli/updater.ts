@@ -22,14 +22,12 @@ interface UpdateCheckResult {
 }
 
 function normalizeVersion(version: string): string {
-  return String(version || '')
-    .trim()
-    .replace(/^v/i, '');
+  return (version || '').trim().replace(/^v/i, '');
 }
 
 function parseVersion(version: string): Version {
   const normalized = normalizeVersion(version);
-  const [core, prerelease = ''] = normalized.split('-', 2);
+  const [core = '', prerelease = ''] = normalized.split('-', 2);
   const parts = core.split('.').map((part) => Number.parseInt(part, 10) || 0);
   return { parts, prerelease };
 }
@@ -54,19 +52,34 @@ export function compareVersions(left: string, right: string): number {
   return 0;
 }
 
-function shouldSkipUpdateCheck({ env = process.env, stdin = process.stdin, stdout = process.stdout }: {
+function shouldSkipUpdateCheck({
+  env = process.env,
+  stdin = process.stdin,
+  stdout = process.stdout,
+}: {
   env?: NodeJS.ProcessEnv;
   stdin?: NodeJS.ReadStream;
   stdout?: NodeJS.WriteStream;
 }): boolean {
-  return env.APOLLO_TOOLKIT_SKIP_UPDATE_CHECK === '1' || !isInteractive(stdin, stdout, env);
+  return (
+    env['APOLLO_TOOLKIT_SKIP_UPDATE_CHECK'] === '1' ||
+    !isInteractive(stdin, stdout, env)
+  );
 }
 
-export function execCommand(command: string, args: string[], { env = process.env, stdout, stderr }: {
-  env?: NodeJS.ProcessEnv;
-  stdout?: NodeJS.WriteStream;
-  stderr?: NodeJS.WriteStream;
-} = {}): Promise<ExecResult> {
+export function execCommand(
+  command: string,
+  args: string[],
+  {
+    env = process.env,
+    stdout,
+    stderr,
+  }: {
+    env?: NodeJS.ProcessEnv;
+    stdout?: NodeJS.WriteStream;
+    stderr?: NodeJS.WriteStream;
+  } = {},
+): Promise<ExecResult> {
   return new Promise((resolve, reject) => {
     // PlatformAdapter normalizes command names across OS (e.g., appending
     // .cmd on Windows) so spawn works reliably on any platform.
@@ -93,7 +106,12 @@ export function execCommand(command: string, args: string[], { env = process.env
     child.on('error', reject);
     child.on('close', (code: number | null) => {
       if (code !== 0) {
-        reject(new Error(capturedStderr.trim() || `${command} exited with code ${code}`));
+        reject(
+          new Error(
+            capturedStderr.trim() ||
+              `${command} exited with code ${String(code)}`,
+          ),
+        );
         return;
       }
       resolve({ stdout: capturedStdout, stderr: capturedStderr });
@@ -101,7 +119,13 @@ export function execCommand(command: string, args: string[], { env = process.env
   });
 }
 
-async function defaultConfirmUpdate({ stdin, stdout, currentVersion, latestVersion, packageName }: {
+async function defaultConfirmUpdate({
+  stdin,
+  stdout,
+  currentVersion,
+  latestVersion,
+  packageName,
+}: {
   stdin: NodeJS.ReadStream;
   stdout: NodeJS.WriteStream;
   currentVersion: string;
@@ -120,20 +144,35 @@ async function defaultConfirmUpdate({ stdin, stdout, currentVersion, latestVersi
   }
 }
 
-async function getLatestPublishedVersion({ packageName, env = process.env, exec = execCommand }: {
+async function getLatestPublishedVersion({
+  packageName,
+  env = process.env,
+  exec = execCommand,
+}: {
   packageName: string;
   env?: NodeJS.ProcessEnv;
   exec?: typeof execCommand;
 }): Promise<string> {
-  const result = await exec('npm', ['view', packageName, 'version', '--json'], { env });
-  const parsed = JSON.parse(result.stdout.trim());
+  const result = await exec('npm', ['view', packageName, 'version', '--json'], {
+    env,
+  });
+  const parsed = JSON.parse(result.stdout.trim()) as string | string[];
   if (Array.isArray(parsed)) {
-    return String(parsed[parsed.length - 1] || '').trim();
+    return (parsed[parsed.length - 1] || '').trim();
   }
-  return String(parsed || '').trim();
+  return (parsed || '').trim();
 }
 
-export async function checkForPackageUpdate({ packageName, currentVersion, env = process.env, stdin = process.stdin, stdout = process.stdout, stderr = process.stderr, exec = execCommand, confirmUpdate = defaultConfirmUpdate }: {
+export async function checkForPackageUpdate({
+  packageName,
+  currentVersion,
+  env = process.env,
+  stdin = process.stdin,
+  stdout = process.stdout,
+  stderr = process.stderr,
+  exec = execCommand,
+  confirmUpdate = defaultConfirmUpdate,
+}: {
   packageName: string;
   currentVersion: string;
   env?: NodeJS.ProcessEnv;
@@ -148,12 +187,22 @@ export async function checkForPackageUpdate({ packageName, currentVersion, env =
   }
 
   try {
-    const latestVersion = await getLatestPublishedVersion({ packageName, env, exec });
+    const latestVersion = await getLatestPublishedVersion({
+      packageName,
+      env,
+      exec,
+    });
     if (!latestVersion || compareVersions(latestVersion, currentVersion) <= 0) {
       return { checked: true, updated: false, latestVersion };
     }
 
-    const approved = await confirmUpdate({ stdin, stdout, currentVersion, latestVersion, packageName });
+    const approved = await confirmUpdate({
+      stdin,
+      stdout,
+      currentVersion,
+      latestVersion,
+      packageName,
+    });
 
     if (!approved) {
       stdout.write(`Continuing with ${packageName} ${currentVersion}.${EOL}`);
@@ -161,12 +210,20 @@ export async function checkForPackageUpdate({ packageName, currentVersion, env =
     }
 
     stdout.write(`Updating ${packageName} to ${latestVersion}...${EOL}`);
-    await exec('npm', ['install', '-g', `${packageName}@latest`], { env, stdout, stderr });
-    stdout.write(`Update complete. Continuing with ${packageName} ${latestVersion}.${EOL}`);
+    await exec('npm', ['install', '-g', `${packageName}@latest`], {
+      env,
+      stdout,
+      stderr,
+    });
+    stdout.write(
+      `Update complete. Continuing with ${packageName} ${latestVersion}.${EOL}`,
+    );
 
     return { checked: true, updated: true, latestVersion };
   } catch (error) {
-    stderr.write(`Warning: unable to check or install package updates: ${(error as Error).message}${EOL}`);
+    stderr.write(
+      `Warning: unable to check or install package updates: ${(error as Error).message}${EOL}`,
+    );
     return { checked: false, updated: false, error: error as Error };
   }
 }

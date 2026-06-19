@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Discuss'
+  short_description: 'Clarify vague requirements through structured conversation and produce a PROPOSAL.md'
+  default_prompt: 'Use $discuss to help users clarify vague requirements through structured conversation, producing a high-level design (PROPOSAL.md) with requirement summaries. Does not read any repo files — relies entirely on conversation. Suitable for requirement discussions, feature ideation, or greenfield project planning.'

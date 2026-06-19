@@ -54,7 +54,9 @@ export async function acquireLock(
           mtime = statSync(lockPath).mtimeMs;
         } catch {
           if (onConflict === 'skip') return { skipped: true };
-          throw new Error('Another process is already in progress (lock exists)');
+          throw new Error(
+            'Another process is already in progress (lock exists)',
+          );
         }
         if (Date.now() - mtime > staleMs) {
           rmSync(lockPath, { recursive: true, force: true });

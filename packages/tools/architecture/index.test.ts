@@ -21,10 +21,22 @@ function makeIo(): Io {
   let stdoutBuf = '';
   let stderrBuf = '';
   return {
-    stdout: { write: (s: string) => { stdoutBuf += s; } },
-    stderr: { write: (s: string) => { stderrBuf += s; } },
-    get stdoutText() { return stdoutBuf; },
-    get stderrText() { return stderrBuf; },
+    stdout: {
+      write: (s: string) => {
+        stdoutBuf += s;
+      },
+    },
+    stderr: {
+      write: (s: string) => {
+        stderrBuf += s;
+      },
+    },
+    get stdoutText() {
+      return stdoutBuf;
+    },
+    get stderrText() {
+      return stderrBuf;
+    },
   };
 }
 
@@ -46,9 +58,15 @@ function makeContext(io: Io, extra?: Partial<ToolContext>): ToolContext {
 function writeMockAtlasModules(
   tmpDir: string,
   stateReturn: Record<string, any>,
-  onSave?: (dir: string, state: Record<string, any>) => void,
+  _onSave?: (dir: string, state: Record<string, any>) => void,
 ): void {
-  const atlasDir = path.join(tmpDir, 'skills', 'init-project-html', 'lib', 'atlas');
+  const atlasDir = path.join(
+    tmpDir,
+    'skills',
+    'init-project-html',
+    'lib',
+    'atlas',
+  );
   fs.mkdirSync(atlasDir, { recursive: true });
 
   fs.mkdirSync(path.join(tmpDir, 'resources', 'project-architecture'), {
@@ -66,10 +84,10 @@ function writeMockAtlasModules(
       'export default {',
       '  resolveProjectRoot: () => projectRoot,',
       '  baseAtlasDir: () => atlasDir,',
-      '  specOverlayDir: () => ({ overlayDir: \'\', rootDir: \'\', htmlOutDir: \'\' }),',
+      "  specOverlayDir: () => ({ overlayDir: '', rootDir: '', htmlOutDir: '' }),",
       '  dispatch: async (args, io) => {',
       '    const verb = args[0];',
-      '    if (verb === \'apply\' || verb === \'template\') {',
+      "    if (verb === 'apply' || verb === 'template') {",
       '      if (io && io.stderr) io.stderr.write(\'Error: "\' + verb + \'" has been removed. Use "apltk architecture add <feature|module|relation>" instead.\\n\');',
       '      return 1;',
       '    }',
@@ -127,10 +145,20 @@ describe('REGTEST-15: Unknown verb via CLI dispatch', () => {
     const handler = tool.handler;
     if (!handler) throw new Error('tool.handler is undefined');
     const exitCode = await handler(
-      ['template', '--spec', '/nonexistent/spec-dir', '--output', '/tmp/rg15-out'],
+      [
+        'template',
+        '--spec',
+        '/nonexistent/spec-dir',
+        '--output',
+        '/tmp/rg15-out',
+      ],
       makeContext(io),
     );
-    assert.equal(exitCode, 1, 'Expected exit code 1 for unknown verb "template"');
+    assert.equal(
+      exitCode,
+      1,
+      'Expected exit code 1 for unknown verb "template"',
+    );
     assert.ok(
       io.stderrText.includes('add'),
       `stderr should suggest using "add": got ${JSON.stringify(io.stderrText)}`,
@@ -152,42 +180,39 @@ describe('REGTEST-16: Verb dispatch — apply returns 1, add/remove return 0', (
   before(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rg16-'));
 
-    writeMockAtlasModules(
-      tmpDir,
-      {
-        features: [
-          {
-            slug: 'feature-a',
-            title: 'Feature A',
-            submodules: [
-              { slug: 'sub-a1', kind: 'service' },
-              { slug: 'sub-a2', kind: 'service' },
-            ],
-            edges: [],
-          },
-          {
-            slug: 'feature-b',
-            title: 'Feature B',
-            submodules: [{ slug: 'sub-b1', kind: 'service' }],
-            edges: [],
-          },
-        ],
-        edges: [
-          {
-            id: 'e1',
-            from: { feature: 'feature-a', submodule: 'sub-a1' },
-            to: { feature: 'feature-b', submodule: 'sub-b1' },
-            kind: 'call',
-          },
-          {
-            id: 'e2',
-            from: { feature: 'feature-a', submodule: 'sub-a2' },
-            to: { feature: 'feature-b', submodule: 'sub-b1' },
-            kind: 'call',
-          },
-        ],
-      },
-    );
+    writeMockAtlasModules(tmpDir, {
+      features: [
+        {
+          slug: 'feature-a',
+          title: 'Feature A',
+          submodules: [
+            { slug: 'sub-a1', kind: 'service' },
+            { slug: 'sub-a2', kind: 'service' },
+          ],
+          edges: [],
+        },
+        {
+          slug: 'feature-b',
+          title: 'Feature B',
+          submodules: [{ slug: 'sub-b1', kind: 'service' }],
+          edges: [],
+        },
+      ],
+      edges: [
+        {
+          id: 'e1',
+          from: { feature: 'feature-a', submodule: 'sub-a1' },
+          to: { feature: 'feature-b', submodule: 'sub-b1' },
+          kind: 'call',
+        },
+        {
+          id: 'e2',
+          from: { feature: 'feature-a', submodule: 'sub-a2' },
+          to: { feature: 'feature-b', submodule: 'sub-b1' },
+          kind: 'call',
+        },
+      ],
+    });
   });
 
   after(() => {

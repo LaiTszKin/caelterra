@@ -22,6 +22,7 @@ After:
 ```
 
 **Verification**:
+
 - Integration tests confirm cross-module interactions still produce the same business outcomes
 - Each new module has independent test coverage for its internal logic
 - Contracts between modules (events, data types) are versioned or explicit
@@ -43,12 +44,13 @@ interface OrderFulfilled {
 interface OrderFulfilled {
   orderId: string;
   trackingNumber: string;
-  carrier: 'fedex' | 'ups' | 'usps';  // narrowed from string
-  estimatedDelivery?: string;          // added optional field
+  carrier: 'fedex' | 'ups' | 'usps'; // narrowed from string
+  estimatedDelivery?: string; // added optional field
 }
 ```
 
 **Test obligations**:
+
 - Producer publishes all required fields
 - Consumer handles the new optional field gracefully (absence = backward compatible)
 - Consumer reject messages for invalid carrier values
@@ -57,10 +59,10 @@ interface OrderFulfilled {
 
 An invariant previously enforced at the database or UI layer must move to the application module boundary.
 
-| Scenario | Approach |
-|---|---|
-| DB constraint moved to application | Add validation in service layer; dual-run until migration verified |
-| UI-only validation promoted to API | Add middleware guard; test both valid and invalid input |
+| Scenario                            | Approach                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| DB constraint moved to application  | Add validation in service layer; dual-run until migration verified        |
+| UI-only validation promoted to API  | Add middleware guard; test both valid and invalid input                   |
 | Soft enforcement → hard enforcement | Roll out with logging first, then error-throwing after observation period |
 
 ## Public API Signature Change
@@ -77,6 +79,7 @@ export function createUser(params: CreateUserParams): User;
 ```
 
 **Migration strategy** (choose one and document):
+
 1. **Deprecate-and-copy**: Old function marked `@deprecated` → new function added → callers migrate one by one → old function removed after N cycles
 2. **Shim layer**: A thin adapter maps new interface to old, or old to new, during a transition window
 3. **Flag gate**: Both implementations coexist behind a feature flag; toggle after callers are confirmed updated
@@ -98,6 +101,7 @@ events.publish({ type: 'order.shipped', data: { orderId, userEmail } });
 ```
 
 **Test obligations**:
+
 - Integration test: publish event → assert subscriber executes expected side-effect
 - Contract test: event schema is agreed between publisher and subscriber
 - Resilience test: subscriber failure does not affect publisher health
@@ -121,6 +125,7 @@ export class FakeGateway implements PaymentProvider { ... }  // for tests
 ```
 
 **Verification**:
+
 - Unit tests pass against `FakeGateway`
 - Integration tests cover `StripeGateway` against sandbox
 - Existing callers are updated to depend on the interface, not the class

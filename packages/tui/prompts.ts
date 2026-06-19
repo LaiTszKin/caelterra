@@ -21,9 +21,13 @@ export interface PromptYesNoOpts {
   output?: NodeJS.WriteStream;
 }
 
-export async function promptForModes(opts: PromptForModesOpts): Promise<string[]> {
+export async function promptForModes(
+  opts: PromptForModesOpts,
+): Promise<string[]> {
   if (!opts.input || !opts.output || !isInteractive(opts.input, opts.output)) {
-    throw new Error('Interactive selection requires a TTY. Re-run with explicit targets.');
+    throw new Error(
+      'Interactive selection requires a TTY. Re-run with explicit targets.',
+    );
   }
   const result = await checkbox(
     {
@@ -35,7 +39,7 @@ export async function promptForModes(opts: PromptForModesOpts): Promise<string[]
       output: opts.output,
     },
   );
-  return result as string[];
+  return result;
 }
 
 export async function promptYesNo(opts: PromptYesNoOpts): Promise<boolean> {

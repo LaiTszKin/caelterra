@@ -8,6 +8,7 @@ description: Reads spec documents and the review output REPORT.md, then generate
 Transform the review findings from REPORT.md into a **fix coordinator prompt** (FIX.md).
 
 This prompt defines a fix coordinator agent:
+
 - The **main agent** only coordinates and supervises: understands issues, dispatches workers to fix them, dispatches workers to write regression tests, checks results, merges, verifies
 - **Workers** handle fixes and test writing: each receives a pre-written self-contained prompt and reports back
 
@@ -78,13 +79,13 @@ Write a self-contained worker prompt for each fix issue. Save each prompt to a s
 
 Use `assets/templates/FIX_WORKER.md`. The template follows the P1-P5 architecture:
 
-| Section | Purpose (P#) |
-|---------|--------------|
-| 1. Mission & Rules | Goal + behavioral rules (preserve tests, no scope creep) |
-| 2. Context | Input files, root cause analysis |
-| 3. Tasks | Concrete fix steps (file, line range, before/after) |
-| 4. Verification | Commands and expected results |
-| 5. Scope & References | Allowed/forbidden files, related documents |
+| Section               | Purpose (P#)                                             |
+| --------------------- | -------------------------------------------------------- |
+| 1. Mission & Rules    | Goal + behavioral rules (preserve tests, no scope creep) |
+| 2. Context            | Input files, root cause analysis                         |
+| 3. Tasks              | Concrete fix steps (file, line range, before/after)      |
+| 4. Verification       | Commands and expected results                            |
+| 5. Scope & References | Allowed/forbidden files, related documents               |
 
 **Simple fixes can be merged**: Multiple simple, non-conflicting fixes can be combined into one worker prompt.
 **Complex fixes stand alone**: Complex fixes (requiring systematic debug) must have independent worker prompts.
@@ -97,15 +98,16 @@ Write a self-contained worker prompt for each regression test. The regression te
 
 Use `assets/templates/REGTEST_WORKER.md`. The template follows the P1-P5 architecture:
 
-| Section | Purpose (P#) |
-|---------|--------------|
-| 1. Mission & Rules | Goal + behavioral rules (test-only, oracle must fail before fix) |
-| 2. Context | Input files, test design (type, location, scenario, oracle) |
-| 3. Tasks | Concrete test writing steps |
-| 4. Verification | Confirm test fails before fix, passes after |
-| 5. Scope & References | Allowed test files, forbidden source files |
+| Section               | Purpose (P#)                                                     |
+| --------------------- | ---------------------------------------------------------------- |
+| 1. Mission & Rules    | Goal + behavioral rules (test-only, oracle must fail before fix) |
+| 2. Context            | Input files, test design (type, location, scenario, oracle)      |
+| 3. Tasks              | Concrete test writing steps                                      |
+| 4. Verification       | Confirm test fails before fix, passes after                      |
+| 5. Scope & References | Allowed test files, forbidden source files                       |
 
 **Writing principles (move these to your process, not the template):**
+
 - Writing clear worker prompts means being concrete, not declarative. For every file the worker must modify, specify: (1) the exact file path, (2) the function or line range, (3) what to add, delete, or change.
 - Workers do not see the coordinator's context. The prompt must include everything necessary.
 - A regression test that passes before the fix is not a valid test. Always design the oracle so it fails on unfixed code.

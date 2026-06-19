@@ -1,4 +1,10 @@
-export function serializeNode(node: any): Record<string, unknown> {
+import type {
+  CodeGraphNode,
+  CodeGraphEdge,
+  CodeGraphSubgraph,
+} from './cg-instance.js';
+
+export function serializeNode(node: CodeGraphNode): Record<string, unknown> {
   return {
     id: node.id,
     name: node.name,
@@ -13,7 +19,10 @@ export function serializeNode(node: any): Record<string, unknown> {
   };
 }
 
-export function serializeEdge(edge: any, nodesById?: Map<string, any>): Record<string, unknown> {
+export function serializeEdge(
+  edge: CodeGraphEdge,
+  nodesById?: Map<string, CodeGraphNode>,
+): Record<string, unknown> {
   return {
     source: edge.source,
     sourceName: nodesById?.get(edge.source)?.name,
@@ -26,14 +35,15 @@ export function serializeEdge(edge: any, nodesById?: Map<string, any>): Record<s
   };
 }
 
-export function serializeSubgraph(subgraph: any): Record<string, unknown> {
-  const nodes: any[] = Array.from(subgraph.nodes?.values?.() ?? []);
+export function serializeSubgraph(
+  subgraph: CodeGraphSubgraph,
+): Record<string, unknown> {
+  const nodes = Array.from(subgraph.nodes.values());
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
   return {
-    roots: subgraph.roots ?? [],
+    roots: subgraph.roots,
     confidence: subgraph.confidence,
     nodes: nodes.map(serializeNode),
-    edges: (subgraph.edges ?? []).map((edge: any) => serializeEdge(edge, nodesById)),
+    edges: subgraph.edges.map((edge) => serializeEdge(edge, nodesById)),
   };
 }
-

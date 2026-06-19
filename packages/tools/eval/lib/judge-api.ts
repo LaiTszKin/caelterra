@@ -59,13 +59,15 @@ export async function callJudgeModelRaw(
   };
 
   if (env.JUDGE_REASONING_EFFORT) {
-    body.reasoning_effort = env.JUDGE_REASONING_EFFORT;
+    body['reasoning_effort'] = env.JUDGE_REASONING_EFFORT;
   }
 
   const controller = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   if (typeof timeoutMs === 'number' && timeoutMs > 0) {
-    timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeoutMs);
   }
 
   try {
@@ -76,18 +78,29 @@ export async function callJudgeModelRaw(
         Authorization: `Bearer ${env.JUDGE_API_KEY}`,
       },
       body: JSON.stringify(body),
-      signal: timeoutMs > 0 ? controller.signal : undefined,
+      signal: timeoutMs > 0 ? controller.signal : null,
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => '(unable to read error body)');
-      throw new Error(`Judge API error ${response.status}: ${truncateError(errorText)}`);
+      const errorText = await response
+        .text()
+        .catch(() => '(unable to read error body)');
+      throw new Error(
+        `Judge API error ${String(response.status)}: ${truncateError(errorText)}`,
+      );
     }
 
-    const result: Record<string, unknown> = await response.json() as Record<string, unknown>;
-    const choices = result.choices as Array<Record<string, unknown>> | undefined;
-    const content = choices?.[0]?.message as Record<string, unknown> | undefined;
-    const contentStr = content?.content as string | undefined;
+    const result: Record<string, unknown> = (await response.json()) as Record<
+      string,
+      unknown
+    >;
+    const choices = result['choices'] as
+      | Array<Record<string, unknown>>
+      | undefined;
+    const content = choices?.[0]?.['message'] as
+      | Record<string, unknown>
+      | undefined;
+    const contentStr = content?.['content'] as string | undefined;
 
     if (!contentStr) {
       throw new Error('Judge 模型回覆中沒有 content');
@@ -136,7 +149,7 @@ function parseJudgeOutput(content: string): Record<string, unknown> {
   // 1. Direct parse
   try {
     return JSON.parse(content) as Record<string, unknown>;
-  } catch (_) {
+  } catch {
     // not valid JSON directly
   }
 
@@ -144,8 +157,8 @@ function parseJudgeOutput(content: string): Record<string, unknown> {
   const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
   if (jsonBlockMatch) {
     try {
-      return JSON.parse(jsonBlockMatch[1]) as Record<string, unknown>;
-    } catch (_) {
+      return JSON.parse(jsonBlockMatch[1] ?? '') as Record<string, unknown>;
+    } catch {
       // still not valid
     }
   }
@@ -155,7 +168,7 @@ function parseJudgeOutput(content: string): Record<string, unknown> {
   if (braceMatch) {
     try {
       return JSON.parse(braceMatch[0]) as Record<string, unknown>;
-    } catch (_) {
+    } catch {
       // still not valid
     }
   }
@@ -164,12 +177,14 @@ function parseJudgeOutput(content: string): Record<string, unknown> {
   return {
     overallScore: 0,
     dimensions: [],
-    issues: [{
-      severity: 'P1',
-      category: 'other',
-      description: 'Judge 模型回覆無法解析為有效 JSON',
-      evidence: content.substring(0, 500),
-    }],
+    issues: [
+      {
+        severity: 'P1',
+        category: 'other',
+        description: 'Judge 模型回覆無法解析為有效 JSON',
+        evidence: content.substring(0, 500),
+      },
+    ],
     summary: 'Judge 輸出解析失敗',
     _parseError: true,
     _rawContent: content.substring(0, 1000),
@@ -199,7 +214,7 @@ export async function callExecModel(
 
   // Only add reasoning_effort if explicitly set
   if (env.EXEC_REASONING_EFFORT) {
-    body.reasoning_effort = env.EXEC_REASONING_EFFORT;
+    body['reasoning_effort'] = env.EXEC_REASONING_EFFORT;
   }
 
   const response = await fetch(url, {
@@ -209,18 +224,29 @@ export async function callExecModel(
       Authorization: `Bearer ${env.EXEC_API_KEY}`,
     },
     body: JSON.stringify(body),
-    signal,
+    signal: signal ?? null,
   });
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '(unable to read error body)');
-    throw new Error(`API error ${response.status}: ${truncateError(errorText)}`);
+    const errorText = await response
+      .text()
+      .catch(() => '(unable to read error body)');
+    throw new Error(
+      `API error ${String(response.status)}: ${truncateError(errorText)}`,
+    );
   }
 
-  const result: Record<string, unknown> = await response.json() as Record<string, unknown>;
-  const choices = result.choices as Array<Record<string, unknown>> | undefined;
-  const message = choices?.[0]?.message as Record<string, unknown> | undefined;
-  const content = message?.content as string | undefined;
+  const result: Record<string, unknown> = (await response.json()) as Record<
+    string,
+    unknown
+  >;
+  const choices = result['choices'] as
+    | Array<Record<string, unknown>>
+    | undefined;
+  const message = choices?.[0]?.['message'] as
+    | Record<string, unknown>
+    | undefined;
+  const content = message?.['content'] as string | undefined;
 
   if (content === undefined) {
     throw new Error('Exec model response missing choices[0].message.content');

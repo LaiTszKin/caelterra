@@ -92,14 +92,16 @@ test('auto-update enable uses bin wrapper path, not CLI library module', async (
 
   // 4. runnerCommand[1] (the cliPath) ends with the bin wrapper path.
   const runnerBinPath = capturedRunnerCommand[1];
+  const expectedSuffix = `dist${path.sep}bin${path.sep}apollo-toolkit.js`;
   assert.ok(
-    runnerBinPath.endsWith('dist/bin/apollo-toolkit.js'),
-    `runnerCommand[1] should end with dist/bin/apollo-toolkit.js, got: ${runnerBinPath}`,
+    runnerBinPath.endsWith(expectedSuffix),
+    `runnerCommand[1] should end with ${expectedSuffix}, got: ${runnerBinPath}`,
   );
 
   // 5. runnerCommand[1] does NOT end with the CLI library module path.
+  const wrongSuffix = `packages${path.sep}cli${path.sep}dist${path.sep}index.js`;
   assert.ok(
-    !runnerBinPath.endsWith('packages/cli/dist/index.js'),
-    `runnerCommand[1] should NOT end with packages/cli/dist/index.js, got: ${runnerBinPath}`,
+    !runnerBinPath.endsWith(wrongSuffix),
+    `runnerCommand[1] should NOT end with ${wrongSuffix}, got: ${runnerBinPath}`,
   );
 });

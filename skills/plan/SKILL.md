@@ -8,6 +8,7 @@ description: Converts SPEC.md + DESIGN.md + CHECKLIST.md into a self-contained c
 Transform business specifications (SPEC.md) and technical design (DESIGN.md + CHECKLIST.md) into a **coordinator prompt** (PROMPT.md).
 
 This prompt defines a coordinator agent:
+
 - The **main agent** only coordinates and supervises: reads tasks, dispatches workers, checks results, merges, verifies
 - **Workers** handle implementation: each receives a pre-written self-contained task prompt and reports back
 
@@ -37,6 +38,7 @@ Read the specified directory and determine the type:
 ### 2. Read and Understand All Documents
 
 Read all files thoroughly:
+
 - `SPEC.md` — Business requirements and scope (BDD GIVEN/WHEN/THEN), In/Out of Scope
 - `DESIGN.md` — Module architecture, interaction anchors (INT-###), external dependencies (EXT-###), system invariants, technical trade-offs
 - `CHECKLIST.md` — Behavior-to-test mapping, hardening requirements, test level choices
@@ -47,6 +49,7 @@ Read all files thoroughly:
 Decompose the architecture design from DESIGN.md into tasks precise to the file or function level.
 
 **Decomposition principles:**
+
 - Each task corresponds to an independently verifiable outcome
 - Task granularity: specific files and functions
 - Each task defines a clear verification method
@@ -54,6 +57,7 @@ Decompose the architecture design from DESIGN.md into tasks precise to the file 
 - Follow the external dependency setup order (EXT-###) defined in DESIGN.md
 
 **Decide whether each task needs an independent worker:**
+
 - Touches ≥2 files → needs independent worker
 - **Workers may run in parallel only when BOTH conditions are met:** (1) file lists have ZERO overlap across all workers within the same batch, AND (2) no logical dependency exists between the tasks. If either condition is violated, the tasks must run sequentially.
 - File overlap or logical dependency between tasks → must run sequentially
@@ -64,6 +68,7 @@ Decompose the architecture design from DESIGN.md into tasks precise to the file 
 #### 4a. Single Spec: Task-Level Dependency Analysis
 
 Analyze dependencies between tasks:
+
 - **Same-file dependency**: Multiple tasks touch the same file → must be sequential
 - **Module dependency**: Task A's output is Task B's input → A before B
 - **INT anchor order**: INT-### sequence constraints defined in DESIGN.md
@@ -74,6 +79,7 @@ Output: Task DAG → PROMPT.md Section 5 (Task Units).
 #### 4b. Batch Spec: Spec-Level Dependency Analysis
 
 Analyze dependencies between specs:
+
 - Identify cross-spec dependencies from each DESIGN.md's interaction anchors
 - Detect files shared between specs
 - Identify module ownership overlap from each DESIGN.md's module list
@@ -96,15 +102,16 @@ For each task that needs an independent worker, write a self-contained worker pr
 
 Use `assets/templates/WORKER_PROMPT.md`. The template follows the P1-P5 architecture:
 
-| Section | Purpose (P#) |
-|---------|--------------|
-| 1. Mission & Rules | Goal + behavioral rules |
-| 2. Context | Files to read, background knowledge |
-| 3. Tasks | Concrete file-level instructions (file, line range, change) |
-| 4. Verification | Commands and expected results |
-| 5. Scope & References | Allowed/forbidden files, related references |
+| Section               | Purpose (P#)                                                |
+| --------------------- | ----------------------------------------------------------- |
+| 1. Mission & Rules    | Goal + behavioral rules                                     |
+| 2. Context            | Files to read, background knowledge                         |
+| 3. Tasks              | Concrete file-level instructions (file, line range, change) |
+| 4. Verification       | Commands and expected results                               |
+| 5. Scope & References | Allowed/forbidden files, related references                 |
 
 **Writing principles (move these to your process, not the template):**
+
 - **Self-contained**: Workers do not see the coordinator's context. The prompt must include everything necessary. Do not rely on shared context or assume the worker has read other documents.
 - **Concrete**: For every file the worker must modify, specify: (1) the exact file path, (2) the function or line range, (3) what to add, delete, or change. Do not write "fix it", "update as needed", or "based on your findings".
 - **Declarative**: Describe "what to do", not "which tool to use".
@@ -117,6 +124,7 @@ Tasks that do not need a worker (purely procedural operations) do not get a work
 Based on dependency analysis and file overlap detection, build the batch schedule → PROMPT.md Section 7 (Batch Schedule).
 
 **Batch partitioning principles (file overlap and logical dependency are the hard gates):**
+
 - Within the same batch: tasks must have ZERO file overlap AND no logical dependency — only then may they dispatch workers in parallel. Tasks with file overlap or logical dependency must be placed in separate sequential batches regardless.
 - Between batches: the previous batch must complete and pass its gate before the next batch begins
 - A final integration batch handles housekeeping tasks (lockfile update, final test suite)
@@ -169,8 +177,8 @@ Place worker prompts in `<spec_dir>/plan/` or `<batch_dir>/plan/`.
 
 ## Examples
 
-- "Generate a coordinator prompt for a single spec" → Read SPEC.md + DESIGN.md + references/ → Decompose into 3 tasks → T1.1 and T1.2 have no file overlap → parallel → Write worker prompts to `plan/` → Schedule: Batch 1 parallel T1.1+T1.2 → Batch 2 T1.3 → Output PROMPT.md + plan/*.md
-- "Generate a coordinator prompt for a batch spec with 4 specs" → Read all SPEC.md + DESIGN.md + references/ → Build spec DAG → Detect cross-spec file overlap → Schedule batches → Write worker prompts to `plan/` → Output PROMPT.md + plan/*.md
+- "Generate a coordinator prompt for a single spec" → Read SPEC.md + DESIGN.md + references/ → Decompose into 3 tasks → T1.1 and T1.2 have no file overlap → parallel → Write worker prompts to `plan/` → Schedule: Batch 1 parallel T1.1+T1.2 → Batch 2 T1.3 → Output PROMPT.md + plan/\*.md
+- "Generate a coordinator prompt for a batch spec with 4 specs" → Read all SPEC.md + DESIGN.md + references/ → Build spec DAG → Detect cross-spec file overlap → Schedule batches → Write worker prompts to `plan/` → Output PROMPT.md + plan/\*.md
 - "Two tasks modify the same file" → Assign to different batches, each with an independent worker prompt in `plan/`, sequential execution → Reference both prompt paths in PROMPT.md
 
 ## References

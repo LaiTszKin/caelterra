@@ -1,8 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { color, supportsColor, supportsAnimation, buildBanner, buildWordmark, buildWelcomeScreen, buildSupportedTargetLines, renderSelectionScreen, animateWelcomeScreen, promptYesNo, promptForModes, isInteractive, createStdioWriter } from '@laitszkin/tui';
-import type { TargetDefinition, StdioWriter } from '@laitszkin/tui';
+import {
+  color,
+  supportsColor,
+  buildBanner,
+  buildWelcomeScreen,
+  animateWelcomeScreen,
+  promptYesNo,
+  promptForModes,
+  isInteractive,
+  createStdioWriter,
+} from '@laitszkin/tui';
+import type { StdioWriter } from '@laitszkin/tui';
 import { runTool } from '@laitszkin/tool-registry';
 import {
   TARGET_DEFINITIONS,
@@ -22,7 +32,11 @@ import {
   resolveHomeDirectory,
   listSkillNames,
 } from './installer.js';
-import { checkForPackageUpdate, compareVersions, execCommand } from './updater.js';
+import {
+  checkForPackageUpdate,
+  compareVersions,
+  execCommand,
+} from './updater.js';
 import { registerAllTools, isKnownToolName } from './tool-registration.js';
 import { AutoUpdateArgsParser } from './parsers/auto-update-parser.js';
 import {
@@ -61,19 +75,33 @@ export {
   execCommand,
 };
 // Re-export auto-update modules for external consumers (tests, bin)
-export { readAutoUpdateConfig, writeAutoUpdateConfig, readAutoUpdateStatus, writeAutoUpdateStatus, resolveAutoUpdatePaths } from './auto-update-state.js';
-export { registerAutoUpdateTask, unregisterAutoUpdateTask, getAutoUpdateTaskStatus } from './auto-update-scheduler.js';
+export {
+  readAutoUpdateConfig,
+  writeAutoUpdateConfig,
+  readAutoUpdateStatus,
+  writeAutoUpdateStatus,
+  resolveAutoUpdatePaths,
+} from './auto-update-state.js';
+export {
+  registerAutoUpdateTask,
+  unregisterAutoUpdateTask,
+  getAutoUpdateTaskStatus,
+} from './auto-update-scheduler.js';
 export { runAutoUpdate } from './auto-update-runner.js';
 import type { CliContext, InstallMode, ParsedArguments } from './types.js';
-import type { CommandParser } from './parsers/types.js';
 import { formatAppError } from '@laitszkin/tool-utils';
 import { InstallArgsParser } from './parsers/install-parser.js';
 import { UninstallArgsParser } from './parsers/uninstall-parser.js';
 import { ToolArgsParser } from './parsers/tool-parser.js';
 import { HelpTextBuilder } from './help-text-builder.js';
 
-function readPackageJson(sourceRoot: string): { version: string; name: string } {
-  return JSON.parse(fs.readFileSync(path.join(sourceRoot, 'package.json'), 'utf8'));
+function readPackageJson(sourceRoot: string): {
+  version: string;
+  name: string;
+} {
+  return JSON.parse(
+    fs.readFileSync(path.join(sourceRoot, 'package.json'), 'utf8'),
+  ) as { version: string; name: string };
 }
 
 /** Derive the executable CLI bin wrapper path from the project source root. */
@@ -94,21 +122,37 @@ function parseArguments(argv: string[]): ParsedArguments {
   // parser, and error-boundary changes.  Modify with care.
   // =================================
 
-  const commandParsers = new Map<string, CommandParser<any>>([
-    ['install', installParser],
-    ['uninstall', new UninstallArgsParser()],
-    ['tools', toolParser],
-    ['tool', toolParser],
-    ['auto-update', new AutoUpdateArgsParser()],
+  const commandParsers = new Map<string, (argv: string[]) => ParsedArguments>([
+    [
+      'install',
+      (argv) => installParser.toParsedArguments(installParser.parse(argv)),
+    ],
+    [
+      'uninstall',
+      (argv) =>
+        new UninstallArgsParser().toParsedArguments(
+          new UninstallArgsParser().parse(argv),
+        ),
+    ],
+    ['tools', (argv) => toolParser.toParsedArguments(toolParser.parse(argv))],
+    ['tool', (argv) => toolParser.toParsedArguments(toolParser.parse(argv))],
+    [
+      'auto-update',
+      (argv) =>
+        new AutoUpdateArgsParser().toParsedArguments(
+          new AutoUpdateArgsParser().parse(argv),
+        ),
+    ],
   ]);
 
   // Command dispatch: iterate parsers, first match wins
-  for (const [name, parser] of commandParsers) {
+  for (const [name, dispatch] of commandParsers) {
     if (firstArg === name) {
-      const result = parser.parse(argv);
-      return parser.toParsedArguments(result);
+      return dispatch(argv);
     }
   }
+
+  // Direct tool name
 
   // Direct tool name (no "tools" prefix) — route through the 'tool' dispatch table entry
   if (firstArg && isKnownToolName(firstArg)) {
@@ -131,17 +175,32 @@ function buildSymlinkInfo({ colorEnabled }: { colorEnabled: boolean }): string {
   ].join('\n');
 }
 
-async function promptSymlinkChoice({ stdin, stdout, env, colorEnabled }: {
+async function promptSymlinkChoice({
+  stdin,
+  stdout,
+  colorEnabled,
+}: {
   stdin: NodeJS.ReadStream;
   stdout: NodeJS.WriteStream;
   env: NodeJS.ProcessEnv;
   colorEnabled: boolean;
 }): Promise<boolean> {
   stdout.write(buildSymlinkInfo({ colorEnabled }));
-  return promptYesNo({ message: 'Install skills as symlinks (recommended)?', default: true, input: stdin, output: stdout });
+  return promptYesNo({
+    message: 'Install skills as symlinks (recommended)?',
+    default: true,
+    input: stdin,
+    output: stdout,
+  });
 }
 
-async function promptIncludeExclusiveSkills({ stdin, stdout, env, colorEnabled, codexSkillNames, nonCodexModes }: {
+async function promptIncludeExclusiveSkills({
+  stdin,
+  stdout,
+  colorEnabled,
+  codexSkillNames,
+  nonCodexModes,
+}: {
   stdin: NodeJS.ReadStream;
   stdout: NodeJS.WriteStream;
   env: NodeJS.ProcessEnv;
@@ -151,13 +210,15 @@ async function promptIncludeExclusiveSkills({ stdin, stdout, env, colorEnabled, 
 }): Promise<boolean> {
   if (codexSkillNames.length === 0 || nonCodexModes.length === 0) return false;
 
-  stdout.write([
-    '',
-    color('Exclusive skills detected:', '1;33', colorEnabled),
-    `  The following skills are exclusive to codex: ${codexSkillNames.join(', ')}`,
-    `  Your selected non-codex targets: ${nonCodexModes.join(', ')}`,
-    '',
-  ].join('\n'));
+  stdout.write(
+    [
+      '',
+      color('Exclusive skills detected:', '1;33', colorEnabled),
+      `  The following skills are exclusive to codex: ${codexSkillNames.join(', ')}`,
+      `  Your selected non-codex targets: ${nonCodexModes.join(', ')}`,
+      '',
+    ].join('\n'),
+  );
 
   return promptYesNo({
     message: `Install codex-exclusive skills to ${nonCodexModes.join(', ')} as well?`,
@@ -167,7 +228,15 @@ async function promptIncludeExclusiveSkills({ stdin, stdout, env, colorEnabled, 
   });
 }
 
-async function confirmInstall({ stdin, stdout, version, toolkitHome, modes, linkMode, env }: {
+async function confirmInstall({
+  stdin,
+  stdout,
+  version,
+  toolkitHome,
+  modes,
+  linkMode,
+  env,
+}: {
   stdin: NodeJS.ReadStream;
   stdout: NodeJS.WriteStream;
   version: string;
@@ -180,7 +249,9 @@ async function confirmInstall({ stdin, stdout, version, toolkitHome, modes, link
   stdout.write(`${buildBanner({ version, colorEnabled })}\n\n`);
   stdout.write(`Apollo Toolkit home: ${toolkitHome}\n`);
   stdout.write(`Targets: ${modes.join(', ')}\n`);
-  stdout.write(`Install mode: ${linkMode === 'symlink' ? 'symlink (auto-update via git pull)' : 'copy (manual reinstall for updates)'}\n\n`);
+  stdout.write(
+    `Install mode: ${linkMode === 'symlink' ? 'symlink (auto-update via git pull)' : 'copy (manual reinstall for updates)'}\n\n`,
+  );
 
   const targets = await getTargetRoots(modes, env);
   for (const target of targets) {
@@ -190,15 +261,31 @@ async function confirmInstall({ stdin, stdout, version, toolkitHome, modes, link
 
   if (!isInteractive(stdin, stdout, env)) return true;
 
-  return promptYesNo({ message: 'Install Apollo Toolkit to these targets?', default: true, input: stdin, output: stdout });
+  return promptYesNo({
+    message: 'Install Apollo Toolkit to these targets?',
+    default: true,
+    input: stdin,
+    output: stdout,
+  });
 }
 
-function printSummary({ stdout, version, toolkitHome, modes, installResult, env }: {
+function printSummary({
+  stdout,
+  version,
+  toolkitHome,
+  modes,
+  installResult,
+  env,
+}: {
   stdout: NodeJS.WriteStream;
   version: string;
   toolkitHome: string;
   modes: string[];
-  installResult: any;
+  installResult: {
+    skillNames: string[];
+    linkMode: string;
+    targets: { label: string; root: string }[];
+  };
   env: NodeJS.ProcessEnv;
 }): void {
   const colorEnabled = supportsColor(stdout, env);
@@ -206,8 +293,12 @@ function printSummary({ stdout, version, toolkitHome, modes, installResult, env 
   stdout.write(color('Installation complete.', '1;32', colorEnabled));
   stdout.write('\n');
   stdout.write(`Apollo Toolkit home: ${toolkitHome}\n`);
-  stdout.write(`Installed skills: ${installResult.skillNames.length}\n`);
-  stdout.write(`Install mode: ${installResult.linkMode === 'symlink' ? 'symlink' : 'copy'}\n`);
+  stdout.write(
+    `Installed skills: ${String(installResult.skillNames.length)}\n`,
+  );
+  stdout.write(
+    `Install mode: ${installResult.linkMode === 'symlink' ? 'symlink' : 'copy'}\n`,
+  );
   stdout.write(`Targets: ${modes.join(', ')}\n\n`);
 
   for (const target of installResult.targets) {
@@ -215,7 +306,11 @@ function printSummary({ stdout, version, toolkitHome, modes, installResult, env 
   }
 }
 
-function printUninstallSummary({ stdout, uninstallResult, env }: {
+function printUninstallSummary({
+  stdout,
+  uninstallResult,
+  env,
+}: {
   stdout: NodeJS.WriteStream;
   uninstallResult: { target: string; root: string; removedSkills: string[] }[];
   env: NodeJS.ProcessEnv;
@@ -223,15 +318,21 @@ function printUninstallSummary({ stdout, uninstallResult, env }: {
   const colorEnabled = supportsColor(stdout, env);
 
   if (uninstallResult.length === 0) {
-    stdout.write(color('No Apollo Toolkit installations found.\n', '1;33', colorEnabled));
+    stdout.write(
+      color('No Apollo Toolkit installations found.\n', '1;33', colorEnabled),
+    );
     return;
   }
 
   stdout.write(color('Uninstall complete.', '1;32', colorEnabled));
   stdout.write('\n\n');
   for (const result of uninstallResult) {
-    stdout.write(`${color(result.target, '1', colorEnabled)} (${result.root})\n`);
-    stdout.write(`  Removed: ${result.removedSkills.length > 0 ? result.removedSkills.join(', ') : '(manifest only)'}\n`);
+    stdout.write(
+      `${color(result.target, '1', colorEnabled)} (${result.root})\n`,
+    );
+    stdout.write(
+      `  Removed: ${result.removedSkills.length > 0 ? result.removedSkills.join(', ') : '(manifest only)'}\n`,
+    );
   }
 }
 
@@ -244,7 +345,10 @@ export { AutoUpdateArgsParser } from './parsers/auto-update-parser.js';
 
 export { parseArguments, buildBanner, buildWelcomeScreen, registerAllTools };
 
-export async function run(argv: string[], context: CliContext = {}): Promise<number> {
+export async function run(
+  argv: string[],
+  context: CliContext = {},
+): Promise<number> {
   const __filename = fileURLToPath(import.meta.url);
   const __dir = path.dirname(__filename);
   const sourceRoot = context.sourceRoot || path.resolve(__dir, '../../..');
@@ -261,21 +365,27 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
     if (parsed.showHelp) {
       const colorEnabled = supportsColor(stdout, env);
       if (parsed.helpTopic === 'overview') await registerAllTools();
-      const builder = new HelpTextBuilder({ version: packageJson.version, colorEnabled });
-      const helpText = parsed.helpTopic === 'install'
-        ? builder.install()
-        : parsed.helpTopic === 'uninstall'
-          ? builder.uninstall()
-          : parsed.helpTopic === 'auto-update'
-            ? builder.autoUpdate()
-            : builder.overview();
+      const builder = new HelpTextBuilder({
+        version: packageJson.version,
+        colorEnabled,
+      });
+      const helpText =
+        parsed.helpTopic === 'install'
+          ? builder.install()
+          : parsed.helpTopic === 'uninstall'
+            ? builder.uninstall()
+            : parsed.helpTopic === 'auto-update'
+              ? builder.autoUpdate()
+              : builder.overview();
       stdout.write(`${helpText}\n`);
       return 0;
     }
 
     if (parsed.showToolsHelp) {
       await registerAllTools();
-      stdout.write(`${new HelpTextBuilder({ version: packageJson.version, colorEnabled: supportsColor(stdout, env) }).toolsHelp()}\n`);
+      stdout.write(
+        `${new HelpTextBuilder({ version: packageJson.version, colorEnabled: supportsColor(stdout, env) }).toolsHelp()}\n`,
+      );
       return 0;
     }
 
@@ -287,8 +397,15 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
     // Both patterns converge on the same formatting at the boundary.
     if (parsed.command === 'tool') {
       await registerAllTools();
-      return await (context.runTool || runTool)(parsed.toolName!, parsed.toolArgs, {
-        sourceRoot, stdout, stderr, env, spawnCommand: context.spawnCommand, stdioWriter,
+      const effectiveRunTool = context.runTool ?? runTool;
+      const resolvedToolName = parsed.toolName as string;
+      return await effectiveRunTool(resolvedToolName, parsed.toolArgs, {
+        sourceRoot,
+        stdout,
+        stderr,
+        env,
+        stdioWriter,
+        ...(context.spawnCommand ? { spawnCommand: context.spawnCommand } : {}),
       });
     }
 
@@ -302,8 +419,13 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
         resolvedModes = normalizeModes(parsed.modes);
       } else if (isTTY) {
         const selected = await promptForModes({
-          message: 'Choose which agent skill targets Apollo Toolkit should uninstall.',
-          choices: [...TARGET_DEFINITIONS].map((t) => ({ name: t.label, value: t.id, description: t.description })),
+          message:
+            'Choose which agent skill targets Apollo Toolkit should uninstall.',
+          choices: [...TARGET_DEFINITIONS].map((t) => ({
+            name: t.label,
+            value: t.id,
+            description: t.description,
+          })),
           input: stdin,
           output: stdout,
         });
@@ -313,8 +435,18 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       const modesForLookup = resolvedModes || [...VALID_MODES];
       const targets = await getUninstallTargetRoots(modesForLookup, env);
 
-      const allKnown = await listAllKnownSkillNames({ toolkitHome, modes: modesForLookup, env });
-      stdout.write(color(`Apollo Toolkit home: ${toolkitHome}\n`, '2', supportsColor(stdout, env)));
+      const allKnown = await listAllKnownSkillNames({
+        toolkitHome,
+        modes: modesForLookup,
+        env,
+      });
+      stdout.write(
+        color(
+          `Apollo Toolkit home: ${toolkitHome}\n`,
+          '2',
+          supportsColor(stdout, env),
+        ),
+      );
       if (targets.length > 0) {
         stdout.write('Targets:\n');
         for (const target of targets) {
@@ -322,23 +454,32 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
         }
       }
 
-      const confirmed = parsed.assumeYes || await promptYesNo({
-        message: `This will remove Apollo Toolkit-installed skills${resolvedModes ? ` from: ${resolvedModes.join(', ')}` : ' from all targets'}. Continue?`,
-        default: false,
-        input: stdin,
-        output: stdout,
-      });
+      const confirmed =
+        parsed.assumeYes ||
+        (await promptYesNo({
+          message: `This will remove Apollo Toolkit-installed skills${resolvedModes ? ` from: ${resolvedModes.join(', ')}` : ' from all targets'}. Continue?`,
+          default: false,
+          input: stdin,
+          output: stdout,
+        }));
 
       if (!confirmed) {
         stdout.write('Uninstall cancelled.\n');
         return 1;
       }
 
-      const uninstallResult = await uninstallSkills({ env, modes: resolvedModes ? [...normalizeModes(resolvedModes)] as InstallMode[] : undefined });
+      const uninstallResult = await uninstallSkills({
+        env,
+        ...(resolvedModes
+          ? { modes: [...normalizeModes(resolvedModes)] as InstallMode[] }
+          : {}),
+      });
       printUninstallSummary({ stdout, uninstallResult, env });
 
       if (allKnown.length > 0) {
-        stdout.write(`\nPreviously known skills (may still exist elsewhere): ${allKnown.join(', ')}\n`);
+        stdout.write(
+          `\nPreviously known skills (may still exist elsewhere): ${allKnown.join(', ')}\n`,
+        );
       }
 
       return 0;
@@ -353,7 +494,11 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
         if (action === 'enable') {
           const nodePath = process.execPath;
           const cliPath = getCliBinPath(sourceRoot);
-          const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+          const runnerCommand = buildRunnerCommand({
+            nodePath,
+            cliPath,
+            toolkitHome,
+          });
           const result = await registerAutoUpdateTask({
             toolkitHome,
             runnerCommand,
@@ -370,7 +515,11 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
         if (action === 'disable') {
           const nodePath = process.execPath;
           const cliPath = getCliBinPath(sourceRoot);
-          const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+          const runnerCommand = buildRunnerCommand({
+            nodePath,
+            cliPath,
+            toolkitHome,
+          });
           await unregisterAutoUpdateTask({
             toolkitHome,
             runnerCommand,
@@ -386,19 +535,27 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
 
         if (action === 'status') {
           const config = await readAutoUpdateConfig(toolkitHome);
-          stdout.write(`Auto-update: ${config.enabled ? 'enabled' : 'disabled'}\n`);
+          stdout.write(
+            `Auto-update: ${config.enabled ? 'enabled' : 'disabled'}\n`,
+          );
           stdout.write(`Last config update: ${config.updatedAt}\n`);
 
           try {
             const nodePath = process.execPath;
             const cliPath = getCliBinPath(sourceRoot);
-            const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+            const runnerCommand = buildRunnerCommand({
+              nodePath,
+              cliPath,
+              toolkitHome,
+            });
             const taskStatus = await getAutoUpdateTaskStatus({
               toolkitHome,
               runnerCommand,
               env,
             });
-            stdout.write(`Scheduler: ${taskStatus.registered ? 'registered' : 'not registered'} (${taskStatus.platform})\n`);
+            stdout.write(
+              `Scheduler: ${taskStatus.registered ? 'registered' : 'not registered'} (${taskStatus.platform})\n`,
+            );
             if (taskStatus.message) {
               stdout.write(`  ${taskStatus.message}\n`);
             }
@@ -422,18 +579,24 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
             autoUpdateEnabled: config.enabled,
           });
           if (result.updated) {
-            stdout.write(`Auto-update: updated from ${result.previousVersion ?? '(unknown)'} to ${result.latestVersion ?? '(unknown)'}.\n`);
+            stdout.write(
+              `Auto-update: updated from ${result.previousVersion ?? '(unknown)'} to ${result.latestVersion ?? '(unknown)'}.\n`,
+            );
             return 0;
           }
           if (result.lastError) {
             stdout.write(`Auto-update: failed - ${result.lastError}\n`);
             return 1;
           }
-          stdout.write(`Auto-update: already up-to-date (${result.latestVersion ?? '(unknown)'}).\n`);
+          stdout.write(
+            `Auto-update: already up-to-date (${result.latestVersion ?? '(unknown)'}).\n`,
+          );
           return 0;
         }
 
-        stdout.write('No action specified. Use: enable, disable, status, or run.\n');
+        stdout.write(
+          'No action specified. Use: enable, disable, status, or run.\n',
+        );
         return 1;
       } catch (error) {
         formatAppError(stderr, error);
@@ -449,8 +612,10 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       stdin,
       stdout,
       stderr,
-      exec: context.execCommand as any,
-      confirmUpdate: context.confirmUpdate as any,
+      ...(context.execCommand ? { exec: context.execCommand } : {}),
+      ...(context.confirmUpdate
+        ? { confirmUpdate: context.confirmUpdate }
+        : {}),
     });
 
     if (updateResult.updated) {
@@ -458,31 +623,58 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
     }
 
     const toolkitHome = parsed.toolkitHome || resolveToolkitHome(env);
-    const modes: InstallMode[] = parsed.modes.length > 0
-      ? normalizeModes(parsed.modes)
-      : normalizeModes(await promptForModes({
-          message: 'Choose where Apollo Toolkit should copy managed skills.',
-          choices: [...TARGET_DEFINITIONS].map((t) => ({ name: t.label, value: t.id, description: t.description })),
-          input: stdin,
-          output: stdout,
-        }));
+    const modes: InstallMode[] =
+      parsed.modes.length > 0
+        ? normalizeModes(parsed.modes)
+        : normalizeModes(
+            await promptForModes({
+              message:
+                'Choose where Apollo Toolkit should copy managed skills.',
+              choices: [...TARGET_DEFINITIONS].map((t) => ({
+                name: t.label,
+                value: t.id,
+                description: t.description,
+              })),
+              input: stdin,
+              output: stdout,
+            }),
+          );
 
     const colorEnabled = supportsColor(stdout, env);
 
     // Show welcome animation only in interactive mode
     if (parsed.modes.length === 0) {
-      await animateWelcomeScreen({ output: stdout, version: packageJson.version, env, targets: [...TARGET_DEFINITIONS] });
+      await animateWelcomeScreen({
+        output: stdout,
+        version: packageJson.version,
+        env,
+        targets: [...TARGET_DEFINITIONS],
+      });
     }
 
     let linkMode: 'copy' | 'symlink' | null = parsed.linkMode;
     if (!linkMode) {
-      linkMode = (await promptSymlinkChoice({ stdin, stdout, env, colorEnabled })) ? 'symlink' : 'copy';
+      linkMode = (await promptSymlinkChoice({
+        stdin,
+        stdout,
+        env,
+        colorEnabled,
+      }))
+        ? 'symlink'
+        : 'copy';
     }
 
     const nonCodexModes = modes.filter((m) => m !== 'codex');
-    const codexSkillNames = await listCodexSkillNames(toolkitHome).catch(() => []);
+    const codexSkillNames = await listCodexSkillNames(toolkitHome).catch(
+      () => [],
+    );
     const includeExclusiveSkills = await promptIncludeExclusiveSkills({
-      stdin, stdout, env, colorEnabled, codexSkillNames, nonCodexModes,
+      stdin,
+      stdout,
+      env,
+      colorEnabled,
+      codexSkillNames,
+      nonCodexModes,
     });
 
     const effectiveModes: InstallMode[] = includeExclusiveSkills
@@ -490,7 +682,13 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       : modes;
 
     const confirmed = await confirmInstall({
-      stdin, stdout, version: packageJson.version, toolkitHome, modes, linkMode, env,
+      stdin,
+      stdout,
+      version: packageJson.version,
+      toolkitHome,
+      modes,
+      linkMode,
+      env,
     });
 
     if (!confirmed) {
@@ -501,7 +699,12 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
     // Read auto-update config before syncToolkitHome (which wipes the directory)
     const preinstallAutoUpdateConfig = await readAutoUpdateConfig(toolkitHome);
 
-    const syncResult = await syncToolkitHome({ sourceRoot, toolkitHome, version: packageJson.version, modes: effectiveModes });
+    const syncResult = await syncToolkitHome({
+      sourceRoot,
+      toolkitHome,
+      version: packageJson.version,
+      modes: effectiveModes,
+    });
     const installResult = await installLinks({
       toolkitHome,
       modes,
@@ -511,13 +714,20 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       env: { ...env, APOLLO_TOOLKIT_HOME: toolkitHome },
     });
 
-    printSummary({ stdout, version: packageJson.version, toolkitHome, modes, installResult, env });
+    printSummary({
+      stdout,
+      version: packageJson.version,
+      toolkitHome,
+      modes,
+      installResult,
+      env,
+    });
 
     // Enable background auto-update by default unless explicitly disabled.
     // Always re-write the config since syncToolkitHome wipes the directory.
     // If previously disabled, preserve that state rather than defaulting to enabled.
     try {
-      const enableAutoUpdate = preinstallAutoUpdateConfig.enabled !== false;
+      const enableAutoUpdate = preinstallAutoUpdateConfig.enabled;
       await writeAutoUpdateConfig(toolkitHome, {
         enabled: enableAutoUpdate,
         updatedAt: new Date().toISOString(),
@@ -525,7 +735,11 @@ export async function run(argv: string[], context: CliContext = {}): Promise<num
       if (enableAutoUpdate) {
         const nodePath = process.execPath;
         const cliPath = getCliBinPath(sourceRoot);
-        const runnerCommand = buildRunnerCommand({ nodePath, cliPath, toolkitHome });
+        const runnerCommand = buildRunnerCommand({
+          nodePath,
+          cliPath,
+          toolkitHome,
+        });
         try {
           await registerAutoUpdateTask({
             toolkitHome,

@@ -40,14 +40,16 @@ export async function callJudgeModelRaw(messages, env, options = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.JUDGE_API_KEY}`,
+        Authorization: `Bearer ${env.JUDGE_API_KEY}`,
       },
       body: JSON.stringify(body),
       signal: timeoutMs > 0 ? controller.signal : undefined,
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => '(unable to read error body)');
+      const errorText = await response
+        .text()
+        .catch(() => '(unable to read error body)');
       throw new Error(`Judge API error ${response.status}: ${errorText}`);
     }
 
@@ -77,7 +79,7 @@ export async function callJudgeModel(prompt, env, options = {}) {
   const { content } = await callJudgeModelRaw(
     [{ role: 'user', content: prompt }],
     env,
-    options
+    options,
   );
   return parseJudgeOutput(content);
 }
@@ -126,12 +128,14 @@ export function parseJudgeOutput(content) {
   return {
     overallScore: 0,
     dimensions: [],
-    issues: [{
-      severity: 'P1',
-      category: 'other',
-      description: 'Judge 模型回覆無法解析為有效 JSON',
-      evidence: content.substring(0, 500),
-    }],
+    issues: [
+      {
+        severity: 'P1',
+        category: 'other',
+        description: 'Judge 模型回覆無法解析為有效 JSON',
+        evidence: content.substring(0, 500),
+      },
+    ],
     summary: 'Judge 輸出解析失敗',
     _parseError: true,
     _rawContent: content.substring(0, 1000),
@@ -164,14 +168,16 @@ export async function callExecModel(messages, env, signal) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${env.EXEC_API_KEY}`,
+      Authorization: `Bearer ${env.EXEC_API_KEY}`,
     },
     body: JSON.stringify(body),
     signal,
   });
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '(unable to read error body)');
+    const errorText = await response
+      .text()
+      .catch(() => '(unable to read error body)');
     throw new Error(`API error ${response.status}: ${errorText}`);
   }
 

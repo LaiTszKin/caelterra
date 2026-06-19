@@ -1,0 +1,4 @@
+interface:
+  display_name: 'QA'
+  short_description: 'Read spec documents and review output REPORT.md, then generate a self-contained fix coordinator prompt (FIX.md)'
+  default_prompt: 'Use $qa to read spec documents and the review output REPORT.md, then generate a self-contained fix coordinator prompt (FIX.md) with issue inventory, dependency analysis, batch scheduling, regression test design, and pre-written worker prompts. The generated FIX.md is consumed directly by the $fix skill.'

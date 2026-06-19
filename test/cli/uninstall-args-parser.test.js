@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { UserInputError } from '@laitszkin/tool-utils';
 import { UninstallArgsParser } from '@laitszkin/cli';
 
@@ -59,15 +60,21 @@ test('UninstallArgsParser: -y with mode parses both correctly', () => {
 test('UninstallArgsParser: --home with path sets toolkitHome', () => {
   const parser = new UninstallArgsParser();
   const result = parser.parse(['uninstall', 'codex', '--home', '/custom/path']);
-  assert.equal(result.toolkitHome, '/custom/path');
+  assert.equal(result.toolkitHome, path.resolve('/custom/path'));
   assert.deepEqual(result.modes, ['codex']);
 });
 
 test('UninstallArgsParser: --home with --yes parses both correctly', () => {
   const parser = new UninstallArgsParser();
-  const result = parser.parse(['uninstall', 'codex', '--yes', '--home', '/tmp/alt-home']);
+  const result = parser.parse([
+    'uninstall',
+    'codex',
+    '--yes',
+    '--home',
+    '/tmp/alt-home',
+  ]);
   assert.equal(result.assumeYes, true);
-  assert.equal(result.toolkitHome, '/tmp/alt-home');
+  assert.equal(result.toolkitHome, path.resolve('/tmp/alt-home'));
   assert.deepEqual(result.modes, ['codex']);
 });
 

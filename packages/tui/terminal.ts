@@ -33,19 +33,30 @@ export function isInteractive(
   if (stdin.isTTY && stdout.isTTY) return true;
   const adapter = createPlatformAdapter();
   if (adapter.isWindows()) {
-    if (env.MSYSTEM) return true;    // MSYS2/MINGW (Git Bash)
-    if (env.WT_SESSION) return true; // Windows Terminal / VS Code integrated terminal
-    if (env.CMDER_ROOT) return true; // ConEmu / cmder
+    if (env['MSYSTEM']) return true; // MSYS2/MINGW (Git Bash)
+    if (env['WT_SESSION']) return true; // Windows Terminal / VS Code integrated terminal
+    if (env['CMDER_ROOT']) return true; // ConEmu / cmder
   }
   return false;
 }
 
-export function supportsColor(stream: { isTTY?: boolean }, env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(stream && isInteractive(stream, stream, env) && !env.NO_COLOR);
+export function supportsColor(
+  stream: { isTTY?: boolean } | null,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return !!(stream && isInteractive(stream, stream, env) && !env['NO_COLOR']);
 }
 
-export function supportsAnimation(stream: { isTTY?: boolean }, env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(stream && isInteractive(stream, stream, env) && !env.CI && env.APOLLO_TOOLKIT_NO_ANIMATION !== '1');
+export function supportsAnimation(
+  stream: { isTTY?: boolean } | null,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return !!(
+    stream &&
+    isInteractive(stream, stream, env) &&
+    !env['CI'] &&
+    env['APOLLO_TOOLKIT_NO_ANIMATION'] !== '1'
+  );
 }
 
 export function color(text: string, code: string, enabled: boolean): string {
@@ -54,7 +65,10 @@ export function color(text: string, code: string, enabled: boolean): string {
   return fn ? fn(text) : text;
 }
 
-export function clearScreen(output: { isTTY?: boolean; write: (str: string) => boolean }): void {
+export function clearScreen(output: {
+  isTTY?: boolean;
+  write: (str: string) => boolean;
+}): void {
   if (output.isTTY) {
     output.write('\x1b[2J\x1b[H');
   }

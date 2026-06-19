@@ -24,7 +24,9 @@ describe('REGTEST-6: handleStatus — Languages section', () => {
 
     // Load the same CodeGraph module that cmd-status.js uses (shared CJS cache),
     // then mock CodeGraph.open + isInitialized so handleStatus uses our fake instance.
-    const { CodeGraph } = require('@colbymchenry/codegraph') as { CodeGraph: { open: Function; isInitialized: Function } };
+    const { CodeGraph } = require('@colbymchenry/codegraph') as {
+      CodeGraph: { open: Function; isInitialized: Function };
+    };
     const openMock = mock.method(CodeGraph, 'open', async () => mockCg);
     const initMock = mock.method(CodeGraph, 'isInitialized', () => true);
 
@@ -45,9 +47,18 @@ describe('REGTEST-6: handleStatus — Languages section', () => {
       assert.strictEqual(exitCode, 0);
 
       const output = chunks.join('');
-      assert.ok(output.includes('Languages:'), 'Output should contain "Languages:" section header');
-      assert.ok(output.includes('typescript'), 'Output should contain "typescript" language name');
-      assert.ok(output.includes('javascript'), 'Output should contain "javascript" language name');
+      assert.ok(
+        output.includes('Languages:'),
+        'Output should contain "Languages:" section header',
+      );
+      assert.ok(
+        output.includes('typescript'),
+        'Output should contain "typescript" language name',
+      );
+      assert.ok(
+        output.includes('javascript'),
+        'Output should contain "javascript" language name',
+      );
     } finally {
       process.stdout.write = originalWrite;
       openMock.mock.restore();
@@ -56,7 +67,9 @@ describe('REGTEST-6: handleStatus — Languages section', () => {
   });
 
   it('REGTEST-R2-02: should return exit code 1 when CodeGraph is not initialized', async () => {
-    const { CodeGraph } = require('@colbymchenry/codegraph') as { CodeGraph: { isInitialized: Function; open: Function } };
+    const { CodeGraph } = require('@colbymchenry/codegraph') as {
+      CodeGraph: { isInitialized: Function; open: Function };
+    };
     const initMock = mock.method(CodeGraph, 'isInitialized', () => false);
 
     // Import fresh (module cache returns same CodeGraph reference with mocked isInitialized)

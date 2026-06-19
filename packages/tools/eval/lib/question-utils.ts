@@ -111,76 +111,101 @@ const SPEC_WORKFLOW_STEPS: StepDefinition[] = [
  * @param question - The raw question object to validate
  * @returns Validation result with errors array
  */
-function validateQuestion(question: unknown): { valid: boolean; errors: string[] } {
+function validateQuestion(question: unknown): {
+  valid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
   const q = question as Record<string, unknown>;
 
   // Top-level required fields
-  if (typeof q.id !== 'string' || q.id.length === 0) {
-    errors.push(`question.id 必須是非空字串，目前為: ${JSON.stringify(q.id)}`);
+  if (typeof q['id'] !== 'string' || q['id'].length === 0) {
+    errors.push(
+      `question.id 必須是非空字串，目前為: ${JSON.stringify(q['id'])}`,
+    );
   }
-  if (typeof q.userPrompt !== 'string' || q.userPrompt.length === 0) {
-    errors.push(`question.userPrompt 必須是非空字串，目前為: ${JSON.stringify(q.userPrompt)}`);
+  if (typeof q['userPrompt'] !== 'string' || q['userPrompt'].length === 0) {
+    errors.push(
+      `question.userPrompt 必須是非空字串，目前為: ${JSON.stringify(q['userPrompt'])}`,
+    );
   }
 
   // difficulty enum
   const validDifficulties = ['basic', 'advanced', 'edge'];
-  if (!validDifficulties.includes(q.difficulty as string)) {
-    errors.push(`question.difficulty 必須為 basic/advanced/edge，目前為: "${String(q.difficulty)}"`);
+  if (!validDifficulties.includes(q['difficulty'] as string)) {
+    errors.push(
+      `question.difficulty 必須為 basic/advanced/edge，目前為: "${String(q['difficulty'])}"`,
+    );
   }
 
   // projectContext
-  if (!q.projectContext || typeof q.projectContext !== 'object') {
+  if (!q['projectContext'] || typeof q['projectContext'] !== 'object') {
     errors.push('question.projectContext 必須是物件');
   } else {
-    const pc = q.projectContext as Record<string, unknown>;
-    if (typeof pc.description !== 'string') {
+    const pc = q['projectContext'] as Record<string, unknown>;
+    if (typeof pc['description'] !== 'string') {
       errors.push('question.projectContext.description 必須是字串');
     }
-    if (!Array.isArray(pc.files)) {
+    if (!Array.isArray(pc['files'])) {
       errors.push('question.projectContext.files 必須是陣列');
     } else {
-      (pc.files as unknown[]).forEach((file, i) => {
+      (pc['files'] as unknown[]).forEach((file, i) => {
         const f = file as Record<string, unknown>;
-        if (typeof f.path !== 'string') {
-          errors.push(`projectContext.files[${i}].path 必須是字串`);
+        if (typeof f['path'] !== 'string') {
+          errors.push(`projectContext.files[${String(i)}].path 必須是字串`);
         }
-        if (typeof f.content !== 'string') {
-          errors.push(`projectContext.files[${i}].content 必須是字串`);
+        if (typeof f['content'] !== 'string') {
+          errors.push(`projectContext.files[${String(i)}].content 必須是字串`);
         }
       });
     }
   }
 
   // scoringCriteria
-  if (!q.scoringCriteria || typeof q.scoringCriteria !== 'object') {
+  if (!q['scoringCriteria'] || typeof q['scoringCriteria'] !== 'object') {
     errors.push('question.scoringCriteria 必須是物件');
   } else {
-    const sc = q.scoringCriteria as Record<string, unknown>;
+    const sc = q['scoringCriteria'] as Record<string, unknown>;
     for (const { key, label } of SCORING_DIMENSIONS) {
       const dim = sc[key] as Record<string, unknown> | undefined;
       if (!dim || typeof dim !== 'object') {
         errors.push(`scoringCriteria.${key} (${label}) 必須是物件`);
         continue;
       }
-      if (typeof dim.weight !== 'number' || dim.weight < 0 || dim.weight > 1) {
+      if (
+        typeof dim['weight'] !== 'number' ||
+        dim['weight'] < 0 ||
+        dim['weight'] > 1
+      ) {
         errors.push(
-          `scoringCriteria.${key}.weight 必須是 0-1 的數字，目前為: ${String(dim.weight)}`,
+          `scoringCriteria.${key}.weight 必須是 0-1 的數字，目前為: ${String(dim['weight'])}`,
         );
       }
-      if (!Array.isArray(dim.checks) || dim.checks.length === 0) {
+      if (!Array.isArray(dim['checks']) || dim['checks'].length === 0) {
         errors.push(`scoringCriteria.${key}.checks 必須是非空陣列`);
       } else {
-        (dim.checks as unknown[]).forEach((check, i) => {
+        (dim['checks'] as unknown[]).forEach((check, i) => {
           const c = check as Record<string, unknown>;
-          if (typeof c.id !== 'string' || c.id.length === 0) {
-            errors.push(`scoringCriteria.${key}.checks[${i}].id 必須是非空字串`);
+          if (typeof c['id'] !== 'string' || c['id'].length === 0) {
+            errors.push(
+              `scoringCriteria.${key}.checks[${String(i)}].id 必須是非空字串`,
+            );
           }
-          if (typeof c.description !== 'string' || c.description.length === 0) {
-            errors.push(`scoringCriteria.${key}.checks[${i}].description 必須是非空字串`);
+          if (
+            typeof c['description'] !== 'string' ||
+            c['description'].length === 0
+          ) {
+            errors.push(
+              `scoringCriteria.${key}.checks[${String(i)}].description 必須是非空字串`,
+            );
           }
-          if (typeof c.passCondition !== 'string' || c.passCondition.length === 0) {
-            errors.push(`scoringCriteria.${key}.checks[${i}].passCondition 必須是非空字串`);
+          if (
+            typeof c['passCondition'] !== 'string' ||
+            c['passCondition'].length === 0
+          ) {
+            errors.push(
+              `scoringCriteria.${key}.checks[${String(i)}].passCondition 必須是非空字串`,
+            );
           }
         });
       }
@@ -188,14 +213,16 @@ function validateQuestion(question: unknown): { valid: boolean; errors: string[]
   }
 
   // coveredSteps (optional field)
-  if (q.coveredSteps !== undefined) {
-    if (!Array.isArray(q.coveredSteps)) {
+  if (q['coveredSteps'] !== undefined) {
+    if (!Array.isArray(q['coveredSteps'])) {
       errors.push('question.coveredSteps 必須是陣列');
     } else {
-      const validSteps = new Set(SPEC_WORKFLOW_STEPS.map(s => s.key));
-      (q.coveredSteps as unknown[]).forEach((step, i) => {
+      const validSteps = new Set(SPEC_WORKFLOW_STEPS.map((s) => s.key));
+      (q['coveredSteps'] as unknown[]).forEach((step, i) => {
         if (typeof step !== 'string' || !validSteps.has(step)) {
-          errors.push(`question.coveredSteps[${i}] "${String(step)}" 不是有效的步驟鍵值`);
+          errors.push(
+            `question.coveredSteps[${String(i)}] "${String(step)}" 不是有效的步驟鍵值`,
+          );
         }
       });
     }
@@ -219,14 +246,18 @@ export function loadQuestionsFromFile(filePath: string): Question[] {
   try {
     raw = fs.readFileSync(resolved, 'utf-8');
   } catch (err) {
-    throw new Error(`無法讀取題目檔案 "${resolved}": ${(err as Error).message}`);
+    throw new Error(
+      `無法讀取題目檔案 "${resolved}": ${(err as Error).message}`,
+    );
   }
 
   let questions: unknown[];
   try {
     questions = JSON.parse(raw) as unknown[];
   } catch (err) {
-    throw new Error(`題目檔案 JSON 格式無效 "${resolved}": ${(err as Error).message}`);
+    throw new Error(
+      `題目檔案 JSON 格式無效 "${resolved}": ${(err as Error).message}`,
+    );
   }
 
   if (!Array.isArray(questions)) {
@@ -239,13 +270,13 @@ export function loadQuestionsFromFile(filePath: string): Question[] {
 
   if (questions.length < 3) {
     throw new Error(
-      `題庫數量不足: 需要至少 3 題（目前 ${questions.length} 題）。請先建立足夠題庫。`,
+      `題庫數量不足: 需要至少 3 題（目前 ${String(questions.length)} 題）。請先建立足夠題庫。`,
     );
   }
 
   if (questions.length < 100) {
     console.log(
-      `提示: 題目數量為 ${questions.length}，少於預期的 100 道。測試覆蓋率可能不足。`,
+      `提示: 題目數量為 ${String(questions.length)}，少於預期的 100 道。測試覆蓋率可能不足。`,
     );
   }
 
@@ -256,13 +287,16 @@ export function loadQuestionsFromFile(filePath: string): Question[] {
   questions.forEach((q, index) => {
     const { valid, errors } = validateQuestion(q);
     if (!valid) {
-      const qid = (q as Record<string, unknown>)?.id ?? '無';
-      validationErrors.push(`題目 #${index + 1} (id: ${String(qid)}): ${errors.join('; ')}`);
+      const rawId = (q as Record<string, unknown>)['id'];
+      const qid = typeof rawId === 'string' ? rawId : '無';
+      validationErrors.push(
+        `題目 #${String(index + 1)} (id: ${qid}): ${errors.join('; ')}`,
+      );
     }
     // Check duplicate ID
-    const qid = (q as Record<string, unknown>)?.id as string | undefined;
+    const qid = (q as Record<string, unknown>)['id'] as string | undefined;
     if (qid && idSet.has(qid)) {
-      validationErrors.push(`題目 #${index + 1}: id "${qid}" 重複`);
+      validationErrors.push(`題目 #${String(index + 1)}: id "${qid}" 重複`);
     }
     if (qid) {
       idSet.add(qid);
@@ -271,7 +305,7 @@ export function loadQuestionsFromFile(filePath: string): Question[] {
 
   if (validationErrors.length > 0) {
     throw new Error(
-      `題目驗證失敗 (${validationErrors.length} 個錯誤):\n${validationErrors.join('\n')}`,
+      `題目驗證失敗 (${String(validationErrors.length)} 個錯誤):\n${validationErrors.join('\n')}`,
     );
   }
 
@@ -319,7 +353,7 @@ export async function generateVariants(
   count: number,
   env: EnvConfig,
 ): Promise<Question[]> {
-  const prompt = `You are a test question variant generator. Given an evaluation question, create ${count} semantically equivalent variants by rewriting only the scenario description.
+  const prompt = `You are a test question variant generator. Given an evaluation question, create ${String(count)} semantically equivalent variants by rewriting only the scenario description.
 
 Original question:
 \`\`\`
@@ -333,7 +367,7 @@ For each variant:
 - Keep the same difficulty level
 - DO NOT change the scoring criteria, project context, or expected behavior
 - Output as a JSON array of objects, each with "id" and "userPrompt" fields
-- ID format: "${question.id}_v{1..${count}}"
+- ID format: "${question.id}_v{1..${String(count)}}"
 
 Respond ONLY with the JSON array, no other text.`;
 
@@ -343,23 +377,35 @@ Respond ONLY with the JSON array, no other text.`;
   );
 
   // Parse JSON with fallback
-  let variants: Array<{ id: string; userPrompt: string }> = [];
+  let variants: Array<Record<string, unknown>> = [];
   try {
-    const parsed = JSON.parse(content);
-    if (Array.isArray(parsed)) variants = parsed;
+    const parsed: unknown = JSON.parse(content);
+    if (Array.isArray(parsed)) {
+      variants = parsed as Array<Record<string, unknown>>;
+    }
   } catch {
     const match = content.match(/\[\s*\{[\s\S]*\}\s*\]/);
     if (match) {
-      try { variants = JSON.parse(match[0]); } catch { /* fall through */ }
+      try {
+        variants = JSON.parse(match[0]) as Array<Record<string, unknown>>;
+      } catch {
+        /* fall through */
+      }
     }
   }
 
   return variants
-    .filter(v => v && typeof v.id === 'string' && typeof v.userPrompt === 'string')
-    .map(v => ({
+    .filter(
+      (v) =>
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        v != null &&
+        typeof v['id'] === 'string' &&
+        typeof v['userPrompt'] === 'string',
+    )
+    .map((v) => ({
       ...question,
-      id: v.id,
-      userPrompt: v.userPrompt,
+      id: v['id'] as string,
+      userPrompt: v['userPrompt'] as string,
     }))
     .slice(0, count);
 }

@@ -29,12 +29,12 @@
 
 ## Relationship to other test levels
 
-| Layer | Unit Test | Contract Test | Integration Test | E2E Test |
-|-------|-----------|---------------|-----------------|----------|
-| Scope | Single function | Module/service boundary | Cross-module with real dependencies | Full system |
-| Speed | ms | ms-s | s-min | min |
-| Confidence in boundary | Low | High | Medium | High |
-| Cost | Low | Low-Medium | Medium | High |
+| Layer                  | Unit Test       | Contract Test           | Integration Test                    | E2E Test    |
+| ---------------------- | --------------- | ----------------------- | ----------------------------------- | ----------- |
+| Scope                  | Single function | Module/service boundary | Cross-module with real dependencies | Full system |
+| Speed                  | ms              | ms-s                    | s-min                               | min         |
+| Confidence in boundary | Low             | High                    | Medium                              | High        |
+| Cost                   | Low             | Low-Medium              | Medium                              | High        |
 
 In parallel development scenarios, contract tests catch virtually all integration issues before full-system testing.
 

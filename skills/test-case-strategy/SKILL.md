@@ -24,10 +24,12 @@ Understand the requirements. Read the relevant code to understand available test
 For each requirement, assess the following:
 
 **Likelihood × Impact = Risk Level**
+
 - Likelihood: How likely is this functionality to fail? (complexity, change frequency, historical defects)
 - Impact: What is the cost of failure? (financial loss, user experience, security)
 
 **Test boundary heuristics** — determine where each behavior should be verified:
+
 - Can the behavior be verified within a single function? → Unit test
 - Does the behavior require cross-module collaboration? → Integration test
 - Is the behavior only observable in a complete user flow? → E2E test
@@ -39,6 +41,7 @@ Read relevant reference files to understand common test strategy patterns for di
 ### 3. Record Decisions
 
 For each test case, record:
+
 - Test ID (UT-xx / IT-xx / E2E-xx / PBT-xx)
 - Target scope (function / module / API / flow)
 - Verification oracle (pass condition)

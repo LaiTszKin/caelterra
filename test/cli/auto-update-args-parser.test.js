@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { UserInputError } from '@laitszkin/tool-utils';
 import { AutoUpdateArgsParser } from '../../packages/cli/dist/parsers/auto-update-parser.js';
 
@@ -51,18 +52,28 @@ test('AutoUpdateArgsParser: parse "run" action', () => {
 
 test('AutoUpdateArgsParser: --home with path before action', () => {
   const parser = new AutoUpdateArgsParser();
-  const result = parser.parse(['auto-update', '--home', '/custom/path', 'status']);
+  const result = parser.parse([
+    'auto-update',
+    '--home',
+    '/custom/path',
+    'status',
+  ]);
   assert.equal(result.command, 'auto-update');
   assert.equal(result.action, 'status');
-  assert.equal(result.toolkitHome, '/custom/path');
+  assert.equal(result.toolkitHome, path.resolve('/custom/path'));
 });
 
 test('AutoUpdateArgsParser: --home with path after action', () => {
   const parser = new AutoUpdateArgsParser();
-  const result = parser.parse(['auto-update', 'status', '--home', '/custom/path']);
+  const result = parser.parse([
+    'auto-update',
+    'status',
+    '--home',
+    '/custom/path',
+  ]);
   assert.equal(result.command, 'auto-update');
   assert.equal(result.action, 'status');
-  assert.equal(result.toolkitHome, '/custom/path');
+  assert.equal(result.toolkitHome, path.resolve('/custom/path'));
 });
 
 test('AutoUpdateArgsParser: --help sets showHelp true', () => {
@@ -91,7 +102,7 @@ test('AutoUpdateArgsParser: --help with action still sets showHelp', () => {
 test('AutoUpdateArgsParser: --home with equals operator works', () => {
   const parser = new AutoUpdateArgsParser();
   const result = parser.parse(['auto-update', '--home=/some/path', 'status']);
-  assert.equal(result.toolkitHome, '/some/path');
+  assert.equal(result.toolkitHome, path.resolve('/some/path'));
   assert.equal(result.action, 'status');
 });
 
@@ -129,7 +140,7 @@ test('AutoUpdateArgsParser: toParsedArguments maps all fields correctly', () => 
   const result = parser.toParsedArguments(parsed);
   assert.equal(result.command, 'auto-update');
   assert.equal(result.autoUpdateAction, 'enable');
-  assert.equal(result.toolkitHome, '/tmp/test');
+  assert.equal(result.toolkitHome, path.resolve('/tmp/test'));
   assert.equal(result.showHelp, false);
   assert.equal(result.showToolsHelp, false);
   assert.deepEqual(result.modes, []);

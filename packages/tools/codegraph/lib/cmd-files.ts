@@ -1,4 +1,8 @@
-import { getCodeGraphModule, closeIndex } from './cg-instance.js';
+import {
+  getCodeGraphModule,
+  closeIndex,
+  type CodeGraphFile,
+} from './cg-instance.js';
 import { formatOutput } from './formatter.js';
 
 export interface FilesOptions {
@@ -6,10 +10,15 @@ export interface FilesOptions {
   json?: boolean;
 }
 
-export async function handleFiles(projectRoot: string, options: FilesOptions = {}): Promise<number> {
+export async function handleFiles(
+  projectRoot: string,
+  options: FilesOptions = {},
+): Promise<number> {
   const { CodeGraph } = getCodeGraphModule();
   if (!CodeGraph.isInitialized(projectRoot)) {
-    process.stderr.write('CodeGraph is not initialized. Run `apltk codegraph init` first.\n');
+    process.stderr.write(
+      'CodeGraph is not initialized. Run `apltk codegraph init` first.\n',
+    );
     return 1;
   }
 
@@ -19,7 +28,10 @@ export async function handleFiles(projectRoot: string, options: FilesOptions = {
 
   const filter = options.filter?.replace(/^\/+/, '').replace(/\/+$/, '');
   if (filter) {
-    files = files.filter((file: any) => file.path === filter || file.path.startsWith(`${filter}/`));
+    files = files.filter(
+      (file: CodeGraphFile) =>
+        file.path === filter || file.path.startsWith(`${filter}/`),
+    );
   }
 
   if (options.json) {
@@ -32,10 +44,11 @@ export async function handleFiles(projectRoot: string, options: FilesOptions = {
     return 0;
   }
 
-  process.stdout.write(`Files (${files.length}):\n`);
+  process.stdout.write(`Files (${String(files.length)}):\n`);
   for (const file of files) {
-    process.stdout.write(`  ${file.path}  [${file.language}]  (${file.nodeCount} symbols)\n`);
+    process.stdout.write(
+      `  ${file.path}  [${file.language}]  (${String(file.nodeCount)} symbols)\n`,
+    );
   }
   return 0;
 }
-

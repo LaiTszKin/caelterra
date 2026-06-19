@@ -1,27 +1,47 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-import { closeIndex } from './cg-instance.js';
+import {
+  getCodeGraphModule,
+  closeIndex,
+  type CodeGraphProgress,
+} from './cg-instance.js';
 import { formatSummary, formatOutput } from './formatter.js';
 
 export interface SyncOptions {
   json?: boolean;
 }
 
-export async function handleSync(projectRoot: string, options: SyncOptions = {}): Promise<number> {
-  const { CodeGraph } = require('@colbymchenry/codegraph');
+export async function handleSync(
+  projectRoot: string,
+  options: SyncOptions = {},
+): Promise<number> {
+  const { CodeGraph } = getCodeGraphModule();
   if (!CodeGraph.isInitialized(projectRoot)) {
-    process.stderr.write('CodeGraph is not initialized. Run `apltk codegraph init` first.\n');
+    process.stderr.write(
+      'CodeGraph is not initialized. Run `apltk codegraph init` first.\n',
+    );
     return 1;
   }
 
-  const cg = await CodeGraph.open(projectRoot, { sync: false, readOnly: false });
+  const cg = await CodeGraph.open(projectRoot, {
+    sync: false,
+    readOnly: false,
+  });
 
-  let progressEvents: Array<{ phase: string; current: number; total: number }> = [];
+  const progressEvents: Array<{
+    phase: string;
+    current: number;
+    total: number;
+  }> = [];
   const result = await cg.sync({
-    onProgress: (p: any) => {
-      progressEvents.push({ phase: p.phase, current: p.current, total: p.total });
+    onProgress: (p: CodeGraphProgress) => {
+      progressEvents.push({
+        phase: p.phase,
+        current: p.current,
+        total: p.total,
+      });
       if (process.stdout.isTTY) {
-        process.stdout.write(`\r  Indexing: ${p.phase} ${p.current}/${p.total}`);
+        process.stdout.write(
+          `\r  Indexing: ${p.phase} ${String(p.current)}/${String(p.total)}`,
+        );
       }
     },
   });
@@ -53,7 +73,7 @@ export async function handleSync(projectRoot: string, options: SyncOptions = {})
       ['Modified:', result.filesModified],
       ['Removed:', result.filesRemoved],
       ['Nodes updated:', result.nodesUpdated],
-      ['Duration:', `${result.durationMs}ms`],
+      ['Duration:', `${String(result.durationMs)}ms`],
     ];
     process.stdout.write(formatSummary(summary) + '\n');
   }

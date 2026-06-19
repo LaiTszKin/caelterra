@@ -31,6 +31,7 @@ Technical architecture belongs to `design`. Execution methodology belongs to `pl
 Analyze requirements from PROPOSAL.md. Compare CodeGraph findings against what PROPOSAL.md describes — if actual code contradicts or constrains the proposal, note these calibrations explicitly.
 
 Deeply explore the codebase for:
+
 - Affected modules and responsibility boundaries
 - Existing data structures, persistence patterns, API contracts, and call relationships
 - Features that overlap or conflict with the requirements
@@ -46,6 +47,7 @@ Transform requirements into GIVEN/WHEN/THEN BDD items scoped against codegraph f
 **Batch threshold**: ≤ 5 BDD items → single SPEC.md. > 5 → group by business flow or user role, 3-5 related items per subdirectory, each with its own SPEC.md.
 
 For each requirement, assess **Uncertainty Level**:
+
 - **Known**: Team has experience; low risk
 - **Exploratory**: Team is unfamiliar or depends on external systems; high risk. Must produce Clarification Questions; suggest spike/prototype if warranted.
 
@@ -56,6 +58,7 @@ If a requirement remains unclear after research and affects scope, record it for
 ### 4. Create Branch
 
 Before generating files, check the current git branch. If on `main`, `master`, `develop`, or any non-dedicated branch:
+
 - Derive branch type prefix from work nature (`feature`, `refactor`, `fix`, `chore`)
 - Derive a kebab-case name from the spec/feature name
 - Run `git checkout -b <type>/<kebab-case-name>`
@@ -63,9 +66,11 @@ Before generating files, check the current git branch. If on `main`, `master`, `
 ### 5. Generate SPEC.md
 
 Run `apltk create-specs --help` first, then:
+
 ```
 apltk create-specs <feature_name> [--batch-name <name>]
 ```
+
 See `references/create-specs.md` for all flags.
 
 Fill each section according to `assets/templates/SPEC.md`. Each BDD block must be independently testable with an observable THEN outcome. For batch specs, repeat template-filling per group.
@@ -79,9 +84,10 @@ For every Exploratory requirement or significant ambiguity, present Clarificatio
 - **Recommendation**: The agent's suggested direction
 
 **Before writing the recommendation, the agent must:**
-1. Self-ask: *What option am I considering recommending?*
-2. Self-ask: *What are the benefits and drawbacks of this option?*
-3. Self-ask: *Is there a better alternative?* If yes, adopt the best one as the recommendation.
+
+1. Self-ask: _What option am I considering recommending?_
+2. Self-ask: _What are the benefits and drawbacks of this option?_
+3. Self-ask: _Is there a better alternative?_ If yes, adopt the best one as the recommendation.
 
 Only omit Clarification Questions when all requirements are Known and unambiguous.
 

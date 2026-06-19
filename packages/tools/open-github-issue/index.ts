@@ -1,18 +1,15 @@
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { request as httpsRequest } from 'node:https';
-import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join as joinPath } from 'node:path';
-import { cwd } from 'node:process';
 import type { ToolDefinition, ToolContext } from '@laitszkin/tool-registry';
 import { UserInputError, SystemError } from '@laitszkin/tool-utils';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 const README_ACCEPT = 'application/vnd.github.raw+json';
 const JSON_ACCEPT = 'application/vnd.github+json';
-const DEFAULT_REPRO_ZH =
-  '尚未穩定重現；需補充更多執行期資料。';
+const DEFAULT_REPRO_ZH = '尚未穩定重現；需補充更多執行期資料。';
 const DEFAULT_REPRO_EN =
   'Not yet reliably reproducible; more runtime evidence is required.';
 
@@ -144,51 +141,55 @@ function parseArgs(argv: string[]): OpenIssueArgs {
   let i = 0;
   while (i < argv.length) {
     const arg = argv[i];
+    if (arg === undefined) {
+      i++;
+      continue;
+    }
     switch (arg) {
       case '--payload-file':
-        if (i + 1 < argv.length) args.payloadFile = argv[++i];
+        if (i + 1 < argv.length) args.payloadFile = argv[++i] ?? null;
         break;
       case '--title':
-        if (i + 1 < argv.length) args.title = argv[++i];
+        if (i + 1 < argv.length) args.title = argv[++i] ?? null;
         break;
       case '--issue-type':
-        if (i + 1 < argv.length) args.issueType = argv[++i];
+        if (i + 1 < argv.length) args.issueType = argv[++i] ?? null;
         break;
       case '--problem-description':
-        if (i + 1 < argv.length) args.problemDescription = argv[++i];
+        if (i + 1 < argv.length) args.problemDescription = argv[++i] ?? null;
         break;
       case '--suspected-cause':
-        if (i + 1 < argv.length) args.suspectedCause = argv[++i];
+        if (i + 1 < argv.length) args.suspectedCause = argv[++i] ?? null;
         break;
       case '--reproduction':
-        if (i + 1 < argv.length) args.reproduction = argv[++i];
+        if (i + 1 < argv.length) args.reproduction = argv[++i] ?? null;
         break;
       case '--proposal':
-        if (i + 1 < argv.length) args.proposal = argv[++i];
+        if (i + 1 < argv.length) args.proposal = argv[++i] ?? null;
         break;
       case '--reason':
-        if (i + 1 < argv.length) args.reason = argv[++i];
+        if (i + 1 < argv.length) args.reason = argv[++i] ?? null;
         break;
       case '--suggested-architecture':
-        if (i + 1 < argv.length) args.suggestedArchitecture = argv[++i];
+        if (i + 1 < argv.length) args.suggestedArchitecture = argv[++i] ?? null;
         break;
       case '--impact':
-        if (i + 1 < argv.length) args.impact = argv[++i];
+        if (i + 1 < argv.length) args.impact = argv[++i] ?? null;
         break;
       case '--evidence':
-        if (i + 1 < argv.length) args.evidence = argv[++i];
+        if (i + 1 < argv.length) args.evidence = argv[++i] ?? null;
         break;
       case '--suggested-action':
-        if (i + 1 < argv.length) args.suggestedAction = argv[++i];
+        if (i + 1 < argv.length) args.suggestedAction = argv[++i] ?? null;
         break;
       case '--severity':
-        if (i + 1 < argv.length) args.severity = argv[++i];
+        if (i + 1 < argv.length) args.severity = argv[++i] ?? null;
         break;
       case '--affected-scope':
-        if (i + 1 < argv.length) args.affectedScope = argv[++i];
+        if (i + 1 < argv.length) args.affectedScope = argv[++i] ?? null;
         break;
       case '--repo':
-        if (i + 1 < argv.length) args.repo = argv[++i];
+        if (i + 1 < argv.length) args.repo = argv[++i] ?? null;
         break;
       case '--dry-run':
         args.dryRun = true;
@@ -219,17 +220,24 @@ interface CommandResult {
 
 function runCommand(cmd: string, cmdArgs: string[]): Promise<CommandResult> {
   return new Promise((resolve) => {
-    execFile(cmd, cmdArgs, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
-      if (error) {
-        resolve({
-          stdout: stdout || '',
-          stderr: stderr || '',
-          exitCode: (error as NodeJS.ErrnoException & { status?: number }).status ?? 1,
-        });
-      } else {
-        resolve({ stdout: stdout || '', stderr: stderr || '', exitCode: 0 });
-      }
-    });
+    execFile(
+      cmd,
+      cmdArgs,
+      { maxBuffer: 10 * 1024 * 1024 },
+      (error, stdout, stderr) => {
+        if (error) {
+          resolve({
+            stdout: stdout || '',
+            stderr: stderr || '',
+            exitCode:
+              (error as NodeJS.ErrnoException & { status?: number }).status ??
+              1,
+          });
+        } else {
+          resolve({ stdout: stdout || '', stderr: stderr || '', exitCode: 0 });
+        }
+      },
+    );
   });
 }
 
@@ -247,7 +255,9 @@ function readPayloadFile(rawPath: string): PayloadEntry {
 
   if (rawPath === '-') {
     // We cannot read stdin here easily; throw clear error
-    throw new UserInputError('stdin payload (-) is not supported in handler mode; use a file path');
+    throw new UserInputError(
+      'stdin payload (-) is not supported in handler mode; use a file path',
+    );
   } else {
     rawContent = readFileSync(rawPath, 'utf-8');
     context = rawPath;
@@ -257,15 +267,27 @@ function readPayloadFile(rawPath: string): PayloadEntry {
   try {
     payload = JSON.parse(rawContent);
   } catch (exc) {
-    throw new UserInputError(`Invalid JSON payload in ${context}: ${(exc as Error).message}`, undefined, { cause: exc });
+    throw new UserInputError(
+      `Invalid JSON payload in ${context}: ${(exc as Error).message}`,
+      undefined,
+      { cause: exc },
+    );
   }
 
-  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
-    throw new UserInputError(`Invalid JSON payload in ${context}: top-level value must be an object.`);
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    Array.isArray(payload)
+  ) {
+    throw new UserInputError(
+      `Invalid JSON payload in ${context}: top-level value must be an object.`,
+    );
   }
 
   const normalized: PayloadEntry = {};
-  for (const [rawKey, value] of Object.entries(payload as Record<string, unknown>)) {
+  for (const [rawKey, value] of Object.entries(
+    payload as Record<string, unknown>,
+  )) {
     const key = normalizeKey(rawKey);
     if (!PAYLOAD_FIELDS.has(key)) {
       throw new UserInputError(`Unsupported payload key: ${rawKey}`);
@@ -275,11 +297,16 @@ function readPayloadFile(rawPath: string): PayloadEntry {
   return normalized;
 }
 
-function readAtFileValue(fieldName: string, value: string | null): string | null {
+function readAtFileValue(
+  fieldName: string,
+  value: string | null,
+): string | null {
   if (value == null) return null;
   if (value.startsWith('@@')) return value.slice(1);
   if (value === '@-') {
-    throw new UserInputError('stdin reading (@-) is not supported in handler mode');
+    throw new UserInputError(
+      'stdin reading (@-) is not supported in handler mode',
+    );
   }
   if (value.startsWith('@') && value.length > 1) {
     const filePath = value.slice(1);
@@ -296,7 +323,10 @@ function readAtFileValue(fieldName: string, value: string | null): string | null
   return value;
 }
 
-function requireNonEmpty(value: string | null | undefined, message: string): void {
+function requireNonEmpty(
+  value: string | null | undefined,
+  message: string,
+): void {
   if (!(value || '').trim()) {
     throw new UserInputError(message);
   }
@@ -314,7 +344,7 @@ function hasGhAuth(): Promise<boolean> {
 }
 
 function getToken(env: Record<string, string | undefined>): string | null {
-  return env.GITHUB_TOKEN || env.GH_TOKEN || null;
+  return env['GITHUB_TOKEN'] || env['GH_TOKEN'] || null;
 }
 
 function validateRepo(repo: string): string {
@@ -369,7 +399,9 @@ function githubRequest(
           } else {
             const detail = data || 'unknown error';
             reject(
-              new Error(`GitHub API ${res.statusCode} ${path}: ${detail}`),
+              new Error(
+                `GitHub API ${String(res.statusCode)} ${path}: ${detail}`,
+              ),
             );
           }
         });
@@ -377,7 +409,9 @@ function githubRequest(
     );
 
     req.on('error', (err) => {
-      reject(new Error(`GitHub API request failed for ${path}: ${err.message}`));
+      reject(
+        new Error(`GitHub API request failed for ${path}: ${err.message}`),
+      );
     });
 
     if (body !== undefined) {
@@ -405,7 +439,12 @@ async function fetchRemoteReadme(
   }
 
   try {
-    return await githubRequest('GET', `/repos/${repo}/readme`, token, README_ACCEPT);
+    return await githubRequest(
+      'GET',
+      `/repos/${repo}/readme`,
+      token,
+      README_ACCEPT,
+    );
   } catch {
     return '';
   }
@@ -415,11 +454,13 @@ function detectIssueLanguage(readmeContent: string): string {
   if (!readmeContent.trim()) return 'en';
 
   const chineseChars = (readmeContent.match(/[一-鿿]/g) || []).length;
-  const languageChars = (
-    readmeContent.match(/[A-Za-z一-鿿]/g) || []
-  ).length;
+  const languageChars = (readmeContent.match(/[A-Za-z一-鿿]/g) || []).length;
 
-  if (chineseChars >= 20 && languageChars > 0 && chineseChars / languageChars >= 0.08) {
+  if (
+    chineseChars >= 20 &&
+    languageChars > 0 &&
+    chineseChars / languageChars >= 0.08
+  ) {
     return 'zh';
   }
   return 'en';
@@ -622,7 +663,7 @@ async function createIssueWithGh(
   body: string,
 ): Promise<string> {
   // Write body to a temp file
-  const tmpFile = joinPath(tmpdir(), `issue-${Date.now()}.md`);
+  const tmpFile = joinPath(tmpdir(), `issue-${String(Date.now())}.md`);
   const { writeFileSync, unlinkSync } = await import('node:fs');
   writeFileSync(tmpFile, body, 'utf-8');
 
@@ -661,14 +702,23 @@ async function createIssueWithToken(
   body: string,
   token: string,
 ): Promise<string> {
-  const response = await githubRequest('POST', `/repos/${repo}/issues`, token, JSON_ACCEPT, {
-    title,
-    body,
-  });
-  const parsed = JSON.parse(response);
-  const issueUrl: string | undefined = parsed.html_url;
+  const response = await githubRequest(
+    'POST',
+    `/repos/${repo}/issues`,
+    token,
+    JSON_ACCEPT,
+    {
+      title,
+      body,
+    },
+  );
+  const parsed = JSON.parse(response) as Record<string, unknown>;
+  const issueUrl =
+    typeof parsed['html_url'] === 'string' ? parsed['html_url'] : undefined;
   if (!issueUrl) {
-    throw new SystemError('Issue created but response did not include html_url');
+    throw new SystemError(
+      'Issue created but response did not include html_url',
+    );
   }
   return issueUrl;
 }
@@ -688,41 +738,74 @@ function validateIssueContent(args: OpenIssueArgs): void {
   }
 
   if (issueType === ISSUE_TYPE_PERFORMANCE) {
-    requireNonEmpty(args.problemDescription, 'Performance issues require --problem-description.');
+    requireNonEmpty(
+      args.problemDescription,
+      'Performance issues require --problem-description.',
+    );
     requireNonEmpty(args.impact, 'Performance issues require --impact.');
     requireNonEmpty(args.evidence, 'Performance issues require --evidence.');
-    requireNonEmpty(args.suggestedAction, 'Performance issues require --suggested-action.');
+    requireNonEmpty(
+      args.suggestedAction,
+      'Performance issues require --suggested-action.',
+    );
     return;
   }
 
   if (issueType === ISSUE_TYPE_SECURITY) {
-    requireNonEmpty(args.problemDescription, 'Security issues require --problem-description.');
-    requireNonEmpty(args.affectedScope, 'Security issues require --affected-scope.');
+    requireNonEmpty(
+      args.problemDescription,
+      'Security issues require --problem-description.',
+    );
+    requireNonEmpty(
+      args.affectedScope,
+      'Security issues require --affected-scope.',
+    );
     requireNonEmpty(args.impact, 'Security issues require --impact.');
     requireNonEmpty(args.evidence, 'Security issues require --evidence.');
-    requireNonEmpty(args.suggestedAction, 'Security issues require --suggested-action.');
+    requireNonEmpty(
+      args.suggestedAction,
+      'Security issues require --suggested-action.',
+    );
     requireNonEmpty(args.severity, 'Security issues require --severity.');
     return;
   }
 
   if (issueType === ISSUE_TYPE_DOCS) {
-    requireNonEmpty(args.problemDescription, 'Docs issues require --problem-description.');
+    requireNonEmpty(
+      args.problemDescription,
+      'Docs issues require --problem-description.',
+    );
     requireNonEmpty(args.evidence, 'Docs issues require --evidence.');
-    requireNonEmpty(args.suggestedAction, 'Docs issues require --suggested-action.');
+    requireNonEmpty(
+      args.suggestedAction,
+      'Docs issues require --suggested-action.',
+    );
     return;
   }
 
   if (issueType === ISSUE_TYPE_OBSERVABILITY) {
-    requireNonEmpty(args.problemDescription, 'Observability issues require --problem-description.');
+    requireNonEmpty(
+      args.problemDescription,
+      'Observability issues require --problem-description.',
+    );
     requireNonEmpty(args.impact, 'Observability issues require --impact.');
     requireNonEmpty(args.evidence, 'Observability issues require --evidence.');
-    requireNonEmpty(args.suggestedAction, 'Observability issues require --suggested-action.');
+    requireNonEmpty(
+      args.suggestedAction,
+      'Observability issues require --suggested-action.',
+    );
     return;
   }
 
   // Problem issue
-  requireNonEmpty(args.problemDescription, 'Problem issues require --problem-description.');
-  requireNonEmpty(args.suspectedCause, 'Problem issues require --suspected-cause.');
+  requireNonEmpty(
+    args.problemDescription,
+    'Problem issues require --problem-description.',
+  );
+  requireNonEmpty(
+    args.suspectedCause,
+    'Problem issues require --suspected-cause.',
+  );
   if (!hasRequiredProblemBddSections(args.problemDescription || '')) {
     throw new UserInputError(
       'Problem issues require --problem-description to include ' +
@@ -740,7 +823,9 @@ function hydrateArgs(args: OpenIssueArgs): OpenIssueArgs {
     for (const [key, value] of Object.entries(payload)) {
       if (key === 'dry_run') {
         if (typeof value !== 'boolean') {
-          throw new UserInputError("Payload field 'dry_run' must be a boolean.");
+          throw new UserInputError(
+            "Payload field 'dry_run' must be a boolean.",
+          );
         }
         if (!result.dryRun) {
           result.dryRun = value;
@@ -751,7 +836,9 @@ function hydrateArgs(args: OpenIssueArgs): OpenIssueArgs {
       // String fields
       if (TEXT_FIELDS.includes(key as (typeof TEXT_FIELDS)[number])) {
         if (value !== null && typeof value !== 'string') {
-          throw new UserInputError(`Payload field '${key}' must be a string or null.`);
+          throw new UserInputError(
+            `Payload field '${key}' must be a string or null.`,
+          );
         }
       } else if (typeof value !== 'string') {
         throw new UserInputError(`Payload field '${key}' must be a string.`);
@@ -781,22 +868,23 @@ function hydrateArgs(args: OpenIssueArgs): OpenIssueArgs {
 
   // Title is required
   if (!(result.title || '').trim()) {
-    throw new UserInputError('Issue title is required. Pass --title or include title in --payload-file.');
+    throw new UserInputError(
+      'Issue title is required. Pass --title or include title in --payload-file.',
+    );
   }
 
   return result;
 }
 
-async function resolveRepoAsync(
-  explicitRepo: string | null,
-  context: ToolContext,
-): Promise<string> {
+async function resolveRepoAsync(explicitRepo: string | null): Promise<string> {
   if (explicitRepo) return validateRepo(explicitRepo);
 
   // Try to resolve from git remote
   const result = await runCommand('git', ['remote', 'get-url', 'origin']);
   if (result.exitCode !== 0) {
-    throw new UserInputError('Unable to resolve origin remote. Pass --repo owner/repo.');
+    throw new UserInputError(
+      'Unable to resolve origin remote. Pass --repo owner/repo.',
+    );
   }
 
   const remote = result.stdout.trim();
@@ -804,10 +892,12 @@ async function resolveRepoAsync(
     /github\.com[:/](?<owner>[A-Za-z0-9_.-]+)\/(?<repo>[A-Za-z0-9_.-]+?)(?:\.git)?$/,
   );
   if (!match?.groups) {
-    throw new UserInputError('Unable to resolve origin remote. Pass --repo owner/repo.');
+    throw new UserInputError(
+      'Unable to resolve origin remote. Pass --repo owner/repo.',
+    );
   }
 
-  return `${match.groups.owner}/${match.groups.repo}`;
+  return `${match.groups['owner'] ?? ''}/${match.groups['repo'] ?? ''}`;
 }
 
 // ---- Main handler ----
@@ -840,11 +930,13 @@ export async function openGitHubIssueHandler(
   argv: string[],
   context: ToolContext,
 ): Promise<number> {
-  const { stdout, stderr, env } = context;
+  const stdout = context.stdout ?? process.stdout;
+  const stderr = context.stderr ?? process.stderr;
+  const env = context.env;
 
   const parsed = parseArgs(argv);
   if (parsed.helpRequested) {
-    stdout!.write(HELP_TEXT + '\n');
+    stdout.write(HELP_TEXT + '\n');
     return 0;
   }
   const args = hydrateArgs(parsed);
@@ -853,7 +945,7 @@ export async function openGitHubIssueHandler(
   const ghAuthenticated = await hasGhAuth();
   const token = getToken(env || {});
 
-  const repo = await resolveRepoAsync(args.repo, context);
+  const repo = await resolveRepoAsync(args.repo);
 
   const readmeContent = await fetchRemoteReadme(repo, ghAuthenticated, token);
   const language = detectIssueLanguage(readmeContent);
@@ -927,13 +1019,15 @@ export async function openGitHubIssueHandler(
     publish_error: publishError,
   };
 
-  stdout!.write(JSON.stringify(output, null, 2) + '\n');
+  stdout.write(JSON.stringify(output, null, 2) + '\n');
 
   if (mode === 'draft-only') {
     if (publishError) {
-      throw new SystemError(`Issue publish failed. Return draft only: ${publishError}`);
+      throw new SystemError(
+        `Issue publish failed. Return draft only: ${publishError}`,
+      );
     } else {
-      stderr!.write(
+      stderr.write(
         'No authenticated gh CLI session and no GitHub token found. ' +
           'Return draft issue body only.\n',
       );

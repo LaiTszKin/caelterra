@@ -1,29 +1,56 @@
-import { getCodeGraphModule, closeIndex } from './cg-instance.js';
+import {
+  getCodeGraphModule,
+  closeIndex,
+  type CodeGraphProgress,
+} from './cg-instance.js';
 import { formatOutput, formatSummary } from './formatter.js';
 
 export interface IndexOptions {
   json?: boolean;
 }
 
-export async function handleIndex(projectRoot: string, options: IndexOptions = {}): Promise<number> {
+export async function handleIndex(
+  projectRoot: string,
+  options: IndexOptions = {},
+): Promise<number> {
   const { CodeGraph } = getCodeGraphModule();
   if (!CodeGraph.isInitialized(projectRoot)) {
-    process.stderr.write('CodeGraph is not initialized. Run `apltk codegraph init` first.\n');
+    process.stderr.write(
+      'CodeGraph is not initialized. Run `apltk codegraph init` first.\n',
+    );
     return 1;
   }
 
-  const progress: Array<{ phase: string; current: number; total: number; currentFile?: string }> = [];
-  const cg = await CodeGraph.open(projectRoot, { sync: false, readOnly: false });
+  const progress: Array<{
+    phase: string;
+    current: number;
+    total: number;
+    currentFile?: string;
+  }> = [];
+  const cg = await CodeGraph.open(projectRoot, {
+    sync: false,
+    readOnly: false,
+  });
   const result = await cg.indexAll({
-    onProgress: (p: any) => {
-      progress.push({
+    onProgress: (p: CodeGraphProgress) => {
+      const entry: {
+        phase: string;
+        current: number;
+        total: number;
+        currentFile?: string;
+      } = {
         phase: p.phase,
         current: p.current,
         total: p.total,
-        currentFile: p.currentFile,
-      });
+      };
+      if (p.currentFile !== undefined) {
+        entry.currentFile = p.currentFile;
+      }
+      progress.push(entry);
       if (process.stdout.isTTY) {
-        process.stdout.write(`\r  Indexing: ${p.phase} ${p.current}/${p.total}${p.currentFile ? `  ${p.currentFile}` : ''}`);
+        process.stdout.write(
+          `\r  Indexing: ${p.phase} ${String(p.current)}/${String(p.total)}${p.currentFile ? `  ${p.currentFile}` : ''}`,
+        );
       }
     },
   });
@@ -48,12 +75,13 @@ export async function handleIndex(projectRoot: string, options: IndexOptions = {
     return 0;
   }
 
-  process.stdout.write(formatSummary([
-    ['Project:', projectRoot],
-    ['Files:', stats.fileCount],
-    ['Nodes:', stats.nodeCount],
-    ['Edges:', stats.edgeCount],
-  ]) + '\n');
+  process.stdout.write(
+    formatSummary([
+      ['Project:', projectRoot],
+      ['Files:', stats.fileCount],
+      ['Nodes:', stats.nodeCount],
+      ['Edges:', stats.edgeCount],
+    ]) + '\n',
+  );
   return 0;
 }
-

@@ -19,6 +19,7 @@ Read PROMPT.md in full — batch schedule, worker prompt paths, verification gat
 ### 2. Execute Batches
 
 For each batch in order:
+
 - **Parallel tasks**: Dispatch workers concurrently using their pre-written prompts. Collect all results before proceeding.
 - **Sequential tasks**: Run workers one at a time.
 - **Procedural tasks** (merge, lockfile): Handle directly without a worker.

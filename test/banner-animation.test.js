@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { animateWelcomeScreen, buildWelcomeScreen, renderSelectionScreen } from '@laitszkin/tui';
+import {
+  animateWelcomeScreen,
+  buildWelcomeScreen,
+  renderSelectionScreen,
+} from '@laitszkin/tui';
 
 test('animateWelcomeScreen returns early when supportsAnimation is false (non-TTY)', async () => {
   const output = { isTTY: false, write() {} };
@@ -37,12 +41,15 @@ test('animateWelcomeScreen returns early with APOLLO_TOOLKIT_NO_ANIMATION', asyn
 });
 
 test('buildWelcomeScreen with full coverage of stage progression', () => {
-  const targets = [
-    { label: 'codex', description: 'Codex agent' },
-  ];
+  const targets = [{ label: 'codex', description: 'Codex agent' }];
 
   for (let stage = 0; stage <= 4; stage++) {
-    const text = buildWelcomeScreen({ version: '5.0.0', colorEnabled: false, stage, targets });
+    const text = buildWelcomeScreen({
+      version: '5.0.0',
+      colorEnabled: false,
+      stage,
+      targets,
+    });
     assert.equal(typeof text, 'string');
     assert.ok(text.length > 0);
   }
@@ -52,7 +59,10 @@ test('animateWelcomeScreen runs full animation with TTY output', async () => {
   let written = '';
   const output = {
     isTTY: true,
-    write(chunk) { written += chunk; return true; },
+    write(chunk) {
+      written += chunk;
+      return true;
+    },
   };
   await animateWelcomeScreen({
     output,
@@ -73,7 +83,10 @@ test('renderSelectionScreen renders options with cursor and selection state', ()
   let written = '';
   const output = {
     isTTY: true,
-    write(chunk) { written += chunk; return true; },
+    write(chunk) {
+      written += chunk;
+      return true;
+    },
   };
   const selected = new Set(['codex']);
   renderSelectionScreen({
@@ -100,7 +113,10 @@ test('renderSelectionScreen renders with all items selected', () => {
   let written = '';
   const output = {
     isTTY: true,
-    write(chunk) { written += chunk; return true; },
+    write(chunk) {
+      written += chunk;
+      return true;
+    },
   };
   const selected = new Set(['codex', 'openclaw']);
   renderSelectionScreen({
@@ -124,7 +140,10 @@ test('renderSelectionScreen shows message when provided', () => {
   let written = '';
   const output = {
     isTTY: true,
-    write(chunk) { written += chunk; return true; },
+    write(chunk) {
+      written += chunk;
+      return true;
+    },
   };
   renderSelectionScreen({
     output,
@@ -134,9 +153,7 @@ test('renderSelectionScreen shows message when provided', () => {
     message: 'Selection required',
     env: { NO_COLOR: '1' },
     intro: 'Pick one:',
-    choices: [
-      { id: 'codex', label: 'Codex', description: 'Codex' },
-    ],
+    choices: [{ id: 'codex', label: 'Codex', description: 'Codex' }],
     allValues: ['codex'],
   });
   assert.ok(written.includes('Selection required'));

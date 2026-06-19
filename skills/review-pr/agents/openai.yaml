@@ -1,4 +1,4 @@
 interface:
-  display_name: "Review a Pull Request"
-  short_description: "Review a GitHub PR across 4 dimensions (hallucination, architecture, performance, tests), post severity-graded comments with fix suggestions."
-  default_prompt: "Use review-pr to review the pull request mentioned by the user. If a PR number is specified, fetch its diff and perform a structured 4-dimension review (hallucinated code, architecture defects, performance defects, test validity). If no PR is specified, list open PRs with their branch relationships and let the user choose. Classify findings as P0/P1/P2/P3, present them to the user for confirmation, then post each finding as a separate PR comment with a suggested fix."
+  display_name: 'Review a Pull Request'
+  short_description: 'Review a GitHub PR across 4 dimensions (hallucination, architecture, performance, tests), post severity-graded comments with fix suggestions.'
+  default_prompt: 'Use $review-pr to review the pull request mentioned by the user. If a PR number is specified, fetch its diff and perform a structured 4-dimension review (hallucinated code, architecture defects, performance defects, test validity). If no PR is specified, list open PRs with their branch relationships and let the user choose. Classify findings as P0/P1/P2/P3, present them to the user for confirmation, then post each finding as a separate PR comment with a suggested fix.'

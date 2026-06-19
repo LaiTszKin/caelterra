@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildWordmark, buildBanner, buildSupportedTargetLines, buildWelcomeScreen } from '@laitszkin/tui';
+import {
+  buildWordmark,
+  buildBanner,
+  buildSupportedTargetLines,
+  buildWelcomeScreen,
+} from '@laitszkin/tui';
 
 test('buildWordmark returns ASCII art with color codes when enabled', () => {
   const result = buildWordmark({ colorEnabled: true });
@@ -59,42 +64,72 @@ test('buildSupportedTargetLines pads labels to align descriptions', () => {
 });
 
 test('buildWelcomeScreen stage 0 shows only banner', () => {
-  const result = buildWelcomeScreen({ version: '5.0.0', colorEnabled: false, stage: 0 });
+  const result = buildWelcomeScreen({
+    version: '5.0.0',
+    colorEnabled: false,
+    stage: 0,
+  });
   assert.ok(result.includes('Apollo Toolkit'));
   assert.ok(!result.includes('This setup will configure'));
 });
 
 test('buildWelcomeScreen stage 1 shows configuration info', () => {
-  const result = buildWelcomeScreen({ version: '5.0.0', colorEnabled: false, stage: 1 });
+  const result = buildWelcomeScreen({
+    version: '5.0.0',
+    colorEnabled: false,
+    stage: 1,
+  });
   assert.ok(result.includes('This setup will configure'));
   assert.ok(!result.includes('Quick start'));
 });
 
 test('buildWelcomeScreen stage 2 shows quick start', () => {
-  const result = buildWelcomeScreen({ version: '5.0.0', colorEnabled: false, stage: 2 });
+  const result = buildWelcomeScreen({
+    version: '5.0.0',
+    colorEnabled: false,
+    stage: 2,
+  });
   assert.ok(result.includes('Quick start'));
   assert.ok(!result.includes('Supported targets'));
 });
 
 test('buildWelcomeScreen stage 3 with targets shows supported targets', () => {
   const targets = [{ label: 'codex', description: 'Codex agent' }];
-  const result = buildWelcomeScreen({ version: '5.0.0', colorEnabled: false, stage: 3, targets });
+  const result = buildWelcomeScreen({
+    version: '5.0.0',
+    colorEnabled: false,
+    stage: 3,
+    targets,
+  });
   assert.ok(result.includes('Supported targets'));
   assert.ok(result.includes('codex'));
   assert.ok(!result.includes('Launching target selector'));
 });
 
 test('buildWelcomeScreen stage 3 without targets omits target section', () => {
-  const result = buildWelcomeScreen({ version: '5.0.0', colorEnabled: false, stage: 3, targets: [] });
+  const result = buildWelcomeScreen({
+    version: '5.0.0',
+    colorEnabled: false,
+    stage: 3,
+    targets: [],
+  });
   assert.ok(!result.includes('Supported targets'));
 });
 
 test('buildWelcomeScreen stage 4 shows selector launch', () => {
-  const result = buildWelcomeScreen({ version: '5.0.0', colorEnabled: false, stage: 4 });
+  const result = buildWelcomeScreen({
+    version: '5.0.0',
+    colorEnabled: false,
+    stage: 4,
+  });
   assert.ok(result.includes('Launching target selector'));
 });
 
 test('buildWelcomeScreen with color enabled has ANSI codes', () => {
-  const result = buildWelcomeScreen({ version: '5.0.0', colorEnabled: true, stage: 4 });
+  const result = buildWelcomeScreen({
+    version: '5.0.0',
+    colorEnabled: true,
+    stage: 4,
+  });
   assert.ok(result.includes('\x1b[') || result.includes('['));
 });

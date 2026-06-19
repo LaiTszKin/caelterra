@@ -84,20 +84,20 @@ Populate `assets/templates/REPORT.md` with these sections:
 
 Defined by impact on **requirement satisfaction**:
 
-| Level | Definition | Verdict Implication |
-|---|---|---|
-| **P0 — Requirement Blocked** | Requirement not implemented, behavior fundamentally deviates from spec, or hallucinated code exists. At least one requirement is **NOT** satisfied. | → Needs Work |
-| **P1 — Requirement Defect** | Functionality exists but behaves incorrectly under specific conditions, or edge cases are unhandled. At least one requirement is only **PARTIALLY** satisfied. | → Needs Work |
-| **P2 — Requirement Risk** | Functionality is correct but potential risks exist (architecture deviation, security weakness, performance bottleneck). Does **NOT** affect current requirement satisfaction. | → Needs Attention |
-| **P3 — Suggestion** | Functionality is fully correct. Code can be improved but nothing is blocking. Does **NOT** affect any requirement's satisfaction. | → Ready to Merge |
+| Level                        | Definition                                                                                                                                                                    | Verdict Implication |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **P0 — Requirement Blocked** | Requirement not implemented, behavior fundamentally deviates from spec, or hallucinated code exists. At least one requirement is **NOT** satisfied.                           | → Needs Work        |
+| **P1 — Requirement Defect**  | Functionality exists but behaves incorrectly under specific conditions, or edge cases are unhandled. At least one requirement is only **PARTIALLY** satisfied.                | → Needs Work        |
+| **P2 — Requirement Risk**    | Functionality is correct but potential risks exist (architecture deviation, security weakness, performance bottleneck). Does **NOT** affect current requirement satisfaction. | → Needs Attention   |
+| **P3 — Suggestion**          | Functionality is fully correct. Code can be improved but nothing is blocking. Does **NOT** affect any requirement's satisfaction.                                             | → Ready to Merge    |
 
 ## Verdict Criteria
 
-| Condition | Verdict |
-|---|---|
-| Has P0 or P1 findings | Needs Work |
+| Condition                 | Verdict         |
+| ------------------------- | --------------- |
+| Has P0 or P1 findings     | Needs Work      |
 | No P0/P1, has P2 findings | Needs Attention |
-| Only P3 or no findings | Ready to Merge |
+| Only P3 or no findings    | Ready to Merge  |
 
 ## References
 

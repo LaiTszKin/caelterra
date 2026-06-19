@@ -11,7 +11,9 @@ import type { CommandParser, ToolCommand, ToolsHelpCommand } from './types.js';
  * Returns a ToolsHelpCommand when no tool is named or --help is passed,
  * otherwise returns a ToolCommand with the tool name and remaining args.
  */
-export class ToolArgsParser implements CommandParser<ToolCommand | ToolsHelpCommand> {
+export class ToolArgsParser implements CommandParser<
+  ToolCommand | ToolsHelpCommand
+> {
   parse(argv: string[]): ToolCommand | ToolsHelpCommand {
     const args = [...argv];
 

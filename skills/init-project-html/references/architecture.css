@@ -9,8 +9,8 @@
   --accent-soft: rgba(224, 122, 95, 0.15);
   --edge: #4a5b6c;
   --ok: #6fcf97;
-  --font-display: "Fraunces", "Georgia", serif;
-  --font-body: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-body: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
   --radius: 12px;
   --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
@@ -42,7 +42,12 @@ body {
   font-size: 1rem;
   line-height: 1.6;
   color: var(--text);
-  background: radial-gradient(1200px 800px at 10% -10%, rgba(224, 122, 95, 0.08), transparent),
+  background:
+    radial-gradient(
+      1200px 800px at 10% -10%,
+      rgba(224, 122, 95, 0.08),
+      transparent
+    ),
     var(--bg);
 }
 
@@ -141,7 +146,9 @@ body {
   border: 1px solid var(--edge);
   border-radius: calc(var(--radius) - 4px);
   padding: 0.85rem 1rem;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -292,7 +299,7 @@ body {
   border: 1px solid var(--edge);
   border-radius: calc(var(--radius) - 4px);
   padding: 0.85rem 1.1rem;
-  border-top:3px solid #7eb8da;
+  border-top: 3px solid #7eb8da;
 }
 
 .flow-node--module {
@@ -313,7 +320,7 @@ body {
 }
 
 .flow-node--decision::before {
-  content: "Decision";
+  content: 'Decision';
   position: absolute;
   top: 0.45rem;
   right: 0.65rem;
@@ -809,16 +816,16 @@ body {
 .flow-edge-manifest--macro {
   margin-top: 1rem;
 }
-.flow-edge-manifest--macro li[data-edge-kind="call"] {
+.flow-edge-manifest--macro li[data-edge-kind='call'] {
   border-left: 3px solid var(--text);
   padding-left: 0.6rem;
 }
-.flow-edge-manifest--macro li[data-edge-kind="return"] {
+.flow-edge-manifest--macro li[data-edge-kind='return'] {
   border-left: 3px solid var(--muted);
   padding-left: 0.6rem;
   font-style: italic;
 }
-.flow-edge-manifest--macro li[data-edge-kind="data-row"] {
+.flow-edge-manifest--macro li[data-edge-kind='data-row'] {
   border-left: 3px solid var(--accent);
   padding-left: 0.6rem;
   font-weight: 600;
@@ -879,13 +886,13 @@ body {
   font-size: 0.8em;
 }
 .sub-vars__name {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
 }
 .sub-vars__type {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   color: var(--muted);
 }
 .sub-vars__scope {
@@ -947,7 +954,7 @@ body {
 }
 
 .sub-io__signature {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   font-size: 0.84rem;
   color: var(--text);
 }
