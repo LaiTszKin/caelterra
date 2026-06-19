@@ -4,6 +4,30 @@ All notable changes to this repository are documented in this file.
 
 ## [Unreleased]
 
+## [v5.3.0] - 2026-06-19
+
+### Added
+
+- **Background auto-update**: New `apltk auto-update enable|disable|status|run` command for automatic skill updates. Includes cross-platform OS scheduler integration (launchd on macOS, systemd timers on Linux) with conflict detection and disabled-state preservation.
+
+### Changed
+
+- **Build toolchain migration**: Migrated from npm to pnpm for workspace management, scripts, and CI — includes `pnpm-lock.yaml`, workspace configuration, and updated all published scripts.
+- **Quality gate upgrade**: Added ESLint `strict-type-checked` ruleset, Prettier formatting, and husky + lint-staged pre-commit hooks for automated code quality enforcement.
+- **CI workflows**: Updated all GitHub Actions workflows for pnpm compatibility and removed hardcoded pnpm version pins.
+
+### Fixed
+
+- **Windows compatibility**: Resolved CRLF assertion mismatches, TTY mock issues, readline hang in interactive-path tests, and Windows path separator handling across the test suite.
+- **TypeScript build errors**: Fixed build failures in eval tool and resolved strict-type-checked violations in background auto-update code.
+- **OpenAI agent config**: Fixed schema validation errors in `agents/openai.yaml`.
+- **Background auto-update**: Preserved disabled state across restarts and restricted runner scope to installed targets only.
+- **Quality gate findings**: Resolved review findings and added regression tests for stale npm lockfile removal, root workspace dependency resolution, and pre-commit pnpm migration.
+
+### Removed
+
+- **Duplicate artifact files**: Cleaned up stale files created during merge conflicts.
+
 ## [v5.2.4] - 2026-06-14
 
 ### Fixed
