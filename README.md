@@ -21,31 +21,16 @@ Caelterra 是一個 [Hermes Agent](https://hermes-agent.nousresearch.com) plugin
 
 ## 安裝
 
-### 方式一：curl 一鍵安裝（推薦）
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/LaiTszKin/caelterra/main/install.sh | bash
 ```
 
 安裝腳本會自動：
 1. 檢查 `hermes` 和 `git` 是否可用
-2. 將 plugin clone 到正確位置
-3. 向 Hermes 註冊 plugin
-4. 執行 `hermes caelterra setup`
+2. 透過 `hermes plugins install LaiTszKin/caelterra` 從 GitHub 安裝 plugin
+3. 執行 `hermes caelterra setup` 建立 profile、寫入 SOUL.md、安裝 skills
 
-### 方式二：手動安裝
-
-```bash
-# Clone 到 plugins 目錄
-git clone https://github.com/LaiTszKin/caelterra.git \
-  ~/.hermes/plugins/caelterra
-
-# 註冊 plugin
-hermes plugins install ~/.hermes/plugins/caelterra
-
-# 執行 setup
-hermes caelterra setup
-```
+> 若 plugin 已安裝過，`hermes plugins install` 會自動拉取最新版本。
 
 ---
 
