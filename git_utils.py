@@ -6,7 +6,25 @@ any project directory. Defaults to the current working directory.
 
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TypedDict
+
+
+class FetchResult(TypedDict):
+    success: bool
+    message: str
+
+
+class AheadBehind(TypedDict):
+    ahead: int
+    behind: int
+    remote_head: str | None
+
+
+class PullResult(TypedDict):
+    success: bool
+    message: str
+    before: str | None
+    after: str | None
 
 
 def _git_cmd(repo_path: Optional[str]) -> list[str]:
@@ -25,9 +43,7 @@ def is_git_repo(repo_path: Optional[str] = None) -> bool:
         return False
 
 
-def get_local_head(
-    repo_path: Optional[str] = None, ref: str | None = None
-) -> str | None:
+def get_local_head(repo_path: Optional[str] = None, ref: str | None = None) -> str | None:
     """Return the full SHA of a local ref (default: HEAD)."""
     target = ref or "HEAD"
     cmd = _git_cmd(repo_path) + ["rev-parse", target]
@@ -56,7 +72,7 @@ def get_default_branch(repo_path: Optional[str] = None) -> str:
         return "main"
 
 
-def fetch_remote(repo_path: Optional[str] = None) -> dict:
+def fetch_remote(repo_path: Optional[str] = None) -> FetchResult:
     """Fetch latest refs from origin.
 
     Returns {"success": bool, "message": str}.
@@ -88,7 +104,7 @@ def get_ahead_behind(
     repo_path: Optional[str] = None,
     base: str = "HEAD",
     remote_ref: str | None = None,
-) -> dict:
+) -> AheadBehind:
     """Return ahead/behind counts between local and remote refs.
 
     Returns {"ahead": int, "behind": int, "remote_head": str | None}.
@@ -120,7 +136,7 @@ def get_ahead_behind(
         return {"ahead": 0, "behind": 0, "remote_head": remote_sha}
 
 
-def pull_branch(repo_path: Optional[str] = None) -> dict:
+def pull_branch(repo_path: Optional[str] = None) -> PullResult:
     """Pull latest changes from the tracking branch (fast-forward only).
 
     Returns {"success": bool, "message": str,

@@ -8,7 +8,10 @@ Team members install via: curl -fsSL <url>/install.sh | bash
 import logging
 import os
 import subprocess
+import sys
+from argparse import Namespace
 from pathlib import Path
+from typing import Any
 
 from . import git_utils
 
@@ -47,6 +50,28 @@ def _get_profile_dir(profile_name: str = "caelterra") -> Path:
 def _get_global_skills_dir() -> Path:
     """Return the global Hermes skills directory."""
     return _get_global_hermes_home() / "skills"
+
+
+# ── Interactive prompt ─────────────────────────────────────────────
+
+
+def _prompt_yes_no(prompt: str, default: bool = True) -> bool:
+    """Ask a yes/no question interactively.
+
+    Returns default when stdin is not a TTY (non-interactive).
+    """
+    if not sys.stdin.isatty():
+        return default
+
+    hint = "Y/n" if default else "y/N"
+    raw = input(f"{prompt} [{hint}] ").strip().lower()
+    if not raw:
+        return default
+    if raw in ("y", "yes"):
+        return True
+    if raw in ("n", "no"):
+        return False
+    return default
 
 
 # ── Profile & SOUL.md ──────────────────────────────────────────────
@@ -100,7 +125,70 @@ def _apply_soul_md(profile_name: str = "caelterra") -> bool:
         return False
 
 
-# ── Bundled skill installation ─────────────────────────────────────
+# ── Bundled skill management ───────────────────────────────────────
+
+
+def _is_skill_dir(path: Path) -> bool:
+    """Return True if *path* is a directory containing SKILL.md."""
+    return path.is_dir() and (path / "SKILL.md").exists()
+
+
+def _get_bundled_skill_names() -> set[str]:
+    """Return the set of skill names currently bundled in the plugin directory."""
+    skills_dir = _PLUGIN_DIR / "skills"
+    if not skills_dir.is_dir():
+        return set()
+    return {child.name for child in sorted(skills_dir.iterdir()) if _is_skill_dir(child)}
+
+
+def _remove_installed_skill(skill_name: str) -> bool:
+    """Remove an installed skill from the global skills directory.
+
+    Returns True if the skill was removed or didn't exist.
+    """
+    skill_dir = _get_global_skills_dir() / skill_name
+    if not skill_dir.exists():
+        return True
+
+    try:
+        import shutil
+
+        shutil.rmtree(skill_dir)
+        print(f"  🗑  Removed stale skill '{skill_name}' from global skills")
+        return True
+    except OSError as e:
+        print(f"  ! Could not remove stale skill '{skill_name}': {e}")
+        return False
+
+
+def _remove_stale_skills(after_skills: set[str]) -> None:
+    """Detect and remove skills that are no longer bundled.
+
+    Compares currently installed skills against the new set of bundled
+    skills. Any skill installed in ~/.hermes/skills/ that no longer
+    exists in the plugin is stale and gets removed.
+    """
+    global_dir = _get_global_skills_dir()
+    if not global_dir.is_dir():
+        return
+
+    installed = {child.name for child in global_dir.iterdir() if _is_skill_dir(child)}
+
+    stale = installed - after_skills
+    if not stale:
+        print("  ✓ No stale skills to remove")
+        return
+
+    print()
+    print("  📋 Stale skills detected (removed from bundle):")
+    for name in sorted(stale):
+        print(f"    - {name}")
+
+    if _prompt_yes_no("  Remove stale skills?", default=True):
+        for name in sorted(stale):
+            _remove_installed_skill(name)
+    else:
+        print("  ⏭  Skipped stale skill removal")
 
 
 def _install_bundled_skills() -> bool:
@@ -115,9 +203,9 @@ def _install_bundled_skills() -> bool:
 
     all_ok = True
     for child in sorted(skills_dir.iterdir()):
-        skill_md = child / "SKILL.md"
-        if not child.is_dir() or not skill_md.exists():
+        if not _is_skill_dir(child):
             continue
+        skill_md = child / "SKILL.md"
 
         skill_name = child.name
         dst = _get_global_skills_dir() / skill_name / "SKILL.md"
@@ -142,10 +230,11 @@ def _install_bundled_skills() -> bool:
 # ── CLI handlers ───────────────────────────────────────────────────
 
 
-def _setup_command(args) -> None:
+def _setup_command(args: Namespace) -> None:
     """Handler for 'hermes caelterra setup'.
 
     Creates the caelterra profile, writes SOUL.md, installs bundled skills.
+    Prompts interactively before overwriting an existing SOUL.md.
     """
     print("⚡ Caelterra Setup")
     print("━" * 40)
@@ -158,9 +247,18 @@ def _setup_command(args) -> None:
 
     # Step 2: SOUL.md
     print("\n🧠 Agent Identity (SOUL.md)")
-    soul_ok = _apply_soul_md()
+    profile_dir = _get_profile_dir()
+    soul_dst = profile_dir / "SOUL.md"
+    if soul_dst.exists():
+        if _prompt_yes_no("  Overwrite existing SOUL.md?", default=True):
+            soul_ok = _apply_soul_md()
+        else:
+            print("  ⏭  Skipped — keeping existing SOUL.md")
+            soul_ok = True
+    else:
+        soul_ok = _apply_soul_md()
     if soul_ok:
-        print("  ✓ Caelterra agent identity applied")
+        print("  ✓ Caelterra agent identity ready")
 
     # Step 3: Bundled skills
     print("\n📚 Bundled Skills")
@@ -180,7 +278,7 @@ def _setup_command(args) -> None:
         print("  Run again: hermes caelterra setup")
 
 
-def _update_check(args) -> None:
+def _update_check(args: Namespace) -> None:
     """Handler for 'hermes caelterra update --check'.
 
     Compares local HEAD against remote origin/main and reports
@@ -237,10 +335,12 @@ def _update_check(args) -> None:
         print("\n✅ Caelterra is up to date.")
 
 
-def _update_pull(args) -> None:
+def _update_pull(args: Namespace) -> None:
     """Handler for 'hermes caelterra update'.
 
     Pulls the latest changes from the remote repository.
+    Detects and removes stale bundled skills.
+    Prompts interactively before overwriting SOUL.md.
     """
     project_dir = str(_PLUGIN_DIR.resolve())
 
@@ -297,19 +397,42 @@ def _update_pull(args) -> None:
     print(f"   Pulling {behind} new commit(s)...")
     result = git_utils.pull_branch(project_dir)
 
-    if result["success"]:
-        after = result.get("after", "")
-        print(f"   After:  {after[:12] if after else 'unknown'}")
-        print("\n✅ Caelterra updated successfully!")
-        print("   Restart any running Hermes sessions to see changes.")
-    else:
+    if not result["success"]:
         print(f"\n✗ Update failed: {result['message']}")
         print("  If the upstream force-pushed, reset with:")
         print("    git reset --hard origin/main")
         print("  (This discards local changes to Caelterra.)")
+        return
+
+    after = result.get("after", "")
+    print(f"   After:  {after[:12] if after else 'unknown'}")
+
+    # Detect and remove stale skills
+    after_skills = _get_bundled_skill_names()
+    _remove_stale_skills(after_skills)
+
+    # Update remaining skills
+    print("\n📚 Updating bundled skills...")
+    _install_bundled_skills()
+
+    # Prompt for SOUL.md overwrite
+    print("\n🧠 Agent Identity (SOUL.md)")
+    profile_dir = _get_profile_dir()
+    soul_dst = profile_dir / "SOUL.md"
+    if soul_dst.exists():
+        if _prompt_yes_no("  Overwrite SOUL.md with latest version?", default=True):
+            _apply_soul_md()
+        else:
+            print("  ⏭  Keeping existing SOUL.md")
+    else:
+        _apply_soul_md()
+
+    print(f"\n{'━' * 40}")
+    print("✅ Caelterra updated successfully!")
+    print("   Restart any running Hermes sessions to see changes.")
 
 
-def _caelterra_command(args) -> None:
+def _caelterra_command(args: Namespace) -> None:
     """Top-level dispatcher for 'hermes caelterra <subcommand>'."""
     sub = getattr(args, "caelterra_command", None)
 
@@ -325,7 +448,7 @@ def _caelterra_command(args) -> None:
         print("Usage: hermes caelterra <setup|update>")
 
 
-def _setup_argparse(subparser):
+def _setup_argparse(subparser: Any) -> None:
     """Build argparse subcommand tree for 'hermes caelterra'."""
     subs = subparser.add_subparsers(dest="caelterra_command")
 
@@ -352,7 +475,7 @@ def _setup_argparse(subparser):
 # ── Plugin registration ────────────────────────────────────────────
 
 
-def register(ctx):
+def register(ctx: Any) -> None:
     """Wire schemas to handler closures, register CLI commands and skills.
 
     Called exactly once at Hermes startup.
@@ -369,7 +492,6 @@ def register(ctx):
     skills_dir = _PLUGIN_DIR / "skills"
     if skills_dir.is_dir():
         for child in sorted(skills_dir.iterdir()):
-            skill_md = child / "SKILL.md"
-            if child.is_dir() and skill_md.exists():
-                ctx.register_skill(child.name, skill_md)
+            if _is_skill_dir(child):
+                ctx.register_skill(child.name, child / "SKILL.md")
                 logger.info("Registered bundled skill: caelterra:%s", child.name)
