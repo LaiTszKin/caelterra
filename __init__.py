@@ -52,7 +52,13 @@ def _get_profiles_dir() -> Path:
 
 
 def _get_profile_dir(profile_name: str) -> Path:
-    """Return the profile directory for a given profile name."""
+    """Return the profile directory for a given profile name.
+
+    The 'default' profile is special — its home is the global Hermes
+    directory (~/.hermes/), not a subdirectory of profiles/.
+    """
+    if profile_name == "default":
+        return _get_global_hermes_home()
     return _get_profiles_dir() / profile_name
 
 
@@ -120,7 +126,7 @@ def _list_profiles() -> list[str]:
     if profiles_dir.is_dir():
         profiles.extend(
             child.name
-            for child in profiles_dir.iterdir()
+            for child in sorted(profiles_dir.iterdir())
             if child.is_dir() and (child / "config.yaml").exists()
         )
     # default profile uses ~/.hermes/config.yaml, not a subdirectory
