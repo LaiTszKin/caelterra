@@ -5,12 +5,6 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/LaiTszKin/caelterra/main/install.sh | bash
 #
-# What it does:
-#   1. Checks that Hermes is installed
-#   2. Clones the Caelterra repo to ~/.hermes/profiles/caelterra/plugins/caelterra/
-#   3. Enables the plugin via 'hermes plugins install'
-#   4. Runs 'hermes caelterra setup' to configure profile, SOUL.md, and skills
-#
 # Requires: git, hermes
 set -euo pipefail
 
@@ -55,30 +49,26 @@ echo -e "  ${OK} Git found: $(git --version)"
 echo ""
 
 # ── Step 2: Determine install path ──────────────────────────────────
-# Best practice: install into the user's default profile plugins dir
 HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
-INSTALL_DIR="${HERMES_HOME}/plugins/${PLUGIN_NAME}"
 
-# If running under a profile, try the profile's plugin dir first
-if [ -n "${HERMES_HOME_PLUGINS:-}" ]; then
-    INSTALL_DIR="${HERMES_HOME_PLUGINS}/${PLUGIN_NAME}"
-elif [ -d "${HERMES_HOME}/profiles" ]; then
-    # Check if there's an active profile
-    ACTIVE_PROFILE=$(hermes config get profile.active 2>/dev/null || echo "")
-    if [ -n "$ACTIVE_PROFILE" ] && [ "$ACTIVE_PROFILE" != "default" ]; then
-        INSTALL_DIR="${HERMES_HOME}/profiles/${ACTIVE_PROFILE}/plugins/${PLUGIN_NAME}"
-    fi
-fi
+# Install under the global plugins dir (auto-discovered by Hermes)
+INSTALL_DIR="${HERMES_HOME}/plugins/${PLUGIN_NAME}"
+PARENT_DIR="${HERMES_HOME}/plugins"
 
 # ── Step 3: Clone or update the repository ─────────────────────────
+mkdir -p "$PARENT_DIR"
+
 if [ -d "$INSTALL_DIR/.git" ]; then
     echo -e "  ${INFO} Caelterra already installed at ${INSTALL_DIR}"
     echo -e "  ${INFO} Updating..."
     (cd "$INSTALL_DIR" && git pull --ff-only origin main)
     echo -e "  ${OK} Updated to latest version"
 else
+    if [ -d "$INSTALL_DIR" ]; then
+        # Directory exists but isn't a git repo — clean it out
+        rm -rf "$INSTALL_DIR"
+    fi
     echo -e "  ${INFO} Installing to ${INSTALL_DIR}..."
-    mkdir -p "$(dirname "$INSTALL_DIR")"
     git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
     echo -e "  ${OK} Repository cloned"
 fi
@@ -88,37 +78,80 @@ echo ""
 # ── Step 4: Register with Hermes ───────────────────────────────────
 echo -e "  ${INFO} Registering plugin with Hermes..."
 
-# Try 'hermes plugins install' first (path-based)
-if hermes plugins install "$INSTALL_DIR" 2>/dev/null; then
+# Use a relative path to avoid Hermes misparsing the absolute path
+# as a GitHub org/repo reference.
+if (cd "$PARENT_DIR" && hermes plugins install "$PLUGIN_NAME" 2>/dev/null); then
     echo -e "  ${OK} Plugin registered via 'hermes plugins install'"
-elif hermes plugins add "$INSTALL_DIR" 2>/dev/null; then
-    echo -e "  ${OK} Plugin registered via 'hermes plugins add'"
 else
-    echo -e "  ${WARN} Could not auto-register plugin."
-    echo "    You may need to run manually:"
+    # Fallback: add the absolute path as a local plugin
+    echo -e "  ${WARN} Auto-registration not supported on this Hermes version."
+    echo "    The plugin is installed at:"
+    echo "      ${INSTALL_DIR}"
+    echo ""
+    echo "    If Hermes doesn't detect it automatically on next startup, run:"
     echo "      hermes plugins install ${INSTALL_DIR}"
-    echo "      # or: hermes plugins add ${INSTALL_DIR}"
 fi
 
 echo ""
 
-# ── Step 5: Run setup ──────────────────────────────────────────────
-echo -e "  ${INFO} Running Caelterra setup..."
-cd "$INSTALL_DIR" && hermes caelterra setup 2>/dev/null || {
-    echo -e "  ${WARN} Could not run setup automatically."
-    echo "    Run it manually after restarting Hermes:"
-    echo "      hermes caelterra setup"
-}
-
+# ── Step 5: Run setup steps directly ───────────────────────────────
+echo -e "  ${INFO} Setting up Caelterra..."
 echo ""
-echo -e "  ${OK} ${BOLD}Caelterra installation complete!${NC}"
+
+# Profile
+PROFILE_NAME="caelterra"
+PROFILE_DIR="${HERMES_HOME}/profiles/${PROFILE_NAME}"
+if [ ! -d "$PROFILE_DIR" ]; then
+    echo -e "  ${INFO} Creating profile '${PROFILE_NAME}'..."
+    if hermes profile create "$PROFILE_NAME" 2>/dev/null; then
+        echo -e "  ${OK} Profile '${PROFILE_NAME}' created"
+    else
+        echo -e "  ${WARN} Could not create profile automatically."
+        echo "    Manual: hermes profile create ${PROFILE_NAME}"
+    fi
+else
+    echo -e "  ${OK} Profile '${PROFILE_NAME}' already exists"
+fi
+
+# SOUL.md
+echo -e "  ${INFO} Writing SOUL.md..."
+if [ -f "$INSTALL_DIR/SOUL.md" ]; then
+    mkdir -p "$PROFILE_DIR"
+    cp "$INSTALL_DIR/SOUL.md" "$PROFILE_DIR/SOUL.md"
+    echo -e "  ${OK} SOUL.md written to ${PROFILE_DIR}/SOUL.md"
+fi
+
+# Bundled skills
+echo -e "  ${INFO} Installing bundled skills..."
+SKILLS_SRC="$INSTALL_DIR/skills"
+SKILLS_DST="${HERMES_HOME}/skills"
+if [ -d "$SKILLS_SRC" ]; then
+    for skill_dir in "$SKILLS_SRC"/*/; do
+        skill_name="$(basename "$skill_dir")"
+        if [ -f "${skill_dir}SKILL.md" ]; then
+            mkdir -p "${SKILLS_DST}/${skill_name}"
+            cp "${skill_dir}SKILL.md" "${SKILLS_DST}/${skill_name}/SKILL.md"
+            echo -e "  ${OK} Skill '${skill_name}' installed"
+        fi
+    done
+fi
+
 echo ""
 echo "  ───────────────────────────────────────────────────────────"
 echo ""
-echo "    Start a session:    hermes -p caelterra"
-echo "    Run setup:          hermes caelterra setup"
-echo "    Check for updates:  hermes caelterra update --check"
-echo "    Update plugin:      hermes caelterra update"
+echo -e "  ${OK} ${BOLD}Caelterra installation complete!${NC}"
 echo ""
-echo "    Load a skill:       skill_view('optimise-skill')"
+echo "    Next steps:"
+echo "      1. Restart Hermes (or start a new session)"
+echo "      2. Run setup:"
+echo "         hermes caelterra setup"
+echo ""
+echo "    Or skip restart and use the profile directly:"
+echo "         hermes -p caelterra"
+echo ""
+echo "    Commands:"
+echo "         hermes caelterra setup              # configure profile & skills"
+echo "         hermes caelterra update --check     # check for updates"
+echo "         hermes caelterra update             # update plugin"
+echo "         skill_view('optimise-skill')        # load a skill"
 echo ""
