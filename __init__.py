@@ -1,15 +1,20 @@
 """
 Caelterra — team standardisation plugin for Hermes.
 
-Registers bundled skills and CLI commands for version management.
-Team members install via: curl -fsSL <url>/install.sh | bash
+Registers bundled skills and CLI commands for multi-profile
+setup, status, and version management.
+
+Install via: hermes plugins install LaiTszKin/caelterra
 """
 
+import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 from argparse import Namespace
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +23,10 @@ from . import git_utils
 logger = logging.getLogger(__name__)
 
 _PLUGIN_DIR = Path(__file__).parent
+_STATE_FILENAME = "caelterra_state.json"
+
+
+# ── Path helpers ───────────────────────────────────────────────────
 
 
 def _get_global_hermes_home() -> Path:
@@ -42,8 +51,8 @@ def _get_profiles_dir() -> Path:
     return _get_global_hermes_home() / "profiles"
 
 
-def _get_profile_dir(profile_name: str = "caelterra") -> Path:
-    """Return the profile directory for caelterra."""
+def _get_profile_dir(profile_name: str) -> Path:
+    """Return the profile directory for a given profile name."""
     return _get_profiles_dir() / profile_name
 
 
@@ -52,41 +61,124 @@ def _get_global_skills_dir() -> Path:
     return _get_global_hermes_home() / "skills"
 
 
-# ── Interactive prompt ─────────────────────────────────────────────
+def _get_state_path() -> Path:
+    """Return the path to the Caelterra state file (~/.hermes/caelterra_state.json)."""
+    return _get_global_hermes_home() / _STATE_FILENAME
+
+
+# ── State management ───────────────────────────────────────────────
+
+
+def _load_state() -> dict[str, Any]:
+    """Load installation state from JSON file."""
+    state_path = _get_state_path()
+    if state_path.exists():
+        try:
+            result = json.loads(state_path.read_text())
+            assert isinstance(result, dict)
+            return result
+        except (json.JSONDecodeError, OSError, AssertionError):
+            pass
+    return {"profiles": {}}
+
+
+def _save_state(state: dict[str, Any]) -> None:
+    """Save installation state to JSON file."""
+    state_path = _get_state_path()
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n")
+    except OSError as e:
+        print(f"  ! Could not save state: {e}")
+
+
+def _set_profile_state(profile_name: str, soul_md: bool) -> None:
+    """Record that a profile has been set up with Caelterra.
+
+    The presence of a profile in the state means skills have been installed.
+    The *soul_md* flag indicates whether SOUL.md was also deployed.
+    """
+    state = _load_state()
+    state["profiles"][profile_name] = {
+        "soul_md": soul_md,
+        "updated_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    _save_state(state)
+
+
+# ── Profile listing ────────────────────────────────────────────────
+
+
+def _list_profiles() -> list[str]:
+    """List all available Hermes profile names by scanning the profiles dir."""
+    profiles_dir = _get_profiles_dir()
+    if not profiles_dir.is_dir():
+        return []
+    return sorted(
+        child.name
+        for child in profiles_dir.iterdir()
+        if child.is_dir() and (child / "config.yaml").exists()
+    )
+
+
+# ── Interactive prompts ────────────────────────────────────────────
 
 
 def _prompt_yes_no(prompt: str, default: bool = True) -> bool:
     """Ask a yes/no question interactively.
 
-    Returns default when stdin is not a TTY (non-interactive).
+    Returns *default* when stdin is not a TTY (non-interactive).
     """
     if not sys.stdin.isatty():
         return default
-
     hint = "Y/n" if default else "y/N"
     raw = input(f"{prompt} [{hint}] ").strip().lower()
     if not raw:
         return default
-    if raw in ("y", "yes"):
-        return True
-    if raw in ("n", "no"):
-        return False
-    return default
+    return raw in ("y", "yes")
+
+
+def _prompt_select_profiles(available: list[str]) -> list[str]:
+    """Interactive multi-select prompt for profiles.
+
+    In non-TTY mode returns all profiles.
+    """
+    if not sys.stdin.isatty():
+        return list(available)
+
+    print("\n📁 Available profiles:")
+    for i, name in enumerate(available, 1):
+        print(f"   {i}) {name}")
+    print()
+
+    raw = input("  Select profiles (comma-separated numbers, or 'all'): ").strip().lower()
+    if not raw or raw == "all":
+        return list(available)
+
+    selected: list[str] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if part.isdigit():
+            idx = int(part) - 1
+            if 0 <= idx < len(available):
+                selected.append(available[idx])
+
+    return selected or list(available)
 
 
 # ── Profile & SOUL.md ──────────────────────────────────────────────
 
 
-def _ensure_profile(profile_name: str = "caelterra") -> bool:
-    """Create the caelterra profile if it doesn't exist.
+def _ensure_profile(profile_name: str) -> bool:
+    """Create the profile if it doesn't exist.
 
     Returns True if the profile exists or was created.
     """
     profile_dir = _get_profile_dir(profile_name)
-    if profile_dir.exists():
+    if profile_dir.exists() and (profile_dir / "config.yaml").exists():
         return True
 
-    print(f"Creating profile '{profile_name}'...")
+    print(f"\n  Creating profile '{profile_name}'...")
     try:
         subprocess.run(
             ["hermes", "profile", "create", profile_name],
@@ -106,8 +198,8 @@ def _ensure_profile(profile_name: str = "caelterra") -> bool:
         return False
 
 
-def _apply_soul_md(profile_name: str = "caelterra") -> bool:
-    """Write SOUL.md to the profile directory."""
+def _apply_soul_md(profile_name: str) -> bool:
+    """Write SOUL.md from the plugin bundle into the profile directory."""
     profile_dir = _get_profile_dir(profile_name)
     soul_src = _PLUGIN_DIR / "SOUL.md"
     soul_dst = profile_dir / "SOUL.md"
@@ -149,10 +241,7 @@ def _remove_installed_skill(skill_name: str) -> bool:
     skill_dir = _get_global_skills_dir() / skill_name
     if not skill_dir.exists():
         return True
-
     try:
-        import shutil
-
         shutil.rmtree(skill_dir)
         print(f"  🗑  Removed stale skill '{skill_name}' from global skills")
         return True
@@ -173,7 +262,6 @@ def _remove_stale_skills(after_skills: set[str]) -> None:
         return
 
     installed = {child.name for child in global_dir.iterdir() if _is_skill_dir(child)}
-
     stale = installed - after_skills
     if not stale:
         print("  ✓ No stale skills to remove")
@@ -206,7 +294,6 @@ def _install_bundled_skills() -> bool:
         if not _is_skill_dir(child):
             continue
         skill_md = child / "SKILL.md"
-
         skill_name = child.name
         dst = _get_global_skills_dir() / skill_name / "SKILL.md"
 
@@ -230,55 +317,122 @@ def _install_bundled_skills() -> bool:
 # ── CLI handlers ───────────────────────────────────────────────────
 
 
-def _setup_command(args: Namespace) -> None:
+def _setup_command(args: Namespace) -> None:  # noqa: ARG001
     """Handler for 'hermes caelterra setup'.
 
-    Creates the caelterra profile, writes SOUL.md, installs bundled skills.
-    Prompts interactively before overwriting an existing SOUL.md.
+    Interactive prompt:
+      1. List available profiles.
+      2. Let user select one or more.
+      3. Ask: skills only, or skills + SOUL.md.
+      4. Install and persist state.
     """
-    print("⚡ Caelterra Setup")
+    print("⚡ Caelterra Setup — Multi-Profile")
     print("━" * 40)
 
-    # Step 1: Profile
-    print("\n📁 Profile")
-    profile_ok = _ensure_profile()
-    if profile_ok:
-        print(f"  ✓ Profile '{_get_profile_dir()}' ready")
+    # Step 1: List profiles
+    available = _list_profiles()
+    if not available:
+        print("\n! No Hermes profiles found.")
+        print("  Create one first: hermes profile create <name>")
+        return
 
-    # Step 2: SOUL.md
-    print("\n🧠 Agent Identity (SOUL.md)")
-    profile_dir = _get_profile_dir()
-    soul_dst = profile_dir / "SOUL.md"
-    if soul_dst.exists():
-        if _prompt_yes_no("  Overwrite existing SOUL.md?", default=True):
-            soul_ok = _apply_soul_md()
-        else:
-            print("  ⏭  Skipped — keeping existing SOUL.md")
-            soul_ok = True
+    selected = _prompt_select_profiles(available)
+    if not selected:
+        print("\n  ⏭  No profiles selected — exiting.")
+        return
+
+    print(f"\n  Selected profiles: {', '.join(selected)}")
+
+    # Step 2: Choose installation mode
+    print("\n📦 Installation mode:")
+    if _prompt_yes_no("  Install SOUL.md with agent identity?", default=True):
+        mode = "soul_md"
+        print("  ✓ Mode: Skills + SOUL.md")
     else:
-        soul_ok = _apply_soul_md()
-    if soul_ok:
-        print("  ✓ Caelterra agent identity ready")
+        mode = "skills_only"
+        print("  ✓ Mode: Skills only")
 
-    # Step 3: Bundled skills
-    print("\n📚 Bundled Skills")
-    skills_ok = _install_bundled_skills()
-    if skills_ok:
-        print("  ✓ All skills installed")
+    # Step 3: Install to each selected profile
+    any_ok = False
+    for profile_name in selected:
+        print(f"\n{'─' * 40}")
+        print(f"📁 Profile: {profile_name}")
 
-    # Step 4: Summary
+        profile_ok = _ensure_profile(profile_name)
+        if not profile_ok:
+            print(f"  ⏭  Skipping profile '{profile_name}'")
+            continue
+
+        # Install bundled skills (global)
+        print()
+        _install_bundled_skills()
+
+        # Write SOUL.md if requested
+        soul_ok = True
+        if mode == "soul_md":
+            print()
+            profile_dir = _get_profile_dir(profile_name)
+            soul_dst = profile_dir / "SOUL.md"
+            if soul_dst.exists():
+                if _prompt_yes_no("  Overwrite existing SOUL.md?", default=True):
+                    soul_ok = _apply_soul_md(profile_name)
+                else:
+                    print("  ⏭  Keeping existing SOUL.md")
+            else:
+                soul_ok = _apply_soul_md(profile_name)
+
+        # Persist state
+        _set_profile_state(profile_name, soul_md=(mode == "soul_md" and soul_ok))
+        any_ok = True
+
+    # Summary
     print(f"\n{'━' * 40}")
-    if profile_ok and soul_ok:
-        print("✅ Caelterra plugin ready")
-        print("  Start a session:    hermes -p caelterra")
-        print("  Run setup again:    hermes caelterra setup")
-        print("  Check for updates:  hermes caelterra update --check")
+    if any_ok:
+        print("✅ Caelterra setup complete for selected profiles.")
+        print("  Check status: hermes caelterra status")
+        print("  Update:       hermes caelterra update")
     else:
-        print("⚠️  Caelterra plugin — setup incomplete")
-        print("  Run again: hermes caelterra setup")
+        print("⚠️  Setup incomplete.")
 
 
-def _update_check(args: Namespace) -> None:
+def _status_command(args: Namespace) -> None:  # noqa: ARG001
+    """Handler for 'hermes caelterra status'.
+
+    Shows per-profile installation status.
+    """
+    print("📊 Caelterra Installation Status")
+    print("━" * 40)
+
+    state = _load_state()
+    profiles_state = state.get("profiles", {})
+
+    if not profiles_state:
+        print("\n  Caelterra has not been installed to any profile yet.")
+        print("  Run: hermes caelterra setup")
+        return
+
+    print()
+    header = f"{'Profile':<22} {'Status':<24} {'Last Updated'}"
+    sep = f"{'─' * 22} {'─' * 24} {'─' * 20}"
+    print(f"  {header}")
+    print(f"  {sep}")
+    for name, info in sorted(profiles_state.items()):
+        status = "Skills + SOUL.md ✓" if info.get("soul_md") else "Skills only"
+        updated = info.get("updated_at", "—")
+        print(f"  {name:<22} {status:<24} {updated}")
+    print()
+
+    # Also detect profiles without Caelterra
+    all_profiles = _list_profiles()
+    missing = [p for p in all_profiles if p not in profiles_state]
+    if missing:
+        print("  📋 Profiles without Caelterra:")
+        for name in missing:
+            print(f"    - {name}")
+        print("  Run: hermes caelterra setup")
+
+
+def _update_check(args: Namespace) -> None:  # noqa: ARG001
     """Handler for 'hermes caelterra update --check'.
 
     Compares local HEAD against remote origin/main and reports
@@ -335,12 +489,56 @@ def _update_check(args: Namespace) -> None:
         print("\n✅ Caelterra is up to date.")
 
 
-def _update_pull(args: Namespace) -> None:
+def _sync_installed_profiles(context: str = "") -> None:
+    """Update skills and SOUL.md for all profiles in the installation state.
+
+    Called after pulling latest code to ensure profiles are in sync.
+    Skills are already expected to be updated globally; this function
+    re-applies SOUL.md where tracked and refreshes timestamps.
+    """
+    state = _load_state()
+    profiles_state = state.get("profiles", {})
+
+    if not profiles_state:
+        print("\n  No profiles in installation state.")
+        print("  Run: hermes caelterra setup")
+        return
+
+    ctx = f" ({context})" if context else ""
+    print(f"\n{'─' * 40}")
+    print(f"🔄 Syncing profiles{ctx}")
+
+    ts = datetime.now().isoformat(timespec="seconds")
+    synced = 0
+    for profile_name, info in sorted(profiles_state.items()):
+        profile_dir = _get_profile_dir(profile_name)
+        if not profile_dir.exists() or not (profile_dir / "config.yaml").exists():
+            print(f"\n  ⏭  Profile '{profile_name}' no longer exists — skipping")
+            continue
+
+        print(f"\n📁 Profile: {profile_name}")
+
+        # SOUL.md
+        if info.get("soul_md"):
+            print("  🧠 Updating SOUL.md...")
+            _apply_soul_md(profile_name)
+        else:
+            print("  ✓ Skills only (SOUL.md not tracked)")
+
+        # Refresh timestamp in state
+        state["profiles"][profile_name]["updated_at"] = ts
+        synced += 1
+
+    _save_state(state)
+    print(f"\n  ✅ {synced} profile(s) synced")
+
+
+def _update_pull(args: Namespace) -> None:  # noqa: ARG001
     """Handler for 'hermes caelterra update'.
 
     Pulls the latest changes from the remote repository.
     Detects and removes stale bundled skills.
-    Prompts interactively before overwriting SOUL.md.
+    Then updates each previously-installed profile according to its state.
     """
     project_dir = str(_PLUGIN_DIR.resolve())
 
@@ -390,7 +588,12 @@ def _update_pull(args: Namespace) -> None:
 
     if behind == 0:
         print("   After:  already up to date")
-        print("\n✅ Caelterra is already up to date.")
+        # Still refresh skills and SOUL in case state drifted
+        print("\n📚 Refreshing bundled skills...")
+        _install_bundled_skills()
+        _sync_installed_profiles("already up to date — refreshing")
+        print(f"\n{'━' * 40}")
+        print("✅ Caelterra is up to date.")
         return
 
     # Pull
@@ -411,33 +614,27 @@ def _update_pull(args: Namespace) -> None:
     after_skills = _get_bundled_skill_names()
     _remove_stale_skills(after_skills)
 
-    # Update remaining skills
+    # Update remaining skills — always (global operation)
     print("\n📚 Updating bundled skills...")
     _install_bundled_skills()
 
-    # Prompt for SOUL.md overwrite
-    print("\n🧠 Agent Identity (SOUL.md)")
-    profile_dir = _get_profile_dir()
-    soul_dst = profile_dir / "SOUL.md"
-    if soul_dst.exists():
-        if _prompt_yes_no("  Overwrite SOUL.md with latest version?", default=True):
-            _apply_soul_md()
-        else:
-            print("  ⏭  Keeping existing SOUL.md")
-    else:
-        _apply_soul_md()
+    # Sync profiles (update SOUL.md where tracked, refresh timestamps)
+    _sync_installed_profiles("updated")
 
     print(f"\n{'━' * 40}")
     print("✅ Caelterra updated successfully!")
     print("   Restart any running Hermes sessions to see changes.")
+    print("   Check status: hermes caelterra status")
 
 
 def _caelterra_command(args: Namespace) -> None:
     """Top-level dispatcher for 'hermes caelterra <subcommand>'."""
     sub = getattr(args, "caelterra_command", None)
 
-    if sub == "setup" or sub is None:
+    if sub in ("setup", None):
         _setup_command(args)
+    elif sub == "status":
+        _status_command(args)
     elif sub == "update":
         if getattr(args, "check", False):
             _update_check(args)
@@ -445,7 +642,7 @@ def _caelterra_command(args: Namespace) -> None:
             _update_pull(args)
     else:
         print(f"Unknown command: {sub}")
-        print("Usage: hermes caelterra <setup|update>")
+        print("Usage: hermes caelterra <setup|status|update>")
 
 
 def _setup_argparse(subparser: Any) -> None:
@@ -455,7 +652,13 @@ def _setup_argparse(subparser: Any) -> None:
     # ── setup ──
     subs.add_parser(
         "setup",
-        help="Create caelterra profile, apply SOUL.md, and install bundled skills",
+        help="Install Caelterra skills and optionally SOUL.md to selected profiles",
+    )
+
+    # ── status ──
+    subs.add_parser(
+        "status",
+        help="Show Caelterra installation status per profile",
     )
 
     # ── update ──
@@ -483,7 +686,7 @@ def register(ctx: Any) -> None:
     # ── CLI commands ──
     ctx.register_cli_command(
         name="caelterra",
-        help="Caelterra plugin — setup, update, and skill management",
+        help="Caelterra plugin — setup, status, update, and skill management",
         setup_fn=_setup_argparse,
         handler_fn=_caelterra_command,
     )

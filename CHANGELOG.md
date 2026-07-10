@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## v0.1.2 — 2026-07-11
+
+Multi-profile support with state tracking. Removed `install.sh` — installation is now done exclusively via `hermes plugins install`.
+
+### Added
+
+- **CLI: `status`** — shows per-profile Caelterra installation status (Skills only vs Skills + SOUL.md), last updated time, and lists profiles without Caelterra
+- **State management** (`~/.hermes/caelterra_state.json`) — JSON file tracking installation mode and timestamp per profile
+- **Multi-profile `setup`** — interactive profile selection (comma-separated or `all`), then choose Skills only or Skills + SOUL.md; installs to all selected profiles
+- **Profile sync on `update`** — after pulling latest code, updates SOUL.md per each profile's recorded state (skills-only vs skills+SOUL.md)
+
+### Changed
+
+- `setup` now lists all available Hermes profiles and lets you select which ones to install to
+- `update` refreshes SOUL.md automatically for profiles that were set up with `Skills + SOUL.md` mode
+- Plugin version bumped to 0.1.2
+
+### Removed
+
+- **`install.sh`** — no longer needed; public repo supports `hermes plugins install LaiTszKin/caelterra` directly
+
+---
+
 ## v0.1.0 — 2026-07-11
 
 Initial release. Caelterra is a Hermes plugin for team standardisation,
