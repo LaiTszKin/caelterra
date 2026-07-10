@@ -1,0 +1,17 @@
+[project]
+name = "caelterra"
+version = "0.1.0"
+description = "Caelterra — Team standardisation plugin for Hermes"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "LaiTszKin", email = "laitszkin1206@gmail.com" }]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
