@@ -523,6 +523,18 @@ def _sync_installed_profiles(context: str = "") -> None:
     print(f"🔄 Syncing profiles{ctx}")
 
     ts = datetime.now().isoformat(timespec="seconds")
+
+    # Auto-detect the "default" profile: if the global Hermes home has a
+    # config.yaml, the default profile exists.  We sync its SOUL.md even
+    # when it wasn't explicitly set up via `caelterra setup`, so that
+    # `caelterra update` keeps it in lockstep with the bundle.
+    default_home = _get_global_hermes_home()
+    if "default" not in profiles_state and (default_home / "config.yaml").exists():
+        has_soul = (default_home / "SOUL.md").exists()
+        profiles_state["default"] = {"soul_md": has_soul}
+        state["profiles"]["default"] = {"soul_md": has_soul, "updated_at": ts}
+        print("\n  📋 Auto-detected 'default' profile for syncing")
+
     synced = 0
     for profile_name, info in sorted(profiles_state.items()):
         profile_dir = _get_profile_dir(profile_name)

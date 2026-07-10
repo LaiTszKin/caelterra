@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## v0.1.5 — 2026-07-11
+
+### Added
+
+- **Auto-detect default profile on `update`** — `_sync_installed_profiles()` now
+  detects the `default` profile even when it was never explicitly set up via
+  `caelterra setup`. If `~/.hermes/config.yaml` exists, the default profile is
+  auto-included in the sync, keeping its SOUL.md in lockstep with the bundle.
+- **Tests** — 5 new tests covering auto-detect with SOUL.md, skills-only,
+  already-in-state, missing config.yaml, and skipped stale profiles.
+
+### Fixed
+
+- `hermes caelterra update` now correctly updates the default profile's SOUL.md
+  even when the profile was not previously recorded in the installation state.
+
+---
+
 ## v0.1.2 — 2026-07-11
 
 Multi-profile support with state tracking. Removed `install.sh` — installation is now done exclusively via `hermes plugins install`.
