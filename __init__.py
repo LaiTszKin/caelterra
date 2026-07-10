@@ -110,15 +110,23 @@ def _set_profile_state(profile_name: str, soul_md: bool) -> None:
 
 
 def _list_profiles() -> list[str]:
-    """List all available Hermes profile names by scanning the profiles dir."""
+    """List all available Hermes profile names.
+
+    Scans the profiles dir for named profiles, and always includes
+    'default' (whose config lives at ~/.hermes/config.yaml).
+    """
+    profiles: list[str] = []
     profiles_dir = _get_profiles_dir()
-    if not profiles_dir.is_dir():
-        return []
-    return sorted(
-        child.name
-        for child in profiles_dir.iterdir()
-        if child.is_dir() and (child / "config.yaml").exists()
-    )
+    if profiles_dir.is_dir():
+        profiles.extend(
+            child.name
+            for child in profiles_dir.iterdir()
+            if child.is_dir() and (child / "config.yaml").exists()
+        )
+    # default profile uses ~/.hermes/config.yaml, not a subdirectory
+    if _get_global_hermes_home().joinpath("config.yaml").exists():
+        profiles.insert(0, "default")
+    return profiles
 
 
 # ── Interactive prompts ────────────────────────────────────────────
