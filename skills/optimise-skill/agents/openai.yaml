@@ -1,4 +1,4 @@
 interface:
   display_name: 'Optimise Skill'
   short_description: 'Rewrite a SKILL.md into a leaner, higher-signal prompt'
-  default_prompt: 'Use $optimise-skill to read the target skill and its supporting files, derive the intended deliverable plus acceptance criteria, then rewrite the skill into a tighter goal / acceptance criteria / workflow / examples / references structure without changing the final outcome.'
+  default_prompt: 'Use $optimise-skill to read the target skill and its supporting files, then run the full 5-phase optimisation: (1) Audit & Map — read, audit description, prune model-known content; (2) Untangle & Restructure — three-layer separation, trace consumption, eliminate contradictions; (3) Rewrite — restructure SKILL.md for clarity, extract gotchas; (4) Verify & Iterate — discovery validation, simulated execution, edge case attack, consistency check; (5) Deliver the complete optimised skill.'

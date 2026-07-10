@@ -68,7 +68,7 @@ hermes -s optimise-skill
 
 | Skill | 用途 |
 |-------|------|
-| `optimise-skill` | 分析並優化 SKILL.md，使其更清晰、更精簡。核心方法：三層分離（Behavioral / Format / Tool） |
+| `optimise-skill` | 五階段優化 SKILL.md：審查 → 解耦 → 重寫 → 驗證（含觸發測試、模擬執行、邊界攻擊）→ 交付。核心方法：三層分離 + Delta from Baseline + Gotchas 提取 |
 
 ---
 
