@@ -374,7 +374,7 @@ def _setup_command(args: Namespace) -> None:  # noqa: ARG001
             profile_dir = _get_profile_dir(profile_name)
             soul_dst = profile_dir / "SOUL.md"
             if soul_dst.exists():
-                if _prompt_yes_no("  Overwrite existing SOUL.md?", default=True):
+                if _prompt_yes_no("  Overwrite existing SOUL.md?", default=False):
                     soul_ok = _apply_soul_md(profile_name)
                 else:
                     print("  ⏭  Keeping existing SOUL.md")
