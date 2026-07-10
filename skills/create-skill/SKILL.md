@@ -4,8 +4,6 @@ description: >
   Guides the agent through creating a new Agent Skill from scratch.
   Use when the user wants to build a skill, create a new skill,
   scaffold a skill directory, or author a SKILL.md.
-  Follows a 6-phase workflow: Discover → Design → Plan → Build →
-  Validate → Deliver.
   Do NOT use for optimising or rewriting existing skills — use
   'optimise-skill' for that.
   Do NOT use for editing files that are already part of a skill.
@@ -15,71 +13,45 @@ description: >
 
 # Create Skill
 
-This skill guides you step by step through building a new Agent Skill — from
-understanding what the user needs, to delivering a complete, validated skill
-directory.
+6-phase workflow: **Discover → Design → Plan → Build → Validate → Deliver**.
 
 ## Core Principles
 
-### Skill Anatomy (What we're building)
-
-Every skill is a folder with this structure:
+### Skill Anatomy
 
 ```
 skill-name/
-├── SKILL.md              # Required: metadata + core instructions (< 500 lines)
-├── scripts/              # Executable code for fragile/repetitive operations
-├── references/           # Supplementary context loaded on demand
-└── assets/               # Templates or static files used in output
+├── SKILL.md         # Behavioural guidance (how to think, what to check)
+├── scripts/         # Deterministic, fragile operations (tested code)
+├── references/      # Look-up material, loaded on demand
+└── assets/          # Output templates, structure only
 ```
-
-- `SKILL.md` is the "brain" — behavioural guidance only (what to do and why).
-- `scripts/` are for deterministic, fragile operations where variation is a bug.
-- `references/` are look-up material (API schemas, CLI flags) — never marked as required reading.
-- `assets/` are output templates — structure only, no behavioural instructions.
 
 ### Three-Layer Separation
 
 Every piece of content belongs in exactly one layer:
+- **Behavioural** (SKILL.md) — how to think, what to check, what principles
+- **Format** (assets/) — what the output structure looks like
+- **Tool** (references/) — CLI flags, API params, external commands
 
-| Layer          | What it contains                               | Where it lives  |
-| -------------- | ---------------------------------------------- | --------------- |
-| **Behavioural** | How to think, what to check, what principles   | SKILL.md        |
-| **Format**      | What the output structure looks like           | assets/         |
-| **Tool**        | CLI flags, API params, external commands       | references/     |
-
-The most common mistake in new skills is mixing these layers. Your job is to
-keep them clean from the start.
+No mixing layers is the most common new-skill mistake.
 
 ### Degrees of Freedom
 
 Match instruction tightness to task fragility:
+- **High (text guidance)** — exploratory, context-dependent decisions
+- **Medium (pseudocode/script with params)** — preferred pattern, some variation OK
+- **Low (specific script, few params)** — fragile, consistency critical
 
-- **High freedom (text guidance)** — multiple approaches valid, decisions
-  depend on context. Use for heuristic-driven workflows.
-- **Medium freedom (pseudocode / scripts with params)** — a preferred pattern
-  exists, some variation is acceptable, configuration affects behaviour.
-- **Low freedom (specific scripts, few params)** — operations are fragile and
-  error-prone, consistency is critical, a specific sequence must be followed.
+See `references/degrees-of-freedom.md` for the full decision tree.
 
 ### CSO Rule for Descriptions
 
-The description is the **only metadata the agent sees** to decide whether to
-load the skill. Never summarise the skill's workflow in the description —
-the agent reads the summary and skips the body.
+The `description` field is the **only metadata the agent sees** to decide
+whether to load a skill. Never summarise the workflow — describe *what* the
+skill does and *when to use it*, not *how it works*.
 
-Good description:
-```
-Guides the agent through creating a new Agent Skill from scratch.
-Use when the user wants to build a skill. Do NOT use for editing
-existing skills.
-```
-
-Bad description:
-```
-First we ask the user what they want. Then we create a directory.
-Then we write the files. Then we validate them...
-```
+See `references/anti-patterns.md` for bad/good examples.
 
 ---
 
@@ -87,299 +59,187 @@ Then we write the files. Then we validate them...
 
 ### Phase 1: DISCOVER — Understand the Skill's Purpose
 
-Before writing anything, establish a clear picture of what the skill should do.
+Collect answers before writing anything.
 
-#### Step 1 — Ask the 5 Core Questions
-
-Ask the user these questions. Collect answers before moving on.
-
-1. **One-liner**: What does this skill do, in one sentence?
-2. **Inputs**: What does the skill read or receive? (files, user prompts, data sources)
-3. **Outputs**: What does the skill produce? (files, analysis, transformed content)
-4. **Consumer**: Who or what consumes the output? (another skill, a human, a downstream tool)
-5. **Known pitfalls**: Are there environment-specific facts or common mistakes the skill must guard against?
-
-#### Step 2 — Determine Degrees of Freedom
-
-For each operation the skill will perform, decide the right level of tightness.
-Use `references/degrees-of-freedom.md` for the full decision tree.
+**1a — Five Core Questions**
 
 Ask the user:
+1. **One-liner**: What does this skill do in one sentence?
+2. **Inputs**: What does it read or receive?
+3. **Outputs**: What does it produce?
+4. **Consumer**: Who or what consumes the output?
+5. **Pitfalls**: Known gotchas or environment-specific facts?
 
-- "Should the agent have flexibility in HOW it does this, or must it follow an exact sequence?"
-- "Is this operation fragile (deleting files, writing to production) or exploratory (analysing data, suggesting improvements)?"
-- "Are there multiple valid approaches, or exactly one correct way?"
+**1b — Degrees of Freedom**
 
-Map each operation to High / Medium / Low freedom and record the result.
+For each operation, determine instruction tightness by asking:
+- Flexibility or exact sequence?
+- Fragile or exploratory?
+- One right way or many valid approaches?
+
+Use `references/degrees-of-freedom.md` for the decision tree.
 
 ---
 
 ### Phase 2: DESIGN — Preview the Expected Interaction
 
-This is the signature phase of `create-skill`. Before building anything, show
-the user what the skill will look like in practice.
+Before building anything, show the user what the skill will look like.
 
-#### Step 3 — Generate a Mock Dialogue
+**2a — Mock Dialogue**
 
-Based on the answers from Phase 1, construct a realistic 3–4 turn dialogue
-between a user and the agent running this skill. Format it clearly:
+Construct a 3–4 turn dialogue: user triggers the skill → agent responds,
+including one edge case (missing input, failure recovery). Format:
 
 ```
-┌─ Mock Dialogue ─────────────────────────────────────┐
-│                                                      │
-│ User: <a realistic user request that triggers this   │
-│        skill>                                        │
-│                                                      │
-│ Agent: <how the agent should respond>                │
-│                                                      │
-│ User: <a follow-up or edge case>                     │
-│                                                      │
-│ Agent: <how the agent handles it>                    │
-│                                                      │
-│ User: <a final confirmation or refinement>           │
-│                                                      │
-│ Agent: <the final output or handoff>                 │
-│                                                      │
-└──────────────────────────────────────────────────────┘
+User: <realistic trigger request>
+Agent: <expected response>
+
+User: <follow-up or edge case>
+Agent: <handling or final output>
 ```
 
-Include at least one edge case that tests the skill's boundaries (e.g. missing
-input, unexpected format, failure recovery).
-
-**Present this to the user and ask: "Is this the interaction you expect?"**
-
-- If YES → proceed to Phase 3.
-- If NO → ask what should change, revise the dialogue, and reconfirm.
-
-This step catches misunderstandings early, before any code or files are written.
+Present to the user: "Is this the interaction you expect?"
+- YES → proceed.
+- NO → revise and reconfirm.
 
 ---
 
 ### Phase 3: PLAN — Map Content to Files
 
-Now that the purpose and interaction model are confirmed, plan what goes where.
+**3a — Classify Every Element**
 
-#### Step 4 — Classify Every Piece of Content
+| Bucket       | When to use                                    |
+|--------------|------------------------------------------------|
+| **SKILL.md** | Behavioural guidance (principles, steps, checks) |
+| **scripts/** | Deterministic, fragile operations              |
+| **references/** | Look-up material (schemas, CLI flags, API docs) |
+| **assets/**  | Output templates, structure only                |
 
-Take the confirmed scope and classify each element into one of four buckets:
+One item → one bucket. No mixing.
 
-| Bucket       | When to use                                                  | Examples                                      |
-| ------------ | ------------------------------------------------------------ | --------------------------------------------- |
-| **SKILL.md** | Behavioural guidance: principles, steps, gotchas             | "Verify every API call returns 200"           |
-| **scripts/** | Deterministic, fragile operations where variation is a bug   | PDF rotation, data parsing, git operations    |
-| **references/** | Look-up material: schemas, API docs, CLI flags           | Database schema, API endpoint list            |
-| **assets/**  | Output structure: templates, boilerplate, output format       | Report template, JSON schema, HTML skeleton   |
-
-For each item, decide which bucket it belongs to. **One item → one bucket.**
-No mixing.
-
-#### Step 5 — Design the Directory Structure
-
-Based on the classification, sketch the final directory:
+**3b — Design Directory**
 
 ```
-proposed-skill-name/
+proposed-name/
 ├── SKILL.md
-├── scripts/           # (only if Step 4 produced script items)
-│   └── <script-name>.py
-├── references/        # (only if Step 4 produced reference items)
-│   └── <ref-name>.md
-└── assets/            # (only if Step 4 produced asset items)
-    └── <template-name>.md
+├── scripts/      # only if Step 3a produced script items
+├── references/   # only if Step 3a produced reference items
+└── assets/       # only if Step 3a produced asset items
 ```
 
-Minimal viable skill: just `SKILL.md`. Add subdirectories only when needed.
+Minimal viable skill: just `SKILL.md`.
 
 ---
 
-### Phase 4: BUILD — Create the Skill
+### Phase 4: BUILD — Create the Files
 
-Now write the actual files.
-
-#### Step 6 — Create the Directory Scaffold
-
-Create the skill directory under the project's `skills/` folder:
+**4a — Scaffold**
 
 ```bash
 mkdir -p skills/<skill-name>/{scripts,references,assets}
+rmdir <empty-dirs>
 ```
 
-Remove any empty directories that aren't needed.
+Or use `scripts/init-skill.sh <skill-name>` with optional `--with-*` flags.
 
-#### Step 7 — Write the SKILL.md
+**4b — Write SKILL.md**
 
-Follow the template in `assets/skill-template.md` as the structure reference.
+Use `assets/skill-template.md` for structure. Rules:
+- `name` matches directory name (lowercase + hyphens, < 64 chars)
+- `description` follows CSO Rule — concrete triggers + negative triggers
+- Third-person imperative: "Verify..." not "You should verify..."
+- Under 500 lines. Split dense content into references/
+- Include `## Gotchas` section with environment-specific facts
+- Reference files explicitly: "See `references/schema.md` for structure"
 
-Key rules:
-- **Frontmatter**: `name` must match the directory name. `description` must
-  follow the CSO Rule — include concrete trigger phrases and negative triggers.
-- **Body**: Use third-person imperative ("Verify every API call..." not "You
-  should verify...").
-- **Keep it under 500 lines**. Split dense content into references/.
-- **Add a `## Gotchas` section** at the end with environment-specific facts
-  that break model defaults. These are the highest-value content per token.
-- **Reference files explicitly**: tell the agent when to read each reference
-  (e.g. "See `references/schema.md` for the full table structure").
+**4c — Write Supporting Files**
 
-#### Step 8 — Write Supporting Files
-
-For each item classified as scripts/references/assets in Step 4:
-
-- **scripts/**: Write tested, self-contained executables. They should:
-  - Accept inputs via CLI args or stdin
-  - Write results to stdout
-  - Return descriptive error messages on failure (so the agent can self-correct)
-  - Be tested by actually running them before finalising
-
-- **references/**: Write concise look-up documents. One topic per file.
-  - Include a table of contents if the file exceeds 100 lines.
-  - Never include behavioural guidance — that belongs in SKILL.md.
-
-- **assets/**: Write output templates showing structure only.
-  - Use `{{placeholder}}` tokens for variable content.
-  - Never embed instructions, logic, or behavioural rules in templates.
+- **scripts/**: Tested executables. Accept CLI args/stdin, output to stdout,
+  descriptive error messages so the agent can self-correct. Run before finalising.
+- **references/**: One topic per file. ToC if >100 lines. No behavioural guidance.
+- **assets/**: Structure only — `{{placeholder}}` tokens. No instructions or rules.
 
 ---
 
 ### Phase 5: VALIDATE — Ensure Quality
 
-Validation is not optional. An unvalidated skill is indistinguishable from
-broken. Run these checks in order. If any fails, go back and fix it.
+Run these checks in order. Fix failures before proceeding.
 
-#### Step 9 — Discovery Validation
+**5a — Discovery Validation**
 
-Paste this prompt into the conversation and answer it honestly:
+Present the frontmatter to yourself: *"Based on this name + description,
+generate 3 prompts that SHOULD trigger this skill and 3 that should NOT.
+Critique the description and propose revisions if needed."*
 
-```
-I am evaluating an Agent Skill's frontmatter. Agents decide whether to load
-this skill based entirely on the YAML metadata below.
+Fix the description if it produces false positives/negatives.
 
----
-name: <proposed-name>
-description: <proposed-description>
----
+**5b — Simulated Execution**
 
-Based strictly on this metadata:
-1. Generate 3 realistic user prompts that SHOULD trigger this skill.
-2. Generate 3 user prompts that sound similar but should NOT trigger.
-3. Critique the description: too broad? too narrow? missing negative triggers?
-4. Propose a revised description if improvements are needed.
-```
+Walk through the SKILL.md step-by-step as an agent running it. Flag any
+line where you'd have to guess or hallucinate. Clarify those instructions.
 
-If the description triggers incorrectly (false positives or false negatives),
-fix it now.
+**5c — Edge Case Attack**
 
-#### Step 10 — Simulated Execution
+Ask: *"What if a referenced file is missing? Input violates assumptions?
+Script fails mid-execution?"* Fix gaps found.
 
-Paste this prompt with the full SKILL.md:
+**5d — Structural Checks**
 
-```
-Act as an autonomous agent that has just triggered this skill. Simulate
-execution step-by-step on a typical input.
+Run `python scripts/validate-skill.py skills/<skill-name>` if available.
 
-For each step, write your internal monologue:
-1. What exactly are you doing?
-2. Which specific file are you reading or running?
-3. Flag any Execution Blockers: exact lines where you must guess or
-   hallucinate because the instructions are ambiguous.
-```
-
-If the simulated agent guesses or hallucinates, clarify the instruction.
-
-#### Step 11 — Edge Case Attack
-
-```
-Switch roles. Act as a ruthless QA tester. Your goal is to break this skill.
-Ask 3-5 highly specific questions about edge cases, failure states,
-or missing fallbacks.
-
-Focus on:
-- What if a referenced file is missing or renamed?
-- What if the input violates assumptions baked into the skill?
-- Are there implicit environment or toolchain assumptions?
-- What happens if a script fails mid-execution?
-
-Do not fix these issues yet. Just ask the numbered questions and wait
-for me to answer them.
-```
-
-Answer the questions, then apply the fixes.
-
-#### Step 12 — Structural Validation
-
-Run the validate script if available:
-
-```bash
-python scripts/validate-skill.py skills/<skill-name>
-```
-
-Check these manually if the script isn't available:
-
-- [ ] Core deliverable preserved: same inputs produce same outputs
-- [ ] Description includes negative triggers (Do NOT use for...)
-- [ ] No behavioural guidance in templates — templates show structure only
+Manually verify:
+- [ ] Same inputs → same outputs (core deliverable preserved)
+- [ ] Description includes negative triggers
+- [ ] No behavioural guidance in templates — structure only
 - [ ] No references marked as required reading
 - [ ] SKILL.md under 500 lines
-- [ ] No duplicate or overlapping steps in the workflow
-- [ ] Cross-file references all valid
-- [ ] Gotchas section present with concrete, environment-specific facts
+- [ ] No duplicate or overlapping steps
+- [ ] All cross-references valid
+- [ ] Gotchas section present with concrete facts
 - [ ] No instructions the model would follow correctly without being told
-- [ ] No README.md, CHANGELOG.md, or other documentation files in the skill dir
+- [ ] No README, CHANGELOG, or human docs in skill directory
 
 ---
 
 ### Phase 6: DELIVER — Present the Result
 
-#### Step 13 — Final Output
-
-Present the completed skill to the user:
-
-1. List the directory structure
-2. Summarise what each file does
-3. Note any decisions made during creation (e.g. "I chose a script instead of
-   inline instructions because the JSON parsing logic is fragile")
-4. Point the user to `optimise-skill` if they want further refinement
-
-Example delivery:
+Show the user:
+1. Directory structure of the new skill
+2. Summary of each file's purpose
+3. Key decisions (script vs inline, reference extracted, etc.)
+4. Point to `optimise-skill` for a token-efficiency pass
 
 ```
-✅ Skill created: skills/analytics-report/
+✅ Skill created: skills/<name>/
 
-analytics-report/
-├── SKILL.md           — 187 lines, core workflow + gotchas
-├── scripts/
-│   └── generate_chart.py — wraps matplotlib with standard sizing
-├── references/
-│   └── metrics.md     — lookup table for metric definitions
-└── assets/
-    └── report_template.md — output structure with {{placeholders}}
-
-The script was extracted because the chart configuration is fragile
-and error-prone when written from scratch each time. Reference
-material was split out to keep SKILL.md under 200 lines.
-
-Run optimise-skill on this for a token-efficiency pass.
+<name>/
+├── SKILL.md          — <N> lines, core workflow + gotchas
+├── scripts/          — <what scripts do>
+├── references/       — <what references cover>
+└── assets/           — <what templates provide>
 ```
+
+Example: *"The script was extracted because JSON parsing is fragile when
+written from scratch. Reference material was split out to keep SKILL.md
+under 200 lines."*
 
 ---
 
 ## Gotchas
 
-- **Empty subdirectories confuse agents.** If a `scripts/` or `references/`
-  directory exists but is empty, don't create it.
-- **The description is the SKILL.md loaded into the user's context in full.**
-  Don't add a "When to Use" section in the body — all routing metadata goes
-  in the `description` frontmatter field, period.
-- **`name` must match the directory name exactly.** The standard enforces this
-  (lowercase, hyphens, < 64 chars). If they diverge, some agents won't load
-  the skill.
-- **Never include human-facing documentation** (README, CHANGELOG, LICENSE)
-  inside a skill directory. Skills are for agents, not humans.
-- **Default assumption: the model is already very smart.** Don't explain basic
-  concepts (HTTP, JSON, git). Only add what's project-specific, non-obvious, or
-  where the model's default behaviour would be wrong.
-- **Mock dialogues are for the user, not for the final skill.** Remove the
-  mock dialogue before delivering — it's a design tool, not part of the output.
+- **Empty subdirectories confuse agents.** Only create `scripts/`,
+  `references/`, or `assets/` when they have actual files.
+- **All routing metadata goes in the `description` frontmatter field.**
+  Don't add a "When to Use" section in the body.
+- **`name` must match the directory name** (lowercase, hyphens, < 64 chars).
+  If they diverge, some agents won't load the skill.
+- **No human-facing docs** (README, CHANGELOG, LICENSE) inside a skill
+  directory. Skills are for agents, not humans.
+- **Default assumption: the model is already smart.** Don't explain basic
+  concepts (HTTP, JSON, git). Add only what's project-specific, non-obvious,
+  or where the default behaviour would be wrong.
+- **Mock dialogues are design tools, not part of the output.** Delete before
+  delivering.
 
 ## References
 
