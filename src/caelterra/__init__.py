@@ -66,12 +66,22 @@ class CaelterraPlugin(HermesPlugin):
 
             print(f"\n📁 Profile: {profile_name}")
 
-            # Remove stale skills then install bundled skills per-profile
-            skills_target = profile_dir / "skills"
+            # Current bundle + previous state → detect only OUR stale skills
             bundled_names = skills.get_bundled_skill_names(self.plugin_dir)
-            skills.remove_stale_skills(self.plugin_dir, bundled_names, skills_target)
+            previous_skills = set(info.get("skills", []))
+
+            # Stale = we installed it before but it's no longer in the bundle
+            stale = previous_skills - bundled_names
+            if stale:
+                skills.remove_stale_from_profile(profile_dir / "skills", stale)
+
+            # Install all bundled skills to this profile
             print("  📚 Installing bundled skills...")
+            skills_target = profile_dir / "skills"
             skills.install_bundled_skills(self.plugin_dir, skills_target)
+
+            # Record what we installed so next update knows what's ours
+            info["skills"] = sorted(bundled_names)
 
             if info.get("soul_md"):
                 print("  🧠 Updating SOUL.md...")
