@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## v0.1.9 — 2026-07-12
+
+### Fixed
+
+- **Update `uv.lock` to pin fabricium ≥0.1.5** — the lockfile still referenced
+  fabricium 0.1.1 which has the old 1-arg `install_bundled_skills()` signature.
+  CI failed because `uv sync --dev` respects the lockfile and installed the old
+  version. Upgraded to fabricium 0.1.6.
+
+---
+
 ## v0.1.5 — 2026-07-11
 
 ### Added

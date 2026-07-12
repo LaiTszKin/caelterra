@@ -93,7 +93,7 @@ wheels = [
 
 [[package]]
 name = "caelterra"
-version = "0.1.6"
+version = "0.1.9"
 source = { editable = "." }
 dependencies = [
     { name = "fabricium" },
@@ -173,11 +173,11 @@ wheels = [
 
 [[package]]
 name = "fabricium"
-version = "0.1.1"
+version = "0.1.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/1f/51/a3d3783801f7a84e4eeef9eecfdacdc7bc5d29a112ce1347307aa2b07ad2/fabricium-0.1.1.tar.gz", hash = "sha256:67325ad77145312aef5940c6567bf231fddca34e6a349b9eff8f70444e2599b1", size = 90080, upload-time = "2026-07-12T11:36:55.787Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1d/6a/3f82b6517059d0e73749de19479f49218696058fdb33abfd3420b11b35fc/fabricium-0.1.6.tar.gz", hash = "sha256:68f9a5ef7f3feda536df45759db281147203e62eb607505cc3feed45a05d85df", size = 112799, upload-time = "2026-07-12T15:20:00.301Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/29/4bf489395ec1c00c9ed72c672f7a5c6d8b16fee32592a811b5bc4a40ff9e/fabricium-0.1.1-py3-none-any.whl", hash = "sha256:5c43a1cd53a42597077d0e0c5b202b7ed75f44933f51248edb4cc20bff813f6a", size = 52060, upload-time = "2026-07-12T11:36:54.72Z" },
+    { url = "https://files.pythonhosted.org/packages/71/8f/5657ccd2fb5bcb411253e8932bdb7f3792bf5bf0896529bcaad3fd13dd5a/fabricium-0.1.6-py3-none-any.whl", hash = "sha256:7025f0b600d2dba66ae5c164e5105b2ef3cb72eae778e6f5b4c4abb165c845fa", size = 52996, upload-time = "2026-07-12T15:19:59.082Z" },
 ]
 
 [[package]]
