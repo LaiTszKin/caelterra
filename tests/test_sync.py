@@ -3,9 +3,15 @@
 import json
 from pathlib import Path
 
+import fabricium.state as fabricium_state
 import pytest
 
-import caelterra.__init__ as caelterra_mod
+import caelterra
+
+
+def _patch_home(monkeypatch, fake_home):
+    """Monkeypatch fabricium's _get_global_hermes_home to return a fake home."""
+    monkeypatch.setattr(fabricium_state, "_get_global_hermes_home", lambda: fake_home)
 
 
 def test_sync_auto_detect_default_with_soul_md(
@@ -19,8 +25,8 @@ def test_sync_auto_detect_default_with_soul_md(
     state = {"profiles": {"jovaltus-agent": {"soul_md": True, "updated_at": "2025-01-01T00:00:00"}}}
     (fake_home / "caelterra_state.json").write_text(json.dumps(state))
 
-    monkeypatch.setattr(caelterra_mod, "_get_global_hermes_home", lambda: fake_home)
-    caelterra_mod._sync_installed_profiles("test")
+    _patch_home(monkeypatch, fake_home)
+    caelterra.plugin._sync_installed_profiles("test")
 
     state_after = json.loads((fake_home / "caelterra_state.json").read_text())
     assert "default" in state_after["profiles"]
@@ -42,8 +48,8 @@ def test_sync_auto_detect_default_skills_only(
     state = {"profiles": {"jovaltus-agent": {"soul_md": True, "updated_at": "2025-01-01T00:00:00"}}}
     (fake_home / "caelterra_state.json").write_text(json.dumps(state))
 
-    monkeypatch.setattr(caelterra_mod, "_get_global_hermes_home", lambda: fake_home)
-    caelterra_mod._sync_installed_profiles("test")
+    _patch_home(monkeypatch, fake_home)
+    caelterra.plugin._sync_installed_profiles("test")
 
     state_after = json.loads((fake_home / "caelterra_state.json").read_text())
     assert "default" in state_after["profiles"]
@@ -65,8 +71,8 @@ def test_sync_no_auto_detect_when_already_in_state(
     state = {"profiles": {"default": {"soul_md": True, "updated_at": "2025-01-01T00:00:00"}}}
     (fake_home / "caelterra_state.json").write_text(json.dumps(state))
 
-    monkeypatch.setattr(caelterra_mod, "_get_global_hermes_home", lambda: fake_home)
-    caelterra_mod._sync_installed_profiles("test")
+    _patch_home(monkeypatch, fake_home)
+    caelterra.plugin._sync_installed_profiles("test")
 
     captured = capsys.readouterr().out
     assert "Auto-detected 'default' profile" not in captured
@@ -82,8 +88,8 @@ def test_sync_no_auto_detect_when_no_config_yaml(
     state = {"profiles": {"jovaltus-agent": {"soul_md": True, "updated_at": "2025-01-01T00:00:00"}}}
     (fake_home / "caelterra_state.json").write_text(json.dumps(state))
 
-    monkeypatch.setattr(caelterra_mod, "_get_global_hermes_home", lambda: fake_home)
-    caelterra_mod._sync_installed_profiles("test")
+    _patch_home(monkeypatch, fake_home)
+    caelterra.plugin._sync_installed_profiles("test")
 
     state_after = json.loads((fake_home / "caelterra_state.json").read_text())
     assert "default" not in state_after["profiles"]
@@ -102,8 +108,8 @@ def test_sync_skips_missing_state_profiles(
     state = {"profiles": {"_t": {"soul_md": True, "updated_at": "2025-01-01T00:00:00"}}}
     (fake_home / "caelterra_state.json").write_text(json.dumps(state))
 
-    monkeypatch.setattr(caelterra_mod, "_get_global_hermes_home", lambda: fake_home)
-    caelterra_mod._sync_installed_profiles("test")
+    _patch_home(monkeypatch, fake_home)
+    caelterra.plugin._sync_installed_profiles("test")
 
     state_after = json.loads((fake_home / "caelterra_state.json").read_text())
     # _t stays in state (not removed)

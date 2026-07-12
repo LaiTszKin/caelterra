@@ -5,6 +5,9 @@ description = "Caelterra — Team standardisation plugin for Hermes"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "LaiTszKin", email = "laitszkin1206@gmail.com" }]
+dependencies = [
+    "fabricium>=0.1.1",
+]
 
 [dependency-groups]
 dev = [
