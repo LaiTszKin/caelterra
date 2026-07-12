@@ -27,6 +27,15 @@ pip install caelterra && hermes plugins enable caelterra
 
 > `fabricium` 會作為依賴自動安裝。
 
+### 從舊版 (≤0.1.5) 遷移
+
+如果你之前用 `hermes plugins install` 安裝過舊版，請先刪掉舊 plugin：
+
+```bash
+rm -rf ~/.hermes/plugins/caelterra
+rm -rf ~/.hermes/profiles/*/plugins/caelterra
+```
+
 安裝後執行：
 
 ```bash
