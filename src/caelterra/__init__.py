@@ -11,6 +11,7 @@ Powered by Fabricium — shared Hermes plugin infrastructure.
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from fabricium import HermesPlugin
 from fabricium import state as fabricium_state
@@ -85,7 +86,7 @@ plugin = CaelterraPlugin(
 )
 
 
-def register(ctx):
+def register(ctx: Any) -> None:
     """Register CLI commands and bundled skills with Hermes."""
     plugin.register(ctx)
     logger.info("Caelterra registered (via Fabricium)")

@@ -22,8 +22,10 @@ Caelterra 是一個 [Hermes Agent](https://hermes-agent.nousresearch.com) plugin
 ## 安裝
 
 ```bash
-hermes plugins install LaiTszKin/caelterra
+pip install caelterra && hermes plugins enable caelterra
 ```
+
+> `fabricium` 會作為依賴自動安裝。
 
 安裝後執行：
 
