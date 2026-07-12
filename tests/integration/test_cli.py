@@ -73,7 +73,7 @@ class TestCaelterraStatus:
 
 
 class TestCaelterraUpdateCheck:
-    """``hermes caelterra update --check`` — git-based update check."""
+    """``hermes caelterra update --check`` — update availability check."""
 
     def test_update_check_produces_diagnostic(self, hermes_test_env: HermesDockerTestEnv) -> None:
         """Update check should produce a meaningful status message."""
