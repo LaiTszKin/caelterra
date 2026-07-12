@@ -66,8 +66,10 @@ class CaelterraPlugin(HermesPlugin):
 
             print(f"\n📁 Profile: {profile_name}")
 
-            # Install bundled skills to this profile's skills directory
+            # Remove stale skills then install bundled skills per-profile
             skills_target = profile_dir / "skills"
+            bundled_names = skills.get_bundled_skill_names(self.plugin_dir)
+            skills.remove_stale_skills(self.plugin_dir, bundled_names, skills_target)
             print("  📚 Installing bundled skills...")
             skills.install_bundled_skills(self.plugin_dir, skills_target)
 
