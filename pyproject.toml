@@ -38,3 +38,20 @@ select = ["E", "F", "I", "N", "W"]
 [tool.black]
 target-version = ["py310"]
 line-length = 100
+
+[tool.mypy]
+strict = true
+no_namespace_packages = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "fabricium.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "fabricium"
+ignore_errors = true

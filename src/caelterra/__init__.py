@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fabricium import HermesPlugin
+from fabricium import HermesPlugin, skills
 from fabricium import state as fabricium_state
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,11 @@ class CaelterraPlugin(HermesPlugin):
                 continue
 
             print(f"\n📁 Profile: {profile_name}")
+
+            # Install bundled skills to this profile's skills directory
+            skills_target = profile_dir / "skills"
+            print("  📚 Installing bundled skills...")
+            skills.install_bundled_skills(self.plugin_dir, skills_target)
 
             if info.get("soul_md"):
                 print("  🧠 Updating SOUL.md...")
