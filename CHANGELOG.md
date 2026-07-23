@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## v0.1.10 — 2026-07-23
+
+### Fixed
+
+- **Optimise `optimise-skill` skill** — removed all `→` arrow symbols and replaced
+  them with natural language sentence connectors for logical flow. Phase 4
+  verification checks (A-C) now use `hermes chat -q` instead of manual
+  prompt-pasting, running independent Hermes instances for adversarial review.
+  Fixed duplicate Step 7 numbering. Added missing `description-patterns.md`
+  and `subagent-self-containment.md` reference files to the source bundle.
+  Removed stale `references/definition.md`.
+
+---
+
 ## v0.1.9 — 2026-07-12
 
 ### Fixed
